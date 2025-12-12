@@ -1,12 +1,11 @@
 import { Header, Footer } from "@/components/layout";
-import { HeroSection, AboutSection, TeamSection } from "@/components/landing";
+import { AboutSection, TeamSection } from "@/components/landing";
 
-export default function Home() {
+export default function AboutPage() {
   return (
     <>
       <Header />
-      <main>
-        <HeroSection />
+      <main className="pt-16">
         <AboutSection />
         <TeamSection />
       </main>
@@ -14,3 +13,4 @@ export default function Home() {
     </>
   );
 }
+

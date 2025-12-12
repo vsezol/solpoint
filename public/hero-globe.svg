@@ -1,0 +1,50 @@
+<svg width="600" height="600" viewBox="0 0 600 600" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="globeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#14f195;stop-opacity:0.3"/>
+      <stop offset="50%" style="stop-color:#9945ff;stop-opacity:0.2"/>
+      <stop offset="100%" style="stop-color:#00d1ff;stop-opacity:0.3"/>
+    </linearGradient>
+    <radialGradient id="glowGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#14f195;stop-opacity:0.4"/>
+      <stop offset="100%" style="stop-color:#14f195;stop-opacity:0"/>
+    </radialGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="20" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Outer glow -->
+  <circle cx="300" cy="300" r="250" fill="url(#glowGrad)"/>
+  
+  <!-- Main globe -->
+  <circle cx="300" cy="300" r="200" stroke="url(#globeGrad)" stroke-width="3" fill="none" filter="url(#glow)"/>
+  
+  <!-- Latitude lines -->
+  <ellipse cx="300" cy="300" rx="200" ry="60" stroke="#14f195" stroke-width="1.5" fill="none" opacity="0.6"/>
+  <ellipse cx="300" cy="300" rx="200" ry="120" stroke="#14f195" stroke-width="1" fill="none" opacity="0.4"/>
+  <ellipse cx="300" cy="300" rx="200" ry="160" stroke="#14f195" stroke-width="0.8" fill="none" opacity="0.3"/>
+  
+  <!-- Longitude lines -->
+  <ellipse cx="300" cy="300" rx="60" ry="200" stroke="#9945ff" stroke-width="1.5" fill="none" opacity="0.6"/>
+  <ellipse cx="300" cy="300" rx="120" ry="200" stroke="#9945ff" stroke-width="1" fill="none" opacity="0.4"/>
+  <ellipse cx="300" cy="300" rx="160" ry="200" stroke="#9945ff" stroke-width="0.8" fill="none" opacity="0.3"/>
+  
+  <!-- Connection points -->
+  <circle cx="200" cy="250" r="6" fill="#14f195" filter="url(#glow)"/>
+  <circle cx="380" cy="280" r="6" fill="#9945ff" filter="url(#glow)"/>
+  <circle cx="320" cy="180" r="6" fill="#00d1ff" filter="url(#glow)"/>
+  <circle cx="250" cy="380" r="6" fill="#fbbf24" filter="url(#glow)"/>
+  <circle cx="400" cy="350" r="6" fill="#14f195" filter="url(#glow)"/>
+  
+  <!-- Connection lines -->
+  <path d="M200 250 Q290 230 320 180" stroke="#14f195" stroke-width="1" fill="none" opacity="0.6"/>
+  <path d="M320 180 Q350 230 380 280" stroke="#9945ff" stroke-width="1" fill="none" opacity="0.6"/>
+  <path d="M380 280 Q390 315 400 350" stroke="#00d1ff" stroke-width="1" fill="none" opacity="0.6"/>
+  <path d="M250 380 Q200 315 200 250" stroke="#fbbf24" stroke-width="1" fill="none" opacity="0.6"/>
+</svg>
+
