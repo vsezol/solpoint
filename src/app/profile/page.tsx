@@ -14,6 +14,17 @@ export default async function ProfilePage() {
     redirect("/login");
   }
 
-  // Редиректим на динамический роут с ID пользователя
-  redirect(`/profile/${authUser.id}`);
+  // Получаем профиль пользователя, чтобы узнать его username
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("twitter_handle")
+    .eq("id", authUser.id)
+    .single();
+
+  if (profileError || !profile) {
+    redirect("/");
+  }
+
+  // Редиректим на динамический роут с username пользователя
+  redirect(`/profile/${profile.twitter_handle}`);
 }

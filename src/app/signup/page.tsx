@@ -1,17 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Button, Card, Input, Badge } from "@/components/ui";
 import { Header, Footer } from "@/components/layout";
 import { Twitter, MapPin, Shield, Globe } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
+import { useAuth } from "@/hooks/use-auth";
 
 type Step = "twitter" | "location" | "profile" | "complete";
 
 export default function SignupPage() {
-  const [step, setStep] = useState<Step>("twitter");
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const stepFromUrl = searchParams.get("step");
+  
+  const [step, setStep] = useState<Step>(
+    (stepFromUrl === "location" ? "location" : 
+     stepFromUrl === "profile" ? "profile" : 
+     "twitter") as Step
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [locationPermission, setLocationPermission] = useState<boolean | null>(null);
   const [formData, setFormData] = useState({
@@ -22,14 +33,39 @@ export default function SignupPage() {
     isOpenToMeet: false,
   });
 
+  // Загружаем данные профиля при загрузке, если пользователь авторизован
+  useEffect(() => {
+    if (!authLoading && isAuthenticated && user) {
+      // Если пользователь уже авторизован и профиль заполнен, редиректим на профиль
+      if (user.country && user.country !== "Unknown" && step === "twitter") {
+        router.push("/profile");
+        return;
+      }
+      
+      // Загружаем данные профиля в форму, если они есть
+      if (user.country || user.city || user.bio || user.role) {
+        setFormData((prev) => ({
+          ...prev,
+          country: user.country || prev.country,
+          city: user.city || prev.city,
+          bio: user.bio || prev.bio,
+          role: user.role || prev.role,
+          isOpenToMeet: user.is_open_to_meet || prev.isOpenToMeet,
+        }));
+      }
+      
+      // Если авторизован, но на шаге twitter, переходим к шагу location
+      if (step === "twitter" && (!user.country || user.country === "Unknown")) {
+        setStep("location");
+      }
+    }
+  }, [authLoading, isAuthenticated, user, router, step]);
+
   const handleTwitterSignup = async () => {
     setIsLoading(true);
-    // TODO: Implement Twitter OAuth
-    // Simulate success for now
-    setTimeout(() => {
-      setIsLoading(false);
-      setStep("location");
-    }, 1500);
+    // Редиректим на API route для инициации Twitter OAuth
+    // После успешной авторизации вернемся на /signup для продолжения процесса
+    window.location.href = "/api/auth/twitter?redirect_to=/signup";
   };
 
   const handleLocationPermission = async (allow: boolean) => {
@@ -68,11 +104,37 @@ export default function SignupPage() {
 
   const handleProfileSubmit = async () => {
     setIsLoading(true);
-    // TODO: Save profile to Supabase
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      // Сохраняем профиль в Supabase
+      const response = await fetch("/api/profile/update", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          country: formData.country || null,
+          city: formData.city || null,
+          bio: formData.bio.trim() || null,
+          role: formData.role || null,
+          is_open_to_meet: formData.isOpenToMeet,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to save profile");
+      }
+
+      // Переходим к завершающему шагу
       setStep("complete");
-    }, 1000);
+    } catch (error) {
+      console.error("Error saving profile:", error);
+      // Можно добавить отображение ошибки пользователю
+      alert(error instanceof Error ? error.message : "Failed to save profile");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const roles = [

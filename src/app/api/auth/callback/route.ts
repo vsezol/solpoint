@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
       // Проверяем, существует ли профиль
       const { data: profile } = await supabase
         .from("profiles")
-        .select("id")
+        .select("id, country, city")
         .eq("id", user.id)
         .single();
 
@@ -85,6 +85,24 @@ export async function GET(request: NextRequest) {
             .update(updates)
             .eq("id", user.id);
         }
+      }
+
+      // Проверяем, нужно ли продолжить процесс регистрации
+      // Если пользователь пришел с /signup и профиль не заполнен, редиректим на нужный шаг
+      if (redirectTo === "/signup") {
+        const { data: currentProfile } = await supabase
+          .from("profiles")
+          .select("country, city")
+          .eq("id", user.id)
+          .single();
+
+        // Если локация не заполнена, редиректим на шаг location
+        if (!currentProfile || !currentProfile.country || currentProfile.country === "Unknown") {
+          return NextResponse.redirect(`${origin}/signup?step=location`);
+        }
+        // Если локация есть, но нет других данных профиля, редиректим на шаг profile
+        // Для простоты, если есть локация, считаем что можно перейти к профилю
+        return NextResponse.redirect(`${origin}/signup?step=profile`);
       }
     }
 

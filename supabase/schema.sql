@@ -142,6 +142,7 @@ CREATE INDEX idx_profiles_city ON public.profiles(city);
 CREATE INDEX idx_profiles_subscription_tier ON public.profiles(subscription_tier);
 CREATE INDEX idx_profiles_last_active ON public.profiles(last_active_at);
 CREATE INDEX idx_profiles_twitter_id ON public.profiles(twitter_id);
+CREATE INDEX idx_profiles_twitter_handle ON public.profiles(twitter_handle);
 
 CREATE INDEX idx_events_country ON public.events(country);
 CREATE INDEX idx_events_city ON public.events(city);

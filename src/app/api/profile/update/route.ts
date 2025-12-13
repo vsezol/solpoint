@@ -19,13 +19,15 @@ export async function PATCH(request: Request) {
 
   try {
     const body = await request.json();
-    const { bio, role, is_open_to_meet } = body;
+    const { bio, role, is_open_to_meet, country, city } = body;
 
     // Валидация
     const updates: {
       bio?: string;
       role?: string;
       is_open_to_meet?: boolean;
+      country?: string;
+      city?: string;
     } = {};
 
     // Валидация bio
@@ -74,6 +76,40 @@ export async function PATCH(request: Request) {
         );
       }
       updates.is_open_to_meet = is_open_to_meet;
+    }
+
+    // Валидация country
+    if (country !== undefined) {
+      if (typeof country !== "string") {
+        return NextResponse.json(
+          { error: "Country must be a string" },
+          { status: 400 }
+        );
+      }
+      if (country.length > 100) {
+        return NextResponse.json(
+          { error: "Country must be 100 characters or less" },
+          { status: 400 }
+        );
+      }
+      updates.country = country || null;
+    }
+
+    // Валидация city
+    if (city !== undefined) {
+      if (typeof city !== "string") {
+        return NextResponse.json(
+          { error: "City must be a string" },
+          { status: 400 }
+        );
+      }
+      if (city.length > 100) {
+        return NextResponse.json(
+          { error: "City must be 100 characters or less" },
+          { status: 400 }
+        );
+      }
+      updates.city = city || null;
     }
 
     // Если нет полей для обновления

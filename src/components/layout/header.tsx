@@ -79,7 +79,7 @@ export function Header() {
               </div>
             ) : isAuthenticated && user ? (
               <Button variant="ghost" size="sm" asChild>
-                <Link href={`/profile/${user.id}`} className="flex items-center gap-2">
+                <Link href={`/profile/${user.twitter_handle}`} className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-full overflow-hidden bg-[var(--color-surface-border)]">
                     {user.avatar_url && (
                       <Image
@@ -159,7 +159,7 @@ export function Header() {
                   </div>
                 ) : isAuthenticated && user ? (
                   <Link
-                    href={`/profile/${user.id}`}
+                    href={`/profile/${user.twitter_handle}`}
                     onClick={() => setIsMobileMenuOpen(false)}
                     className="block px-4 py-2 rounded-lg text-sm font-medium text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]"
                   >

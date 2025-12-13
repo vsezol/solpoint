@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation";
+import { redirect, notFound } from "next/navigation";
 import { Header, Footer } from "@/components/layout";
 import { Avatar, Button, Badge, Card } from "@/components/ui";
 import {
@@ -16,11 +16,11 @@ import { ProfileHeader } from "../profile-header";
 import { ProfileEditProvider } from "../profile-edit-provider";
 
 interface ProfilePageProps {
-  params: Promise<{ userId: string }>;
+  params: Promise<{ username: string }>;
 }
 
 export default async function ProfilePage({ params }: ProfilePageProps) {
-  const { userId } = await params;
+  const { username } = await params;
   const supabase = await createClient();
 
   // Получаем текущего пользователя для проверки, это его профиль или нет
@@ -28,18 +28,40 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     data: { user: authUser },
   } = await supabase.auth.getUser();
 
-  // Получаем профиль пользователя (может быть свой или чужой)
+  // Получаем профиль пользователя по никнейму (может быть свой или чужой)
+  // Убираем @ если он есть в начале
+  const cleanUsername = username.startsWith("@") ? username.slice(1) : username;
+  
+  console.log("Searching for profile:", { username, cleanUsername });
+  
+  // Получаем профиль по точному совпадению twitter_handle
   const { data: user, error: profileError } = await supabase
     .from("profiles")
     .select("*")
-    .eq("id", userId)
-    .single();
+    .eq("twitter_handle", cleanUsername)
+    .maybeSingle();
 
-  if (profileError || !user) {
-    redirect("/");
+  console.log("Query result:", { 
+    found: !!user, 
+    error: profileError,
+    username: cleanUsername 
+  });
+
+  // Если пользователь не найден или ошибка
+  if (profileError) {
+    console.error("Database error:", profileError);
+    notFound();
   }
 
-  const isOwnProfile = authUser?.id === userId;
+  if (!user) {
+    console.error("User not found:", { 
+      searchedUsername: cleanUsername,
+      originalUsername: username 
+    });
+    notFound();
+  }
+
+  const isOwnProfile = authUser?.id === user.id;
 
   // Если это свой профиль, получаем события и друзей
   let upcomingEvents: Event[] = [];
@@ -192,7 +214,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
                         />
                         <div className="flex-1 min-w-0">
                           <Link
-                            href={`/profile/${friend.id}`}
+                            href={`/profile/${friend.twitter_handle}`}
                             className="block"
                           >
                             <p className="text-sm font-medium text-[var(--color-text-primary)] truncate hover:underline">
