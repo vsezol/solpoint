@@ -44,32 +44,34 @@ export function Header() {
             </span>
           </Link>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center gap-1">
-            {navLinks.map((link) => {
-              const isActive = pathname === link.href;
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={cn(
-                    "px-4 py-2 text-sm font-medium rounded-lg transition-colors",
-                    isActive
-                      ? "text-[var(--color-text-primary)]"
-                      : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
-                  )}
-                >
-                  {link.label}
-                  {isActive && (
-                    <span className="block h-0.5 mt-0.5 bg-[var(--color-primary)] rounded-full" />
-                  )}
-                </Link>
-              );
-            })}
-          </nav>
+          {/* Desktop Navigation and Auth Buttons - Right Side */}
+          <div className="hidden lg:flex items-center gap-1">
+            {/* Desktop Navigation */}
+            <nav className="flex items-center gap-1">
+              {navLinks.map((link) => {
+                const isActive = pathname === link.href;
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={cn(
+                      "px-4 py-2 text-sm font-medium rounded-lg transition-colors",
+                      isActive
+                        ? "text-[var(--color-text-primary)]"
+                        : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+                    )}
+                  >
+                    {link.label}
+                    {isActive && (
+                      <span className="block h-0.5 mt-0.5 bg-[var(--color-primary)] rounded-full" />
+                    )}
+                  </Link>
+                );
+              })}
+            </nav>
 
-          {/* Auth Buttons */}
-          <div className="hidden lg:flex items-center gap-3">
+            {/* Auth Buttons */}
+            <div className="flex items-center gap-3 ml-3">
             {isLoading ? (
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full bg-[var(--color-surface-border)] animate-pulse" />
@@ -104,6 +106,7 @@ export function Header() {
                 </Button>
               </>
             )}
+            </div>
           </div>
 
           {/* Mobile Menu Button */}

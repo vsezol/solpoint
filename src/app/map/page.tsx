@@ -98,9 +98,9 @@ export default function MapPage() {
 
         {/* Map section */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
-          <div className="grid lg:grid-cols-[300px,1fr] gap-6">
+          <div className="flex flex-col lg:flex-row gap-6">
             {/* Filters sidebar */}
-            <aside className="order-2 lg:order-1">
+            <aside className="w-full lg:w-[320px] lg:flex-shrink-0">
               <MapFiltersPanel
                 filters={filters}
                 onFiltersChange={setFilters}
@@ -109,7 +109,7 @@ export default function MapPage() {
             </aside>
 
             {/* Map */}
-            <div className="order-1 lg:order-2">
+            <div className="flex-1 lg:max-w-[calc(100%-344px)]">
               <div className="h-[500px] lg:h-[600px] rounded-xl overflow-hidden border border-[var(--color-surface-border)]">
                 <SolPointMap
                   markers={filteredMarkers}
