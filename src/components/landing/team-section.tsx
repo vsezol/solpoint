@@ -56,9 +56,9 @@ export function TeamSection() {
               animate={isInView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.6, delay: 0.2 + index * 0.1 }}
             >
-              <Card variant="bordered" className="text-center p-8 h-full">
+              <Card variant="bordered" className="p-8 h-full text-center">
                 {/* Avatar */}
-                <div className="relative w-40 h-40 mx-auto mb-6 rounded-xl overflow-hidden">
+                <div className="relative w-72 h-72 mx-auto mb-6 rounded-xl overflow-hidden border-2 border-[var(--color-surface-border)]">
                   <Image
                     src={member.image}
                     alt={member.name}
@@ -80,7 +80,7 @@ export function TeamSection() {
                   </span>
                 </div>
 
-                <p className="text-base text-[var(--color-text-secondary)] leading-relaxed">
+                <p className="text-base text-[var(--color-text-secondary)] leading-relaxed text-center mt-4">
                   {member.description}
                 </p>
               </Card>
