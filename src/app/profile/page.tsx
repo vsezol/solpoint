@@ -1,12 +1,8 @@
-"use client";
-
-import { useState } from "react";
+import { redirect } from "next/navigation";
 import { Header, Footer } from "@/components/layout";
-import { Avatar, Button, Badge, Card, Input } from "@/components/ui";
-import { UserCard } from "@/components/cards/user-card";
+import { Avatar, Button, Badge, Card } from "@/components/ui";
 import {
   Settings,
-  Edit,
   MapPin,
   Calendar,
   Twitter,
@@ -18,22 +14,107 @@ import {
   MessageCircle,
 } from "lucide-react";
 import Link from "next/link";
-import { mockUsers, mockEvents } from "@/lib/mock-data";
+import { createClient } from "@/lib/supabase/server";
+import type { User, Event } from "@/types";
+import { ProfileActions } from "./profile-actions";
 
-export default function ProfilePage() {
-  const [isEditing, setIsEditing] = useState(false);
+export default async function ProfilePage() {
+  const supabase = await createClient();
 
-  // Mock current user (in real app, get from auth context)
-  const user = mockUsers[0];
-  const upcomingEvents = mockEvents.filter(
-    (e) => new Date(e.start_date) > new Date()
+  // Получаем текущего пользователя
+  const {
+    data: { user: authUser },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !authUser) {
+    redirect("/login");
+  }
+
+  // Получаем профиль пользователя
+  const { data: user, error: profileError } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", authUser.id)
+    .single();
+
+  if (profileError || !user) {
+    redirect("/login");
+  }
+
+  // Получаем события пользователя
+  const { data: eventAttendees } = await supabase
+    .from("event_attendees")
+    .select(
+      `
+      event_id,
+      events (
+        id,
+        name,
+        description,
+        image_url,
+        country,
+        city,
+        address,
+        latitude,
+        longitude,
+        start_date,
+        end_date,
+        event_type,
+        visibility,
+        is_paid,
+        price_sol,
+        max_attendees,
+        attendees_count,
+        socials,
+        organizer_id,
+        created_at
+      )
+    `
+    )
+    .eq("user_id", authUser.id);
+
+  const allEvents: Event[] =
+    eventAttendees?.map((ea: any) => ea.events).filter(Boolean) || [];
+
+  const now = new Date();
+  const upcomingEvents = allEvents.filter(
+    (e) => new Date(e.start_date) > now
   );
-  const pastEvents = mockEvents.filter(
-    (e) => new Date(e.start_date) <= new Date()
-  );
+  const pastEvents = allEvents.filter((e) => new Date(e.start_date) <= now);
 
-  // Mock mutual friends
-  const mutualFriends = mockUsers.slice(1, 4);
+  // Получаем друзей пользователя
+  const { data: friendsData } = await supabase
+    .from("friends")
+    .select(
+      `
+      friend_id,
+      profiles!friends_friend_id_fkey (
+        id,
+        twitter_id,
+        twitter_handle,
+        twitter_name,
+        avatar_url,
+        bio,
+        country,
+        city,
+        role,
+        is_open_to_meet,
+        subscription_tier,
+        is_verified,
+        wallet_address,
+        socials,
+        last_active_at,
+        created_at,
+        updated_at
+      )
+    `
+    )
+    .eq("user_id", authUser.id)
+    .eq("status", "accepted");
+
+  const friends: User[] =
+    friendsData?.map((f: any) => f.profiles).filter(Boolean) || [];
 
   return (
     <>
@@ -80,21 +161,7 @@ export default function ProfilePage() {
               </div>
 
               {/* Actions */}
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsEditing(!isEditing)}
-                >
-                  <Edit className="w-4 h-4 mr-2" />
-                  Edit Profile
-                </Button>
-                <Button variant="ghost" size="sm" asChild>
-                  <Link href="/settings">
-                    <Settings className="w-4 h-4" />
-                  </Link>
-                </Button>
-              </div>
+              <ProfileActions />
             </div>
           </div>
 
@@ -121,7 +188,8 @@ export default function ProfilePage() {
                   <div className="flex items-center gap-3 text-[var(--color-text-secondary)]">
                     <MapPin className="w-4 h-4 text-[var(--color-primary)]" />
                     <span>
-                      {user.city}, {user.country}
+                      {user.city && `${user.city}, `}
+                      {user.country}
                     </span>
                   </div>
                   {user.role && (
@@ -218,43 +286,46 @@ export default function ProfilePage() {
                 </Card>
               )}
 
-              {/* Mutual friends */}
-              <Card variant="bordered">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold text-[var(--color-text-primary)]">
-                    Mutual Friends
-                  </h3>
-                  <span className="text-sm text-[var(--color-text-muted)]">
-                    {mutualFriends.length} friends
-                  </span>
-                </div>
-                <div className="grid sm:grid-cols-2 gap-3">
-                  {mutualFriends.map((friend) => (
-                    <div
-                      key={friend.id}
-                      className="flex items-center gap-3 p-3 rounded-lg bg-[var(--color-surface-hover)]"
-                    >
-                      <Avatar
-                        src={friend.avatar_url}
-                        alt={friend.twitter_name}
-                        size="sm"
-                        isVip={friend.subscription_tier === "vip"}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-[var(--color-text-primary)] truncate">
-                          {friend.twitter_name}
-                        </p>
-                        <p className="text-xs text-[var(--color-text-muted)] truncate">
-                          {friend.city}, {friend.country}
-                        </p>
+              {/* Friends */}
+              {friends.length > 0 && (
+                <Card variant="bordered">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-semibold text-[var(--color-text-primary)]">
+                      Friends
+                    </h3>
+                    <span className="text-sm text-[var(--color-text-muted)]">
+                      {friends.length} {friends.length === 1 ? "friend" : "friends"}
+                    </span>
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    {friends.slice(0, 4).map((friend) => (
+                      <div
+                        key={friend.id}
+                        className="flex items-center gap-3 p-3 rounded-lg bg-[var(--color-surface-hover)]"
+                      >
+                        <Avatar
+                          src={friend.avatar_url}
+                          alt={friend.twitter_name}
+                          size="sm"
+                          isVip={friend.subscription_tier === "vip"}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-[var(--color-text-primary)] truncate">
+                            {friend.twitter_name}
+                          </p>
+                          <p className="text-xs text-[var(--color-text-muted)] truncate">
+                            {friend.city && `${friend.city}, `}
+                            {friend.country}
+                          </p>
+                        </div>
+                        <Button variant="ghost" size="sm">
+                          <MessageCircle className="w-4 h-4" />
+                        </Button>
                       </div>
-                      <Button variant="ghost" size="sm">
-                        <MessageCircle className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </Card>
+                    ))}
+                  </div>
+                </Card>
+              )}
 
               {/* Upcoming Events */}
               <Card variant="bordered">

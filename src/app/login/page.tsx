@@ -1,19 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { Button, Card } from "@/components/ui";
+import { useSearchParams } from "next/navigation";
+import { Button, Card, Badge } from "@/components/ui";
 import { Header, Footer } from "@/components/layout";
-import { Twitter } from "lucide-react";
+import { Twitter, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
+  const searchParams = useSearchParams();
+  const error = searchParams.get("error");
 
   const handleTwitterLogin = async () => {
     setIsLoading(true);
-    // TODO: Implement Twitter OAuth
-    // For now, redirect to signup flow
+    // Редиректим на API route для инициации Twitter OAuth
     window.location.href = "/api/auth/twitter";
   };
 
@@ -42,6 +44,42 @@ export default function LoginPage() {
           <p className="text-center text-[var(--color-text-secondary)] mb-8">
             Sign in to access your SolPoint account
           </p>
+
+          {/* Error message */}
+          {error && (
+            <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+              <div className="flex items-start gap-2 text-red-500">
+                <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium mb-1">
+                    {error === "twitter_not_enabled"
+                      ? "Twitter OAuth не настроен"
+                      : error === "oauth_failed"
+                      ? "Ошибка подключения к Twitter"
+                      : "Ошибка авторизации"}
+                  </p>
+                  {error === "twitter_not_enabled" && (
+                    <div className="text-xs text-red-400 mt-2 space-y-1">
+                      <p>Необходимо включить Twitter OAuth в Supabase:</p>
+                      <ol className="list-decimal list-inside space-y-1 ml-2">
+                        <li>Откройте Supabase Dashboard</li>
+                        <li>Перейдите в Authentication → Providers</li>
+                        <li>Включите Twitter и введите API Key и Secret</li>
+                      </ol>
+                      <p className="mt-2">
+                        Подробная инструкция: <code className="text-xs bg-red-500/20 px-1 rounded">/notes/twitter-oauth-setup.md</code>
+                      </p>
+                    </div>
+                  )}
+                  {error !== "twitter_not_enabled" && (
+                    <p className="text-xs text-red-400 mt-1">
+                      {decodeURIComponent(error)}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Twitter Login */}
           <Button

@@ -1,12 +1,13 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { forwardRef, ButtonHTMLAttributes } from "react";
+import { forwardRef, ButtonHTMLAttributes, ReactElement, cloneElement, isValidElement } from "react";
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "primary" | "secondary" | "outline" | "ghost" | "danger";
   size?: "sm" | "md" | "lg";
   isLoading?: boolean;
+  asChild?: boolean;
 }
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -18,6 +19,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       isLoading = false,
       disabled,
       children,
+      asChild = false,
       ...props
     },
     ref
@@ -44,10 +46,21 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       lg: "h-12 px-6 text-base gap-2",
     };
 
+    const buttonClassName = cn(baseStyles, variants[variant], sizes[size], className);
+
+    if (asChild && isValidElement(children)) {
+      return cloneElement(children as ReactElement, {
+        className: cn(buttonClassName, (children as ReactElement).props?.className),
+        disabled: disabled || isLoading,
+        ...props,
+        ref,
+      });
+    }
+
     return (
       <button
         ref={ref}
-        className={cn(baseStyles, variants[variant], sizes[size], className)}
+        className={buttonClassName}
         disabled={disabled || isLoading}
         {...props}
       >
