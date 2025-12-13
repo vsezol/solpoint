@@ -8,6 +8,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { useAuth } from "@/hooks/use-auth";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -18,17 +19,10 @@ const navLinks = [
   { href: "/about", label: "About us" },
 ];
 
-interface HeaderProps {
-  isAuthenticated?: boolean;
-  user?: {
-    avatar_url?: string;
-    twitter_handle: string;
-  };
-}
-
-export function Header({ isAuthenticated = false, user }: HeaderProps) {
+export function Header() {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { user, isAuthenticated } = useAuth();
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 glass">
@@ -77,22 +71,24 @@ export function Header({ isAuthenticated = false, user }: HeaderProps) {
           {/* Auth Buttons */}
           <div className="hidden lg:flex items-center gap-3">
             {isAuthenticated && user ? (
-              <Link href="/profile" className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full overflow-hidden bg-[var(--color-surface-border)]">
-                  {user.avatar_url && (
-                    <Image
-                      src={user.avatar_url}
-                      alt={user.twitter_handle}
-                      width={32}
-                      height={32}
-                      className="object-cover"
-                    />
-                  )}
-                </div>
-                <span className="text-sm text-[var(--color-text-secondary)]">
-                  @{user.twitter_handle}
-                </span>
-              </Link>
+              <Button variant="ghost" size="sm" asChild>
+                <Link href="/profile" className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full overflow-hidden bg-[var(--color-surface-border)]">
+                    {user.avatar_url && (
+                      <Image
+                        src={user.avatar_url}
+                        alt={user.twitter_handle}
+                        width={32}
+                        height={32}
+                        className="object-cover"
+                      />
+                    )}
+                  </div>
+                  <span className="text-sm text-[var(--color-text-secondary)]">
+                    @{user.twitter_handle}
+                  </span>
+                </Link>
+              </Button>
             ) : (
               <>
                 <Button variant="ghost" size="sm" asChild>
