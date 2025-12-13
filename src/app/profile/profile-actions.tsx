@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
 import { Button } from "@/components/ui";
 import { Settings, Edit } from "lucide-react";
 import Link from "next/link";
+import { useProfileEdit } from "./profile-edit-provider";
 
 export function ProfileActions() {
-  const [isEditing, setIsEditing] = useState(false);
+  const { isEditing, setIsEditing } = useProfileEdit();
 
   return (
     <div className="flex gap-2">
@@ -16,7 +16,7 @@ export function ProfileActions() {
         onClick={() => setIsEditing(!isEditing)}
       >
         <Edit className="w-4 h-4 mr-2" />
-        Edit Profile
+        {isEditing ? "Cancel Edit" : "Edit Profile"}
       </Button>
       <Button variant="ghost" size="sm" asChild>
         <Link href="/settings">

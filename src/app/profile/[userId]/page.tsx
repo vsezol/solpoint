@@ -2,22 +2,18 @@ import { redirect } from "next/navigation";
 import { Header, Footer } from "@/components/layout";
 import { Avatar, Button, Badge, Card } from "@/components/ui";
 import {
-  Settings,
-  MapPin,
   Calendar,
-  Twitter,
-  Instagram,
-  Facebook,
-  Wallet,
   Crown,
-  Users,
   MessageCircle,
-  LogOut,
+  MapPin,
+  Users,
 } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import type { User, Event } from "@/types";
-import { ProfileActions } from "../profile-actions";
+import { ProfileInfoSection } from "../profile-info-section";
+import { ProfileHeader } from "../profile-header";
+import { ProfileEditProvider } from "../profile-edit-provider";
 
 interface ProfilePageProps {
   params: Promise<{ userId: string }>;
@@ -132,162 +128,20 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
         <div className="h-48 bg-gradient-to-r from-[var(--color-primary)]/20 via-[var(--color-secondary)]/20 to-[var(--color-accent)]/20" />
 
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Profile header */}
-          <div className="relative -mt-16 mb-8">
-            <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4">
-              {/* Avatar */}
-              <Avatar
-                src={user.avatar_url}
-                alt={user.twitter_name}
-                size="xl"
-                isVip={user.subscription_tier === "vip"}
-                isVerified={user.is_verified}
-                className="ring-4 ring-[var(--color-background)]"
-              />
-
-              {/* Info */}
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">
-                    {user.twitter_name}
-                  </h1>
-                  {user.is_verified && (
-                    <Badge variant="primary" size="sm">
-                      Verified
-                    </Badge>
-                  )}
-                  {user.subscription_tier === "vip" && (
-                    <Badge variant="warning" size="sm">
-                      <Crown className="w-3 h-3 mr-1" />
-                      VIP
-                    </Badge>
-                  )}
-                </div>
-                <p className="text-[var(--color-text-muted)]">
-                  @{user.twitter_handle}
-                </p>
+          {isOwnProfile ? (
+            <ProfileEditProvider>
+              {/* Profile header */}
+              <div className="relative -mt-16 mb-8">
+                <ProfileHeader user={user} isOwnProfile={isOwnProfile} />
               </div>
 
-              {/* Actions */}
-              {isOwnProfile && <ProfileActions />}
-            </div>
-          </div>
+              {/* Content grid */}
+              <div className="grid lg:grid-cols-3 gap-6">
+                {/* Left column - Info */}
+                <ProfileInfoSection user={user} isOwnProfile={isOwnProfile} />
 
-          {/* Content grid */}
-          <div className="grid lg:grid-cols-3 gap-6">
-            {/* Left column - Info */}
-            <div className="lg:col-span-1 space-y-6">
-              {/* Bio */}
-              <Card variant="bordered">
-                <h3 className="text-sm font-medium text-[var(--color-text-muted)] mb-2">
-                  About
-                </h3>
-                <p className="text-[var(--color-text-secondary)]">
-                  {user.bio || "No bio yet"}
-                </p>
-              </Card>
-
-              {/* Details */}
-              <Card variant="bordered">
-                <h3 className="text-sm font-medium text-[var(--color-text-muted)] mb-3">
-                  Details
-                </h3>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3 text-[var(--color-text-secondary)]">
-                    <MapPin className="w-4 h-4 text-[var(--color-primary)]" />
-                    <span>
-                      {user.city && `${user.city}, `}
-                      {user.country}
-                    </span>
-                  </div>
-                  {user.role && (
-                    <div className="flex items-center gap-3 text-[var(--color-text-secondary)]">
-                      <Users className="w-4 h-4 text-[var(--color-primary)]" />
-                      <span className="capitalize">{user.role}</span>
-                    </div>
-                  )}
-                  {user.is_open_to_meet && (
-                    <Badge variant="success">Open to meet</Badge>
-                  )}
-                </div>
-              </Card>
-
-              {/* Socials */}
-              <Card variant="bordered">
-                <h3 className="text-sm font-medium text-[var(--color-text-muted)] mb-3">
-                  Socials
-                </h3>
-                <div className="flex gap-2">
-                  <a
-                    href={`https://twitter.com/${user.twitter_handle}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-2 rounded-lg bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
-                  >
-                    <Twitter className="w-5 h-5" />
-                  </a>
-                  {user.socials?.instagram && (
-                    <a
-                      href={user.socials.instagram}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-2 rounded-lg bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
-                    >
-                      <Instagram className="w-5 h-5" />
-                    </a>
-                  )}
-                  {user.socials?.facebook && (
-                    <a
-                      href={user.socials.facebook}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-2 rounded-lg bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
-                    >
-                      <Facebook className="w-5 h-5" />
-                    </a>
-                  )}
-                </div>
-              </Card>
-
-              {/* Wallet */}
-              {isOwnProfile && (
-                <Card variant="bordered">
-                  <h3 className="text-sm font-medium text-[var(--color-text-muted)] mb-3">
-                    Wallet
-                  </h3>
-                  {user.wallet_address ? (
-                    <p className="text-sm font-mono text-[var(--color-text-secondary)] truncate">
-                      {user.wallet_address}
-                    </p>
-                  ) : (
-                    <Button variant="outline" size="sm" className="w-full">
-                      <Wallet className="w-4 h-4 mr-2" />
-                      Connect Wallet
-                    </Button>
-                  )}
-                </Card>
-              )}
-
-              {/* Logout button - только для своего профиля */}
-              {isOwnProfile && (
-                <Card variant="bordered">
-                  <form action="/api/auth/logout" method="POST">
-                    <Button
-                      type="submit"
-                      variant="outline"
-                      size="sm"
-                      className="w-full text-red-500 hover:text-red-600 hover:border-red-500"
-                    >
-                      <LogOut className="w-4 h-4 mr-2" />
-                      Log out
-                    </Button>
-                  </form>
-                </Card>
-              )}
-            </div>
-
-            {/* Right column - Activity */}
-            <div className="lg:col-span-2 space-y-6">
+                {/* Right column - Activity */}
+                <div className="lg:col-span-2 space-y-6">
               {/* Subscription status - только для своего профиля */}
               {isOwnProfile && user.subscription_tier === "free" && (
                 <Card
@@ -442,9 +296,62 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
                     </p>
                   )}
                 </Card>
-              )}
-            </div>
-          </div>
+                )}
+                </div>
+              </div>
+            </ProfileEditProvider>
+          ) : (
+            <>
+              {/* Profile header */}
+              <div className="relative -mt-16 mb-8">
+                <ProfileHeader user={user} isOwnProfile={isOwnProfile} />
+              </div>
+
+              {/* Content grid */}
+              <div className="grid lg:grid-cols-3 gap-6">
+                {/* Left column - Info */}
+                <div className="lg:col-span-1 space-y-6">
+                  {/* Bio */}
+                  <Card variant="bordered">
+                    <h3 className="text-sm font-medium text-[var(--color-text-muted)] mb-2">
+                      About
+                    </h3>
+                    <p className="text-[var(--color-text-secondary)]">
+                      {user.bio || "No bio yet"}
+                    </p>
+                  </Card>
+
+                  {/* Details */}
+                  <Card variant="bordered">
+                    <h3 className="text-sm font-medium text-[var(--color-text-muted)] mb-3">
+                      Details
+                    </h3>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3 text-[var(--color-text-secondary)]">
+                        <MapPin className="w-4 h-4 text-[var(--color-primary)]" />
+                        <span>
+                          {user.city && `${user.city}, `}
+                          {user.country}
+                        </span>
+                      </div>
+                      {user.role && (
+                        <div className="flex items-center gap-3 text-[var(--color-text-secondary)]">
+                          <Users className="w-4 h-4 text-[var(--color-primary)]" />
+                          <span className="capitalize">{user.role}</span>
+                        </div>
+                      )}
+                      {user.is_open_to_meet && (
+                        <Badge variant="success">Open to meet</Badge>
+                      )}
+                    </div>
+                  </Card>
+                </div>
+
+                {/* Right column - Activity - пусто для чужих профилей */}
+                <div className="lg:col-span-2"></div>
+              </div>
+            </>
+          )}
         </div>
       </main>
       <Footer />
