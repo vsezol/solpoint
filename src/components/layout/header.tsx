@@ -22,7 +22,7 @@ const navLinks = [
 export function Header() {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 glass">
@@ -70,9 +70,14 @@ export function Header() {
 
           {/* Auth Buttons */}
           <div className="hidden lg:flex items-center gap-3">
-            {isAuthenticated && user ? (
+            {isLoading ? (
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-[var(--color-surface-border)] animate-pulse" />
+                <div className="w-20 h-4 bg-[var(--color-surface-border)] rounded animate-pulse" />
+              </div>
+            ) : isAuthenticated && user ? (
               <Button variant="ghost" size="sm" asChild>
-                <Link href="/profile" className="flex items-center gap-2">
+                <Link href={`/profile/${user.id}`} className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-full overflow-hidden bg-[var(--color-surface-border)]">
                     {user.avatar_url && (
                       <Image
@@ -145,9 +150,13 @@ export function Header() {
                 );
               })}
               <div className="pt-4 space-y-2">
-                {isAuthenticated ? (
+                {isLoading ? (
+                  <div className="px-4 py-2">
+                    <div className="h-4 bg-[var(--color-surface-border)] rounded animate-pulse" />
+                  </div>
+                ) : isAuthenticated && user ? (
                   <Link
-                    href="/profile"
+                    href={`/profile/${user.id}`}
                     onClick={() => setIsMobileMenuOpen(false)}
                     className="block px-4 py-2 rounded-lg text-sm font-medium text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]"
                   >

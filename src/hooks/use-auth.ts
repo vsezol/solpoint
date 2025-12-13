@@ -1,166 +1,97 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
-import { useAuthStore } from "@/store/auth-store";
 import type { User } from "@/types";
 
+// Функция для загрузки профиля через API
+async function fetchProfile(): Promise<User | null> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+  try {
+    const response = await fetch("/api/auth/me", {
+      signal: controller.signal,
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const { profile } = await response.json();
+    return profile as User | null;
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error("Request timeout");
+    }
+    throw error;
+  }
+}
+
 export function useAuth() {
-  const { user, isAuthenticated, isLoading, setUser, setLoading, logout } =
-    useAuthStore();
-  const initializedRef = useRef(false);
+  const queryClient = useQueryClient();
 
+  // Используем React Query для загрузки профиля
+  const {
+    data: user,
+    isLoading,
+  } = useQuery({
+    queryKey: ["auth", "profile"],
+    queryFn: fetchProfile,
+    retry: 1,
+    staleTime: 5 * 60 * 1000, // 5 минут кэш
+    gcTime: 10 * 60 * 1000, // 10 минут в памяти
+  });
+
+  // Подписываемся на изменения аутентификации
   useEffect(() => {
-    // Инициализация только один раз для этого компонента
-    if (initializedRef.current) return;
-    initializedRef.current = true;
-
     const supabase = createClient();
 
-    // Инициализация: проверяем сессию при загрузке
-    const initAuth = async () => {
-      setLoading(true);
-      try {
-        // Используем API route для проверки сессии - это более надежно
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 секунд таймаут
-
-        const response = await fetch("/api/auth/me", {
-          signal: controller.signal,
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-
-        clearTimeout(timeoutId);
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        const { user: authUser, profile } = data;
-
-        if (profile) {
-          setUser(profile as User);
-        } else if (authUser) {
-          // Пользователь авторизован, но профиль не найден
-          setUser(null);
-        } else {
-          setUser(null);
-        }
-      } catch (error) {
-        // Обработка различных типов ошибок
-        if (error instanceof Error) {
-          if (error.name === "AbortError") {
-            // Таймаут запроса
-            setUser(null);
-          } else if (error.message.includes("Failed to fetch")) {
-            // Сетевая ошибка
-            setUser(null);
-          } else {
-            // Другие ошибки
-            setUser(null);
-          }
-        } else {
-          setUser(null);
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    initAuth();
-
-    // Подписываемся на изменения аутентификации
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "SIGNED_IN" && session?.user) {
-        try {
-          // Используем API route для получения профиля
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-          const response = await fetch("/api/auth/me", {
-            signal: controller.signal,
-            headers: {
-              "Content-Type": "application/json",
-            },
-          });
-
-          clearTimeout(timeoutId);
-
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-
-          const { profile } = await response.json();
-
-          if (profile) {
-            setUser(profile as User);
-          }
-        } catch (error) {
-          // Тихая обработка ошибок - не логируем, просто не обновляем профиль
-          // Пользователь может быть авторизован, но профиль не загружен
-          if (error instanceof Error && error.name !== "AbortError") {
-            // Только для не-таймаут ошибок можно попробовать еще раз
-            // Но пока просто игнорируем
-          }
-        }
-      } else if (event === "SIGNED_OUT" || event === "TOKEN_REFRESHED") {
-        if (event === "SIGNED_OUT") {
-          setUser(null);
-        } else if (event === "TOKEN_REFRESHED" && session?.user) {
-          // При обновлении токена обновляем профиль через API route
-          try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-            const response = await fetch("/api/auth/me", {
-              signal: controller.signal,
-              headers: {
-                "Content-Type": "application/json",
-              },
-            });
-
-            clearTimeout(timeoutId);
-
-            if (response.ok) {
-              const { profile } = await response.json();
-              if (profile) {
-                setUser(profile as User);
-              }
-            }
-          } catch (error) {
-            // Тихая обработка - не критично, если не удалось обновить
-          }
-        }
+        // Инвалидируем кэш при входе - React Query автоматически перезагрузит данные
+        queryClient.invalidateQueries({ queryKey: ["auth", "profile"] });
+      } else if (event === "SIGNED_OUT") {
+        // Очищаем кэш при выходе
+        queryClient.setQueryData(["auth", "profile"], null);
+      } else if (event === "TOKEN_REFRESHED" && session?.user) {
+        // Обновляем профиль при обновлении токена
+        queryClient.invalidateQueries({ queryKey: ["auth", "profile"] });
       }
     });
 
     return () => {
       subscription.unsubscribe();
-      initializedRef.current = false;
     };
-  }, [setUser, setLoading]);
+  }, [queryClient]);
 
   const handleLogout = async () => {
     try {
-      const supabase = createClient();
-      await supabase.auth.signOut();
-      logout();
+      // Вызываем API route для logout
+      await fetch("/api/auth/logout", { method: "POST" });
+      // Очищаем кэш при выходе
+      queryClient.setQueryData(["auth", "profile"], null);
+      // Редиректим на главную
+      window.location.href = "/";
     } catch (error) {
-      // Даже если signOut не удался, очищаем локальное состояние
-      logout();
+      // Даже если signOut не удался, очищаем кэш и редиректим
+      queryClient.setQueryData(["auth", "profile"], null);
+      window.location.href = "/";
     }
   };
 
   return {
-    user,
-    isAuthenticated,
+    user: user ?? null,
+    isAuthenticated: !!user,
     isLoading,
     logout: handleLogout,
   };
 }
-
