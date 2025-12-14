@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Button, Input, Badge } from "@/components/ui";
+import { Input } from "@/components/ui";
 import type { MapFilters, UserRole } from "@/types";
-import { Search, X, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
+import CountrySelect from "@/app/map/country-select";
 
 const userRoles: { value: UserRole; label: string; description?: string }[] = [
   { value: "developer", label: "Developer" },
@@ -41,10 +41,8 @@ export function MapFiltersPanel({
   onFiltersChange,
   isVip = false,
 }: MapFiltersProps) {
-  const [isExpanded, setIsExpanded] = useState(true);
   const [selectedDomainType, setSelectedDomainType] = useState<string>("web3");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
 
   const handleReset = () => {
     onFiltersChange({
@@ -59,7 +57,6 @@ export function MapFiltersPanel({
     });
     setSelectedDomainType("web3");
     setSelectedTags([]);
-    setSearchQuery("");
   };
 
   const toggleRole = (role: UserRole) => {
@@ -96,19 +93,15 @@ export function MapFiltersPanel({
 
       {/* Content */}
       <div className="p-4 space-y-6">
-        {/* Country filter */}
-        <div>
+
+          {/* Country Select */}
+          <div>
           <label className="block text-sm text-[var(--color-text-muted)] mb-2">
-            Country:
+            Country
           </label>
-          <Input
-            placeholder="Enter country..."
-            value={filters.country || ""}
-            onChange={(e) =>
-              onFiltersChange({ ...filters, country: e.target.value || undefined })
-            }
-          />
+          <CountrySelect />
         </div>
+    
 
         {/* City filter (VIP only) */}
         {isVip && (
@@ -169,15 +162,7 @@ export function MapFiltersPanel({
           </div>
         </div>
 
-        {/* Search */}
-        <div>
-          <Input
-            placeholder="Search"
-            icon={<Search className="w-4 h-4" />}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
+      
 
         {/* Browse by Vibe */}
         <div>
