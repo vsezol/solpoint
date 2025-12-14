@@ -95,6 +95,8 @@ export default function SignupPage() {
     window.location.href = `/api/auth/twitter?redirect_to=${encodeURIComponent(redirectTo)}`;
   };
 
+ 
+
   const handleLocationPermission = async (allow: boolean) => {
     setLocationPermission(allow);
     if (allow) {
