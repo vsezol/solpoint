@@ -29,3 +29,17 @@ export function getInitials(name: string): string {
     .slice(0, 2);
 }
 
+/**
+ * Получает базовый URL приложения
+ * Использует NEXT_PUBLIC_APP_URL из переменных окружения или window.location.origin
+ */
+export function getAppUrl(): string {
+  // На сервере используем переменную окружения
+  if (typeof window === "undefined") {
+    return process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  }
+  
+  // В браузере используем переменную окружения или window.location.origin
+  return process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
+}
+

@@ -160,7 +160,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
               {/* Content grid */}
               <div className="grid lg:grid-cols-3 gap-6">
                 {/* Left column - Info */}
-                <ProfileInfoSection user={user} isOwnProfile={isOwnProfile} />
+                <ProfileInfoSection user={user} isOwnProfile={isOwnProfile} friends={friends} />
 
                 {/* Right column - Activity */}
                 <div className="lg:col-span-2 space-y-6">

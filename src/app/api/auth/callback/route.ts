@@ -20,7 +20,12 @@ export async function GET(request: NextRequest) {
     }
 
     // Получаем данные пользователя
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user }, error: getUserError } = await supabase.auth.getUser();
+
+    console.log("[INVITE] User auth check:", { 
+      user: user ? { id: user.id, email: user.email } : null, 
+      error: getUserError 
+    });
 
     if (user) {
       // Проверяем, существует ли профиль
@@ -60,6 +65,129 @@ export async function GET(request: NextRequest) {
         if (insertError) {
           console.error("Error creating profile:", insertError);
           // Продолжаем редирект даже если не удалось создать профиль
+        } else {
+          // Обрабатываем invite код, если он есть в redirect_to
+          console.log("[INVITE] Profile created, checking for invite code");
+          console.log("[INVITE] redirectTo:", redirectTo);
+          console.log("[INVITE] origin:", origin);
+          
+          const redirectUrl = new URL(redirectTo, origin);
+          const inviteCode = redirectUrl.searchParams.get("invite");
+          
+          console.log("[INVITE] Extracted invite code:", inviteCode);
+          
+          if (inviteCode) {
+            console.log("[INVITE] Invite code found:", inviteCode);
+            console.log("[INVITE] New user ID:", user.id);
+            
+            // Проверяем, что пользователь еще не использовал invite код
+            const { data: existingReferral, error: existingReferralError } = await supabase
+              .from("referrals")
+              .select("id")
+              .eq("invited_user_id", user.id)
+              .single();
+
+            console.log("[INVITE] Existing referral check:", { existingReferral, error: existingReferralError });
+
+            if (!existingReferral) {
+              console.log("[INVITE] No existing referral found, looking up invite");
+              
+              // Используем функцию БД для поиска invite (обходит RLS)
+              const { data: inviteData, error: inviteError } = await supabase
+                .rpc('get_invite_by_code', { invite_code: inviteCode });
+
+              const invite = inviteData && inviteData.length > 0 ? inviteData[0] : null;
+
+              console.log("[INVITE] Invite lookup result:", { 
+                invite, 
+                inviteData, 
+                inviteCode,
+                error: inviteError 
+              });
+
+              if (invite) {
+                console.log("[INVITE] Invite found:", {
+                  id: invite.id,
+                  code: invite.code,
+                  inviter_user_id: invite.inviter_user_id,
+                  max_uses: invite.max_uses,
+                  expires_at: invite.expires_at,
+                });
+                
+                // Проверяем валидность инвайта
+                // Проверяем срок действия только если он задан
+                const isNotExpired = !invite.expires_at || new Date(invite.expires_at) >= new Date();
+                // Проверяем, что пользователь не приглашает сам себя
+                const isNotSelfInvite = invite.inviter_user_id !== user.id;
+                
+                // Проверяем количество использований только если max_uses задан
+                let isWithinMaxUses = true;
+                if (invite.max_uses !== null && invite.max_uses !== undefined) {
+                  const { count, error: countError } = await supabase
+                    .from("referrals")
+                    .select("*", { count: "exact", head: true })
+                    .eq("invite_id", invite.id);
+                  
+                  console.log("[INVITE] Usage count check:", { count, error: countError, max_uses: invite.max_uses });
+                  isWithinMaxUses = count !== null && count < invite.max_uses;
+                }
+
+                const isValid = isNotExpired && isWithinMaxUses && isNotSelfInvite;
+                console.log("[INVITE] Final validation:", { 
+                  isValid, 
+                  isNotExpired, 
+                  isWithinMaxUses, 
+                  isNotSelfInvite,
+                  expires_at: invite.expires_at,
+                  max_uses: invite.max_uses
+                });
+
+                if (isValid) {
+                  console.log("[INVITE] Invite is valid, creating referral");
+                  
+                  // Создаем referral
+                  const { data: referral, error: referralError } = await supabase
+                    .from("referrals")
+                    .insert({
+                      invite_id: invite.id,
+                      inviter_user_id: invite.inviter_user_id,
+                      invited_user_id: user.id,
+                    })
+                    .select()
+                    .single();
+
+                  console.log("[INVITE] Referral creation result:", { referral, error: referralError });
+
+                  if (!referralError && referral) {
+                    console.log("[INVITE] Referral created successfully:", referral.id);
+                    
+                    // Создаем взаимную дружбу через функцию БД (обходит RLS)
+                    const { error: friendshipError } = await supabase
+                      .rpc('create_mutual_friendship', {
+                        p_user_id_1: invite.inviter_user_id,
+                        p_user_id_2: user.id,
+                      });
+
+                    if (friendshipError) {
+                      console.error("[INVITE] Error creating mutual friendship:", friendshipError);
+                    } else {
+                      console.log("[INVITE] Mutual friendship created successfully");
+                    }
+                  } else {
+                    console.error("[INVITE] Failed to create referral:", referralError);
+                  }
+                } else {
+                  console.log("[INVITE] Invite validation failed, not creating referral");
+                }
+              } else {
+                console.log("[INVITE] Invite not found in database");
+              }
+            } else {
+              console.log("[INVITE] User already has a referral, skipping");
+            }
+          } else {
+            console.log("[INVITE] No invite code in redirect_to");
+          }
         }
       } else {
         // Обновляем профиль если нужно (например, аватар или имя могли измениться)
@@ -89,7 +217,10 @@ export async function GET(request: NextRequest) {
 
       // Проверяем, нужно ли продолжить процесс регистрации
       // Если пользователь пришел с /signup и профиль не заполнен, редиректим на нужный шаг
-      if (redirectTo === "/signup") {
+      if (redirectTo.startsWith("/signup")) {
+        const redirectUrl = new URL(redirectTo, origin);
+        const inviteCode = redirectUrl.searchParams.get("invite");
+        
         const { data: currentProfile } = await supabase
           .from("profiles")
           .select("country, city")
@@ -98,11 +229,21 @@ export async function GET(request: NextRequest) {
 
         // Если локация не заполнена, редиректим на шаг location
         if (!currentProfile || !currentProfile.country || currentProfile.country === "Unknown") {
-          return NextResponse.redirect(`${origin}/signup?step=location`);
+          const locationUrl = new URL(`${origin}/signup`);
+          locationUrl.searchParams.set("step", "location");
+          if (inviteCode) {
+            locationUrl.searchParams.set("invite", inviteCode);
+          }
+          return NextResponse.redirect(locationUrl.toString());
         }
         // Если локация есть, но нет других данных профиля, редиректим на шаг profile
         // Для простоты, если есть локация, считаем что можно перейти к профилю
-        return NextResponse.redirect(`${origin}/signup?step=profile`);
+        const profileUrl = new URL(`${origin}/signup`);
+        profileUrl.searchParams.set("step", "profile");
+        if (inviteCode) {
+          profileUrl.searchParams.set("invite", inviteCode);
+        }
+        return NextResponse.redirect(profileUrl.toString());
       }
     }
 

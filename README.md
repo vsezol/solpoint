@@ -2,6 +2,23 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+### Environment Variables
+
+Create a `.env.local` file in the root directory with the following variables:
+
+```env
+# Supabase Configuration
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
+
+# Application URL
+# For local development use: http://localhost:3000
+# For production use your domain: https://app.example.com
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
+
+### Running the Development Server
+
 First, run the development server:
 
 ```bash

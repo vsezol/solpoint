@@ -17,6 +17,7 @@ export default function SignupPage() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const stepFromUrl = searchParams.get("step");
+  const inviteCode = searchParams.get("invite");
   
   const [step, setStep] = useState<Step>(
     (stepFromUrl === "location" ? "location" : 
@@ -27,17 +28,28 @@ export default function SignupPage() {
   const [locationPermission, setLocationPermission] = useState<boolean | null>(null);
   const [formData, setFormData] = useState({
     country: "",
-    city: "",
+    city: "" as string | null,
     bio: "",
     role: "",
     isOpenToMeet: false,
   });
 
+  // Сохраняем invite код в localStorage для использования после регистрации
+  useEffect(() => {
+    if (inviteCode) {
+      console.log("[SIGNUP] Saving invite code to localStorage:", inviteCode);
+      localStorage.setItem("inviteCode", inviteCode);
+    } else {
+      console.log("[SIGNUP] No invite code in URL params");
+    }
+  }, [inviteCode]);
+
   // Загружаем данные профиля при загрузке, если пользователь авторизован
   useEffect(() => {
     if (!authLoading && isAuthenticated && user) {
       // Если пользователь уже авторизован и профиль заполнен, редиректим на профиль
-      if (user.country && user.country !== "Unknown" && step === "twitter") {
+      // НО только если нет invite кода (чтобы не пропустить обработку invite)
+      if (user.country && user.country !== "Unknown" && step === "twitter" && !inviteCode) {
         router.push("/profile");
         return;
       }
@@ -55,17 +67,30 @@ export default function SignupPage() {
       }
       
       // Если авторизован, но на шаге twitter, переходим к шагу location
-      if (step === "twitter" && (!user.country || user.country === "Unknown")) {
+      // НО только если нет invite кода в URL (чтобы не пропустить шаг Twitter при регистрации по invite)
+      // Если есть invite код, пользователь должен видеть шаг Twitter, чтобы понять что он зарегистрировался
+      if (step === "twitter" && (!user.country || user.country === "Unknown") && !inviteCode) {
         setStep("location");
       }
     }
-  }, [authLoading, isAuthenticated, user, router, step]);
+  }, [authLoading, isAuthenticated, user, router, step, inviteCode]);
 
   const handleTwitterSignup = async () => {
     setIsLoading(true);
     // Редиректим на API route для инициации Twitter OAuth
     // После успешной авторизации вернемся на /signup для продолжения процесса
-    window.location.href = "/api/auth/twitter?redirect_to=/signup";
+    // Передаем invite код через redirect_to, если он есть
+    const redirectTo = inviteCode 
+      ? `/signup?invite=${encodeURIComponent(inviteCode)}`
+      : "/signup";
+    
+    console.log("[SIGNUP] Starting Twitter OAuth with invite:", {
+      inviteCode,
+      redirectTo,
+      localStorageInvite: localStorage.getItem("inviteCode"),
+    });
+    
+    window.location.href = `/api/auth/twitter?redirect_to=${encodeURIComponent(redirectTo)}`;
   };
 
   const handleLocationPermission = async (allow: boolean) => {
@@ -75,30 +100,78 @@ export default function SignupPage() {
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
           async (position) => {
-            // Use IP-based API as fallback or for city/country
-            // For demo, use placeholder
-            setFormData((prev) => ({
-              ...prev,
-              country: "Kazakhstan",
-              city: "Almaty",
-            }));
+            try {
+              // Используем координаты из браузера для reverse geocoding
+              const { latitude, longitude } = position.coords;
+              
+              // Вызываем API для преобразования координат в страну/город
+              const response = await fetch(
+                `/api/geolocation/reverse?latitude=${latitude}&longitude=${longitude}`
+              );
+              
+              if (response.ok) {
+                const data = await response.json();
+                setFormData((prev) => ({
+                  ...prev,
+                  country: data.country || "Unknown",
+                  city: data.city || null,
+                }));
+              } else {
+                // Если reverse geocoding не сработал, используем IP-based fallback
+                await fetchLocationFromIP();
+              }
+            } catch (error) {
+              console.error("Error getting location from coordinates:", error);
+              // Fallback на IP-based геолокацию
+              await fetchLocationFromIP();
+            }
             setStep("profile");
           },
-          () => {
+          async () => {
             // Geolocation denied, use IP-based
-            setFormData((prev) => ({
-              ...prev,
-              country: "Kazakhstan",
-              city: "Almaty",
-            }));
+            await fetchLocationFromIP();
             setStep("profile");
           }
         );
       } else {
+        // Браузер не поддерживает geolocation, используем IP-based
+        await fetchLocationFromIP();
         setStep("profile");
       }
     } else {
+      // Пользователь отклонил запрос, используем IP-based
+      await fetchLocationFromIP();
       setStep("profile");
+    }
+  };
+
+  // Функция для получения локации по IP (fallback)
+  const fetchLocationFromIP = async () => {
+    try {
+      // Используем бесплатный IP geolocation API
+      const response = await fetch("https://ipapi.co/json/");
+      if (response.ok) {
+        const data = await response.json();
+        setFormData((prev) => ({
+          ...prev,
+          country: data.country_name || "Unknown",
+          city: data.city || null,
+        }));
+      } else {
+        // Если и IP-based не сработал, оставляем пустым
+        setFormData((prev) => ({
+          ...prev,
+          country: "Unknown",
+          city: null,
+        }));
+      }
+    } catch (error) {
+      console.error("Error getting location from IP:", error);
+      setFormData((prev) => ({
+        ...prev,
+        country: "Unknown",
+        city: null,
+      }));
     }
   };
 
@@ -324,9 +397,9 @@ export default function SignupPage() {
                         City
                       </label>
                       <Input
-                        value={formData.city}
+                        value={formData.city || ""}
                         onChange={(e) =>
-                          setFormData((prev) => ({ ...prev, city: e.target.value }))
+                          setFormData((prev) => ({ ...prev, city: e.target.value || null }))
                         }
                         placeholder="Your city"
                       />

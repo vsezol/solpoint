@@ -157,3 +157,22 @@ export interface GeoLocation {
   longitude: number;
 }
 
+// Invite types
+export interface Invite {
+  id: string;
+  code: string;
+  inviter_user_id: string;
+  max_uses?: number | null;
+  expires_at?: string | null;
+  created_at: string;
+  uses_count?: number; // Количество использований (добавляется на сервере)
+}
+
+export interface Referral {
+  id: string;
+  invite_id: string;
+  inviter_user_id: string;
+  invited_user_id: string;
+  created_at: string;
+}
+
