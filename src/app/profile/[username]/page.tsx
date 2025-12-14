@@ -32,8 +32,6 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   // Убираем @ если он есть в начале
   const cleanUsername = username.startsWith("@") ? username.slice(1) : username;
   
-  console.log("Searching for profile:", { username, cleanUsername });
-  
   // Получаем профиль по точному совпадению twitter_handle
   const { data: user, error: profileError } = await supabase
     .from("profiles")
@@ -41,23 +39,8 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     .eq("twitter_handle", cleanUsername)
     .maybeSingle();
 
-  console.log("Query result:", { 
-    found: !!user, 
-    error: profileError,
-    username: cleanUsername 
-  });
-
   // Если пользователь не найден или ошибка
-  if (profileError) {
-    console.error("Database error:", profileError);
-    notFound();
-  }
-
-  if (!user) {
-    console.error("User not found:", { 
-      searchedUsername: cleanUsername,
-      originalUsername: username 
-    });
+  if (profileError || !user) {
     notFound();
   }
 

@@ -19,34 +19,25 @@ export async function POST(request: NextRequest) {
     // Получаем данные из запроса
     const body = await request.json();
     const { max_uses, expires_at } = body;
-
-    console.log("[INVITES API] Creating invite for user:", user.id);
     
     // Генерируем уникальный код инвайта
     const { data: inviteCode, error: codeError } = await supabase
       .rpc('generate_invite_code');
 
-    console.log("[INVITES API] RPC result:", { inviteCode, error: codeError });
-
     if (codeError) {
-      console.error("[INVITES API] Error generating invite code:", codeError);
+      console.error("Error generating invite code:", codeError);
       // Fallback: генерируем код на клиенте
       const fallbackCode = Math.random().toString(36).substring(2, 10).toUpperCase() + 
                           Math.random().toString(36).substring(2, 10).toUpperCase();
       
-      console.log("[INVITES API] Using fallback code:", fallbackCode);
-      
       // Проверяем уникальность
-      const { data: existing, error: checkError } = await supabase
+      const { data: existing } = await supabase
         .from("invites")
         .select("code")
         .eq("code", fallbackCode)
         .maybeSingle();
       
-      console.log("[INVITES API] Uniqueness check:", { existing, error: checkError });
-      
       if (existing) {
-        console.error("[INVITES API] Fallback code already exists, retrying...");
         return NextResponse.json(
           { error: "Failed to generate unique invite code" },
           { status: 500 }
@@ -65,10 +56,8 @@ export async function POST(request: NextRequest) {
         .select()
         .single();
 
-      console.log("[INVITES API] Invite created (fallback):", { invite, error: insertError });
-
       if (insertError) {
-        console.error("[INVITES API] Error creating invite:", insertError);
+        console.error("Error creating invite:", insertError);
         return NextResponse.json(
           { error: "Failed to create invite" },
           { status: 500 }
@@ -79,7 +68,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Создаем инвайт с сгенерированным кодом
-    console.log("[INVITES API] Creating invite with RPC code:", inviteCode);
     const { data: invite, error: insertError } = await supabase
       .from("invites")
       .insert({
@@ -90,8 +78,6 @@ export async function POST(request: NextRequest) {
       })
       .select()
       .single();
-
-    console.log("[INVITES API] Invite created (RPC):", { invite, error: insertError });
 
     if (insertError) {
       console.error("Error creating invite:", insertError);

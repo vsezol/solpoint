@@ -37,10 +37,7 @@ export default function SignupPage() {
   // Сохраняем invite код в localStorage для использования после регистрации
   useEffect(() => {
     if (inviteCode) {
-      console.log("[SIGNUP] Saving invite code to localStorage:", inviteCode);
       localStorage.setItem("inviteCode", inviteCode);
-    } else {
-      console.log("[SIGNUP] No invite code in URL params");
     }
   }, [inviteCode]);
 
@@ -83,12 +80,6 @@ export default function SignupPage() {
     const redirectTo = inviteCode 
       ? `/signup?invite=${encodeURIComponent(inviteCode)}`
       : "/signup";
-    
-    console.log("[SIGNUP] Starting Twitter OAuth with invite:", {
-      inviteCode,
-      redirectTo,
-      localStorageInvite: localStorage.getItem("inviteCode"),
-    });
     
     window.location.href = `/api/auth/twitter?redirect_to=${encodeURIComponent(redirectTo)}`;
   };

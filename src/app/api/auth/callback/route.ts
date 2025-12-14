@@ -20,12 +20,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Получаем данные пользователя
-    const { data: { user }, error: getUserError } = await supabase.auth.getUser();
-
-    console.log("[INVITE] User auth check:", { 
-      user: user ? { id: user.id, email: user.email } : null, 
-      error: getUserError 
-    });
+    const { data: { user } } = await supabase.auth.getUser();
 
     if (user) {
       // Проверяем, существует ли профиль
@@ -67,84 +62,43 @@ export async function GET(request: NextRequest) {
           // Продолжаем редирект даже если не удалось создать профиль
         } else {
           // Обрабатываем invite код, если он есть в redirect_to
-          console.log("[INVITE] Profile created, checking for invite code");
-          console.log("[INVITE] redirectTo:", redirectTo);
-          console.log("[INVITE] origin:", origin);
-          
           const redirectUrl = new URL(redirectTo, origin);
           const inviteCode = redirectUrl.searchParams.get("invite");
           
-          console.log("[INVITE] Extracted invite code:", inviteCode);
-          
           if (inviteCode) {
-            console.log("[INVITE] Invite code found:", inviteCode);
-            console.log("[INVITE] New user ID:", user.id);
-            
             // Проверяем, что пользователь еще не использовал invite код
-            const { data: existingReferral, error: existingReferralError } = await supabase
+            const { data: existingReferral } = await supabase
               .from("referrals")
               .select("id")
               .eq("invited_user_id", user.id)
               .single();
 
-            console.log("[INVITE] Existing referral check:", { existingReferral, error: existingReferralError });
-
             if (!existingReferral) {
-              console.log("[INVITE] No existing referral found, looking up invite");
-              
               // Используем функцию БД для поиска invite (обходит RLS)
-              const { data: inviteData, error: inviteError } = await supabase
+              const { data: inviteData } = await supabase
                 .rpc('get_invite_by_code', { invite_code: inviteCode });
 
               const invite = inviteData && inviteData.length > 0 ? inviteData[0] : null;
 
-              console.log("[INVITE] Invite lookup result:", { 
-                invite, 
-                inviteData, 
-                inviteCode,
-                error: inviteError 
-              });
-
               if (invite) {
-                console.log("[INVITE] Invite found:", {
-                  id: invite.id,
-                  code: invite.code,
-                  inviter_user_id: invite.inviter_user_id,
-                  max_uses: invite.max_uses,
-                  expires_at: invite.expires_at,
-                });
-                
                 // Проверяем валидность инвайта
-                // Проверяем срок действия только если он задан
                 const isNotExpired = !invite.expires_at || new Date(invite.expires_at) >= new Date();
-                // Проверяем, что пользователь не приглашает сам себя
                 const isNotSelfInvite = invite.inviter_user_id !== user.id;
                 
                 // Проверяем количество использований только если max_uses задан
                 let isWithinMaxUses = true;
                 if (invite.max_uses !== null && invite.max_uses !== undefined) {
-                  const { count, error: countError } = await supabase
+                  const { count } = await supabase
                     .from("referrals")
                     .select("*", { count: "exact", head: true })
                     .eq("invite_id", invite.id);
                   
-                  console.log("[INVITE] Usage count check:", { count, error: countError, max_uses: invite.max_uses });
                   isWithinMaxUses = count !== null && count < invite.max_uses;
                 }
 
                 const isValid = isNotExpired && isWithinMaxUses && isNotSelfInvite;
-                console.log("[INVITE] Final validation:", { 
-                  isValid, 
-                  isNotExpired, 
-                  isWithinMaxUses, 
-                  isNotSelfInvite,
-                  expires_at: invite.expires_at,
-                  max_uses: invite.max_uses
-                });
 
                 if (isValid) {
-                  console.log("[INVITE] Invite is valid, creating referral");
-                  
                   // Создаем referral
                   const { data: referral, error: referralError } = await supabase
                     .from("referrals")
@@ -156,11 +110,7 @@ export async function GET(request: NextRequest) {
                     .select()
                     .single();
 
-                  console.log("[INVITE] Referral creation result:", { referral, error: referralError });
-
                   if (!referralError && referral) {
-                    console.log("[INVITE] Referral created successfully:", referral.id);
-                    
                     // Создаем взаимную дружбу через функцию БД (обходит RLS)
                     const { error: friendshipError } = await supabase
                       .rpc('create_mutual_friendship', {
@@ -169,24 +119,14 @@ export async function GET(request: NextRequest) {
                       });
 
                     if (friendshipError) {
-                      console.error("[INVITE] Error creating mutual friendship:", friendshipError);
-                    } else {
-                      console.log("[INVITE] Mutual friendship created successfully");
+                      console.error("Error creating mutual friendship:", friendshipError);
                     }
                   } else {
-                    console.error("[INVITE] Failed to create referral:", referralError);
+                    console.error("Failed to create referral:", referralError);
                   }
-                } else {
-                  console.log("[INVITE] Invite validation failed, not creating referral");
                 }
-              } else {
-                console.log("[INVITE] Invite not found in database");
               }
-            } else {
-              console.log("[INVITE] User already has a referral, skipping");
             }
-          } else {
-            console.log("[INVITE] No invite code in redirect_to");
           }
         }
       } else {

@@ -83,7 +83,6 @@ export default function SubscriptionPage() {
   const handleUpgrade = async () => {
     setIsLoading(true);
     // TODO: Implement Solana Pay integration
-    console.log("Initiating Solana Pay...");
     setTimeout(() => setIsLoading(false), 2000);
   };
 

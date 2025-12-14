@@ -6,12 +6,6 @@ export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const redirectTo = searchParams.get("redirect_to") || "/profile";
 
-  console.log("[TWITTER OAUTH] Starting OAuth flow:", {
-    redirectTo,
-    origin,
-    callbackUrl: `${origin}/api/auth/callback?redirect_to=${encodeURIComponent(redirectTo)}`,
-  });
-
   // Инициируем OAuth flow с Twitter через Supabase
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "twitter",
