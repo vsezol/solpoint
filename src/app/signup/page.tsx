@@ -104,11 +104,14 @@ export default function SignupPage() {
           async (position) => {
             try {
               // Используем координаты из браузера для reverse geocoding
+              // Округляем до 2 знаков для снижения точности (~1 км) - достаточно для определения города
               const { latitude, longitude } = position.coords;
+              const roundedLat = Math.round(latitude * 100) / 100;
+              const roundedLng = Math.round(longitude * 100) / 100;
               
               // Вызываем API для преобразования координат в страну/город
               const response = await fetch(
-                `/api/geolocation/reverse?latitude=${latitude}&longitude=${longitude}`
+                `/api/geolocation/reverse?latitude=${roundedLat}&longitude=${roundedLng}`
               );
               
               if (response.ok) {
@@ -132,6 +135,11 @@ export default function SignupPage() {
             // Geolocation denied, use IP-based
             await fetchLocationFromIP();
             setStep("profile");
+          },
+          {
+            enableHighAccuracy: false, // Не использовать GPS, только WiFi/сеть (точность ~1-2 км)
+            timeout: 10000, // Таймаут 10 секунд
+            maximumAge: 60000 // Использовать кешированные данные до 1 минуты
           }
         );
       } else {
