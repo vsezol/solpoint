@@ -43,30 +43,68 @@ export default function SignupPage() {
 
   // Загружаем данные профиля при загрузке, если пользователь авторизован
   useEffect(() => {
+    console.log("[SIGNUP] useEffect triggered:", {
+      authLoading,
+      isAuthenticated,
+      user: user ? { id: user.id, country: user.country, city: user.city } : null,
+      step,
+      inviteCode,
+    });
+    
     if (!authLoading && isAuthenticated && user) {
+      console.log("[SIGNUP] User authenticated, checking profile:", {
+        country: user.country,
+        city: user.city,
+        hasCountry: !!user.country,
+        countryIsUnknown: user.country === "Unknown",
+      });
+      
       // Если пользователь уже авторизован и профиль заполнен, редиректим на профиль
       // НО только если нет invite кода (чтобы не пропустить обработку invite)
       if (user.country && user.country !== "Unknown" && step === "twitter" && !inviteCode) {
+        console.log("[SIGNUP] Profile complete, redirecting to /profile");
         router.push("/profile");
         return;
       }
       
       // Загружаем данные профиля в форму, если они есть
+      // НО не перезаписываем данные, которые уже были установлены через геолокацию
       if (user.country || user.city || user.bio || user.role) {
-        setFormData((prev) => ({
-          ...prev,
-          country: user.country || prev.country,
-          city: user.city || prev.city,
-          bio: user.bio || prev.bio,
-          role: user.role || prev.role,
-          isOpenToMeet: user.is_open_to_meet || prev.isOpenToMeet,
-        }));
+        setFormData((prev) => {
+          // Если в formData уже есть страна (не "Unknown" и не пустая), не перезаписываем её
+          // Это означает, что данные были установлены через геолокацию
+          const shouldKeepCountry = prev.country && prev.country !== "Unknown" && prev.country !== "";
+          const shouldKeepCity = prev.city && prev.city !== "";
+          
+          const newFormData = {
+            ...prev,
+            // Сохраняем страну из геолокации, если она уже установлена
+            country: shouldKeepCountry ? prev.country : (user.country || prev.country || ""),
+            // Сохраняем город из геолокации, если он уже установлен
+            city: shouldKeepCity ? prev.city : (user.city || prev.city || ""),
+            // Био и роль можно загружать из БД, так как они не устанавливаются через геолокацию
+            bio: user.bio || prev.bio || "",
+            role: user.role || prev.role || "",
+            isOpenToMeet: user.is_open_to_meet !== undefined ? user.is_open_to_meet : prev.isOpenToMeet,
+          };
+          
+          console.log("[SIGNUP] Loading user data into form:", {
+            fromDB: { country: user.country, city: user.city },
+            currentFormData: prev,
+            shouldKeepCountry,
+            shouldKeepCity,
+            finalFormData: newFormData,
+          });
+          
+          return newFormData;
+        });
       }
       
       // Если авторизован, но на шаге twitter, переходим к шагу location
       // НО только если нет invite кода в URL (чтобы не пропустить шаг Twitter при регистрации по invite)
       // Если есть invite код, пользователь должен видеть шаг Twitter, чтобы понять что он зарегистрировался
       if (step === "twitter" && (!user.country || user.country === "Unknown") && !inviteCode) {
+        console.log("[SIGNUP] No country or Unknown, moving to location step");
         setStep("location");
       }
     }
@@ -85,51 +123,74 @@ export default function SignupPage() {
   };
 
   const handleLocationPermission = async (allow: boolean) => {
+    console.log("[GEOLOCATION] handleLocationPermission called, allow:", allow);
     setLocationPermission(allow);
     if (allow) {
       // Request geolocation
       if (navigator.geolocation) {
+        console.log("[GEOLOCATION] Requesting geolocation from browser...");
         navigator.geolocation.getCurrentPosition(
           async (position) => {
+            console.log("[GEOLOCATION] Browser returned position:", {
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+              accuracy: position.coords.accuracy,
+            });
             try {
               // Используем координаты из браузера для reverse geocoding
               const { latitude, longitude } = position.coords;
               
+              console.log("[GEOLOCATION] Calling reverse geocoding API...");
               // Вызываем API для преобразования координат в страну/город
               const response = await fetch(
                 `/api/geolocation/reverse?latitude=${latitude}&longitude=${longitude}`
               );
               
+              console.log("[GEOLOCATION] Reverse geocoding response status:", response.status);
+              
               if (response.ok) {
                 const data = await response.json();
-                setFormData((prev) => ({
-                  ...prev,
-                  country: data.country || "Unknown",
-                  city: data.city || null,
-                }));
+                console.log("[GEOLOCATION] Reverse geocoding data:", data);
+                setFormData((prev) => {
+                  const newData = {
+                    ...prev,
+                    country: data.country || "Unknown",
+                    city: data.city || null,
+                  };
+                  console.log("[GEOLOCATION] Updated formData:", newData);
+                  return newData;
+                });
               } else {
+                const errorData = await response.json().catch(() => ({}));
+                console.warn("[GEOLOCATION] Reverse geocoding failed:", response.status, errorData);
                 // Если reverse geocoding не сработал, используем IP-based fallback
                 await fetchLocationFromIP();
               }
             } catch (error) {
-              console.error("Error getting location from coordinates:", error);
+              console.error("[GEOLOCATION] Error getting location from coordinates:", error);
               // Fallback на IP-based геолокацию
               await fetchLocationFromIP();
             }
             setStep("profile");
           },
-          async () => {
+          async (error) => {
+            console.warn("[GEOLOCATION] Browser geolocation denied/error:", {
+              code: error.code,
+              message: error.message,
+            });
             // Geolocation denied, use IP-based
             await fetchLocationFromIP();
             setStep("profile");
           }
         );
       } else {
+        console.warn("[GEOLOCATION] Browser does not support geolocation");
         // Браузер не поддерживает geolocation, используем IP-based
         await fetchLocationFromIP();
         setStep("profile");
       }
     } else {
+      console.log("[GEOLOCATION] User denied location permission, using IP-based");
       // Пользователь отклонил запрос, используем IP-based
       await fetchLocationFromIP();
       setStep("profile");
@@ -138,57 +199,86 @@ export default function SignupPage() {
 
   // Функция для получения локации по IP (fallback)
   const fetchLocationFromIP = async () => {
+    console.log("[GEOLOCATION] fetchLocationFromIP called");
     try {
       // Используем бесплатный IP geolocation API
+      console.log("[GEOLOCATION] Fetching location from IP API...");
       const response = await fetch("https://ipapi.co/json/");
+      console.log("[GEOLOCATION] IP API response status:", response.status);
+      
       if (response.ok) {
         const data = await response.json();
-        setFormData((prev) => ({
-          ...prev,
-          country: data.country_name || "Unknown",
-          city: data.city || null,
-        }));
+        console.log("[GEOLOCATION] IP API data:", data);
+        setFormData((prev) => {
+          const newData = {
+            ...prev,
+            country: data.country_name || "Unknown",
+            city: data.city || null,
+          };
+          console.log("[GEOLOCATION] Updated formData from IP:", newData);
+          return newData;
+        });
       } else {
+        const errorText = await response.text();
+        console.warn("[GEOLOCATION] IP API failed:", response.status, errorText);
         // Если и IP-based не сработал, оставляем пустым
-        setFormData((prev) => ({
+        setFormData((prev) => {
+          const newData = {
+            ...prev,
+            country: "Unknown",
+            city: null,
+          };
+          console.log("[GEOLOCATION] Set to Unknown (IP API failed):", newData);
+          return newData;
+        });
+      }
+    } catch (error) {
+      console.error("[GEOLOCATION] Error getting location from IP:", error);
+      setFormData((prev) => {
+        const newData = {
           ...prev,
           country: "Unknown",
           city: null,
-        }));
-      }
-    } catch (error) {
-      console.error("Error getting location from IP:", error);
-      setFormData((prev) => ({
-        ...prev,
-        country: "Unknown",
-        city: null,
-      }));
+        };
+        console.log("[GEOLOCATION] Set to Unknown (error):", newData);
+        return newData;
+      });
     }
   };
 
   const handleProfileSubmit = async () => {
+    console.log("[PROFILE_SUBMIT] Current formData:", formData);
     setIsLoading(true);
     try {
+      const payload = {
+        country: formData.country || null,
+        city: formData.city || null,
+        bio: formData.bio.trim() || null,
+        role: formData.role || null,
+        is_open_to_meet: formData.isOpenToMeet,
+      };
+      console.log("[PROFILE_SUBMIT] Sending payload:", payload);
+      
       // Сохраняем профиль в Supabase
       const response = await fetch("/api/profile/update", {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          country: formData.country || null,
-          city: formData.city || null,
-          bio: formData.bio.trim() || null,
-          role: formData.role || null,
-          is_open_to_meet: formData.isOpenToMeet,
-        }),
+        body: JSON.stringify(payload),
       });
+      
+      console.log("[PROFILE_SUBMIT] Response status:", response.status);
 
       const data = await response.json();
+      console.log("[PROFILE_SUBMIT] Response data:", data);
 
       if (!response.ok) {
+        console.error("[PROFILE_SUBMIT] Error response:", data);
         throw new Error(data.error || "Failed to save profile");
       }
+      
+      console.log("[PROFILE_SUBMIT] Profile saved successfully:", data.profile);
 
       // Переходим к завершающему шагу
       setStep("complete");
