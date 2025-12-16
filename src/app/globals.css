@@ -93,6 +93,14 @@ body {
   color: var(--color-text-primary);
 }
 
+/* Input selection - same as focus color (bright green) */
+input[type="text"]::selection,
+input[type="search"]::selection,
+input::selection {
+  background: #14f195 !important;
+  color: #ffffff !important;
+}
+
 /* Focus styles */
 :focus-visible {
   outline: 2px solid var(--color-primary);
@@ -103,6 +111,34 @@ body {
 .leaflet-container {
   background: var(--color-surface) !important;
   font-family: var(--font-sans) !important;
+}
+
+/* Custom map style with exact colors from Figma */
+/* #452D9F - материки (continents/landmasses) - фиолетовый */
+/* #18E3C5 - вода (water) - бирюзовый */
+/* #A4E3B4 - границы стран (country borders) - светло-зеленый */
+
+.solpoint-map-container {
+  background: #18E3C5 !important; /* Бирюзовый цвет для воды */
+}
+
+.solpoint-map-container .leaflet-container {
+  background: #18E3C5 !important; /* Бирюзовый цвет для воды */
+}
+
+/* Убеждаемся, что все панели Leaflet имеют прозрачный фон, чтобы был виден цвет воды */
+.solpoint-map-container .leaflet-tile-pane,
+.solpoint-map-container .leaflet-overlay-pane,
+.solpoint-map-container .leaflet-shadow-pane,
+.solpoint-map-container .leaflet-marker-pane,
+.solpoint-map-container .leaflet-tooltip-pane,
+.solpoint-map-container .leaflet-popup-pane {
+  background: transparent !important;
+}
+
+/* Убеждаемся, что тайлы не перекрывают фон воды */
+.solpoint-map-container .leaflet-tile-container {
+  background: transparent !important;
 }
 
 .leaflet-popup-content-wrapper {

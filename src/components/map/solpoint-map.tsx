@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import { MapContainer, Marker, Popup, useMap, GeoJSON } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { MapMarker, User, Event, Hub } from "@/types";
+import type { GeoJsonObject } from "geojson";
 import { UserCard } from "@/components/cards/user-card";
 import { EventCard } from "@/components/cards/event-card";
 import { HubCard } from "@/components/cards/hub-card";
@@ -17,64 +18,82 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
 });
 
-// Custom marker icons
+// Custom marker icons for users
 const createCustomIcon = (type: MapMarker["type"]) => {
   const colors = {
     user: "#ef4444",      // Red
     vip_user: "#fbbf24",  // Yellow/Gold
-    hub: "#3b82f6",       // Blue
-    event: "#14f195",     // Green
+    hub: "#3b82f6",       // Blue (not used, hub has separate icon)
+    event: "#14f195",     // Green (not used, event has separate icon)
   };
 
+  // Red circular marker for regular users
+  if (type === "user") {
+    const svgMarker = `
+      <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="16" cy="16" r="14" fill="#ef4444" stroke="#ffffff" stroke-width="2"/>
+        <circle cx="16" cy="16" r="10" fill="#ffffff" opacity="0.9"/>
+      </svg>
+    `;
+    return L.divIcon({
+      html: svgMarker,
+      className: "custom-marker user-marker",
+      iconSize: [32, 32],
+      iconAnchor: [16, 16],
+      popupAnchor: [0, -16],
+    });
+  }
+
+  // Yellow circular marker for VIP users
+  if (type === "vip_user") {
+    const svgMarker = `
+      <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="16" cy="16" r="14" fill="#fbbf24" stroke="#ffffff" stroke-width="2"/>
+        <circle cx="16" cy="16" r="10" fill="#ffffff" opacity="0.9"/>
+      </svg>
+    `;
+    return L.divIcon({
+      html: svgMarker,
+      className: "custom-marker vip-user-marker",
+      iconSize: [32, 32],
+      iconAnchor: [16, 16],
+      popupAnchor: [0, -16],
+    });
+  }
+
+  // Fallback
   const svgMarker = `
-    <svg width="40" height="50" viewBox="0 0 40 50" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M20 0C8.954 0 0 8.954 0 20c0 15 20 30 20 30s20-15 20-30C40 8.954 31.046 0 20 0z" fill="${colors[type]}"/>
-      <circle cx="20" cy="18" r="12" fill="white" opacity="0.9"/>
-      <circle cx="20" cy="18" r="10" fill="${colors[type]}" opacity="0.3"/>
+    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="16" cy="16" r="14" fill="${colors[type]}" stroke="#ffffff" stroke-width="2"/>
     </svg>
   `;
-
   return L.divIcon({
     html: svgMarker,
     className: "custom-marker",
-    iconSize: [40, 50],
-    iconAnchor: [20, 50],
-    popupAnchor: [0, -45],
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+    popupAnchor: [0, -16],
   });
 };
 
-// Hub marker (square shape like in design)
+// Hub marker using community-hubs.svg
 const createHubIcon = () => {
-  const svg = `
-    <svg width="48" height="56" viewBox="0 0 48 56" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="2" y="2" width="44" height="44" rx="8" fill="#3b82f6" stroke="#ffffff" stroke-width="2"/>
-      <path d="M24 50L18 44H30L24 50Z" fill="#3b82f6"/>
-      <circle cx="24" cy="24" r="14" fill="white" opacity="0.9"/>
-    </svg>
-  `;
   return L.divIcon({
-    html: svg,
+    html: `<img src="/community-hubs.svg" alt="Hub" style="width: 46px; height: 54px;" />`,
     className: "custom-marker hub-marker",
-    iconSize: [48, 56],
-    iconAnchor: [24, 56],
+    iconSize: [46, 54],
+    iconAnchor: [23, 54],
     popupAnchor: [0, -50],
   });
 };
 
-// Event marker (rounded square with point)
+// Event marker using event-icon.svg
 const createEventIcon = () => {
-  const svg = `
-    <svg width="48" height="56" viewBox="0 0 48 56" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="2" y="2" width="44" height="44" rx="12" fill="#14f195" stroke="#ffffff" stroke-width="2"/>
-      <path d="M24 50L18 44H30L24 50Z" fill="#14f195"/>
-      <circle cx="24" cy="24" r="14" fill="white" opacity="0.9"/>
-    </svg>
-  `;
   return L.divIcon({
-    html: svg,
+    html: `<img src="/event-icon.svg" alt="Event" style="width: 46px; height: 54px;" />`,
     className: "custom-marker event-marker",
-    iconSize: [48, 56],
-    iconAnchor: [24, 56],
+    iconSize: [46, 54],
+    iconAnchor: [23, 54],
     popupAnchor: [0, -50],
   });
 };
@@ -111,7 +130,20 @@ export function SolPointMap({
   onMarkerClick,
   isVip = false,
 }: SolPointMapProps) {
-  const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
+  const [, setSelectedMarker] = useState<MapMarker | null>(null);
+  const [worldGeoJson, setWorldGeoJson] = useState<GeoJsonObject | null>(null);
+
+  // Load GeoJSON data for world countries
+  useEffect(() => {
+    fetch("/world.geo.json")
+      .then((response) => response.json())
+      .then((data) => {
+        setWorldGeoJson(data as GeoJsonObject);
+      })
+      .catch((error) => {
+        console.error("Failed to load world GeoJSON:", error);
+      });
+  }, []);
 
   const handleMarkerClick = useCallback(
     (marker: MapMarker) => {
@@ -148,19 +180,53 @@ export function SolPointMap({
 
   return (
     <div className="relative w-full h-full">
+      {/* Timer indicator */}
+        <div className="absolute top-4 right-4 z-1000 flex items-center gap-2 bg-white/90 backdrop-blur-sm rounded-full px-3 py-2 shadow-lg" style={{ zIndex: 1000 }}>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5"/>
+          <path d="M8 4V8L10 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+        </svg>
+        <span className="text-sm font-semibold text-gray-800">3.2</span>
+      </div>
+
       <MapContainer
         center={center}
         zoom={zoom}
-        className="w-full h-full rounded-xl overflow-hidden"
-        style={{ background: "var(--color-surface)" }}
+        className="w-full h-full rounded-xl overflow-hidden solpoint-map-container"
+        style={{ background: "#18E3C5" }}
         scrollWheelZoom={true}
         doubleClickZoom={true}
         dragging={true}
       >
-        <TileLayer
-          attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        />
+        {/* GeoJSON layer with custom colors from Figma */}
+        {worldGeoJson && (
+          <GeoJSON
+            data={worldGeoJson}
+            style={() => ({
+              fillColor: "#452D9F", // Фиолетовый для материков
+              fillOpacity: 1,
+              color: "#A4E3B4", // Светло-зеленый для границ стран
+              weight: 1.5,
+              opacity: 1,
+            })}
+            eventHandlers={{
+              mouseover: (e) => {
+                const layer = e.target;
+                layer.setStyle({
+                  fillOpacity: 0.95,
+                  weight: 2,
+                });
+              },
+              mouseout: (e) => {
+                const layer = e.target;
+                layer.setStyle({
+                  fillOpacity: 1,
+                  weight: 1.5,
+                });
+              },
+            }}
+          />
+        )}
         <MapController center={center} zoom={zoom} />
 
         {markers.map((marker) => (
@@ -185,11 +251,24 @@ export function SolPointMap({
         ))}
       </MapContainer>
 
-      {/* Custom styles for markers */}
+      {/* Custom styles for markers and map */}
       <style jsx global>{`
         .custom-marker {
           background: transparent;
           border: none;
+        }
+        
+        .custom-marker img {
+          filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+        }
+        
+        /* User markers styling */
+        .user-marker {
+          filter: drop-shadow(0 2px 4px rgba(239, 68, 68, 0.4));
+        }
+        
+        .vip-user-marker {
+          filter: drop-shadow(0 2px 4px rgba(251, 191, 36, 0.4));
         }
         
         .solpoint-popup .leaflet-popup-content-wrapper {
