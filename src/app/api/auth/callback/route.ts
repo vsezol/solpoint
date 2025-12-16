@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
       // Проверяем, существует ли профиль
       const { data: profile } = await supabase
         .from("profiles")
-        .select("id, country, city")
+        .select("id, country, country_code, city")
         .eq("id", user.id)
         .single();
 
@@ -52,7 +52,9 @@ export async function GET(request: NextRequest) {
           twitter_handle: twitterHandle,
           twitter_name: twitterName,
           avatar_url: avatarUrl,
-          country: "Unknown", // Можно попробовать получить из локации
+          country: "Unknown", // @deprecated - будет заполнено позже
+          country_code: null, // Будет заполнено на этапе signup
+          city: null,
           subscription_tier: "free",
           is_verified: isVerified,
         });
@@ -163,12 +165,12 @@ export async function GET(request: NextRequest) {
         
         const { data: currentProfile } = await supabase
           .from("profiles")
-          .select("country, city")
+          .select("country, country_code, city")
           .eq("id", user.id)
           .single();
 
         // Если локация не заполнена, редиректим на шаг location
-        if (!currentProfile || !currentProfile.country || currentProfile.country === "Unknown") {
+        if (!currentProfile || !currentProfile.country_code || currentProfile.country === "Unknown") {
           const locationUrl = new URL(`${origin}/signup`);
           locationUrl.searchParams.set("step", "location");
           if (inviteCode) {

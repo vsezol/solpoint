@@ -4,8 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Card, Input } from "@/components/ui";
 import { useQueryClient } from "@tanstack/react-query";
-import { Save, X } from "lucide-react";
+import { Save, X, MapPin, RefreshCw } from "lucide-react";
 import type { User, UserRole } from "@/types";
+import { useGeolocation } from "@/hooks/use-geolocation";
 
 const ROLES: UserRole[] = [
   "degen",
@@ -28,11 +29,24 @@ export function ProfileEditForm({ user, onCancel, onUpdate }: ProfileEditFormPro
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { isDetecting, requestGeolocation } = useGeolocation();
 
   // Form state
   const [bio, setBio] = useState(user.bio || "");
   const [role, setRole] = useState<UserRole>(user.role || "degen");
   const [isOpenToMeet, setIsOpenToMeet] = useState(user.is_open_to_meet || false);
+  const [country, setCountry] = useState(user.country || "");
+  const [countryCode, setCountryCode] = useState<string | undefined>(user.country_code);
+  const [city, setCity] = useState(user.city || "");
+
+  const handleDetectLocation = async () => {
+    const result = await requestGeolocation();
+    if (result) {
+      setCountry(result.country);
+      setCountryCode(result.country_code);
+      setCity(result.city || "");
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,6 +63,9 @@ export function ProfileEditForm({ user, onCancel, onUpdate }: ProfileEditFormPro
           bio: bio.trim() || null,
           role,
           is_open_to_meet: isOpenToMeet,
+          country: country.trim() || null,
+          country_code: countryCode || null,
+          city: city.trim() || null,
         }),
       });
 
@@ -125,6 +142,73 @@ export function ProfileEditForm({ user, onCancel, onUpdate }: ProfileEditFormPro
                 </option>
               ))}
             </select>
+          </div>
+
+          {/* Location Detection */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-[var(--color-text-primary)]">
+                Location
+              </label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleDetectLocation}
+                disabled={isDetecting || isLoading}
+                className="h-8 px-2 text-xs"
+              >
+                {isDetecting ? (
+                  <>
+                    <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
+                    Detecting...
+                  </>
+                ) : (
+                  <>
+                    <MapPin className="w-3 h-3 mr-1" />
+                    Detect Location
+                  </>
+                )}
+              </Button>
+            </div>
+            
+            <div className="space-y-3">
+              {/* Country */}
+              <div>
+                <label className="block text-xs text-[var(--color-text-muted)] mb-1">
+                  Country
+                </label>
+                <Input
+                  type="text"
+                  value={country || "Not detected"}
+                  readOnly
+                  placeholder="Detect location to set country"
+                  className="bg-[var(--color-surface-hover)] cursor-not-allowed"
+                />
+              </div>
+
+              {/* City */}
+              <div>
+                <label className="block text-xs text-[var(--color-text-muted)] mb-1">
+                  City
+                </label>
+                <Input
+                  type="text"
+                  value={city || "Not detected"}
+                  readOnly
+                  placeholder="Detect location to set city"
+                  className="bg-[var(--color-surface-hover)] cursor-not-allowed"
+                />
+              </div>
+            </div>
+            
+            <p className="mt-2 text-xs text-[var(--color-text-muted)] flex items-start gap-1">
+              <MapPin className="w-3 h-3 mt-0.5 shrink-0" />
+              <span>
+                Click &quot;Detect Location&quot; to automatically set your country and city.
+                We only store country and city — never exact coordinates.
+              </span>
+            </p>
           </div>
 
           {/* Is Open to Meet */}

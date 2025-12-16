@@ -2,6 +2,12 @@
 export type UserRole = "degen" | "developer" | "trader" | "investor" | "designer" | "founder" | "other";
 export type SubscriptionTier = "free" | "vip";
 
+// Country type
+export interface Country {
+  code: string; // ISO 3166-1 alpha-2 (2 chars, uppercase)
+  name: string; // Human-readable name
+}
+
 export interface User {
   id: string;
   twitter_id: string;
@@ -9,8 +15,9 @@ export interface User {
   twitter_name: string;
   avatar_url: string;
   bio?: string;
-  country: string;
-  city?: string;
+  country?: string; // @deprecated Use country_code instead
+  country_code?: string; // ISO 3166-1 alpha-2 (e.g., "US", "RU")
+  city?: string; // Max 150 characters
   role?: UserRole;
   is_open_to_meet: boolean;
   subscription_tier: SubscriptionTier;
@@ -95,11 +102,12 @@ export interface MapMarker {
 }
 
 export interface CountryStats {
-  country: string;
-  country_code: string;
+  country_code: string; // ISO 3166-1 alpha-2
+  country_name?: string; // Human-readable name from countries table
   users_count: number;
-  events_count: number;
-  hubs_count: number;
+  vip_users_count: number;
+  events_count?: number;
+  hubs_count?: number;
 }
 
 // Filter types
@@ -150,9 +158,10 @@ export interface ApiResponse<T> {
 
 // Geolocation types
 export interface GeoLocation {
-  country: string;
-  country_code: string;
-  city: string;
+  country?: string; // @deprecated Use country_name instead
+  country_code: string; // ISO 3166-1 alpha-2
+  country_name?: string; // Human-readable name
+  city?: string; // Max 150 characters
   latitude: number;
   longitude: number;
 }

@@ -11,3 +11,5 @@ export type { InputProps } from "./input";
 
 export { Modal, ModalHeader, ModalTitle, ModalContent, ModalFooter } from "./modal";
 
+export { CountrySelect } from "./country-select";
+

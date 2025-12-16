@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Button, Card, Input, Badge } from "@/components/ui";
+import { Button, Card, Input } from "@/components/ui";
 import { Header, Footer } from "@/components/layout";
 import { Twitter, MapPin, Shield, Globe } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
 import { useAuth } from "@/hooks/use-auth";
+import { useGeolocation } from "@/hooks/use-geolocation";
 
 type Step = "twitter" | "location" | "profile" | "complete";
 
@@ -16,6 +17,7 @@ export default function SignupPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { requestGeolocation } = useGeolocation();
   const stepFromUrl = searchParams.get("step");
   const inviteCode = searchParams.get("invite");
   
@@ -25,9 +27,9 @@ export default function SignupPage() {
      "twitter") as Step
   );
   const [isLoading, setIsLoading] = useState(false);
-  const [locationPermission, setLocationPermission] = useState<boolean | null>(null);
   const [formData, setFormData] = useState({
     country: "",
+    country_code: "" as string | undefined,
     city: "" as string | null,
     bio: "",
     role: "",
@@ -46,24 +48,25 @@ export default function SignupPage() {
     if (!authLoading && isAuthenticated && user) {
       // Если пользователь уже авторизован и профиль заполнен, редиректим на профиль
       // НО только если нет invite кода (чтобы не пропустить обработку invite)
-      if (user.country && user.country !== "Unknown" && step === "twitter" && !inviteCode) {
+      if (user.country_code && step === "twitter" && !inviteCode) {
         router.push("/profile");
         return;
       }
       
       // Загружаем данные профиля в форму, если они есть
       // НО не перезаписываем данные, которые уже были установлены через геолокацию
-      if (user.country || user.city || user.bio || user.role) {
+      if (user.country_code || user.city || user.bio || user.role) {
         setFormData((prev) => {
-          // Если в formData уже есть страна (не "Unknown" и не пустая), не перезаписываем её
+          // Если в formData уже есть country_code, не перезаписываем
           // Это означает, что данные были установлены через геолокацию
-          const shouldKeepCountry = prev.country && prev.country !== "Unknown" && prev.country !== "";
+          const shouldKeepCountryCode = prev.country_code && prev.country_code !== "";
           const shouldKeepCity = prev.city && prev.city !== "";
           
           return {
             ...prev,
-            // Сохраняем страну из геолокации, если она уже установлена
-            country: shouldKeepCountry ? prev.country : (user.country || prev.country || ""),
+            // Сохраняем country_code из геолокации, если он уже установлен
+            country: prev.country || user.country || "",
+            country_code: shouldKeepCountryCode ? prev.country_code : (user.country_code || prev.country_code),
             // Сохраняем город из геолокации, если он уже установлен
             city: shouldKeepCity ? prev.city : (user.city || prev.city || ""),
             // Био и роль можно загружать из БД, так как они не устанавливаются через геолокацию
@@ -77,7 +80,7 @@ export default function SignupPage() {
       // Если авторизован, но на шаге twitter, переходим к шагу location
       // НО только если нет invite кода в URL (чтобы не пропустить шаг Twitter при регистрации по invite)
       // Если есть invite код, пользователь должен видеть шаг Twitter, чтобы понять что он зарегистрировался
-      if (step === "twitter" && (!user.country || user.country === "Unknown") && !inviteCode) {
+      if (step === "twitter" && !user.country_code && !inviteCode) {
         setStep("location");
       }
     }
@@ -97,93 +100,17 @@ export default function SignupPage() {
 
  
 
-  const handleLocationPermission = async (allow: boolean) => {
-    setLocationPermission(allow);
-    if (allow) {
-      // Request geolocation
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          async (position) => {
-            try {
-              // Используем координаты из браузера для reverse geocoding
-              // Округляем до 2 знаков для снижения точности (~1 км) - достаточно для определения города
-              const { latitude, longitude } = position.coords;
-              const roundedLat = Math.round(latitude * 100) / 100;
-              const roundedLng = Math.round(longitude * 100) / 100;
-              
-              // Вызываем API для преобразования координат в страну/город
-              const response = await fetch(
-                `/api/geolocation/reverse?latitude=${roundedLat}&longitude=${roundedLng}`
-              );
-              
-              if (response.ok) {
-                const data = await response.json();
-                setFormData((prev) => ({
-                  ...prev,
-                  country: data.country || "Unknown",
-                  city: data.city || null,
-                }));
-              } else {
-                // Если reverse geocoding не сработал, используем IP-based fallback
-                await fetchLocationFromIP();
-              }
-            } catch (error) {
-              // Fallback на IP-based геолокацию
-              await fetchLocationFromIP();
-            }
-            setStep("profile");
-          },
-          async () => {
-            // Geolocation denied, use IP-based
-            await fetchLocationFromIP();
-            setStep("profile");
-          },
-          {
-            enableHighAccuracy: false, // Не использовать GPS, только WiFi/сеть (точность ~1-2 км)
-            timeout: 10000, // Таймаут 10 секунд
-            maximumAge: 60000 // Использовать кешированные данные до 1 минуты
-          }
-        );
-      } else {
-        // Браузер не поддерживает geolocation, используем IP-based
-        await fetchLocationFromIP();
-        setStep("profile");
-      }
-    } else {
-      // Пользователь отклонил запрос, используем IP-based
-      await fetchLocationFromIP();
-      setStep("profile");
-    }
-  };
-
-  // Функция для получения локации по IP (fallback)
-  const fetchLocationFromIP = async () => {
-    try {
-      // Используем бесплатный IP geolocation API
-      const response = await fetch("https://ipapi.co/json/");
-      
-      if (response.ok) {
-        const data = await response.json();
-        setFormData((prev) => ({
-          ...prev,
-          country: data.country_name || "Unknown",
-          city: data.city || null,
-        }));
-      } else {
-        // Если и IP-based не сработал, оставляем пустым
-        setFormData((prev) => ({
-          ...prev,
-          country: "Unknown",
-          city: null,
-        }));
-      }
-    } catch (error) {
+  const handleLocationPermission = async () => {
+    const result = await requestGeolocation();
+    if (result) {
       setFormData((prev) => ({
         ...prev,
-        country: "Unknown",
-        city: null,
+        country: result.country,
+        country_code: result.country_code,
+        city: result.city,
       }));
     }
+    setStep("profile");
   };
 
   const handleProfileSubmit = async () => {
@@ -197,6 +124,7 @@ export default function SignupPage() {
         },
         body: JSON.stringify({
           country: formData.country || null,
+          country_code: formData.country_code || null,
           city: formData.city || null,
           bio: formData.bio.trim() || null,
           role: formData.role || null,
@@ -355,7 +283,7 @@ export default function SignupPage() {
 
                 <div className="space-y-3">
                   <Button
-                    onClick={() => handleLocationPermission(true)}
+                    onClick={handleLocationPermission}
                     className="w-full"
                     size="lg"
                   >
@@ -364,10 +292,10 @@ export default function SignupPage() {
                   </Button>
                   <Button
                     variant="ghost"
-                    onClick={() => handleLocationPermission(false)}
+                    onClick={handleLocationPermission}
                     className="w-full"
                   >
-                    Skip for now
+                    Skip (Use IP-based detection)
                   </Button>
                 </div>
               </motion.div>
@@ -389,18 +317,16 @@ export default function SignupPage() {
                 </p>
 
                 <div className="space-y-4">
-                  {/* Location fields */}
+                  {/* Location fields - автоматически определяются через геолокацию */}
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-sm text-[var(--color-text-muted)] mb-1">
                         Country
                       </label>
                       <Input
-                        value={formData.country}
-                        onChange={(e) =>
-                          setFormData((prev) => ({ ...prev, country: e.target.value }))
-                        }
-                        placeholder="Your country"
+                        value={formData.country || "Detecting..."}
+                        readOnly
+                        placeholder="Auto-detected from location"
                       />
                     </div>
                     <div>
@@ -408,11 +334,9 @@ export default function SignupPage() {
                         City
                       </label>
                       <Input
-                        value={formData.city || ""}
-                        onChange={(e) =>
-                          setFormData((prev) => ({ ...prev, city: e.target.value || null }))
-                        }
-                        placeholder="Your city"
+                        value={formData.city || "Detecting..."}
+                        readOnly
+                        placeholder="Auto-detected from location"
                       />
                     </div>
                   </div>

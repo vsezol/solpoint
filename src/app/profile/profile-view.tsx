@@ -31,7 +31,7 @@ export function ProfileView({ user }: ProfileViewProps) {
             <MapPin className="w-4 h-4 text-[var(--color-primary)]" />
             <span>
               {user.city && `${user.city}, `}
-              {user.country}
+              {(user as any).countries?.name || user.country || "Not specified"}
             </span>
           </div>
           {user.role && (

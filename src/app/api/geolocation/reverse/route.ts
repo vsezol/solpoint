@@ -1,5 +1,58 @@
 import { NextResponse } from "next/server";
 
+// Маппинг названий стран на ISO коды
+const COUNTRY_TO_CODE: Record<string, string> = {
+  "United States": "US",
+  "United States of America": "US",
+  "Russia": "RU",
+  "Russian Federation": "RU",
+  "Germany": "DE",
+  "France": "FR",
+  "Spain": "ES",
+  "Italy": "IT",
+  "Japan": "JP",
+  "China": "CN",
+  "South Korea": "KR",
+  "Korea, South": "KR",
+  "Singapore": "SG",
+  "United Arab Emirates": "AE",
+  "Canada": "CA",
+  "Australia": "AU",
+  "Brazil": "BR",
+  "Mexico": "MX",
+  "Argentina": "AR",
+  "Chile": "CL",
+  "India": "IN",
+  "Thailand": "TH",
+  "Vietnam": "VN",
+  "Philippines": "PH",
+  "Indonesia": "ID",
+  "Turkey": "TR",
+  "Türkiye": "TR",
+  "Ukraine": "UA",
+  "Poland": "PL",
+  "Netherlands": "NL",
+  "Sweden": "SE",
+  "Norway": "NO",
+  "Denmark": "DK",
+  "Finland": "FI",
+  "Switzerland": "CH",
+  "Austria": "AT",
+  "Belgium": "BE",
+  "Portugal": "PT",
+  "Greece": "GR",
+  "Czech Republic": "CZ",
+  "Czechia": "CZ",
+  "Israel": "IL",
+  "Saudi Arabia": "SA",
+  "Egypt": "EG",
+  "South Africa": "ZA",
+  "Nigeria": "NG",
+  "Kenya": "KE",
+  "United Kingdom": "GB",
+  "UK": "GB",
+};
+
 /**
  * Reverse geocoding API endpoint
  * Преобразует координаты (latitude, longitude) в страну и город
@@ -60,6 +113,11 @@ export async function GET(request: Request) {
       address.country_name || 
       null;
     
+    // Получаем ISO код страны
+    const countryCode = address.country_code?.toUpperCase() || 
+                        (country ? COUNTRY_TO_CODE[country] : null) ||
+                        null;
+    
     const city = 
       address.city || 
       address.town || 
@@ -70,7 +128,8 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       country: country || "Unknown",
-      city: city || null,
+      country_code: countryCode,
+      city: city && city.length <= 150 ? city : city?.substring(0, 150) || null,
       latitude: lat,
       longitude: lng,
       full_address: data.display_name,

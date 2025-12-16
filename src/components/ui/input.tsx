@@ -22,6 +22,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
           className={cn(
             "w-full h-10 px-3 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] transition-colors",
             "focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]",
+            "selection:bg-[var(--color-primary)] selection:text-white",
             "disabled:opacity-50 disabled:cursor-not-allowed",
             icon && "pl-10",
             error && "border-[var(--color-error)] focus:border-[var(--color-error)] focus:ring-[var(--color-error)]",
