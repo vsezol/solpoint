@@ -43,32 +43,73 @@ export interface UserProfile extends User {
 // Event types
 export type EventType = "official" | "community" | "private" | "meetup";
 export type EventVisibility = "public" | "vip_only";
+export type AttendeeStatus = "going" | "maybe" | "not_going";
 
 export interface Event {
   id: string;
   name: string;
   description?: string;
   image_url?: string;
+  slug: string; // Публичная ссылка для SEO
   country: string;
+  country_code?: string; // ISO 3166-1 alpha-2
   city: string;
   address?: string;
+  venue_name?: string; // Название места проведения
   latitude: number;
   longitude: number;
   start_date: string;
   end_date?: string;
+  timezone?: string; // Часовой пояс (например, "America/New_York")
   event_type: EventType;
   visibility: EventVisibility;
   is_paid: boolean;
   price_sol?: number;
+  price_usd?: number; // Цена в долларах
   max_attendees?: number;
   attendees_count: number;
+  capacity_remaining?: number; // Оставшиеся места
+  registration_deadline?: string; // Дедлайн регистрации
+  is_online: boolean; // Онлайн/офлайн (гибрид пока не делаем)
   socials?: {
     twitter?: string;
     instagram?: string;
     facebook?: string;
     website?: string;
   };
+  contacts?: {
+    email?: string;
+    telegram?: string;
+    phone?: string;
+    other?: string; // Другие контакты
+  };
   organizer_id?: string;
+  organizer?: User; // При загрузке с JOIN
+  hub_id?: string; // Связь с хабом (опционально)
+  hub?: Hub; // При загрузке с JOIN
+  created_at: string;
+  updated_at?: string;
+}
+
+// Участник ивента
+export interface EventMember {
+  id: string;
+  event_id: string;
+  user_id: string;
+  user?: User; // При загрузке с JOIN
+  status: AttendeeStatus; // going / maybe / not_going
+  registered_at: string;
+}
+
+// Спикер ивента
+export interface EventSpeaker {
+  id: string;
+  event_id: string;
+  user_id: string;
+  user?: User; // При загрузке с JOIN
+  topic?: string; // Тема выступления
+  bio?: string; // Краткая биография для этого ивента
+  order?: number; // Порядок выступления
   created_at: string;
 }
 

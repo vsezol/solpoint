@@ -37,6 +37,7 @@ export function EventCard({
       day: "numeric",
     });
 
+    // Format: "Thu, Dec 11 - Sat, Dec 13"
     return `${startStr} - ${endStr}`;
   };
 
@@ -165,9 +166,9 @@ export function EventCard({
 
   // Full card view
   return (
-    <div className="bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-xl overflow-hidden">
-      {/* Image */}
-      <div className="relative h-48 bg-[var(--color-surface-hover)]">
+    <div className="bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-xl overflow-hidden flex flex-col h-full">
+      {/* Image/Icon Section */}
+      <div className="relative h-48 bg-gradient-to-br from-[var(--color-primary)]/20 via-[var(--color-primary)]/10 to-[var(--color-secondary)]/20 flex-shrink-0">
         {event.image_url ? (
           <Image
             src={event.image_url}
@@ -176,67 +177,80 @@ export function EventCard({
             className="object-cover"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[var(--color-primary)]/20 to-[var(--color-secondary)]/20">
-            <Calendar className="w-16 h-16 text-[var(--color-primary)] opacity-50" />
+          <div className="w-full h-full flex items-center justify-center">
+            <Calendar className="w-20 h-20 text-[var(--color-text-primary)] opacity-60 stroke-[1.5]" />
           </div>
         )}
         {/* Badges */}
         <div className="absolute top-3 left-3 flex gap-2">
-          <Badge variant={event.event_type === "official" ? "primary" : "default"}>
+          <Badge 
+            variant="primary"
+            className="bg-[var(--color-primary)] text-[var(--color-background)] font-semibold"
+          >
             {eventTypeLabels[event.event_type] || event.event_type}
           </Badge>
-          {event.is_paid && (
-            <Badge variant="warning">
+          {event.is_paid ? (
+            <Badge 
+              variant="warning"
+              className="bg-[#f97316] text-white font-semibold"
+            >
               {event.price_sol} SOL
+            </Badge>
+          ) : (
+            <Badge 
+              variant="warning"
+              className="bg-[#f97316] text-white font-semibold"
+            >
+              Free
             </Badge>
           )}
         </div>
       </div>
 
       {/* Content */}
-      <div className="p-5">
-        <h3 className="text-xl font-semibold text-[var(--color-text-primary)] mb-3">
+      <div className="p-5 flex flex-col flex-grow">
+        <h3 className="text-xl font-semibold text-[var(--color-text-primary)] mb-2">
           {event.name}
         </h3>
 
         {event.description && (
-          <p className="text-[var(--color-text-secondary)] mb-4 line-clamp-2">
+          <p className="text-[var(--color-text-secondary)] mb-4 line-clamp-2 text-sm">
             {event.description}
           </p>
         )}
 
         {/* Info */}
         <div className="space-y-2 mb-4">
-          <div className="flex items-center gap-2 text-[var(--color-text-secondary)]">
-            <MapPin className="w-4 h-4 text-[var(--color-primary)]" />
+          <div className="flex items-center gap-2 text-[var(--color-text-secondary)] text-sm">
+            <MapPin className="w-4 h-4 text-[var(--color-text-muted)] flex-shrink-0" />
             <span>
               {event.city}, {event.country}
             </span>
           </div>
-          <div className="flex items-center gap-2 text-[var(--color-text-secondary)]">
-            <Calendar className="w-4 h-4 text-[var(--color-primary)]" />
+          <div className="flex items-center gap-2 text-[var(--color-text-secondary)] text-sm">
+            <Calendar className="w-4 h-4 text-[var(--color-text-muted)] flex-shrink-0" />
             <span>{formatDate(event.start_date, event.end_date)}</span>
           </div>
         </div>
 
         {/* Attendees */}
         <div className="flex items-center gap-2 mb-4">
-          <span className="text-sm text-[var(--color-text-muted)]">
+          <span className="text-sm text-[var(--color-text-secondary)]">
             {event.attendees_count} attending
             {event.max_attendees && ` / ${event.max_attendees} max`}
           </span>
         </div>
 
         {/* Socials */}
-        <div className="flex items-center gap-3 mb-4">
-          {event.socials?.twitter && (
+        <div className="flex items-center gap-2 mb-4">
+          {event.socials?.instagram && (
             <a
-              href={event.socials.twitter}
+              href={event.socials.instagram}
               target="_blank"
               rel="noopener noreferrer"
-              className="p-2 rounded-full bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+              className="p-1.5 rounded-full text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
             >
-              <Twitter className="w-5 h-5" />
+              <Instagram className="w-4 h-4" />
             </a>
           )}
           {event.socials?.website && (
@@ -244,27 +258,24 @@ export function EventCard({
               href={event.socials.website}
               target="_blank"
               rel="noopener noreferrer"
-              className="p-2 rounded-full bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+              className="p-1.5 rounded-full text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
             >
-              <ExternalLink className="w-5 h-5" />
+              <ExternalLink className="w-4 h-4" />
             </a>
           )}
         </div>
 
+        {/* Spacer to push button to bottom */}
+        <div className="flex-grow"></div>
+
         {/* Actions */}
-        <div className="flex gap-3">
-          <Button
-            variant="outline"
-            className="flex-1 text-[var(--color-primary)] border-[var(--color-primary)] hover:bg-[var(--color-primary)]/10"
-          >
-            <Share2 className="w-4 h-4 mr-2" />
-            Share
-          </Button>
-          <Button variant="outline" className="flex-1">
-            <ExternalLink className="w-4 h-4 mr-2" />
-            Details
-          </Button>
-        </div>
+        <Button
+          variant="outline"
+          className="w-full text-[var(--color-primary)] border-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 mt-auto"
+        >
+          <Share2 className="w-4 h-4 mr-2" />
+          Share
+        </Button>
       </div>
     </div>
   );

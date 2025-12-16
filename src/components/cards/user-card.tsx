@@ -67,7 +67,7 @@ export function UserCard({
         <div className={cn("space-y-1 text-sm mb-3", isBlurred && !isVip && "blur-sm select-none")}>
           <p className="text-[var(--color-text-secondary)]">
             <span className="text-[var(--color-primary)]">Country:</span>{" "}
-            {user.country}
+            {(user as any).countries?.name || user.country || user.country_code || "Not specified"}
           </p>
           {isVip && user.city && (
             <p className="text-[var(--color-text-secondary)]">
@@ -199,7 +199,7 @@ export function UserCard({
         <div className="flex items-center gap-2 text-[var(--color-text-secondary)]">
           <MapPin className="w-4 h-4" />
           <span>
-            {user.country}
+            {(user as any).countries?.name || user.country || user.country_code || "Not specified"}
             {isVip && user.city && `, ${user.city}`}
           </span>
         </div>

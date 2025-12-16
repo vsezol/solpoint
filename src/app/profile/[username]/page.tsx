@@ -32,10 +32,15 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   // Убираем @ если он есть в начале
   const cleanUsername = username.startsWith("@") ? username.slice(1) : username;
   
-  // Получаем профиль по точному совпадению twitter_handle
+  // Получаем профиль по точному совпадению twitter_handle с названием страны
   const { data: user, error: profileError } = await supabase
     .from("profiles")
-    .select("*")
+    .select(`
+      *,
+      countries!fk_profiles_country_code (
+        name
+      )
+    `)
     .eq("twitter_handle", cleanUsername)
     .maybeSingle();
 
@@ -64,6 +69,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
           description,
           image_url,
           country,
+          country_code,
           city,
           address,
           latitude,
@@ -105,6 +111,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
           avatar_url,
           bio,
           country,
+          country_code,
           city,
           role,
           is_open_to_meet,
@@ -114,7 +121,10 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
           socials,
           last_active_at,
           created_at,
-          updated_at
+          updated_at,
+          countries!fk_profiles_country_code (
+            name
+          )
         )
       `
       )
@@ -206,7 +216,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
                           </Link>
                           <p className="text-xs text-[var(--color-text-muted)] truncate">
                             {friend.city && `${friend.city}, `}
-                            {friend.country}
+                            {(friend.countries as any)?.name || friend.country || "Not specified"}
                           </p>
                         </div>
                         <Button variant="ghost" size="sm">
@@ -336,7 +346,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
                         <MapPin className="w-4 h-4 text-[var(--color-primary)]" />
                         <span>
                           {user.city && `${user.city}, `}
-                          {user.country}
+                          {(user.countries as any)?.name || user.country || "Not specified"}
                         </span>
                       </div>
                       {user.role && (
