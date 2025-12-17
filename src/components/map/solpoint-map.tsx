@@ -180,15 +180,6 @@ export function SolPointMap({
 
   return (
     <div className="relative w-full h-full">
-      {/* Timer indicator */}
-        <div className="absolute top-4 right-4 z-1000 flex items-center gap-2 bg-white/90 backdrop-blur-sm rounded-full px-3 py-2 shadow-lg" style={{ zIndex: 1000 }}>
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5"/>
-          <path d="M8 4V8L10 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-        </svg>
-        <span className="text-sm font-semibold text-gray-800">3.2</span>
-      </div>
-
       <MapContainer
         center={center}
         zoom={zoom}
