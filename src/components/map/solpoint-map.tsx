@@ -188,6 +188,7 @@ export function SolPointMap({
         scrollWheelZoom={true}
         doubleClickZoom={true}
         dragging={true}
+        attributionControl={false}
       >
         {/* GeoJSON layer with custom colors from Figma */}
         {worldGeoJson && (
@@ -311,6 +312,10 @@ export function SolPointMap({
         
         .leaflet-control-zoom a:last-child {
           border-bottom: none !important;
+        }
+        
+        .leaflet-control-attribution {
+          display: none !important;
         }
       `}</style>
     </div>
