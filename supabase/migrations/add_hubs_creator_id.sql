@@ -24,3 +24,23 @@ CREATE POLICY "Authenticated users can create hubs"
   ON public.hubs FOR INSERT
   WITH CHECK (auth.uid() IS NOT NULL);
 
+-- ============================================================================
+-- Назначение организаторов для существующих хабов
+-- ============================================================================
+
+-- Назначаем первого пользователя организатором первого хаба (по ID или created_at)
+UPDATE public.hubs
+SET creator_id = 'f8646815-26ff-43a0-be78-552919bfc2cc'::uuid
+WHERE id = (
+  SELECT id 
+  FROM public.hubs 
+  ORDER BY created_at ASC, id ASC 
+  LIMIT 1
+)
+AND creator_id IS NULL;
+
+-- Назначаем второго пользователя организатором всех остальных хабов
+UPDATE public.hubs
+SET creator_id = 'bec61439-31c9-47e4-85a2-f2c1801542e7'::uuid
+WHERE creator_id IS NULL;
+
