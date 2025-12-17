@@ -75,6 +75,7 @@ CREATE TABLE public.hubs (
   longitude DOUBLE PRECISION NOT NULL,
   members_count INTEGER DEFAULT 0,
   socials JSONB DEFAULT '{}',
+  creator_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -207,6 +208,14 @@ CREATE POLICY "Authenticated users can create events"
 CREATE POLICY "Hubs are viewable by everyone"
   ON public.hubs FOR SELECT
   USING (true);
+
+CREATE POLICY "Creators can update their hubs"
+  ON public.hubs FOR UPDATE
+  USING (creator_id = auth.uid());
+
+CREATE POLICY "Authenticated users can create hubs"
+  ON public.hubs FOR INSERT
+  WITH CHECK (auth.uid() IS NOT NULL);
 
 -- Messages policies (VIP only)
 CREATE POLICY "Users can view their own messages"

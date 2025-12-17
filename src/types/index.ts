@@ -132,6 +132,8 @@ export interface Hub {
     facebook?: string;
     website?: string;
   };
+  creator_id?: string;
+  creator?: User; // При загрузке с JOIN
   created_at: string;
 }
 

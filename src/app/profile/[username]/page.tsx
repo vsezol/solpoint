@@ -114,13 +114,13 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   const isOwnProfile = Boolean(authUser?.id && user.id && authUser.id === user.id);
 
   // Получаем события пользователя (для любого профиля)
+  // События, на которые пользователь зарегистрировался (нажал "участвовать")
   let upcomingEvents: Event[] = [];
   let pastEvents: Event[] = [];
-  let allUpcomingEvents: Event[] = []; // Все предстоящие события для блока "What's happening"
   let friends: User[] = [];
   let friendshipStatus: "none" | "pending_sent" | "pending_received" | "accepted" | "blocked" = "none";
 
-  // Получаем события пользователя
+  // Получаем события пользователя из event_attendees (события, на которые он зарегистрировался)
   const { data: eventAttendees } = await supabase
     .from("event_attendees")
     .select(
@@ -135,20 +135,29 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
         country_code,
         city,
         address,
+        venue_name,
         latitude,
         longitude,
         start_date,
         end_date,
+        timezone,
         event_type,
         visibility,
         is_paid,
         price_sol,
+        price_usd,
         max_attendees,
         attendees_count,
+        capacity_remaining,
+        registration_deadline,
+        is_online,
         socials,
+        contacts,
         organizer_id,
+        hub_id,
         slug,
-        created_at
+        created_at,
+        updated_at
       )
     `
     )
@@ -161,20 +170,30 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     }).filter((e): e is Event => Boolean(e)) || [];
 
   const now = new Date();
-  upcomingEvents = allEvents.filter((e) => new Date(e.start_date) > now);
   pastEvents = allEvents.filter((e) => new Date(e.start_date) <= now);
 
-  // Получаем все предстоящие события для блока "What's happening" (только для своего профиля)
-  // Переменная allUpcomingEvents не используется, но оставлена для будущего использования
-  if (isOwnProfile) {
-    const { data: allEventsData } = await supabase
-      .from("events")
-      .select("*")
-      .gte("start_date", now.toISOString())
-      .order("start_date", { ascending: true })
-      .limit(10);
+  // Получаем предстоящие события по стране авторизованного пользователя для блока "What's happening"
+  // Если пользователь не авторизован, показываем пустой список
+  if (authUser) {
+    // Получаем профиль авторизованного пользователя для получения его страны
+    const { data: authUserProfile } = await supabase
+      .from("profiles")
+      .select("country_code")
+      .eq("id", authUser.id)
+      .maybeSingle();
 
-    allUpcomingEvents = (allEventsData || []) as Event[];
+    if (authUserProfile?.country_code) {
+      // Получаем предстоящие события по стране авторизованного пользователя
+      const { data: countryEvents } = await supabase
+        .from("events")
+        .select("*")
+        .eq("country_code", authUserProfile.country_code)
+        .gte("start_date", now.toISOString())
+        .order("start_date", { ascending: true })
+        .limit(10);
+
+      upcomingEvents = (countryEvents || []) as Event[];
+    }
   }
 
   // Получаем количество взаимных друзей (mutual follows) для любого профиля
