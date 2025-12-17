@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Header, Footer } from "@/components/layout";
-import { EventCard } from "@/components/cards/event-card";
+import { EventCard, EventCardSkeleton } from "@/components/cards";
 import { Button, Input } from "@/components/ui";
 import { Search, Calendar } from "lucide-react";
 import { getEvents, filterEventsBySearch } from "@/lib/api/events";
@@ -139,11 +139,10 @@ export default function EventsPage() {
           </h2>
 
           {loading ? (
-            <div className="text-center py-12">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)]"></div>
-              <p className="mt-4 text-[var(--color-text-secondary)]">
-                Loading events...
-              </p>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <EventCardSkeleton key={i} />
+              ))}
             </div>
           ) : error ? (
             <div className="text-center py-12">
