@@ -58,9 +58,9 @@ export default function HubsPage() {
         {/* Hero */}
         <section className="py-12 text-center">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h1 className="text-4xl sm:text-5xl font-bold text-gradient mb-4 inline-block" >
-              Solana Hubs
-            </h1>
+          <h1 className="text-4xl sm:text-5xl font-bold mb-4 inline-block bg-gradient-to-r from-[#00F58D] to-[#A73EFF] bg-clip-text text-transparent">
+            Solana Hubs
+          </h1>
             <p className="text-lg text-[var(--color-text-secondary)] max-w-2xl mx-auto mb-8">
               Connect with local Solana communities and Superteam chapters
               around the world.

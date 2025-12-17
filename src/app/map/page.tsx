@@ -92,10 +92,10 @@ export default function MapPage() {
               </defs>
             </svg>
           </div>
-
-          <h1 className="text-4xl sm:text-5xl font-bold text-gradient mb-4 inline-block">
-            SolPoint Map
-          </h1>
+          <h1 className="text-4xl sm:text-5xl font-bold mb-4 inline-block bg-gradient-to-r from-[#00F58D] to-[#A73EFF] bg-clip-text text-transparent">
+  Solana Map
+</h1>
+         
           <p className="text-lg text-[var(--color-text-secondary)] max-w-2xl mx-auto">
             Discover Solana Users, Hubs, and Events Around the World.
           </p>
