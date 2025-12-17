@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Card, Button, Avatar, Badge } from "@/components/ui";
+import { Button, Avatar } from "@/components/ui";
 import { 
   Twitter, 
   Instagram, 
@@ -148,74 +148,84 @@ export function ProfileMainSection({ user, isOwnProfile, friendsCount = 0 }: Pro
         <>
           {/* Wallet */}
           {isOwnProfile && (
-            <Card variant="bordered">
-              <h3 className="text-sm font-medium text-[var(--color-text-muted)] mb-3">
-                Wallet
-              </h3>
-              {currentUser.wallet_address ? (
-                <p className="text-sm font-mono text-[var(--color-text-secondary)] truncate">
-                  {currentUser.wallet_address}
-                </p>
-              ) : (
-                <Button variant="outline" size="sm" className="w-full">
-                  <Wallet className="w-4 h-4 mr-2" />
-                  Connect wallet
-                </Button>
-              )}
-            </Card>
+            <div className="w-fit">
+              <div className="flex items-center justify-between gap-4">
+                <h3 className="text-sm font-medium text-[var(--color-text-muted)]">
+                  Wallet
+                </h3>
+                {currentUser.wallet_address ? (
+                  <p className="text-sm font-mono text-[var(--color-text-secondary)] truncate max-w-[200px]">
+                    {currentUser.wallet_address}
+                  </p>
+                ) : (
+                  <Button variant="outline" size="sm">
+                    <Wallet className="w-4 h-4 mr-2" />
+                    Connect wallet
+                  </Button>
+                )}
+              </div>
+            </div>
           )}
 
           {/* Socials */}
-          <Card variant="bordered">
-            <h3 className="text-sm font-medium text-[var(--color-text-muted)] mb-3">
-              Socials
-            </h3>
-            <div className="flex gap-2">
-              <a
-                href={`https://twitter.com/${currentUser.twitter_handle}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-2 rounded-lg bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
-              >
-                <Twitter className="w-5 h-5" />
-              </a>
-              {currentUser.socials?.instagram && (
+          <div className="w-fit">
+            <div className="flex items-center justify-between gap-4">
+              <h3 className="text-sm font-medium text-[var(--color-text-muted)]">
+                Socials
+              </h3>
+              <div className="flex gap-2">
                 <a
-                  href={currentUser.socials.instagram}
+                  href={`https://twitter.com/${currentUser.twitter_handle}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="p-2 rounded-lg bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+                  aria-label="Twitter"
                 >
-                  <Instagram className="w-5 h-5" />
+                  <Twitter className="w-5 h-5" />
                 </a>
-              )}
-              {currentUser.socials?.facebook && (
-                <a
-                  href={currentUser.socials.facebook}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="p-2 rounded-lg bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
-                >
-                  <Facebook className="w-5 h-5" />
-                </a>
-              )}
+                {currentUser.socials?.instagram && (
+                  <a
+                    href={currentUser.socials.instagram}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2 rounded-lg bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+                    aria-label="Instagram"
+                  >
+                    <Instagram className="w-5 h-5" />
+                  </a>
+                )}
+                {currentUser.socials?.facebook && (
+                  <a
+                    href={currentUser.socials.facebook}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2 rounded-lg bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+                    aria-label="Facebook"
+                  >
+                    <Facebook className="w-5 h-5" />
+                  </a>
+                )}
+              </div>
             </div>
-          </Card>
+          </div>
 
-          {/* Open to meet */}
+          {/* Open to meet and Logout */}
           {isOwnProfile && (
-            <Card variant="bordered">
-              <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between w-full">
+              <div className="flex items-center gap-4">
                 <span className="text-sm font-medium text-[var(--color-text-primary)]">
                   Open to meet:
                 </span>
                 <button
                   onClick={handleToggleOpenToMeet}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-offset-2 focus:ring-offset-[var(--color-background)] ${
                     isOpenToMeet
-                      ? "bg-[var(--color-primary)]"
+                      ? "bg-green-500"
                       : "bg-[var(--color-surface-border)]"
                   }`}
+                  aria-label={isOpenToMeet ? "Open to meet" : "Not open to meet"}
+                  aria-checked={isOpenToMeet}
+                  role="switch"
                 >
                   <span
                     className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
@@ -224,24 +234,18 @@ export function ProfileMainSection({ user, isOwnProfile, friendsCount = 0 }: Pro
                   />
                 </button>
               </div>
-            </Card>
-          )}
-
-          {/* Logout */}
-          {isOwnProfile && (
-            <Card variant="bordered">
               <form action="/api/auth/logout" method="POST">
                 <Button
                   type="submit"
                   variant="outline"
                   size="sm"
-                  className="w-full text-red-500 hover:text-red-600 hover:border-red-500"
+                  className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:border-[var(--color-surface-border)]"
                 >
                   <LogOut className="w-4 h-4 mr-2" />
                   Log out
                 </Button>
               </form>
-            </Card>
+            </div>
           )}
         </>
       )}
