@@ -61,11 +61,16 @@ export function UserCard({
                     <Check className="w-4 h-4 text-[var(--color-primary)]" />
                   )}
                 </div>
-                {user.role && (
-                  <Badge variant="primary" className="mt-1 w-fit">
-                    {roleLabels[user.role] || user.role}
-                  </Badge>
-                )}
+                <div className="flex items-center gap-2 mt-1">
+                  {user.role && (
+                    <Badge variant="primary" className="w-fit">
+                      {roleLabels[user.role] || user.role}
+                    </Badge>
+                  )}
+                  {user.subscription_tier === "vip" && (
+                    <Badge variant="warning">VIP</Badge>
+                  )}
+                </div>
               </div>
             </div>
             {isHost && (
@@ -206,11 +211,16 @@ export function UserCard({
                 )}
               </div>
               <p className="text-[var(--color-text-muted)]">@{user.twitter_handle}</p>
-              {user.role && (
-                <Badge variant="primary" className="mt-2 w-fit">
-                  {roleLabels[user.role] || user.role}
-                </Badge>
-              )}
+              <div className="flex items-center gap-2 mt-2">
+                {user.role && (
+                  <Badge variant="primary" className="w-fit">
+                    {roleLabels[user.role] || user.role}
+                  </Badge>
+                )}
+                {user.subscription_tier === "vip" && (
+                  <Badge variant="warning">VIP</Badge>
+                )}
+              </div>
             </div>
           </div>
           {isHost && (
@@ -251,14 +261,11 @@ export function UserCard({
       )}
 
       {/* Tags */}
-      <div className="flex flex-wrap gap-2 mb-4">
-        {user.is_open_to_meet && !isHost && (
+      {user.is_open_to_meet && !isHost && (
+        <div className="flex flex-wrap gap-2 mb-4">
           <Badge variant="success">Open to meet</Badge>
-        )}
-        {user.subscription_tier === "vip" && (
-          <Badge variant="warning">VIP</Badge>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Socials */}
       <div className="mb-4">

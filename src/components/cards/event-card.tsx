@@ -6,10 +6,12 @@ import { Twitter, Instagram, Facebook, ExternalLink, MapPin, Calendar, Share2 } 
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 interface EventCardProps {
   event: Event;
   isVip?: boolean;
+  isAuthenticated?: boolean;
   compact?: boolean;
   isBlurred?: boolean;
 }
@@ -65,9 +67,18 @@ export function EventCardSkeleton() {
 export function EventCard({
   event,
   isVip = false,
+  isAuthenticated = false,
   compact = false,
   isBlurred = false,
 }: EventCardProps) {
+  const router = useRouter();
+
+  // Определяем, может ли пользователь видеть детали события
+  const canViewDetails = isAuthenticated && (
+    event.visibility === "public" || 
+    (event.visibility === "vip_only" && isVip)
+  );
+
   const formatDate = (startDate: string, endDate?: string) => {
     const start = new Date(startDate);
     const startStr = start.toLocaleDateString("en-US", {
@@ -98,8 +109,7 @@ export function EventCard({
 
   if (compact) {
     return (
-      <Link href={`/events/${event.slug}`} className="block">
-        <div className="p-4 min-w-[280px] border border-[var(--color-surface-border)] rounded-xl transition-all duration-200 hover:scale-[1.02] hover:border-white cursor-pointer">
+      <div className="p-4 min-w-[280px] border border-[var(--color-surface-border)] rounded-xl transition-all duration-200 hover:scale-[1.02] hover:border-white">
         {/* Image */}
         <div className="relative w-16 h-16 mx-auto mb-3 rounded-xl overflow-hidden bg-[var(--color-surface-hover)]">
           {event.image_url ? (
@@ -175,7 +185,7 @@ export function EventCard({
         )}
 
         {/* Actions */}
-        {isVip ? (
+        {canViewDetails ? (
           <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
             <Button
               variant="outline"
@@ -183,6 +193,7 @@ export function EventCard({
               className="flex-1 text-[var(--color-primary)] border-[var(--color-primary)]"
               onClick={(e) => {
                 e.stopPropagation();
+                e.preventDefault();
                 // Share functionality
               }}
             >
@@ -195,7 +206,8 @@ export function EventCard({
               className="flex-1"
               onClick={(e) => {
                 e.stopPropagation();
-                window.location.href = `/events/${event.slug}`;
+                e.preventDefault();
+                router.push(`/events/${event.slug}`);
               }}
             >
               <ExternalLink className="w-4 h-4 mr-1" />
@@ -222,7 +234,6 @@ export function EventCard({
           </div>
         )}
         </div>
-      </Link>
     );
   }
 
