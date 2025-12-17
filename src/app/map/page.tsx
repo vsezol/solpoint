@@ -102,7 +102,7 @@ export default function MapPage() {
         </section>
 
         {/* Map section */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+        <section className="max-w-[90rem] mx-auto px-4 sm:px-6 lg:px-8 pb-16">
           <div className="flex flex-col lg:flex-row gap-6">
             {/* Filters sidebar */}
             <aside className="w-full lg:w-[320px] lg:flex-shrink-0">
@@ -114,8 +114,8 @@ export default function MapPage() {
             </aside>
 
             {/* Map */}
-            <div className="flex-1 lg:max-w-[calc(100%-344px)]">
-              <div className="h-[500px] lg:h-[600px] rounded-xl overflow-hidden border border-[var(--color-surface-border)]">
+            <div className="flex-1">
+              <div className="h-[500px] lg:h-[720px] rounded-xl overflow-hidden border border-[var(--color-surface-border)]">
                 {loading ? (
                   <div className="w-full h-full flex items-center justify-center bg-[var(--color-surface)]">
                     <div className="flex flex-col items-center gap-4">
