@@ -93,7 +93,7 @@ export default function MapPage() {
             </svg>
           </div>
 
-          <h1 className="text-4xl sm:text-5xl font-bold text-gradient mb-4">
+          <h1 className="text-4xl sm:text-5xl font-bold text-gradient mb-4 inline-block">
             SolPoint Map
           </h1>
           <p className="text-lg text-[var(--color-text-secondary)] max-w-2xl mx-auto">

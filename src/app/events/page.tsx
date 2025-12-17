@@ -69,7 +69,7 @@ export default function EventsPage() {
         <section className="py-12 text-center">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h1 
-              className="text-4xl sm:text-5xl font-bold mb-4"
+              className="text-4xl sm:text-5xl font-bold mb-4 inline-block"
               style={{
                 background: 'linear-gradient(to right, #00F58D 0%, #A73EFF 100%)',
                 WebkitBackgroundClip: 'text',
