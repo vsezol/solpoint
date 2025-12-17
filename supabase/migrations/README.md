@@ -117,15 +117,91 @@ CREATE INDEX idx_profiles_twitter_handle ON public.profiles(twitter_handle);
 
 ---
 
+### 6. `migrate_friends_to_follows.sql` ✨ НОВАЯ
+
+Миграция системы друзей на модель подписок (Instagram/Twitter).
+
+**Что делает:**
+
+1. **Создает таблицу `follows`**
+   - Односторонние подписки (follower_id → following_id)
+   - Индексы для производительности
+   - RLS политики
+
+2. **Создает представление `mutual_friends`**
+   - Взаимные подписки = друзья
+   - Автоматически вычисляется из `follows`
+
+3. **Мигрирует существующие данные**
+   - Принятые дружбы → двусторонние подписки
+   - Ожидающие запросы → односторонние подписки
+
+4. **Создает helper функции**
+   - `is_following()` - проверить подписку
+   - `are_mutual_friends()` - проверить взаимную дружбу
+   - `get_follow_status()` - получить статус (none/following/follower/mutual)
+   - `get_followers_count()` - количество подписчиков
+   - `get_following_count()` - количество подписок
+   - `get_mutual_friends_count()` - количество взаимных друзей
+
+**Применение:**
+
+```bash
+# Выполните миграцию через Supabase SQL Editor
+# Файл: supabase/migrations/migrate_friends_to_follows.sql
+```
+
+**Важно:**
+- Старая таблица `friends` остается для обратной совместимости
+- Все данные мигрируются автоматически
+- После миграции используйте `follows` вместо `friends`
+
+**Frontend интеграция:**
+- ✅ API endpoint обновлен (`src/app/api/friends/route.ts`)
+- ✅ Новый endpoint для списков (`src/app/api/friends/list/route.ts`)
+- ✅ Страница профиля обновлена (`src/app/profile/[username]/page.tsx`)
+
+---
+
+### 7. `drop_friends_table.sql` ✨ НОВАЯ (ОПЦИОНАЛЬНО)
+
+Удаляет устаревшую таблицу `friends` после успешной миграции на систему `follows`.
+
+**⚠️ ВНИМАНИЕ:** Выполняйте эту миграцию ТОЛЬКО после:
+1. Успешного выполнения `migrate_friends_to_follows.sql`
+2. Проверки, что все данные мигрированы
+3. Проверки, что новая система работает корректно
+4. Создания резервной копии базы данных
+
+**Что делает:**
+- Удаляет функцию `create_mutual_friendship()` (обновлена в `add_invites_and_referrals.sql`)
+- Удаляет RLS политики таблицы `friends`
+- Удаляет таблицу `friends` (CASCADE удалит все зависимости)
+- Проверяет наличие таблицы `follows` и представления `mutual_friends` перед удалением
+
+**Применение:**
+
+```bash
+# Выполните ТОЛЬКО после проверки работы новой системы
+# Файл: supabase/migrations/drop_friends_table.sql
+```
+
+**Откат:**
+Если нужно восстановить таблицу `friends`, выполните миграцию `migrate_friends_to_follows.sql` заново (она создаст таблицу, если её нет).
+
+---
+
 ## Порядок применения миграций
 
 Если вы настраиваете проект с нуля:
 
 1. `schema.sql` - базовая схема
-2. `add_invites_and_referrals.sql` - система инвайтов
+2. `add_invites_and_referrals.sql` - система инвайтов (обновлена для follows)
 3. `add_twitter_handle_index.sql` - индекс Twitter handle
 4. `add_countries_and_location_fields.sql` - страны и локация (создает таблицу)
 5. `seed_countries.sql` - заполнение таблицы countries (249 стран)
+6. `migrate_friends_to_follows.sql` - миграция на систему подписок (Instagram/Twitter модель)
+7. `drop_friends_table.sql` - удаление устаревшей таблицы friends (опционально, только после проверки)
 
 ## Проверка статуса миграций
 

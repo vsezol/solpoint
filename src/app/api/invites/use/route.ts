@@ -105,36 +105,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Создаем дружбу между пользователями (оба направления)
-    await supabase
-      .from("friends")
-      .insert({
-        user_id: invite.inviter_user_id,
-        friend_id: user.id,
-        status: "accepted",
-      })
-      .select()
-      .single()
-      .then(({ error }) => {
-        if (error && !error.message.includes("duplicate")) {
-          console.error("Error creating friendship:", error);
-        }
-      });
+    // Создаем взаимные подписки между пользователями (оба направления)
+    // Это автоматически создаст взаимную дружбу через view mutual_friends
+    // Используем функцию БД для надежности (обходит RLS и обрабатывает дубликаты)
+    const { error: friendshipError } = await supabase.rpc('create_mutual_friendship', {
+      p_user_id_1: invite.inviter_user_id,
+      p_user_id_2: user.id,
+    });
 
-    await supabase
-      .from("friends")
-      .insert({
-        user_id: user.id,
-        friend_id: invite.inviter_user_id,
-        status: "accepted",
-      })
-      .select()
-      .single()
-      .then(({ error }) => {
-        if (error && !error.message.includes("duplicate")) {
-          console.error("Error creating friendship:", error);
-        }
-      });
+    if (friendshipError) {
+      console.error("Error creating mutual friendship:", friendshipError);
+      // Не прерываем выполнение, так как referral уже создан
+      // Взаимная дружба - это дополнительная функция
+    }
 
     return NextResponse.json({ data: referral }, { status: 201 });
   } catch (error) {

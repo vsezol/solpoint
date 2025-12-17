@@ -120,7 +120,8 @@ BEGIN
 END;
 $$;
 
--- Function to create mutual friendship (bypasses RLS for server-side operations)
+-- Function to create mutual friendship (creates bidirectional follows)
+-- Updated to use follows table instead of friends table
 CREATE OR REPLACE FUNCTION public.create_mutual_friendship(
   p_user_id_1 UUID,
   p_user_id_2 UUID
@@ -131,15 +132,15 @@ SET search_path = public
 LANGUAGE plpgsql
 AS $$
 BEGIN
-  -- Создаем дружбу в обоих направлениях
+  -- Создаем взаимные подписки (follows) в обоих направлениях
   -- Игнорируем дубликаты (ON CONFLICT DO NOTHING)
-  INSERT INTO public.friends (user_id, friend_id, status)
-  VALUES (p_user_id_1, p_user_id_2, 'accepted')
-  ON CONFLICT (user_id, friend_id) DO NOTHING;
+  INSERT INTO public.follows (follower_id, following_id)
+  VALUES (p_user_id_1, p_user_id_2)
+  ON CONFLICT (follower_id, following_id) DO NOTHING;
   
-  INSERT INTO public.friends (user_id, friend_id, status)
-  VALUES (p_user_id_2, p_user_id_1, 'accepted')
-  ON CONFLICT (user_id, friend_id) DO NOTHING;
+  INSERT INTO public.follows (follower_id, following_id)
+  VALUES (p_user_id_2, p_user_id_1)
+  ON CONFLICT (follower_id, following_id) DO NOTHING;
 END;
 $$;
 

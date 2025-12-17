@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
-// POST /api/friends - добавить в друзья или отправить запрос
+// POST /api/friends - подписаться на пользователя (follow)
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
@@ -24,80 +24,66 @@ export async function POST(request: NextRequest) {
 
     if (authUser.id === friend_id) {
       return NextResponse.json(
-        { error: "Cannot add yourself as a friend" },
+        { error: "Cannot follow yourself" },
         { status: 400 }
       );
     }
 
-    // Проверяем, существует ли уже запись о дружбе
-    const { data: existingFriendship } = await supabase
-      .from("friends")
+    // Проверяем, существует ли уже подписка
+    const { data: existingFollow } = await supabase
+      .from("follows")
       .select("*")
-      .or(`and(user_id.eq.${authUser.id},friend_id.eq.${friend_id}),and(user_id.eq.${friend_id},friend_id.eq.${authUser.id})`)
+      .eq("follower_id", authUser.id)
+      .eq("following_id", friend_id)
       .maybeSingle();
 
-    if (existingFriendship) {
-      // Если запрос уже существует
-      if (existingFriendship.status === "pending") {
-        // Если запрос был отправлен другим пользователем, принимаем его
-        if (existingFriendship.user_id === friend_id && existingFriendship.friend_id === authUser.id) {
-          const { error } = await supabase
-            .from("friends")
-            .update({ status: "accepted" })
-            .eq("id", existingFriendship.id);
-
-          if (error) throw error;
-
-          return NextResponse.json({
-            data: { status: "accepted", friendship: existingFriendship },
-            message: "Friend request accepted",
-          });
-        } else {
-          return NextResponse.json(
-            { error: "Friend request already sent" },
-            { status: 400 }
-          );
-        }
-      } else if (existingFriendship.status === "accepted") {
-        return NextResponse.json(
-          { error: "Already friends" },
-          { status: 400 }
-        );
-      } else if (existingFriendship.status === "blocked") {
-        return NextResponse.json(
-          { error: "User is blocked" },
-          { status: 400 }
-        );
-      }
+    if (existingFollow) {
+      return NextResponse.json(
+        { error: "Already following this user" },
+        { status: 400 }
+      );
     }
 
-    // Создаем новый запрос в друзья
-    const { data: friendship, error } = await supabase
-      .from("friends")
+    // Создаем подписку
+    const { data: follow, error } = await supabase
+      .from("follows")
       .insert({
-        user_id: authUser.id,
-        friend_id: friend_id,
-        status: "pending",
+        follower_id: authUser.id,
+        following_id: friend_id,
       })
       .select()
       .single();
 
     if (error) throw error;
 
+    // Проверяем, является ли это взаимной подпиской (дружбой)
+    const { data: mutualFollow } = await supabase
+      .from("follows")
+      .select("*")
+      .eq("follower_id", friend_id)
+      .eq("following_id", authUser.id)
+      .maybeSingle();
+
+    const isMutual = !!mutualFollow;
+
     return NextResponse.json({
-      data: friendship,
-      message: "Friend request sent",
+      data: {
+        follow,
+        status: isMutual ? "mutual" : "following",
+        isMutual,
+      },
+      message: isMutual ? "Now following each other (friends)" : "Now following",
     });
   } catch (error: any) {
-    console.error("Add friend error:", error);
+    console.error("Follow error:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to add friend" },
+      { error: error.message || "Failed to follow user" },
       { status: 500 }
     );
   }
 }
 
-// DELETE /api/friends - удалить из друзей или отменить запрос
+// DELETE /api/friends - отписаться от пользователя (unfollow)
 export async function DELETE(request: NextRequest) {
   try {
     const supabase = await createClient();
@@ -119,27 +105,29 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Удаляем запись о дружбе (в любом направлении)
+    // Удаляем подписку (только свою)
     const { error } = await supabase
-      .from("friends")
+      .from("follows")
       .delete()
-      .or(`and(user_id.eq.${authUser.id},friend_id.eq.${friend_id}),and(user_id.eq.${friend_id},friend_id.eq.${authUser.id})`);
+      .eq("follower_id", authUser.id)
+      .eq("following_id", friend_id);
 
     if (error) throw error;
 
     return NextResponse.json({
-      message: "Friend removed",
+      message: "Unfollowed successfully",
     });
   } catch (error: any) {
-    console.error("Remove friend error:", error);
+    console.error("Unfollow error:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to remove friend" },
+      { error: error.message || "Failed to unfollow user" },
       { status: 500 }
     );
   }
 }
 
-// GET /api/friends?user_id=xxx - получить статус дружбы
+// GET /api/friends?user_id=xxx - получить статус подписки
+// Возвращает: 'none', 'following', 'follower', 'mutual'
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
@@ -161,36 +149,57 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Проверяем статус дружбы
-    const { data: friendship } = await supabase
-      .from("friends")
+    // Проверяем, подписан ли текущий пользователь на другого
+    const { data: userFollowsOther } = await supabase
+      .from("follows")
       .select("*")
-      .or(`and(user_id.eq.${authUser.id},friend_id.eq.${user_id}),and(user_id.eq.${user_id},friend_id.eq.${authUser.id})`)
+      .eq("follower_id", authUser.id)
+      .eq("following_id", user_id)
       .maybeSingle();
 
-    let status = "none";
-    if (friendship) {
-      if (friendship.status === "accepted") {
-        status = "accepted";
-      } else if (friendship.status === "pending") {
-        // Определяем, кто отправил запрос
-        if (friendship.user_id === authUser.id) {
-          status = "pending_sent";
-        } else {
-          status = "pending_received";
-        }
-      } else if (friendship.status === "blocked") {
-        status = "blocked";
-      }
+    // Проверяем, подписан ли другой пользователь на текущего
+    const { data: otherFollowsUser } = await supabase
+      .from("follows")
+      .select("*")
+      .eq("follower_id", user_id)
+      .eq("following_id", authUser.id)
+      .maybeSingle();
+
+    // Определяем статус
+    let status: "none" | "following" | "follower" | "mutual" = "none";
+    
+    if (userFollowsOther && otherFollowsUser) {
+      status = "mutual";
+    } else if (userFollowsOther) {
+      status = "following";
+    } else if (otherFollowsUser) {
+      status = "follower";
+    }
+
+    // Для обратной совместимости с фронтендом, маппим статусы
+    let frontendStatus: "none" | "pending_sent" | "pending_received" | "accepted" | "blocked" = "none";
+    
+    if (status === "mutual") {
+      frontendStatus = "accepted"; // mutual friends = accepted
+    } else if (status === "following") {
+      frontendStatus = "pending_sent"; // following = pending_sent (для UI)
+    } else if (status === "follower") {
+      frontendStatus = "pending_received"; // follower = pending_received (входящий запрос)
     }
 
     return NextResponse.json({
-      data: { status, friendship },
+      data: {
+        status: frontendStatus, // Для обратной совместимости
+        followStatus: status, // Новый статус (following/follower/mutual/none)
+        isMutual: status === "mutual",
+        userFollowsOther: !!userFollowsOther,
+        otherFollowsUser: !!otherFollowsUser,
+      },
     });
   } catch (error: any) {
-    console.error("Get friendship status error:", error);
+    console.error("Get follow status error:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to get friendship status" },
+      { error: error.message || "Failed to get follow status" },
       { status: 500 }
     );
   }

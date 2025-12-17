@@ -64,9 +64,9 @@ export default function EventsPage() {
   return (
     <>
       <Header />
-      <main className="min-h-screen pt-16 pb-16 bg-[var(--color-background)]">
+      <main className="min-h-screen pt-16 pb-16 animated-bg">
         {/* Hero */}
-        <section className="py-12 text-center animated-bg">
+        <section className="py-12 text-center">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h1 
               className="text-4xl sm:text-5xl font-bold mb-4"

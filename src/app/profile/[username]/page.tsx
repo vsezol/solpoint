@@ -116,24 +116,23 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     allUpcomingEvents = (allEventsData || []) as Event[];
   }
 
-  // Получаем количество друзей для любого профиля
+  // Получаем количество взаимных друзей (mutual follows) для любого профиля
   let friendsCount = 0;
-  const { count: friendsCountData } = await supabase
-    .from("friends")
+  const { count: mutualFriendsCount } = await supabase
+    .from("mutual_friends")
     .select("*", { count: "exact", head: true })
-    .eq("user_id", user.id)
-    .eq("status", "accepted");
+    .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`);
   
-  friendsCount = friendsCountData || 0;
+  friendsCount = mutualFriendsCount || 0;
 
-  // Получаем друзей пользователя (только для своего профиля)
+  // Получаем взаимных друзей пользователя (только для своего профиля)
   if (isOwnProfile && authUser) {
-    const { data: friendsData } = await supabase
-      .from("friends")
+    const { data: mutualFriendsData } = await supabase
+      .from("mutual_friends")
       .select(
         `
         friend_id,
-        profiles!friends_friend_id_fkey (
+        profiles!mutual_friends_friend_id_fkey (
           id,
           twitter_id,
           twitter_handle,
@@ -158,36 +157,42 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
         )
       `
       )
-      .eq("user_id", authUser.id)
-      .eq("status", "accepted");
+      .eq("user_id", authUser.id);
 
     friends =
-      friendsData?.map((f: any) => {
-        const profile = Array.isArray(f.profiles) ? f.profiles[0] : f.profiles;
+      mutualFriendsData?.map((mf: any) => {
+        const profile = Array.isArray(mf.profiles) ? mf.profiles[0] : mf.profiles;
         return profile;
       }).filter((p: any): p is User => Boolean(p)) || [];
   }
 
-  // Получаем статус дружбы для чужого профиля
+  // Получаем статус подписки для чужого профиля
   if (!isOwnProfile && authUser) {
-    const { data: friendship } = await supabase
-      .from("friends")
+    // Проверяем, подписан ли текущий пользователь на другого
+    const { data: userFollowsOther } = await supabase
+      .from("follows")
       .select("*")
-      .or(`and(user_id.eq.${authUser.id},friend_id.eq.${user.id}),and(user_id.eq.${user.id},friend_id.eq.${authUser.id})`)
+      .eq("follower_id", authUser.id)
+      .eq("following_id", user.id)
       .maybeSingle();
 
-    if (friendship) {
-      if (friendship.status === "accepted") {
-        friendshipStatus = "accepted";
-      } else if (friendship.status === "pending") {
-        if (friendship.user_id === authUser.id) {
-          friendshipStatus = "pending_sent";
-        } else {
-          friendshipStatus = "pending_received";
-        }
-      } else if (friendship.status === "blocked") {
-        friendshipStatus = "blocked";
-      }
+    // Проверяем, подписан ли другой пользователь на текущего
+    const { data: otherFollowsUser } = await supabase
+      .from("follows")
+      .select("*")
+      .eq("follower_id", user.id)
+      .eq("following_id", authUser.id)
+      .maybeSingle();
+
+    // Определяем статус для обратной совместимости с UI
+    if (userFollowsOther && otherFollowsUser) {
+      friendshipStatus = "accepted"; // mutual friends
+    } else if (userFollowsOther) {
+      friendshipStatus = "pending_sent"; // following
+    } else if (otherFollowsUser) {
+      friendshipStatus = "pending_received"; // follower (входящий запрос)
+    } else {
+      friendshipStatus = "none";
     }
   }
 

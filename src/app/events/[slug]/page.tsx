@@ -140,12 +140,12 @@ export default async function EventPage({ params }: EventPageProps) {
 
     members = (membersData || []) as (EventMember & { user?: User })[];
 
-    // Получаем друзей авторизованного пользователя
+    // Получаем взаимных друзей авторизованного пользователя
     const { data: friendsData } = await supabase
-      .from("friends")
+      .from("mutual_friends")
       .select(`
         friend_id,
-        profiles!friends_friend_id_fkey (
+        profiles!mutual_friends_friend_id_fkey (
           id,
           twitter_id,
           twitter_handle,
@@ -169,8 +169,7 @@ export default async function EventPage({ params }: EventPageProps) {
           )
         )
       `)
-      .eq("user_id", authUser.id)
-      .eq("status", "accepted");
+      .eq("user_id", authUser.id);
 
     friends = (friendsData?.map((f: { friend_id: string; profiles: User | User[] | null }) => {
       if (Array.isArray(f.profiles)) {
