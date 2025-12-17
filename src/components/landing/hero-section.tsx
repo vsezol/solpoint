@@ -52,22 +52,27 @@ export function HeroSection() {
             transition={{ duration: 0.6 }}
             className="space-y-6"
           >
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight">
-              <span className="text-[var(--color-text-primary)]">
-                Connect, Network, Attend:
-              </span>
+            <h1 
+              className="text-[40px] font-bold leading-[100%] tracking-normal text-[var(--color-text-primary)]"
+              style={{ fontFamily: 'var(--font-inter)' }}
+            >
+              Connect, Network, Attend:
               <br />
-              <span className="text-gradient">
-                The Global Solana Community Map.
-              </span>
+              The Global Solana Community Map.
             </h1>
 
-            <p className="text-lg text-[var(--color-text-secondary)] max-w-xl">
-              Landing in a new country and looking to connect with the local
-              Solana community?
+            <p 
+              className="text-[18px] font-normal leading-[30px] tracking-normal text-[var(--color-text-secondary)] max-w-xl"
+              style={{ fontFamily: 'var(--font-inter)' }}
+            >
+              Landing in a new country and looking to connect with the local Solana
+              community?
             </p>
 
-            <p className="text-[var(--color-text-secondary)]">
+            <p 
+              className="text-[18px] font-normal leading-[30px] tracking-normal text-[var(--color-text-secondary)] max-w-xl"
+              style={{ fontFamily: 'var(--font-inter)' }}
+            >
               <span className="font-semibold text-[var(--color-text-primary)]">
                 SolPoint
               </span>{" "}
@@ -93,7 +98,7 @@ export function HeroSection() {
             transition={{ duration: 0.8, delay: 0.2 }}
             className="relative hidden lg:block"
           >
-            <div className="relative w-full aspect-square max-w-lg mx-auto animate-float">
+            <div className="relative w-full aspect-square max-w-2xl mx-auto animate-float">
               <Image
                 src="/hero-globe.svg"
                 alt="Global Solana Community"

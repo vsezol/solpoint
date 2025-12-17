@@ -166,7 +166,7 @@ export function AboutSection() {
             transition={{ duration: 0.6, delay: 0.4 }}
             className="space-y-4"
           >
-            <h4 className="text-sm font-medium text-[var(--color-primary)] underline">
+            <h4 className="text-xl font-medium text-[var(--color-primary)]">
               Our Mission
             </h4>
             <p className="text-[var(--color-text-secondary)]">
@@ -188,7 +188,7 @@ export function AboutSection() {
             transition={{ duration: 0.6, delay: 0.5 }}
             className="space-y-4"
           >
-            <h4 className="text-sm font-medium text-[var(--color-primary)] underline">
+            <h4 className="text-xl font-medium text-[var(--color-primary)]">
               Our Vision
             </h4>
             <p className="text-[var(--color-text-secondary)]">

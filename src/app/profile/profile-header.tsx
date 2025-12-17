@@ -3,15 +3,17 @@
 import { Avatar, Badge } from "@/components/ui";
 import { Crown } from "lucide-react";
 import { ProfileActions } from "./profile-actions";
+import { AddFriendButton } from "./add-friend-button";
 import { useProfileEdit } from "./profile-edit-provider";
 import type { User } from "@/types";
 
 interface ProfileHeaderProps {
   user: User;
   isOwnProfile: boolean;
+  friendshipStatus?: "none" | "pending_sent" | "pending_received" | "accepted" | "blocked";
 }
 
-export function ProfileHeader({ user, isOwnProfile }: ProfileHeaderProps) {
+export function ProfileHeader({ user, isOwnProfile, friendshipStatus = "none" }: ProfileHeaderProps) {
   // Если это не свой профиль, не используем контекст
   if (!isOwnProfile) {
     return (
@@ -45,6 +47,7 @@ export function ProfileHeader({ user, isOwnProfile }: ProfileHeaderProps) {
             @{user.twitter_handle}
           </p>
         </div>
+        <AddFriendButton userId={user.id} initialStatus={friendshipStatus} />
       </div>
     );
   }

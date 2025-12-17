@@ -1,4 +1,4 @@
-import { redirect, notFound } from "next/navigation";
+import { notFound } from "next/navigation";
 import { Header, Footer } from "@/components/layout";
 import { Avatar, Button, Badge, Card } from "@/components/ui";
 import {
@@ -51,53 +51,58 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
 
   const isOwnProfile = authUser?.id === user.id;
 
-  // Если это свой профиль, получаем события и друзей
+  // Получаем события пользователя (для любого профиля)
   let upcomingEvents: Event[] = [];
   let pastEvents: Event[] = [];
   let friends: User[] = [];
+  let friendshipStatus: "none" | "pending_sent" | "pending_received" | "accepted" | "blocked" = "none";
 
-  if (isOwnProfile && authUser) {
-    // Получаем события пользователя
-    const { data: eventAttendees } = await supabase
-      .from("event_attendees")
-      .select(
-        `
-        event_id,
-        events (
-          id,
-          name,
-          description,
-          image_url,
-          country,
-          country_code,
-          city,
-          address,
-          latitude,
-          longitude,
-          start_date,
-          end_date,
-          event_type,
-          visibility,
-          is_paid,
-          price_sol,
-          max_attendees,
-          attendees_count,
-          socials,
-          organizer_id,
-          created_at
-        )
+  // Получаем события пользователя
+  const { data: eventAttendees } = await supabase
+    .from("event_attendees")
+    .select(
       `
+      event_id,
+      events (
+        id,
+        name,
+        description,
+        image_url,
+        country,
+        country_code,
+        city,
+        address,
+        latitude,
+        longitude,
+        start_date,
+        end_date,
+        event_type,
+        visibility,
+        is_paid,
+        price_sol,
+        max_attendees,
+        attendees_count,
+        socials,
+        organizer_id,
+        slug,
+        created_at
       )
-      .eq("user_id", authUser.id);
+    `
+    )
+    .eq("user_id", user.id);
 
-    const allEvents: Event[] =
-      eventAttendees?.map((ea: any) => ea.events).filter(Boolean) || [];
+  const allEvents: Event[] =
+    eventAttendees?.map((ea: any) => {
+      const event = Array.isArray(ea.events) ? ea.events[0] : ea.events;
+      return event;
+    }).filter((e: any): e is Event => Boolean(e)) || [];
 
-    const now = new Date();
-    upcomingEvents = allEvents.filter((e) => new Date(e.start_date) > now);
-    pastEvents = allEvents.filter((e) => new Date(e.start_date) <= now);
+  const now = new Date();
+  upcomingEvents = allEvents.filter((e) => new Date(e.start_date) > now);
+  pastEvents = allEvents.filter((e) => new Date(e.start_date) <= now);
 
-    // Получаем друзей пользователя
+  // Получаем друзей пользователя (только для своего профиля)
+  if (isOwnProfile && authUser) {
     const { data: friendsData } = await supabase
       .from("friends")
       .select(
@@ -132,7 +137,33 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
       .eq("status", "accepted");
 
     friends =
-      friendsData?.map((f: any) => f.profiles).filter(Boolean) || [];
+      friendsData?.map((f: any) => {
+        const profile = Array.isArray(f.profiles) ? f.profiles[0] : f.profiles;
+        return profile;
+      }).filter((p: any): p is User => Boolean(p)) || [];
+  }
+
+  // Получаем статус дружбы для чужого профиля
+  if (!isOwnProfile && authUser) {
+    const { data: friendship } = await supabase
+      .from("friends")
+      .select("*")
+      .or(`and(user_id.eq.${authUser.id},friend_id.eq.${user.id}),and(user_id.eq.${user.id},friend_id.eq.${authUser.id})`)
+      .maybeSingle();
+
+    if (friendship) {
+      if (friendship.status === "accepted") {
+        friendshipStatus = "accepted";
+      } else if (friendship.status === "pending") {
+        if (friendship.user_id === authUser.id) {
+          friendshipStatus = "pending_sent";
+        } else {
+          friendshipStatus = "pending_received";
+        }
+      } else if (friendship.status === "blocked") {
+        friendshipStatus = "blocked";
+      }
+    }
   }
 
   return (
@@ -216,7 +247,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
                           </Link>
                           <p className="text-xs text-[var(--color-text-muted)] truncate">
                             {friend.city && `${friend.city}, `}
-                            {(friend.countries as any)?.name || friend.country || "Not specified"}
+                            {(friend as User & { countries?: { name: string } })?.countries?.name || friend.country || "Not specified"}
                           </p>
                         </div>
                         <Button variant="ghost" size="sm">
@@ -245,26 +276,29 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
                   {upcomingEvents.length > 0 ? (
                     <div className="space-y-3">
                       {upcomingEvents.slice(0, 2).map((event) => (
-                        <div
+                        <Link
                           key={event.id}
-                          className="flex items-center gap-3 p-3 rounded-lg bg-[var(--color-surface-hover)]"
+                          href={`/events/${(event as Event & { slug?: string }).slug || event.id}`}
+                          className="block"
                         >
-                          <div className="w-12 h-12 rounded-lg bg-[var(--color-primary)]/20 flex items-center justify-center">
-                            <Calendar className="w-6 h-6 text-[var(--color-primary)]" />
+                          <div className="flex items-center gap-3 p-3 rounded-lg bg-[var(--color-surface-hover)] hover:bg-[var(--color-surface-hover)]/80 transition-colors">
+                            <div className="w-12 h-12 rounded-lg bg-[var(--color-primary)]/20 flex items-center justify-center">
+                              <Calendar className="w-6 h-6 text-[var(--color-primary)]" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-[var(--color-text-primary)] truncate">
+                                {event.name}
+                              </p>
+                              <p className="text-xs text-[var(--color-text-muted)]">
+                                {new Date(event.start_date).toLocaleDateString()} •{" "}
+                                {event.city}
+                              </p>
+                            </div>
+                            <Badge variant="primary" size="sm">
+                              {event.event_type}
+                            </Badge>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-[var(--color-text-primary)] truncate">
-                              {event.name}
-                            </p>
-                            <p className="text-xs text-[var(--color-text-muted)]">
-                              {new Date(event.start_date).toLocaleDateString()} •{" "}
-                              {event.city}
-                            </p>
-                          </div>
-                          <Badge variant="primary" size="sm">
-                            {event.event_type}
-                          </Badge>
-                        </div>
+                        </Link>
                       ))}
                     </div>
                   ) : (
@@ -286,23 +320,26 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
                   {pastEvents.length > 0 ? (
                     <div className="space-y-3">
                       {pastEvents.slice(0, 2).map((event) => (
-                        <div
+                        <Link
                           key={event.id}
-                          className="flex items-center gap-3 p-3 rounded-lg bg-[var(--color-surface-hover)] opacity-70"
+                          href={`/events/${(event as Event & { slug?: string }).slug || event.id}`}
+                          className="block"
                         >
-                          <div className="w-12 h-12 rounded-lg bg-[var(--color-surface-border)] flex items-center justify-center">
-                            <Calendar className="w-6 h-6 text-[var(--color-text-muted)]" />
+                          <div className="flex items-center gap-3 p-3 rounded-lg bg-[var(--color-surface-hover)] opacity-70 hover:opacity-100 transition-opacity">
+                            <div className="w-12 h-12 rounded-lg bg-[var(--color-surface-border)] flex items-center justify-center">
+                              <Calendar className="w-6 h-6 text-[var(--color-text-muted)]" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-[var(--color-text-primary)] truncate">
+                                {event.name}
+                              </p>
+                              <p className="text-xs text-[var(--color-text-muted)]">
+                                {new Date(event.start_date).toLocaleDateString()} •{" "}
+                                {event.city}
+                              </p>
+                            </div>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-[var(--color-text-primary)] truncate">
-                              {event.name}
-                            </p>
-                            <p className="text-xs text-[var(--color-text-muted)]">
-                              {new Date(event.start_date).toLocaleDateString()} •{" "}
-                              {event.city}
-                            </p>
-                          </div>
-                        </div>
+                        </Link>
                       ))}
                     </div>
                   ) : (
@@ -319,7 +356,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
             <>
               {/* Profile header */}
               <div className="relative -mt-16 mb-8">
-                <ProfileHeader user={user} isOwnProfile={isOwnProfile} />
+                <ProfileHeader user={user} isOwnProfile={isOwnProfile} friendshipStatus={friendshipStatus} />
               </div>
 
               {/* Content grid */}
@@ -346,7 +383,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
                         <MapPin className="w-4 h-4 text-[var(--color-primary)]" />
                         <span>
                           {user.city && `${user.city}, `}
-                          {(user.countries as any)?.name || user.country || "Not specified"}
+                          {(user as User & { countries?: { name: string } })?.countries?.name || user.country || "Not specified"}
                         </span>
                       </div>
                       {user.role && (
@@ -362,8 +399,97 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
                   </Card>
                 </div>
 
-                {/* Right column - Activity - пусто для чужих профилей */}
-                <div className="lg:col-span-2"></div>
+                {/* Right column - Activity */}
+                <div className="lg:col-span-2 space-y-6">
+                  {/* Upcoming Events */}
+                  <Card variant="bordered">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-semibold text-[var(--color-text-primary)]">
+                        Upcoming Events
+                      </h3>
+                      {upcomingEvents.length > 0 && (
+                        <Link
+                          href="/events"
+                          className="text-sm text-[var(--color-primary)] hover:underline"
+                        >
+                          View all
+                        </Link>
+                      )}
+                    </div>
+                    {upcomingEvents.length > 0 ? (
+                      <div className="space-y-3">
+                        {upcomingEvents.slice(0, 2).map((event) => (
+                          <Link
+                            key={event.id}
+                            href={`/events/${(event as Event & { slug?: string }).slug || event.id}`}
+                            className="block"
+                          >
+                            <div className="flex items-center gap-3 p-3 rounded-lg bg-[var(--color-surface-hover)] hover:bg-[var(--color-surface-hover)]/80 transition-colors">
+                              <div className="w-12 h-12 rounded-lg bg-[var(--color-primary)]/20 flex items-center justify-center">
+                                <Calendar className="w-6 h-6 text-[var(--color-primary)]" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-[var(--color-text-primary)] truncate">
+                                  {event.name}
+                                </p>
+                                <p className="text-xs text-[var(--color-text-muted)]">
+                                  {new Date(event.start_date).toLocaleDateString()} •{" "}
+                                  {event.city}
+                                </p>
+                              </div>
+                              <Badge variant="primary" size="sm">
+                                {event.event_type}
+                              </Badge>
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-center text-[var(--color-text-muted)] py-4">
+                        No upcoming events
+                      </p>
+                    )}
+                  </Card>
+
+                  {/* Past Events */}
+                  <Card variant="bordered">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-semibold text-[var(--color-text-primary)]">
+                        Past Events
+                      </h3>
+                    </div>
+                    {pastEvents.length > 0 ? (
+                      <div className="space-y-3">
+                        {pastEvents.slice(0, 2).map((event) => (
+                          <Link
+                            key={event.id}
+                            href={`/events/${(event as Event & { slug?: string }).slug || event.id}`}
+                            className="block"
+                          >
+                            <div className="flex items-center gap-3 p-3 rounded-lg bg-[var(--color-surface-hover)] opacity-70 hover:opacity-100 transition-opacity">
+                              <div className="w-12 h-12 rounded-lg bg-[var(--color-surface-border)] flex items-center justify-center">
+                                <Calendar className="w-6 h-6 text-[var(--color-text-muted)]" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-[var(--color-text-primary)] truncate">
+                                  {event.name}
+                                </p>
+                                <p className="text-xs text-[var(--color-text-muted)]">
+                                  {new Date(event.start_date).toLocaleDateString()} •{" "}
+                                  {event.city}
+                                </p>
+                              </div>
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-center text-[var(--color-text-muted)] py-4">
+                        No past events
+                      </p>
+                    )}
+                  </Card>
+                </div>
               </div>
             </>
           )}

@@ -5,6 +5,7 @@ export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 export type { CardProps } from "./card";
 
 export { Avatar } from "./avatar";
+export { AttendeesList } from "./attendees-list";
 export { Badge } from "./badge";
 export { Input } from "./input";
 export type { InputProps } from "./input";

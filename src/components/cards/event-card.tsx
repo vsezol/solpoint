@@ -50,7 +50,8 @@ export function EventCard({
 
   if (compact) {
     return (
-      <div className="p-4 min-w-[280px]">
+      <Link href={`/events/${event.slug}`} className="block">
+        <div className="p-4 min-w-[280px] border border-[var(--color-surface-border)] rounded-xl transition-all duration-200 hover:scale-[1.02] hover:border-white cursor-pointer">
         {/* Image */}
         <div className="relative w-16 h-16 mx-auto mb-3 rounded-xl overflow-hidden bg-[var(--color-surface-hover)]">
           {event.image_url ? (
@@ -127,25 +128,37 @@ export function EventCard({
 
         {/* Actions */}
         {isVip ? (
-          <div className="flex gap-2">
+          <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
             <Button
               variant="outline"
               size="sm"
               className="flex-1 text-[var(--color-primary)] border-[var(--color-primary)]"
+              onClick={(e) => {
+                e.stopPropagation();
+                // Share functionality
+              }}
             >
               <Share2 className="w-4 h-4 mr-1" />
               Share
             </Button>
-            <Button variant="outline" size="sm" className="flex-1">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="flex-1"
+              onClick={(e) => {
+                e.stopPropagation();
+                window.location.href = `/events/${event.slug}`;
+              }}
+            >
               <ExternalLink className="w-4 h-4 mr-1" />
               Details
             </Button>
           </div>
         ) : (
-          <div className="relative">
+          <div className="relative" onClick={(e) => e.stopPropagation()}>
             <div className="absolute inset-0 flex items-center justify-center">
               <Button variant="secondary" size="sm" asChild>
-                <Link href="/signup">Sign up / Log in</Link>
+                <Link href="/signup" onClick={(e) => e.stopPropagation()}>Sign up / Log in</Link>
               </Button>
             </div>
             <div className="blur-sm pointer-events-none opacity-50">
@@ -160,13 +173,15 @@ export function EventCard({
             </div>
           </div>
         )}
-      </div>
+        </div>
+      </Link>
     );
   }
 
   // Full card view
   return (
-    <div className="bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-xl overflow-hidden flex flex-col h-full">
+    <Link href={`/events/${event.slug}`} className="block h-full">
+      <div className="bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-xl overflow-hidden flex flex-col h-full transition-all duration-200 hover:scale-[1.02] hover:border-white cursor-pointer">
       {/* Image/Icon Section */}
       <div className="relative h-48 bg-gradient-to-br from-[var(--color-primary)]/20 via-[var(--color-primary)]/10 to-[var(--color-secondary)]/20 flex-shrink-0">
         {event.image_url ? (
@@ -185,21 +200,21 @@ export function EventCard({
         <div className="absolute top-3 left-3 flex gap-2">
           <Badge 
             variant="primary"
-            className="bg-[var(--color-primary)] text-[var(--color-background)] font-semibold"
+            className="bg-[#0F453E] text-[#00AB67] font-semibold border border-[#70767D]/40"
           >
             {eventTypeLabels[event.event_type] || event.event_type}
           </Badge>
           {event.is_paid ? (
             <Badge 
               variant="warning"
-              className="bg-[#f97316] text-white font-semibold"
+              className="bg-[#2A403A] text-[#BB8800] font-semibold border border-[#70767D]/40"
             >
               {event.price_sol} SOL
             </Badge>
           ) : (
             <Badge 
               variant="warning"
-              className="bg-[#f97316] text-white font-semibold"
+              className="bg-[#2A403A] text-[#BB8800] font-semibold border border-[#70767D]/40"
             >
               Free
             </Badge>
@@ -269,15 +284,22 @@ export function EventCard({
         <div className="flex-grow"></div>
 
         {/* Actions */}
-        <Button
-          variant="outline"
-          className="w-full text-[var(--color-primary)] border-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 mt-auto"
-        >
-          <Share2 className="w-4 h-4 mr-2" />
-          Share
-        </Button>
+        <div onClick={(e) => e.stopPropagation()}>
+          <Button
+            variant="outline"
+            className="w-full text-[var(--color-primary)] border-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 mt-auto"
+            onClick={(e) => {
+              e.stopPropagation();
+              // Share functionality
+            }}
+          >
+            <Share2 className="w-4 h-4 mr-2" />
+            Share
+          </Button>
+        </div>
       </div>
     </div>
+    </Link>
   );
 }
 
