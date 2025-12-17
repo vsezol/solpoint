@@ -71,9 +71,17 @@ export function ProfileSidebar({ user, upcomingEvents }: ProfileSidebarProps) {
     setIsLoadingInvite(true);
     try {
       const response = await fetch("/api/invites");
-      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
-      if (response.ok && data.data && data.data.length > 0) {
+      const data = await response.json().catch((err) => {
+        console.error("Error parsing invites response:", err);
+        return { data: [] };
+      });
+
+      if (data.data && data.data.length > 0) {
         const activeInvite = data.data.find((invite: Invite) => {
           const isNotExpired = !invite.expires_at || new Date(invite.expires_at) >= new Date();
           let isWithinMaxUses = true;
@@ -90,6 +98,7 @@ export function ProfileSidebar({ user, upcomingEvents }: ProfileSidebarProps) {
       }
     } catch (error) {
       console.error("Error fetching invites:", error);
+      // Не показываем ошибку пользователю, просто не загружаем invites
     } finally {
       setIsLoadingInvite(false);
     }
@@ -108,10 +117,18 @@ export function ProfileSidebar({ user, upcomingEvents }: ProfileSidebarProps) {
         body: JSON.stringify({}),
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
-        throw new Error(data.error || "Failed to generate invite");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json().catch((err) => {
+        console.error("Error parsing invite response:", err);
+        throw new Error("Failed to parse server response");
+      });
+
+      if (!data.data) {
+        throw new Error("Invalid response from server");
       }
 
       setCurrentInvite(data.data);

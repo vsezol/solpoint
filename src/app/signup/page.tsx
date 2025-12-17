@@ -87,30 +87,42 @@ export default function SignupPage() {
   }, [authLoading, isAuthenticated, user, router, step, inviteCode]);
 
   const handleTwitterSignup = async () => {
-    setIsLoading(true);
-    // Редиректим на API route для инициации Twitter OAuth
-    // После успешной авторизации вернемся на /signup для продолжения процесса
-    // Передаем invite код через redirect_to, если он есть
-    const redirectTo = inviteCode 
-      ? `/signup?invite=${encodeURIComponent(inviteCode)}`
-      : "/signup";
-    
-    window.location.href = `/api/auth/twitter?redirect_to=${encodeURIComponent(redirectTo)}`;
+    try {
+      setIsLoading(true);
+      // Редиректим на API route для инициации Twitter OAuth
+      // После успешной авторизации вернемся на /signup для продолжения процесса
+      // Передаем invite код через redirect_to, если он есть
+      const redirectTo = inviteCode 
+        ? `/signup?invite=${encodeURIComponent(inviteCode)}`
+        : "/signup";
+      
+      window.location.href = `/api/auth/twitter?redirect_to=${encodeURIComponent(redirectTo)}`;
+    } catch (error) {
+      console.error("Error initiating Twitter signup:", error);
+      setIsLoading(false);
+      alert("Не удалось начать регистрацию. Пожалуйста, попробуйте еще раз.");
+    }
   };
 
  
 
   const handleLocationPermission = async () => {
-    const result = await requestGeolocation();
-    if (result) {
-      setFormData((prev) => ({
-        ...prev,
-        country: result.country,
-        country_code: result.country_code,
-        city: result.city,
-      }));
+    try {
+      const result = await requestGeolocation();
+      if (result) {
+        setFormData((prev) => ({
+          ...prev,
+          country: result.country,
+          country_code: result.country_code,
+          city: result.city,
+        }));
+      }
+      setStep("profile");
+    } catch (error) {
+      console.error("Error detecting location:", error);
+      // Продолжаем процесс даже если геолокация не удалась
+      setStep("profile");
     }
-    setStep("profile");
   };
 
   const handleProfileSubmit = async () => {

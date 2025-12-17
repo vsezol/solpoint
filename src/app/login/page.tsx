@@ -14,9 +14,15 @@ export default function LoginPage() {
   const error = searchParams.get("error");
 
   const handleTwitterLogin = async () => {
-    setIsLoading(true);
-    // Редиректим на API route для инициации Twitter OAuth
-    window.location.href = "/api/auth/twitter";
+    try {
+      setIsLoading(true);
+      // Редиректим на API route для инициации Twitter OAuth
+      window.location.href = "/api/auth/twitter";
+    } catch (error) {
+      console.error("Error initiating Twitter login:", error);
+      setIsLoading(false);
+      alert("Не удалось начать вход. Пожалуйста, попробуйте еще раз.");
+    }
   };
 
   return (

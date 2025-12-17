@@ -40,9 +40,17 @@ export function ProfileInfoSection({ user, isOwnProfile, friends = [] }: Profile
     setIsLoadingInvite(true);
     try {
       const response = await fetch("/api/invites");
-      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
-      if (response.ok && data.data && data.data.length > 0) {
+      const data = await response.json().catch((err) => {
+        console.error("Error parsing invites response:", err);
+        return { data: [] };
+      });
+
+      if (data.data && data.data.length > 0) {
         // Находим первый активный invite
         // Проверяем срок действия только если expires_at задан
         // Проверяем max_uses только если он задан
@@ -66,6 +74,7 @@ export function ProfileInfoSection({ user, isOwnProfile, friends = [] }: Profile
       }
     } catch (error) {
       console.error("Error fetching invites:", error);
+      // Не показываем ошибку пользователю, просто не загружаем invites
     } finally {
       setIsLoadingInvite(false);
     }
@@ -88,10 +97,18 @@ export function ProfileInfoSection({ user, isOwnProfile, friends = [] }: Profile
         body: JSON.stringify({}),
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
-        throw new Error(data.error || "Failed to generate invite");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json().catch((err) => {
+        console.error("Error parsing invite response:", err);
+        throw new Error("Failed to parse server response");
+      });
+
+      if (!data.data) {
+        throw new Error("Invalid response from server");
       }
 
       // Сохраняем новый invite

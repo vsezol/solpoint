@@ -40,11 +40,16 @@ export function ProfileEditForm({ user, onCancel, onUpdate }: ProfileEditFormPro
   const [city, setCity] = useState(user.city || "");
 
   const handleDetectLocation = async () => {
-    const result = await requestGeolocation();
-    if (result) {
-      setCountry(result.country);
-      setCountryCode(result.country_code);
-      setCity(result.city || "");
+    try {
+      const result = await requestGeolocation();
+      if (result) {
+        setCountry(result.country);
+        setCountryCode(result.country_code);
+        setCity(result.city || "");
+      }
+    } catch (error) {
+      console.error("Error detecting location:", error);
+      setError("Не удалось определить местоположение. Пожалуйста, попробуйте еще раз.");
     }
   };
 

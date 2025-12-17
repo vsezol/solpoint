@@ -82,8 +82,22 @@ export default function SubscriptionPage() {
 
   const handleUpgrade = async () => {
     setIsLoading(true);
-    // TODO: Implement Solana Pay integration
-    setTimeout(() => setIsLoading(false), 2000);
+    try {
+      // TODO: Implement Solana Pay integration
+      // Симуляция процесса оплаты
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      
+      // После успешной оплаты здесь будет обновление подписки
+      // await updateSubscription("vip");
+      
+      // Показываем успешное сообщение
+      alert("VIP подписка активирована! (Это демо-версия)");
+    } catch (error) {
+      console.error("Error upgrading to VIP:", error);
+      alert("Не удалось обновить подписку. Пожалуйста, попробуйте еще раз.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

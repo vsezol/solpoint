@@ -53,26 +53,32 @@ export async function getMapMarkers(
         userParams.append("active_only", "true");
       }
 
-      const usersResponse = await fetch(`/api/users?${userParams.toString()}`);
-      if (usersResponse.ok) {
-        const { users } = await usersResponse.json();
-        if (users && Array.isArray(users)) {
-          // Преобразуем пользователей в маркеры
-          // Если у пользователя нет координат, используем координаты страны/города
-          users.forEach((user: User) => {
-            // Для пользователей без координат используем координаты по умолчанию
-            // В будущем можно добавить геокодинг или хранить координаты в профиле
-            const coords = getUserCoordinates(user);
-            
-            markers.push({
-              id: `user-${user.id}`,
-              type: user.subscription_tier === "vip" ? "vip_user" : "user",
-              latitude: coords.lat,
-              longitude: coords.lng,
-              data: user,
+      try {
+        const usersResponse = await fetch(`/api/users?${userParams.toString()}`);
+        if (usersResponse.ok) {
+          const data = await usersResponse.json().catch(() => ({}));
+          const { users } = data;
+          if (users && Array.isArray(users)) {
+            // Преобразуем пользователей в маркеры
+            // Если у пользователя нет координат, используем координаты страны/города
+            users.forEach((user: User) => {
+              // Для пользователей без координат используем координаты по умолчанию
+              // В будущем можно добавить геокодинг или хранить координаты в профиле
+              const coords = getUserCoordinates(user);
+              
+              markers.push({
+                id: `user-${user.id}`,
+                type: user.subscription_tier === "vip" ? "vip_user" : "user",
+                latitude: coords.lat,
+                longitude: coords.lng,
+                data: user,
+              });
             });
-          });
+          }
         }
+      } catch (error) {
+        console.error("Error fetching users for map:", error);
+        // Продолжаем работу даже если не удалось загрузить пользователей
       }
     }
 
@@ -98,20 +104,26 @@ export async function getMapMarkers(
       // Показываем только предстоящие события на карте
       eventParams.append("upcoming", "true");
 
-      const eventsResponse = await fetch(`/api/events?${eventParams.toString()}`);
-      if (eventsResponse.ok) {
-        const { events } = await eventsResponse.json();
-        if (events && Array.isArray(events)) {
-          events.forEach((event: Event) => {
-            markers.push({
-              id: `event-${event.id}`,
-              type: "event",
-              latitude: event.latitude,
-              longitude: event.longitude,
-              data: event,
+      try {
+        const eventsResponse = await fetch(`/api/events?${eventParams.toString()}`);
+        if (eventsResponse.ok) {
+          const data = await eventsResponse.json().catch(() => ({}));
+          const { events } = data;
+          if (events && Array.isArray(events)) {
+            events.forEach((event: Event) => {
+              markers.push({
+                id: `event-${event.id}`,
+                type: "event",
+                latitude: event.latitude,
+                longitude: event.longitude,
+                data: event,
+              });
             });
-          });
+          }
         }
+      } catch (error) {
+        console.error("Error fetching events for map:", error);
+        // Продолжаем работу даже если не удалось загрузить события
       }
     }
 
@@ -130,20 +142,26 @@ export async function getMapMarkers(
         hubParams.append("city", filters.city);
       }
 
-      const hubsResponse = await fetch(`/api/hubs?${hubParams.toString()}`);
-      if (hubsResponse.ok) {
-        const { hubs } = await hubsResponse.json();
-        if (hubs && Array.isArray(hubs)) {
-          hubs.forEach((hub: Hub) => {
-            markers.push({
-              id: `hub-${hub.id}`,
-              type: "hub",
-              latitude: hub.latitude,
-              longitude: hub.longitude,
-              data: hub,
+      try {
+        const hubsResponse = await fetch(`/api/hubs?${hubParams.toString()}`);
+        if (hubsResponse.ok) {
+          const data = await hubsResponse.json().catch(() => ({}));
+          const { hubs } = data;
+          if (hubs && Array.isArray(hubs)) {
+            hubs.forEach((hub: Hub) => {
+              markers.push({
+                id: `hub-${hub.id}`,
+                type: "hub",
+                latitude: hub.latitude,
+                longitude: hub.longitude,
+                data: hub,
+              });
             });
-          });
+          }
         }
+      } catch (error) {
+        console.error("Error fetching hubs for map:", error);
+        // Продолжаем работу даже если не удалось загрузить хабы
       }
     }
   } catch (error) {
