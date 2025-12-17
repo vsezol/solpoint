@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Badge } from "@/components/ui";
+import { Button, EventBadges } from "@/components/ui";
 import type { Event } from "@/types";
 import { Twitter, Instagram, Facebook, ExternalLink, MapPin, Calendar, Share2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -100,12 +100,6 @@ export function EventCard({
     return `${startStr} - ${endStr}`;
   };
 
-  const eventTypeLabels: Record<string, string> = {
-    official: "Official",
-    community: "Community",
-    private: "Private",
-    meetup: "Meetup",
-  };
 
   if (compact) {
     return (
@@ -256,28 +250,8 @@ export function EventCard({
           </div>
         )}
         {/* Badges */}
-        <div className="absolute top-3 left-3 flex gap-2">
-          <Badge 
-            variant="primary"
-            className="bg-[#0F453E] text-[#00AB67] font-semibold border border-[#70767D]/40"
-          >
-            {eventTypeLabels[event.event_type] || event.event_type}
-          </Badge>
-          {event.is_paid ? (
-            <Badge 
-              variant="warning"
-              className="bg-[#2A403A] text-[#BB8800] font-semibold border border-[#70767D]/40"
-            >
-              {event.price_sol} SOL
-            </Badge>
-          ) : (
-            <Badge 
-              variant="warning"
-              className="bg-[#2A403A] text-[#BB8800] font-semibold border border-[#70767D]/40"
-            >
-              Free
-            </Badge>
-          )}
+        <div className="absolute top-3 left-3">
+          <EventBadges event={event} />
         </div>
       </div>
 

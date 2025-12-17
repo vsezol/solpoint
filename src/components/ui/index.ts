@@ -7,6 +7,7 @@ export type { CardProps } from "./card";
 export { Avatar } from "./avatar";
 export { AttendeesList } from "./attendees-list";
 export { Badge } from "./badge";
+export { EventBadges } from "./event-badges";
 export { Input } from "./input";
 export type { InputProps } from "./input";
 

@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { Header, Footer } from "@/components/layout";
-import { Button, Badge, Card, AttendeesList } from "@/components/ui";
+import { Button, EventBadges, Card, AttendeesList } from "@/components/ui";
 import { Calendar, MapPin, Share2, ExternalLink, Twitter, Instagram, Facebook, Globe, Ticket } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import type { Event, User, EventMember } from "@/types";
@@ -220,12 +220,6 @@ export default async function EventPage({ params }: EventPageProps) {
     return `${startStr} ${startTimeStr} - ${endStr} ${endTimeStr}`;
   };
 
-  const eventTypeLabels: Record<string, string> = {
-    official: "Official",
-    community: "Community",
-    private: "Private",
-    meetup: "Meetup",
-  };
 
   return (
     <>
@@ -246,28 +240,8 @@ export default async function EventPage({ params }: EventPageProps) {
                 <Calendar className="w-24 h-24 text-[var(--color-text-primary)] opacity-60 stroke-[1.5]" />
               </div>
             )}
-            <div className="absolute top-4 left-4 flex gap-2">
-              <Badge 
-                variant="primary"
-                className="bg-[var(--color-primary)] text-[var(--color-background)] font-semibold"
-              >
-                {eventTypeLabels[event.event_type] || event.event_type}
-              </Badge>
-              {event.is_paid ? (
-                <Badge 
-                  variant="warning"
-                  className="bg-[#f97316] text-white font-semibold"
-                >
-                  {event.price_sol} SOL
-                </Badge>
-              ) : (
-                <Badge 
-                  variant="warning"
-                  className="bg-[#f97316] text-white font-semibold"
-                >
-                  Free
-                </Badge>
-              )}
+            <div className="absolute top-4 left-4">
+              <EventBadges event={event} />
             </div>
           </div>
 
