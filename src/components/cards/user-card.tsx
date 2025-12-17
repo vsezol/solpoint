@@ -39,44 +39,41 @@ export function UserCard({
 
   if (compact) {
     return (
-      <div className="p-4 min-w-[280px] relative">
-        {/* Host Badge */}
-        {isHost && (
-          <div className="absolute top-4 right-4 z-20">
-            <Badge variant="outline" className="bg-[var(--color-surface)] text-[var(--color-text-primary)]">
-              Host
-            </Badge>
-          </div>
-        )}
-        
+      <div className="p-4 min-w-[280px] w-fit">
         {/* Content with blur if unauthorized */}
         <div className={cn(isUnauthorized && "blur-sm")}>
           {/* Header */}
-          <div className="flex items-start gap-3 mb-3">
-          <Avatar
-            src={user.avatar_url}
-            alt={user.twitter_name}
-            size="lg"
-            isVip={user.subscription_tier === "vip"}
-            isVerified={user.is_verified}
-          />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-[var(--color-text-primary)] truncate">
-                {user.twitter_name}
-              </h3>
-              {user.is_verified && (
-                <Check className="w-4 h-4 text-[var(--color-primary)]" />
-              )}
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <div className="flex items-start gap-3">
+              <Avatar
+                src={user.avatar_url}
+                alt={user.twitter_name}
+                size="lg"
+                isVip={user.subscription_tier === "vip"}
+                isVerified={user.is_verified}
+              />
+              <div className="flex flex-col min-w-0">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-semibold text-[var(--color-text-primary)] truncate">
+                    {user.twitter_name}
+                  </h3>
+                  {user.is_verified && (
+                    <Check className="w-4 h-4 text-[var(--color-primary)]" />
+                  )}
+                </div>
+                {user.role && (
+                  <Badge variant="primary" className="mt-1 w-fit">
+                    {roleLabels[user.role] || user.role}
+                  </Badge>
+                )}
+              </div>
             </div>
-            {user.role && (
-              <p className="text-sm text-[var(--color-text-muted)]">
-                <span className="text-[var(--color-primary)]">Who:</span>{" "}
-                {roleLabels[user.role] || user.role}
-              </p>
+            {isHost && (
+              <Badge variant="outline" className="bg-[var(--color-surface)] text-[var(--color-text-primary)]">
+                Host
+              </Badge>
             )}
           </div>
-        </div>
 
         {/* Location */}
         <div className={cn("space-y-1 text-sm mb-3", isBlurred && !isVip && "blur-sm select-none")}>
@@ -186,44 +183,42 @@ export function UserCard({
 
   // Full card view
   return (
-    <div className="bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-xl p-5 relative">
-      {/* Host Badge */}
-      {isHost && (
-        <div className="absolute top-5 right-5 z-20">
-          <Badge variant="outline" className="bg-[var(--color-surface)] text-[var(--color-text-primary)]">
-            Host
-          </Badge>
-        </div>
-      )}
-      
+    <div className="bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-xl p-5 w-fit">
       {/* Content with blur if unauthorized */}
       <div className={cn(isUnauthorized && "blur-sm")}>
         {/* Header */}
-        <div className="flex items-start gap-4 mb-4">
-        <Avatar
-          src={user.avatar_url}
-          alt={user.twitter_name}
-          size="xl"
-          isVip={user.subscription_tier === "vip"}
-          isVerified={user.is_verified}
-        />
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <h3 className="text-xl font-semibold text-[var(--color-text-primary)]">
-              {user.twitter_name}
-            </h3>
-            {user.is_verified && (
-              <Check className="w-5 h-5 text-[var(--color-primary)]" />
-            )}
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <div className="flex items-start gap-4">
+            <Avatar
+              src={user.avatar_url}
+              alt={user.twitter_name}
+              size="xl"
+              isVip={user.subscription_tier === "vip"}
+              isVerified={user.is_verified}
+            />
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="text-xl font-semibold text-[var(--color-text-primary)]">
+                  {user.twitter_name}
+                </h3>
+                {user.is_verified && (
+                  <Check className="w-5 h-5 text-[var(--color-primary)]" />
+                )}
+              </div>
+              <p className="text-[var(--color-text-muted)]">@{user.twitter_handle}</p>
+              {user.role && (
+                <Badge variant="primary" className="mt-2 w-fit">
+                  {roleLabels[user.role] || user.role}
+                </Badge>
+              )}
+            </div>
           </div>
-          <p className="text-[var(--color-text-muted)]">@{user.twitter_handle}</p>
-          {user.role && (
-            <Badge variant="primary" className="mt-2">
-              {roleLabels[user.role] || user.role}
+          {isHost && (
+            <Badge variant="outline" className="bg-[var(--color-surface)] text-[var(--color-text-primary)]">
+              Host
             </Badge>
           )}
         </div>
-      </div>
 
       {/* Info */}
       <div className="space-y-2 mb-4">
