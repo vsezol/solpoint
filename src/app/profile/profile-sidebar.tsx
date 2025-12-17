@@ -184,9 +184,9 @@ export function ProfileSidebar({ user, upcomingEvents }: ProfileSidebarProps) {
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 w-full">
       {/* SolPoint users */}
-      <Card variant="bordered">
+      <Card variant="bordered" className="w-full">
         <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
           SolPoint users
         </h3>
@@ -277,7 +277,7 @@ export function ProfileSidebar({ user, upcomingEvents }: ProfileSidebarProps) {
       </Card>
 
       {/* What's happening */}
-      <Card variant="bordered">
+      <Card variant="bordered" className="w-full">
         <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
           What's happening
         </h3>
@@ -320,7 +320,7 @@ export function ProfileSidebar({ user, upcomingEvents }: ProfileSidebarProps) {
 
       {/* Upgrade to VIP */}
       {user.subscription_tier === "free" && (
-        <Card variant="bordered" className="bg-gradient-to-r from-[var(--color-primary)]/10 to-[var(--color-secondary)]/10">
+        <Card variant="bordered" className="w-full bg-gradient-to-r from-[var(--color-primary)]/10 to-[var(--color-secondary)]/10">
           <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">
             Upgrade to VIP
           </h3>

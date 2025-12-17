@@ -72,14 +72,15 @@ export function ProfileMainSection({ user, isOwnProfile, friendsCount = 0 }: Pro
 
       {/* Profile Header */}
       <div className="flex items-start justify-between -mt-20 relative z-10">
-        <Avatar
-          src={currentUser.avatar_url}
-          alt={currentUser.twitter_name}
-          size="xl"
-          isVip={currentUser.subscription_tier === "vip"}
-          isVerified={currentUser.is_verified}
-          className="ring-4 ring-[var(--color-background)] ml-[18px]"
-        />
+        <div className="ml-[18px] rounded-full overflow-hidden border-4 border-[var(--color-background)]">
+          <Avatar
+            src={currentUser.avatar_url}
+            alt={currentUser.twitter_name}
+            size="xl"
+            isVip={currentUser.subscription_tier === "vip"}
+            isVerified={currentUser.is_verified}
+          />
+        </div>
         {isOwnProfile && (
           <div className="mr-[14px]">
             <Button
@@ -131,11 +132,9 @@ export function ProfileMainSection({ user, isOwnProfile, friendsCount = 0 }: Pro
         )}
 
         {/* Friends count */}
-        {friendsCount > 0 && (
-          <p className="text-[var(--color-text-secondary)]">
-            {friendsCount} {friendsCount === 1 ? "fren" : "frens"}
-          </p>
-        )}
+        <p className="text-[var(--color-text-secondary)]">
+          {friendsCount} {friendsCount === 1 ? "fren" : "frens"}
+        </p>
       </div>
 
       {/* Edit Form or View */}

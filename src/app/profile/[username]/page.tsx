@@ -116,6 +116,16 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     allUpcomingEvents = (allEventsData || []) as Event[];
   }
 
+  // Получаем количество друзей для любого профиля
+  let friendsCount = 0;
+  const { count: friendsCountData } = await supabase
+    .from("friends")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", user.id)
+    .eq("status", "accepted");
+  
+  friendsCount = friendsCountData || 0;
+
   // Получаем друзей пользователя (только для своего профиля)
   if (isOwnProfile && authUser) {
     const { data: friendsData } = await supabase
@@ -195,12 +205,12 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
                   <ProfileMainSection 
                     user={user} 
                     isOwnProfile={isOwnProfile} 
-                    friendsCount={friends.length}
+                    friendsCount={friendsCount}
                   />
                 </div>
 
                 {/* Right column - Sidebar */}
-                <div className="w-80 flex-shrink-0">
+                <div className="w-[557px] flex-shrink-0">
                   <ProfileSidebar 
                     user={user} 
                     upcomingEvents={allUpcomingEvents}
