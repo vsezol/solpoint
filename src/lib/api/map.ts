@@ -1,0 +1,197 @@
+import type { MapMarker, MapFilters, User, Event, Hub } from "@/types";
+
+export interface GetMapMarkersResponse {
+  markers: MapMarker[];
+  error?: string;
+}
+
+/**
+ * Получить маркеры для карты с применением фильтров
+ */
+export async function getMapMarkers(
+  filters: MapFilters = {
+    showUsers: true,
+    showEvents: true,
+    showHubs: true,
+  }
+): Promise<MapMarker[]> {
+  const markers: MapMarker[] = [];
+
+  try {
+    // Получить пользователей
+    if (filters.showUsers) {
+      const userParams = new URLSearchParams();
+      
+      if (filters.country) {
+        userParams.append("country", filters.country);
+      }
+      
+      if (filters.countryCode) {
+        userParams.append("country_code", filters.countryCode);
+      }
+      
+      if (filters.city) {
+        userParams.append("city", filters.city);
+      }
+      
+      if (filters.userRoles && filters.userRoles.length > 0) {
+        userParams.append("roles", filters.userRoles.join(","));
+      }
+      
+      if (filters.openToMeet) {
+        userParams.append("open_to_meet", "true");
+      }
+      
+      if (filters.activeOnly) {
+        userParams.append("active_only", "true");
+      }
+
+      const usersResponse = await fetch(`/api/users?${userParams.toString()}`);
+      if (usersResponse.ok) {
+        const { users } = await usersResponse.json();
+        if (users && Array.isArray(users)) {
+          // Преобразуем пользователей в маркеры
+          // Если у пользователя нет координат, используем координаты страны/города
+          users.forEach((user: User) => {
+            // Для пользователей без координат используем координаты по умолчанию
+            // В будущем можно добавить геокодинг или хранить координаты в профиле
+            const coords = getUserCoordinates(user);
+            
+            markers.push({
+              id: `user-${user.id}`,
+              type: user.subscription_tier === "vip" ? "vip_user" : "user",
+              latitude: coords.lat,
+              longitude: coords.lng,
+              data: user,
+            });
+          });
+        }
+      }
+    }
+
+    // Получить события
+    if (filters.showEvents) {
+      const eventParams = new URLSearchParams();
+      
+      if (filters.country) {
+        eventParams.append("country", filters.country);
+      }
+      
+      if (filters.countryCode) {
+        eventParams.append("country_code", filters.countryCode);
+      }
+      
+      if (filters.city) {
+        eventParams.append("city", filters.city);
+      }
+      
+      if (filters.eventType) {
+        eventParams.append("event_type", filters.eventType);
+      }
+      
+      // Показываем только предстоящие события на карте
+      eventParams.append("upcoming", "true");
+
+      const eventsResponse = await fetch(`/api/events?${eventParams.toString()}`);
+      if (eventsResponse.ok) {
+        const { events } = await eventsResponse.json();
+        if (events && Array.isArray(events)) {
+          events.forEach((event: Event) => {
+            markers.push({
+              id: `event-${event.id}`,
+              type: "event",
+              latitude: event.latitude,
+              longitude: event.longitude,
+              data: event,
+            });
+          });
+        }
+      }
+    }
+
+    // Получить хабы
+    if (filters.showHubs) {
+      const hubParams = new URLSearchParams();
+      
+      if (filters.country) {
+        hubParams.append("country", filters.country);
+      }
+      
+      if (filters.countryCode) {
+        hubParams.append("country_code", filters.countryCode);
+      }
+      
+      if (filters.city) {
+        hubParams.append("city", filters.city);
+      }
+
+      const hubsResponse = await fetch(`/api/hubs?${hubParams.toString()}`);
+      if (hubsResponse.ok) {
+        const { hubs } = await hubsResponse.json();
+        if (hubs && Array.isArray(hubs)) {
+          hubs.forEach((hub: Hub) => {
+            markers.push({
+              id: `hub-${hub.id}`,
+              type: "hub",
+              latitude: hub.latitude,
+              longitude: hub.longitude,
+              data: hub,
+            });
+          });
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Error fetching map markers:", error);
+  }
+
+  return markers;
+}
+
+/**
+ * Получить координаты пользователя на основе его страны/города
+ * Временное решение до добавления координат в профиль
+ */
+function getUserCoordinates(user: User): { lat: number; lng: number } {
+  // Базовые координаты для некоторых стран
+  const countryCoordinates: Record<string, { lat: number; lng: number }> = {
+    AR: { lat: -34.6037, lng: -58.3816 }, // Argentina
+    KZ: { lat: 43.2566, lng: 76.9286 }, // Kazakhstan
+    AE: { lat: 25.2048, lng: 55.2708 }, // UAE
+    TR: { lat: 41.0082, lng: 28.9784 }, // Turkey
+    TH: { lat: 13.7563, lng: 100.5018 }, // Thailand
+    IN: { lat: 12.9716, lng: 77.5946 }, // India
+    US: { lat: 40.7128, lng: -74.0060 }, // USA
+    GB: { lat: 51.5074, lng: -0.1278 }, // UK
+    DE: { lat: 52.5200, lng: 13.4050 }, // Germany
+    FR: { lat: 48.8566, lng: 2.3522 }, // France
+    RU: { lat: 55.7558, lng: 37.6173 }, // Russia
+    CN: { lat: 39.9042, lng: 116.4074 }, // China
+    JP: { lat: 35.6762, lng: 139.6503 }, // Japan
+    KR: { lat: 37.5665, lng: 126.9780 }, // South Korea
+    BR: { lat: -23.5505, lng: -46.6333 }, // Brazil
+    MX: { lat: 19.4326, lng: -99.1332 }, // Mexico
+    CA: { lat: 43.6532, lng: -79.3832 }, // Canada
+    AU: { lat: -33.8688, lng: 151.2093 }, // Australia
+  };
+
+  // Используем country_code если есть, иначе пытаемся найти по country
+  const code = user.country_code || 
+    (user.country ? Object.keys(countryCoordinates).find(k => 
+      countryCoordinates[k] && user.country?.toLowerCase().includes(k.toLowerCase())
+    ) : null);
+
+  if (code && countryCoordinates[code]) {
+    // Добавляем небольшой случайный сдвиг для разных пользователей в одной стране
+    const latOffset = (Math.random() - 0.5) * 2;
+    const lngOffset = (Math.random() - 0.5) * 2;
+    return {
+      lat: countryCoordinates[code].lat + latOffset,
+      lng: countryCoordinates[code].lng + lngOffset,
+    };
+  }
+
+  // Если страна не найдена, возвращаем координаты по умолчанию (центр мира)
+  return { lat: 0, lng: 0 };
+}
+

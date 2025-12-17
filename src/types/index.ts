@@ -157,9 +157,11 @@ export interface MapFilters {
   showEvents: boolean;
   showHubs: boolean;
   userRoles?: UserRole[];
+  eventType?: EventType;
   openToMeet?: boolean;
   activeOnly?: boolean;
   country?: string;
+  countryCode?: string;
   city?: string;
 }
 

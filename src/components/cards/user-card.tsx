@@ -103,9 +103,9 @@ export function UserCard({
         {isVip && (
           <div className="flex items-center gap-2 mb-4">
             <span className="text-xs text-[var(--color-text-muted)]">Socials:</span>
-            {user.socials?.twitter && (
+            {(user.socials?.twitter || user.twitter_handle) && (
               <a
-                href={`https://twitter.com/${user.twitter_handle}`}
+                href={user.socials?.twitter || `https://twitter.com/${user.twitter_handle}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="p-1.5 rounded-full bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
@@ -264,9 +264,9 @@ export function UserCard({
       <div className="mb-4">
         <p className="text-xs text-[var(--color-text-muted)] mb-2">Socials:</p>
         <div className="flex items-center gap-2">
-          {user.socials?.twitter && (
+          {(user.socials?.twitter || user.twitter_handle) && (
             <a
-              href={`https://twitter.com/${user.twitter_handle}`}
+              href={user.socials?.twitter || `https://twitter.com/${user.twitter_handle}`}
               target="_blank"
               rel="noopener noreferrer"
               className="p-2 rounded-full bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"

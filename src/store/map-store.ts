@@ -8,7 +8,7 @@ export type Country = {
 interface Maptate {
  country: Country | null
  isLoading: boolean
- setCountry: (c: Country) => void
+ setCountry: (c: Country | null) => void
   setLoading: (loading: boolean) => void
 }
 
