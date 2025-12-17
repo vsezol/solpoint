@@ -184,7 +184,7 @@ export function EventCard({
             <Button
               variant="outline"
               size="sm"
-              className="flex-1 text-[var(--color-primary)] border-[var(--color-primary)]"
+              className="flex-1 text-[var(--color-primary)] border-[var(--color-primary)] cursor-pointer"
               onClick={(e) => {
                 e.stopPropagation();
                 e.preventDefault();
@@ -197,7 +197,7 @@ export function EventCard({
             <Button 
               variant="outline" 
               size="sm" 
-              className="flex-1"
+              className="flex-1 cursor-pointer"
               onClick={(e) => {
                 e.stopPropagation();
                 e.preventDefault();
@@ -320,7 +320,7 @@ export function EventCard({
         <div onClick={(e) => e.stopPropagation()}>
           <Button
             variant="outline"
-            className="w-full text-[var(--color-primary)] border-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 mt-auto"
+            className="w-full text-[var(--color-primary)] border-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 mt-auto cursor-pointer"
             onClick={(e) => {
               e.stopPropagation();
               // Share functionality

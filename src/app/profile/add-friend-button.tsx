@@ -34,9 +34,12 @@ export function AddFriendButton({ userId, initialStatus = "none" }: AddFriendBut
         throw new Error(data.error || "Failed to add friend");
       }
 
-      // Обновляем статус
-      if (data.data?.status === "accepted") {
+      // Обновляем статус на основе ответа API
+      // API возвращает status: "mutual" или "following"
+      if (data.data?.status === "mutual" || data.data?.isMutual) {
         setStatus("accepted");
+      } else if (data.data?.status === "following") {
+        setStatus("pending_sent");
       } else {
         setStatus("pending_sent");
       }
@@ -60,6 +63,7 @@ export function AddFriendButton({ userId, initialStatus = "none" }: AddFriendBut
         throw new Error(data.error || "Failed to remove friend");
       }
 
+      // После отписки статус становится "none"
       setStatus("none");
     } catch (error) {
       console.error("Error removing friend:", error);

@@ -108,7 +108,7 @@ export function HubCard({ hub, compact = false }: HubCardProps) {
           <Button
             variant="outline"
             size="sm"
-            className="flex-1 text-[var(--color-primary)] border-[var(--color-primary)]"
+            className="flex-1 text-[var(--color-primary)] border-[var(--color-primary)] cursor-pointer"
             onClick={(e) => {
               e.stopPropagation();
               // TODO: Implement share functionality
@@ -118,7 +118,7 @@ export function HubCard({ hub, compact = false }: HubCardProps) {
             Share
           </Button>
           {hub.slug && (
-            <Button variant="outline" size="sm" className="flex-1" asChild>
+            <Button variant="outline" size="sm" className="flex-1 cursor-pointer" asChild>
               <Link href={`/hubs/${hub.slug}`}>
                 <ExternalLink className="w-4 h-4 mr-1" />
                 Details
@@ -233,7 +233,7 @@ export function HubCard({ hub, compact = false }: HubCardProps) {
       <div className="flex gap-3 mt-auto" onClick={(e) => e.stopPropagation()}>
         <Button
           variant="outline"
-          className="flex-1 text-[var(--color-primary)] border-[var(--color-primary)] hover:bg-[var(--color-primary)]/10"
+          className="flex-1 text-[var(--color-primary)] border-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 cursor-pointer"
           onClick={(e) => {
             e.stopPropagation();
             // TODO: Implement share functionality
@@ -245,7 +245,7 @@ export function HubCard({ hub, compact = false }: HubCardProps) {
         {hub.slug && (
           <Button 
             variant="outline" 
-            className="flex-1"
+            className="flex-1 cursor-pointer"
             asChild
             onClick={(e) => e.stopPropagation()}
           >

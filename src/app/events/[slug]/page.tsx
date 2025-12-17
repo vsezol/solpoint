@@ -141,11 +141,29 @@ export default async function EventPage({ params }: EventPageProps) {
     members = (membersData || []) as (EventMember & { user?: User })[];
 
     // Получаем взаимных друзей авторизованного пользователя
-    const { data: friendsData } = await supabase
+    // mutual_friends view содержит записи где user_id < friend_id, поэтому нужно проверять обе стороны
+    const { data: mutualFriendsData } = await supabase
       .from("mutual_friends")
-      .select(`
-        friend_id,
-        profiles!mutual_friends_friend_id_fkey (
+      .select("user_id, friend_id")
+      .or(`user_id.eq.${authUser.id},friend_id.eq.${authUser.id}`);
+
+    // Получаем ID всех друзей
+    const friendIds: string[] = [];
+    if (mutualFriendsData) {
+      for (const mf of mutualFriendsData) {
+        if (mf.user_id === authUser.id) {
+          friendIds.push(mf.friend_id);
+        } else if (mf.friend_id === authUser.id) {
+          friendIds.push(mf.user_id);
+        }
+      }
+    }
+
+    // Загружаем профили друзей
+    if (friendIds.length > 0) {
+      const { data: friendsProfiles } = await supabase
+        .from("profiles")
+        .select(`
           id,
           twitter_id,
           twitter_handle,
@@ -167,16 +185,11 @@ export default async function EventPage({ params }: EventPageProps) {
           countries!fk_profiles_country_code (
             name
           )
-        )
-      `)
-      .eq("user_id", authUser.id);
+        `)
+        .in("id", friendIds);
 
-    friends = (friendsData?.map((f: { friend_id: string; profiles: User | User[] | null }) => {
-      if (Array.isArray(f.profiles)) {
-        return f.profiles[0] || null;
-      }
-      return f.profiles;
-    }).filter((p): p is User => p !== null) || []) as User[];
+      friends = (friendsProfiles || []) as User[];
+    }
 
     // Находим друзей, которые идут на событие
     const memberUserIds = new Set(members.map(m => m.user?.id).filter(Boolean));

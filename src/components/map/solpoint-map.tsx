@@ -9,6 +9,7 @@ import type { GeoJsonObject } from "geojson";
 import { UserCard } from "@/components/cards/user-card";
 import { EventCard } from "@/components/cards/event-card";
 import { HubCard } from "@/components/cards/hub-card";
+import { createClient } from "@/lib/supabase/client";
 
 // Fix for default markers
 delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: () => void })._getIconUrl;
@@ -122,6 +123,7 @@ interface SolPointMapProps {
   onMarkerClick?: (marker: MapMarker) => void;
   isVip?: boolean;
   isAuthenticated?: boolean;
+  currentUserId?: string; // ID текущего пользователя для проверки статуса дружбы
 }
 
 export function SolPointMap({
@@ -131,9 +133,11 @@ export function SolPointMap({
   onMarkerClick,
   isVip = false,
   isAuthenticated = false,
+  currentUserId,
 }: SolPointMapProps) {
   const [, setSelectedMarker] = useState<MapMarker | null>(null);
   const [worldGeoJson, setWorldGeoJson] = useState<GeoJsonObject | null>(null);
+  const [friendshipStatuses, setFriendshipStatuses] = useState<Record<string, "none" | "following" | "mutual">>({});
 
   // Load GeoJSON data for world countries
   useEffect(() => {
@@ -155,6 +159,68 @@ export function SolPointMap({
     [onMarkerClick]
   );
 
+  // Проверяем статус дружбы для пользователей
+  useEffect(() => {
+    if (!currentUserId || !isAuthenticated) {
+      return;
+    }
+
+    const checkFriendshipStatuses = async () => {
+      const supabase = createClient();
+      const userMarkers = markers.filter(
+        (m) => m.type === "user" || m.type === "vip_user"
+      );
+
+      if (userMarkers.length === 0) {
+        return;
+      }
+
+      const userIds = userMarkers.map((m) => (m.data as User).id);
+      const statuses: Record<string, "none" | "following" | "mutual"> = {};
+
+      // Проверяем статус подписки через таблицу follows
+      for (const userId of userIds) {
+        if (userId === currentUserId) {
+          continue;
+        }
+
+        try {
+          // Проверяем, подписан ли текущий пользователь на другого
+          const { data: userFollowsOther } = await supabase
+            .from("follows")
+            .select("*")
+            .eq("follower_id", currentUserId)
+            .eq("following_id", userId)
+            .maybeSingle();
+
+          // Проверяем, подписан ли другой пользователь на текущего
+          const { data: otherFollowsUser } = await supabase
+            .from("follows")
+            .select("*")
+            .eq("follower_id", userId)
+            .eq("following_id", currentUserId)
+            .maybeSingle();
+
+          // Определяем статус
+          if (userFollowsOther && otherFollowsUser) {
+            statuses[userId] = "mutual"; // Взаимная подписка (друзья)
+          } else if (userFollowsOther) {
+            statuses[userId] = "following"; // Текущий пользователь подписан
+          } else {
+            statuses[userId] = "none"; // Не подписан
+          }
+        } catch (error) {
+          console.error(`Error checking friendship status for user ${userId}:`, error);
+          statuses[userId] = "none";
+        }
+      }
+
+      setFriendshipStatuses(statuses);
+    };
+
+    checkFriendshipStatuses();
+  }, [markers, currentUserId, isAuthenticated]);
+
   const getIcon = (marker: MapMarker) => {
     switch (marker.type) {
       case "hub":
@@ -166,11 +232,88 @@ export function SolPointMap({
     }
   };
 
+  const handleAddFriend = useCallback(async (userId: string) => {
+    if (!isAuthenticated || !currentUserId) {
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/friends", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ friend_id: userId }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to add friend");
+      }
+
+      // Обновляем статус подписки
+      if (data.data?.isMutual || data.data?.status === "mutual") {
+        setFriendshipStatuses((prev) => ({
+          ...prev,
+          [userId]: "mutual",
+        }));
+      } else {
+        setFriendshipStatuses((prev) => ({
+          ...prev,
+          [userId]: "following",
+        }));
+      }
+    } catch (error) {
+      console.error("Error adding friend:", error);
+      alert(error instanceof Error ? error.message : "Failed to add friend");
+    }
+  }, [isAuthenticated, currentUserId]);
+
+  const handleRemoveFriend = useCallback(async (userId: string) => {
+    if (!isAuthenticated || !currentUserId) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/friends?friend_id=${userId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to remove friend");
+      }
+
+      // После отписки статус становится "none"
+      setFriendshipStatuses((prev) => ({
+        ...prev,
+        [userId]: "none",
+      }));
+    } catch (error) {
+      console.error("Error removing friend:", error);
+      alert(error instanceof Error ? error.message : "Failed to remove friend");
+    }
+  }, [isAuthenticated, currentUserId]);
+
   const renderPopupContent = (marker: MapMarker) => {
     switch (marker.type) {
       case "user":
-      case "vip_user":
-        return <UserCard user={marker.data as User} isVip={isVip} compact />;
+      case "vip_user": {
+        const user = marker.data as User;
+        const friendshipStatus = friendshipStatuses[user.id] || "none";
+        const isFriend = friendshipStatus === "mutual";
+        return (
+          <UserCard
+            user={user}
+            isVip={isVip}
+            compact
+            isFriend={isFriend}
+            onAddFriend={friendshipStatus === "none" ? () => handleAddFriend(user.id) : undefined}
+            onRemoveFriend={friendshipStatus === "following" ? () => handleRemoveFriend(user.id) : undefined}
+          />
+        );
+      }
       case "event":
         return <EventCard event={marker.data as Event} isVip={isVip} isAuthenticated={isAuthenticated} compact />;
       case "hub":

@@ -7,13 +7,16 @@ export interface GetMapMarkersResponse {
 
 /**
  * Получить маркеры для карты с применением фильтров
+ * @param filters - Фильтры для карты
+ * @param currentUserId - ID текущего пользователя (для фильтрации mutual friends)
  */
 export async function getMapMarkers(
   filters: MapFilters = {
     showUsers: true,
     showEvents: true,
     showHubs: true,
-  }
+  },
+  currentUserId?: string
 ): Promise<MapMarker[]> {
   const markers: MapMarker[] = [];
 
@@ -39,6 +42,11 @@ export async function getMapMarkers(
       
       if (filters.openToMeet) {
         userParams.append("open_to_meet", "true");
+        // Если включен openToMeet, показываем только mutual friends
+        if (currentUserId) {
+          userParams.append("mutual_friends_only", "true");
+          userParams.append("current_user_id", currentUserId);
+        }
       }
       
       if (filters.activeOnly) {

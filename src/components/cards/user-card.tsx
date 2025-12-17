@@ -2,7 +2,7 @@
 
 import { Avatar, Badge, Button } from "@/components/ui";
 import type { User } from "@/types";
-import { Twitter, Instagram, Facebook, UserPlus, MapPin, Briefcase, Check } from "lucide-react";
+import { Twitter, Instagram, Facebook, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
@@ -13,7 +13,9 @@ interface UserCardProps {
   isBlurred?: boolean;
   isHost?: boolean;
   isUnauthorized?: boolean;
+  isFriend?: boolean; // Является ли пользователь другом (взаимная подписка)
   onAddFriend?: () => void;
+  onRemoveFriend?: () => void; // Для отписки
   onMessage?: () => void;
 }
 
@@ -24,7 +26,9 @@ export function UserCard({
   isBlurred = false,
   isHost = false,
   isUnauthorized = false,
+  isFriend = false,
   onAddFriend,
+  onRemoveFriend,
   onMessage,
 }: UserCardProps) {
   const roleLabels: Record<string, string> = {
@@ -44,7 +48,10 @@ export function UserCard({
         <div className={cn(isUnauthorized && "blur-sm")}>
           {/* Header */}
           <div className="flex items-start justify-between gap-3 mb-3">
-            <div className="flex items-start gap-3">
+            <Link 
+              href={`/profile/${user.twitter_handle}`}
+              className="flex items-start gap-3 hover:opacity-80 transition-opacity"
+            >
               <Avatar
                 src={user.avatar_url}
                 alt={user.twitter_name}
@@ -72,7 +79,7 @@ export function UserCard({
                   )}
                 </div>
               </div>
-            </div>
+            </Link>
             {isHost && (
               <Badge variant="outline" className="bg-[var(--color-surface)] text-[var(--color-text-primary)]">
                 Host
@@ -84,7 +91,7 @@ export function UserCard({
         <div className={cn("space-y-1 text-sm mb-3", isBlurred && !isVip && "blur-sm select-none")}>
           <p className="text-[var(--color-text-secondary)]">
             <span className="text-[var(--color-primary)]">Country:</span>{" "}
-            {(user as any).countries?.name || user.country || user.country_code || "Not specified"}
+            {(user as User & { countries?: { name: string } }).countries?.name || user.country || user.country_code || "Not specified"}
           </p>
           {isVip && user.city && (
             <p className="text-[var(--color-text-secondary)]">
@@ -166,17 +173,36 @@ export function UserCard({
           </div>
         ) : (
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onAddFriend}
-              className="flex-1 text-[var(--color-primary)] border-[var(--color-primary)] font-semibold text-sm leading-none tracking-normal"
+            {!isFriend && onAddFriend && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onAddFriend}
+                className="flex-1 text-[var(--color-primary)] border-[var(--color-primary)] font-semibold text-sm leading-none tracking-normal cursor-pointer"
+                style={{ fontFamily: 'var(--font-inter)' }}
+              >
+                {/* <UserPlus className="w-4 h-4 mr-1" /> */}
+                Add Friend
+              </Button>
+            )}
+            {!isFriend && onRemoveFriend && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onRemoveFriend}
+                className="flex-1 text-[var(--color-text-secondary)] border-[var(--color-surface-border)] font-semibold text-sm leading-none tracking-normal cursor-pointer"
+                style={{ fontFamily: 'var(--font-inter)' }}
+              >
+                Unfollow
+              </Button>
+            )}
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={onMessage} 
+              className="flex-1 font-semibold text-sm leading-none tracking-normal border border-white cursor-pointer" 
               style={{ fontFamily: 'var(--font-inter)' }}
             >
-              {/* <UserPlus className="w-4 h-4 mr-1" /> */}
-              Add Friend
-            </Button>
-            <Button variant="outline" size="sm" onClick={onMessage} className="flex-1 font-semibold text-sm leading-none tracking-normal border border-white" style={{ fontFamily: 'var(--font-inter)' }}>
               {/* <MessageCircle className="w-4 h-4 mr-1" /> */}
               Send Message
             </Button>
@@ -193,7 +219,10 @@ export function UserCard({
       <div className={cn(isUnauthorized && "blur-sm")}>
         {/* Header */}
         <div className="flex items-start justify-between gap-4 mb-4">
-          <div className="flex items-start gap-4">
+          <Link 
+            href={`/profile/${user.twitter_handle}`}
+            className="flex items-start gap-4 hover:opacity-80 transition-opacity"
+          >
             <Avatar
               src={user.avatar_url}
               alt={user.twitter_name}
@@ -222,7 +251,7 @@ export function UserCard({
                 )}
               </div>
             </div>
-          </div>
+          </Link>
           {isHost && (
             <Badge variant="outline" className="bg-[var(--color-surface)] text-[var(--color-text-primary)]">
               Host
@@ -240,7 +269,7 @@ export function UserCard({
         )}
         <div className="text-[var(--color-text-secondary)]">
           <span className="text-[var(--color-text-muted)]">Country:</span>{" "}
-          <span>{(user as any).countries?.name || user.country || user.country_code || "Not specified"}</span>
+          <span>{(user as User & { countries?: { name: string } }).countries?.name || user.country || user.country_code || "Not specified"}</span>
         </div>
         {user.city && (
           <div className="text-[var(--color-text-secondary)]">
@@ -333,16 +362,33 @@ export function UserCard({
         </div>
       ) : (
         <div className="flex gap-3">
-          <Button
-            variant="outline"
-            onClick={onAddFriend}
-            className="flex-1 text-[var(--color-primary)] border-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 font-semibold text-sm leading-none tracking-normal"
+          {!isFriend && onAddFriend && (
+            <Button
+              variant="outline"
+              onClick={onAddFriend}
+              className="flex-1 text-[var(--color-primary)] border-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 font-semibold text-sm leading-none tracking-normal cursor-pointer"
+              style={{ fontFamily: 'var(--font-inter)' }}
+            >
+              {/* <UserPlus className="w-4 h-4 mr-2" /> */}
+              Add Friend
+            </Button>
+          )}
+          {!isFriend && onRemoveFriend && (
+            <Button
+              variant="outline"
+              onClick={onRemoveFriend}
+              className="flex-1 text-[var(--color-text-secondary)] border-[var(--color-surface-border)] hover:bg-[var(--color-surface-hover)] font-semibold text-sm leading-none tracking-normal cursor-pointer"
+              style={{ fontFamily: 'var(--font-inter)' }}
+            >
+              Unfollow
+            </Button>
+          )}
+          <Button 
+            variant="outline" 
+            onClick={onMessage} 
+            className="flex-1 font-semibold text-sm leading-none tracking-normal border border-white cursor-pointer" 
             style={{ fontFamily: 'var(--font-inter)' }}
           >
-            {/* <UserPlus className="w-4 h-4 mr-2" /> */}
-            Add Friend
-          </Button>
-          <Button variant="outline" onClick={onMessage} className="flex-1 font-semibold text-sm leading-none tracking-normal border border-white" style={{ fontFamily: 'var(--font-inter)' }}>
             {/* <MessageCircle className="w-4 h-4 mr-2" /> */}
             Send Message
           </Button>

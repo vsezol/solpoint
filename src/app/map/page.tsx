@@ -44,7 +44,7 @@ export default function MapPage() {
       try {
         setLoading(true);
         setError(null);
-        const allMarkers = await getMapMarkers(filters);
+        const allMarkers = await getMapMarkers(filters, user?.id);
         setMarkers(allMarkers);
       } catch (err) {
         console.error("Error loading map markers:", err);
@@ -55,7 +55,7 @@ export default function MapPage() {
     }
 
     loadMarkers();
-  }, [filters]);
+  }, [filters, user?.id]);
 
   return (
     <>
@@ -142,6 +142,7 @@ export default function MapPage() {
                     zoom={4}
                     isVip={isVip}
                     isAuthenticated={isAuthenticated}
+                    currentUserId={user?.id}
                   />
                 )}
               </div>

@@ -242,12 +242,32 @@ export function MapFiltersPanel({
               Find frens
             </span>
             <button
-              onClick={() =>
-                onFiltersChange({
-                  ...filters,
-                  openToMeet: !filters.openToMeet,
-                })
-              }
+              onClick={() => {
+                const newOpenToMeet = !filters.openToMeet;
+                if (newOpenToMeet) {
+                  // При включении "Find frens" сбрасываем все остальные фильтры
+                  setCountry(null);
+                  onFiltersChange({
+                    showUsers: true,
+                    showEvents: false,
+                    showHubs: false,
+                    contentType: "users",
+                    userRoles: undefined,
+                    eventType: undefined,
+                    openToMeet: true,
+                    activeOnly: undefined,
+                    country: undefined,
+                    countryCode: undefined,
+                    city: undefined,
+                  });
+                } else {
+                  // При выключении просто убираем фильтр openToMeet
+                  onFiltersChange({
+                    ...filters,
+                    openToMeet: false,
+                  });
+                }
+              }}
               className={cn(
                 "w-11 h-6 rounded-full transition-colors relative",
                 filters.openToMeet
