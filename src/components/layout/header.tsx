@@ -9,6 +9,7 @@ import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useAuth } from "@/hooks/use-auth";
+import { trackEvent } from "@/lib/analytics";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -54,6 +55,13 @@ export function Header() {
                   <Link
                     key={link.href}
                     href={link.href}
+                    onClick={() => {
+                      trackEvent("navigation_click", {
+                        event_category: "Navigation",
+                        event_label: link.label,
+                        destination: link.href,
+                      });
+                    }}
                     className={cn(
                       "px-4 py-2 text-sm font-medium rounded-lg transition-colors",
                       isActive
@@ -140,7 +148,15 @@ export function Header() {
                   <Link
                     key={link.href}
                     href={link.href}
-                    onClick={() => setIsMobileMenuOpen(false)}
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      trackEvent("navigation_click", {
+                        event_category: "Navigation",
+                        event_label: link.label,
+                        destination: link.href,
+                        is_mobile: true,
+                      });
+                    }}
                     className={cn(
                       "block px-4 py-2 rounded-lg text-sm font-medium transition-colors",
                       isActive

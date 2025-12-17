@@ -7,6 +7,7 @@ import { MapFiltersPanel } from "@/components/map";
 import type { MapFilters, MapMarker } from "@/types";
 import { getMapMarkers } from "@/lib/api/map";
 import { useAuth } from "@/hooks/use-auth";
+import { trackEvent } from "@/lib/analytics";
 
 // Dynamic import for map component to avoid SSR issues with Leaflet
 const SolPointMap = dynamic(
@@ -37,6 +38,15 @@ export default function MapPage() {
   const { user } = useAuth();
   const isVip = user?.subscription_tier === "vip";
   const isAuthenticated = !!user;
+
+  // Отслеживаем просмотр карты
+  useEffect(() => {
+    trackEvent("map_view", {
+      event_category: "Map",
+      is_vip: isVip,
+      is_authenticated: isAuthenticated,
+    });
+  }, [isVip, isAuthenticated]);
 
   // Загружаем маркеры при изменении фильтров
   useEffect(() => {

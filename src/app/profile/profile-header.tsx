@@ -47,7 +47,11 @@ export function ProfileHeader({ user, isOwnProfile, friendshipStatus = "none" }:
             @{user.twitter_handle}
           </p>
         </div>
-        <AddFriendButton userId={user.id} initialStatus={friendshipStatus} />
+        <AddFriendButton 
+          userId={user.id} 
+          userHandle={user.twitter_handle}
+          initialStatus={friendshipStatus} 
+        />
       </div>
     );
   }

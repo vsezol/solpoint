@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { ProfileEditForm } from "./profile-edit-form";
 import { useProfileEdit } from "./profile-edit-provider";
+import { EditProfileButton } from "./edit-profile-button";
 import type { User, Invite } from "@/types";
 import { createClient } from "@/lib/supabase/client";
 import { getAppUrl } from "@/lib/utils";
@@ -292,13 +293,7 @@ export function ProfileMainSection({ user, isOwnProfile, friendsCount = 0 }: Pro
         </div>
         {isOwnProfile && (
           <div className="mr-[14px]">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsEditing(!isEditing)}
-            >
-              Edit profile
-            </Button>
+            <EditProfileButton />
           </div>
         )}
       </div>

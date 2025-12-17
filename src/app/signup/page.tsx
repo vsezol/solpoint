@@ -10,6 +10,7 @@ import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
 import { useAuth } from "@/hooks/use-auth";
 import { useGeolocation } from "@/hooks/use-geolocation";
+import { trackEvent } from "@/lib/analytics";
 
 type Step = "twitter" | "location" | "profile" | "complete";
 
@@ -89,6 +90,11 @@ export default function SignupPage() {
   const handleTwitterSignup = async () => {
     try {
       setIsLoading(true);
+      trackEvent("signup_start", {
+        event_category: "Authentication",
+        method: "twitter",
+        has_invite: !!inviteCode,
+      });
       // Редиректим на API route для инициации Twitter OAuth
       // После успешной авторизации вернемся на /signup для продолжения процесса
       // Передаем invite код через redirect_to, если он есть
@@ -100,6 +106,10 @@ export default function SignupPage() {
     } catch (error) {
       console.error("Error initiating Twitter signup:", error);
       setIsLoading(false);
+      trackEvent("signup_error", {
+        event_category: "Authentication",
+        error_type: error instanceof Error ? error.message : "unknown",
+      });
       alert("Не удалось начать регистрацию. Пожалуйста, попробуйте еще раз.");
     }
   };
@@ -116,10 +126,20 @@ export default function SignupPage() {
           country_code: result.country_code,
           city: result.city,
         }));
+        trackEvent("location_detected", {
+          event_category: "Signup",
+          country: result.country,
+          country_code: result.country_code,
+          has_city: !!result.city,
+        });
       }
       setStep("profile");
     } catch (error) {
       console.error("Error detecting location:", error);
+      trackEvent("location_error", {
+        event_category: "Signup",
+        error_type: error instanceof Error ? error.message : "unknown",
+      });
       // Продолжаем процесс даже если геолокация не удалась
       setStep("profile");
     }
@@ -149,6 +169,14 @@ export default function SignupPage() {
       if (!response.ok) {
         throw new Error(data.error || "Failed to save profile");
       }
+
+      trackEvent("signup_success", {
+        event_category: "Authentication",
+        has_bio: !!formData.bio,
+        has_role: !!formData.role,
+        is_open_to_meet: formData.isOpenToMeet,
+        has_invite: !!inviteCode,
+      });
 
       // Переходим к завершающему шагу
       setStep("complete");

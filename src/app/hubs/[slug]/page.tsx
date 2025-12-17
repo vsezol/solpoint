@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { Header, Footer } from "@/components/layout";
 import { Button, Card } from "@/components/ui";
-import { MapPin, Share2, ExternalLink, Twitter, Instagram, Facebook, Globe, Users } from "lucide-react";
+import { MapPin, Globe, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import type { Hub, User } from "@/types";
 import Image from "next/image";
@@ -9,6 +9,10 @@ import Link from "next/link";
 import { UserCard } from "@/components/cards/user-card";
 import type { Metadata } from "next";
 import { getAppUrl } from "@/lib/utils";
+import { HubViewTracker } from "@/components/analytics/hub-view-tracker";
+import { HubShareButton } from "@/components/analytics/hub-share-button";
+import { HubSocialLink } from "@/components/analytics/hub-social-link";
+import { HubJoinButton } from "@/components/analytics/hub-join-button";
 
 interface HubPageProps {
   params: Promise<{ slug: string }>;
@@ -202,9 +206,7 @@ export default async function HubPage({ params }: HubPageProps) {
                     </p>
                   )}
                 </div>
-                <Button variant="ghost" size="sm">
-                  <Share2 className="w-5 h-5" />
-                </Button>
+                <HubShareButton hub={hub} />
               </div>
 
               {/* Details Card */}
@@ -257,44 +259,32 @@ export default async function HubPage({ params }: HubPageProps) {
                   </h2>
                   <div className="flex items-center gap-3">
                     {hub.socials?.twitter && (
-                      <a
+                      <HubSocialLink
+                        hub={hub}
+                        platform="twitter"
                         href={hub.socials.twitter}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-3 rounded-full bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
-                      >
-                        <Twitter className="w-5 h-5" />
-                      </a>
+                      />
                     )}
                     {hub.socials?.instagram && (
-                      <a
+                      <HubSocialLink
+                        hub={hub}
+                        platform="instagram"
                         href={hub.socials.instagram}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-3 rounded-full bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
-                      >
-                        <Instagram className="w-5 h-5" />
-                      </a>
+                      />
                     )}
                     {hub.socials?.facebook && (
-                      <a
+                      <HubSocialLink
+                        hub={hub}
+                        platform="facebook"
                         href={hub.socials.facebook}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-3 rounded-full bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
-                      >
-                        <Facebook className="w-5 h-5" />
-                      </a>
+                      />
                     )}
                     {hub.socials?.website && (
-                      <a
+                      <HubSocialLink
+                        hub={hub}
+                        platform="website"
                         href={hub.socials.website}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-3 rounded-full bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
-                      >
-                        <ExternalLink className="w-5 h-5" />
-                      </a>
+                      />
                     )}
                   </div>
                 </Card>
@@ -315,13 +305,10 @@ export default async function HubPage({ params }: HubPageProps) {
                     </p>
                   </div>
                   {authUser ? (
-                    <Button 
-                      variant={isUserMember ? "outline" : "primary"} 
-                      className="w-full" 
-                      size="lg"
-                    >
-                      {isUserMember ? "Member" : "Join Hub"}
-                    </Button>
+                    <HubJoinButton 
+                      hub={hub}
+                      isMember={isUserMember}
+                    />
                   ) : (
                     <Button variant="primary" className="w-full" size="lg" asChild>
                       <Link href="/login">
@@ -329,10 +316,12 @@ export default async function HubPage({ params }: HubPageProps) {
                       </Link>
                     </Button>
                   )}
-                  <Button variant="outline" className="w-full">
-                    <Share2 className="w-4 h-4 mr-2" />
-                    Share Hub
-                  </Button>
+                  <HubShareButton 
+                    hub={hub} 
+                    variant="outline" 
+                    size="lg"
+                    className="w-full"
+                  />
                 </div>
               </Card>
 

@@ -6,6 +6,7 @@ import countries from "../../../supabase/coutries";
 import { Input } from "@/components/ui";
 import { Search, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { trackEvent } from "@/lib/analytics";
 
 export default function CountrySelect() {
   const { country, setCountry } = useMapStore();
@@ -30,6 +31,12 @@ export default function CountrySelect() {
   }, []);
 
   const handleSelectCountry = (c: Country) => {
+    trackEvent("map_filter_change", {
+      event_category: "Map",
+      filter_type: "country",
+      filter_value: c.name,
+      country_code: c.code,
+    });
     setCountry(c);
     setQuery("");
     setIsOpen(false);

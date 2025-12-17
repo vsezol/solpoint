@@ -6,6 +6,7 @@ import type { MapFilters, UserRole, EventType, ContentTypeFilter } from "@/types
 import { cn } from "@/lib/utils";
 import CountrySelect from "@/app/map/country-select";
 import { useMapStore } from "@/store/map-store";
+import { trackEvent } from "@/lib/analytics";
 
 const userRoles: { value: UserRole; label: string; description?: string }[] = [
   { value: "developer", label: "Developer" },
@@ -57,6 +58,9 @@ export function MapFiltersPanel({
 
   const handleReset = () => {
     setCountry(null);
+    trackEvent("map_filter_reset", {
+      event_category: "Map",
+    });
     onFiltersChange({
       showUsers: true,
       showEvents: true,
@@ -73,6 +77,11 @@ export function MapFiltersPanel({
   };
 
   const handleContentTypeChange = (contentType: ContentTypeFilter) => {
+    trackEvent("map_filter_change", {
+      event_category: "Map",
+      filter_type: "content_type",
+      filter_value: contentType,
+    });
     onFiltersChange({
       ...filters,
       contentType,
@@ -88,6 +97,12 @@ export function MapFiltersPanel({
     const newRoles = currentRoles.includes(role)
       ? currentRoles.filter((r) => r !== role)
       : [...currentRoles, role];
+    trackEvent("map_filter_change", {
+      event_category: "Map",
+      filter_type: "user_role",
+      filter_value: role,
+      is_added: !currentRoles.includes(role),
+    });
     onFiltersChange({
       ...filters,
       userRoles: newRoles.length > 0 ? newRoles : undefined,
@@ -95,9 +110,15 @@ export function MapFiltersPanel({
   };
 
   const toggleEventType = (eventType: EventType) => {
+    const isRemoving = filters.eventType === eventType;
+    trackEvent("map_filter_change", {
+      event_category: "Map",
+      filter_type: "event_type",
+      filter_value: isRemoving ? "none" : eventType,
+    });
     onFiltersChange({
       ...filters,
-      eventType: filters.eventType === eventType ? undefined : eventType,
+      eventType: isRemoving ? undefined : eventType,
     });
   };
 
@@ -290,12 +311,18 @@ export function MapFiltersPanel({
                 Active users only
               </span>
               <button
-                onClick={() =>
+                onClick={() => {
+                  const newActiveOnly = !filters.activeOnly;
+                  trackEvent("map_filter_change", {
+                    event_category: "Map",
+                    filter_type: "active_only",
+                    filter_value: newActiveOnly ? "true" : "false",
+                  });
                   onFiltersChange({
                     ...filters,
-                    activeOnly: !filters.activeOnly,
-                  })
-                }
+                    activeOnly: newActiveOnly,
+                  });
+                }}
                 className={cn(
                   "w-11 h-6 rounded-full transition-colors relative",
                   filters.activeOnly

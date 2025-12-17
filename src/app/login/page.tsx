@@ -7,6 +7,7 @@ import { Header, Footer } from "@/components/layout";
 import { Twitter, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import { trackEvent } from "@/lib/analytics";
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -16,11 +17,19 @@ export default function LoginPage() {
   const handleTwitterLogin = async () => {
     try {
       setIsLoading(true);
+      trackEvent("login_start", {
+        event_category: "Authentication",
+        method: "twitter",
+      });
       // Редиректим на API route для инициации Twitter OAuth
       window.location.href = "/api/auth/twitter";
     } catch (error) {
       console.error("Error initiating Twitter login:", error);
       setIsLoading(false);
+      trackEvent("login_error", {
+        event_category: "Authentication",
+        error_type: error instanceof Error ? error.message : "unknown",
+      });
       alert("Не удалось начать вход. Пожалуйста, попробуйте еще раз.");
     }
   };
@@ -57,6 +66,13 @@ export default function LoginPage() {
               <div className="flex items-start gap-2 text-red-500">
                 <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                 <div className="flex-1">
+                  {(() => {
+                    trackEvent("login_error", {
+                      event_category: "Authentication",
+                      error_type: error,
+                    });
+                    return null;
+                  })()}
                   <p className="text-sm font-medium mb-1">
                     {error === "twitter_not_enabled"
                       ? "Twitter OAuth не настроен"

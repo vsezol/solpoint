@@ -7,6 +7,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Save, X, MapPin, RefreshCw } from "lucide-react";
 import type { User, UserRole } from "@/types";
 import { useGeolocation } from "@/hooks/use-geolocation";
+import { trackEvent } from "@/lib/analytics";
 
 const ROLES: UserRole[] = [
   "degen",
@@ -79,6 +80,15 @@ export function ProfileEditForm({ user, onCancel, onUpdate }: ProfileEditFormPro
       if (!response.ok) {
         throw new Error(data.error || "Failed to update profile");
       }
+
+      trackEvent("profile_edit_save", {
+        event_category: "Profiles",
+        has_bio: !!bio.trim(),
+        has_role: !!role,
+        is_open_to_meet: isOpenToMeet,
+        has_country: !!country.trim(),
+        has_city: !!city.trim(),
+      });
 
       // Обновляем локальное состояние, если callback передан
       if (onUpdate && data.profile) {

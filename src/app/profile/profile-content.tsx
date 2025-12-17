@@ -25,6 +25,8 @@ import { getAppUrl } from "@/lib/utils";
 import { ProfileEditForm } from "./profile-edit-form";
 import { useProfileEdit } from "./profile-edit-provider";
 import { AddFriendButton } from "./add-friend-button";
+import { EditProfileButton } from "./edit-profile-button";
+import { trackEvent } from "@/lib/analytics";
 
 interface ProfileContentProps {
   user: User;
@@ -399,17 +401,15 @@ export function ProfileContent({
             </div>
             {isOwnProfile ? (
               <div className="mr-[14px]">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsEditing(!isEditing)}
-                >
-                  Edit profile
-                </Button>
+                <EditProfileButton />
               </div>
             ) : (
               <div className="mr-[14px]">
-                <AddFriendButton userId={user.id} initialStatus={friendshipStatus} />
+                <AddFriendButton 
+                  userId={user.id} 
+                  userHandle={user.twitter_handle}
+                  initialStatus={friendshipStatus} 
+                />
               </div>
             )}
           </div>
@@ -498,6 +498,14 @@ export function ProfileContent({
                       href={`https://twitter.com/${currentUser.twitter_handle}`}
                       target="_blank"
                       rel="noopener noreferrer"
+                      onClick={() => {
+                        trackEvent("profile_social_link_click", {
+                          event_category: "Profiles",
+                          event_label: currentUser.twitter_handle || currentUser.id,
+                          target_user_id: currentUser.id,
+                          social_platform: "twitter",
+                        });
+                      }}
                       className="p-2 rounded-lg bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
                       aria-label="Twitter"
                     >
@@ -508,6 +516,14 @@ export function ProfileContent({
                         href={currentUser.socials.instagram}
                         target="_blank"
                         rel="noopener noreferrer"
+                        onClick={() => {
+                          trackEvent("profile_social_link_click", {
+                            event_category: "Profiles",
+                            event_label: currentUser.twitter_handle || currentUser.id,
+                            target_user_id: currentUser.id,
+                            social_platform: "instagram",
+                          });
+                        }}
                         className="p-2 rounded-lg bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
                         aria-label="Instagram"
                       >
@@ -519,6 +535,14 @@ export function ProfileContent({
                         href={currentUser.socials.facebook}
                         target="_blank"
                         rel="noopener noreferrer"
+                        onClick={() => {
+                          trackEvent("profile_social_link_click", {
+                            event_category: "Profiles",
+                            event_label: currentUser.twitter_handle || currentUser.id,
+                            target_user_id: currentUser.id,
+                            social_platform: "facebook",
+                          });
+                        }}
                         className="p-2 rounded-lg bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
                         aria-label="Facebook"
                       >

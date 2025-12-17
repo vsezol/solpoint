@@ -6,6 +6,7 @@ import { Twitter, Instagram, Facebook, ExternalLink, MapPin, Users, Share2 } fro
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { trackEvent } from "@/lib/analytics";
 
 interface HubCardProps {
   hub: Hub;
@@ -21,6 +22,14 @@ export function HubCard({ hub, compact = false }: HubCardProps) {
       return;
     }
     if (hub.slug) {
+      trackEvent("hub_card_click", {
+        event_category: "Hubs",
+        event_label: hub.slug || hub.id,
+        hub_id: hub.id,
+        hub_slug: hub.slug,
+        hub_name: hub.name,
+        source: "hub_card_compact",
+      });
       router.push(`/hubs/${hub.slug}`);
     }
   };
@@ -76,6 +85,17 @@ export function HubCard({ hub, compact = false }: HubCardProps) {
               href={hub.socials.twitter}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={(e) => {
+                e.stopPropagation();
+                trackEvent("hub_social_link_click", {
+                  event_category: "Hubs",
+                  event_label: hub.slug || hub.id,
+                  hub_id: hub.id,
+                  hub_slug: hub.slug,
+                  social_platform: "twitter",
+                  source: "hub_card_compact",
+                });
+              }}
               className="p-1.5 rounded-full bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
             >
               <Twitter className="w-4 h-4" />
@@ -86,6 +106,17 @@ export function HubCard({ hub, compact = false }: HubCardProps) {
               href={hub.socials.instagram}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={(e) => {
+                e.stopPropagation();
+                trackEvent("hub_social_link_click", {
+                  event_category: "Hubs",
+                  event_label: hub.slug || hub.id,
+                  hub_id: hub.id,
+                  hub_slug: hub.slug,
+                  social_platform: "instagram",
+                  source: "hub_card_compact",
+                });
+              }}
               className="p-1.5 rounded-full bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
             >
               <Instagram className="w-4 h-4" />
@@ -96,6 +127,17 @@ export function HubCard({ hub, compact = false }: HubCardProps) {
               href={hub.socials.facebook}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={(e) => {
+                e.stopPropagation();
+                trackEvent("hub_social_link_click", {
+                  event_category: "Hubs",
+                  event_label: hub.slug || hub.id,
+                  hub_id: hub.id,
+                  hub_slug: hub.slug,
+                  social_platform: "facebook",
+                  source: "hub_card_compact",
+                });
+              }}
               className="p-1.5 rounded-full bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
             >
               <Facebook className="w-4 h-4" />
@@ -111,6 +153,14 @@ export function HubCard({ hub, compact = false }: HubCardProps) {
             className="flex-1 text-[var(--color-primary)] border-[var(--color-primary)] cursor-pointer"
             onClick={(e) => {
               e.stopPropagation();
+              trackEvent("hub_share_click", {
+                event_category: "Hubs",
+                event_label: hub.slug || hub.id,
+                hub_id: hub.id,
+                hub_slug: hub.slug,
+                hub_name: hub.name,
+                source: "hub_card_compact",
+              });
               // TODO: Implement share functionality
             }}
           >
@@ -118,7 +168,23 @@ export function HubCard({ hub, compact = false }: HubCardProps) {
             Share
           </Button>
           {hub.slug && (
-            <Button variant="outline" size="sm" className="flex-1 cursor-pointer" asChild>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="flex-1 cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                trackEvent("hub_card_click", {
+                  event_category: "Hubs",
+                  event_label: hub.slug || hub.id,
+                  hub_id: hub.id,
+                  hub_slug: hub.slug,
+                  hub_name: hub.name,
+                  source: "hub_card_compact_details_button",
+                });
+              }}
+              asChild
+            >
               <Link href={`/hubs/${hub.slug}`}>
                 <ExternalLink className="w-4 h-4 mr-1" />
                 Details
@@ -236,6 +302,14 @@ export function HubCard({ hub, compact = false }: HubCardProps) {
           className="flex-1 text-[var(--color-primary)] border-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 cursor-pointer"
           onClick={(e) => {
             e.stopPropagation();
+            trackEvent("hub_share_click", {
+              event_category: "Hubs",
+              event_label: hub.slug || hub.id,
+              hub_id: hub.id,
+              hub_slug: hub.slug,
+              hub_name: hub.name,
+              source: "hub_card_full",
+            });
             // TODO: Implement share functionality
           }}
         >
@@ -246,8 +320,18 @@ export function HubCard({ hub, compact = false }: HubCardProps) {
           <Button 
             variant="outline" 
             className="flex-1 cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              trackEvent("hub_card_click", {
+                event_category: "Hubs",
+                event_label: hub.slug || hub.id,
+                hub_id: hub.id,
+                hub_slug: hub.slug,
+                hub_name: hub.name,
+                source: "hub_card_full_details_button",
+              });
+            }}
             asChild
-            onClick={(e) => e.stopPropagation()}
           >
             <Link href={`/hubs/${hub.slug}`}>
               <ExternalLink className="w-4 h-4 mr-2" />

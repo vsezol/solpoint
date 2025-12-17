@@ -6,6 +6,7 @@ import { ProfileContent } from "../profile-content";
 import { ProfileEditProvider } from "../profile-edit-provider";
 import type { Metadata } from "next";
 import { getAppUrl } from "@/lib/utils";
+import { ProfileViewTracker } from "@/components/analytics/profile-view-tracker";
 
 interface ProfilePageProps {
   params: Promise<{ username: string }>;
@@ -154,16 +155,17 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     .eq("user_id", user.id);
 
   const allEvents: Event[] =
-    eventAttendees?.map((ea: any) => {
+    eventAttendees?.map((ea: { event_id: string; events: Event | Event[] }) => {
       const event = Array.isArray(ea.events) ? ea.events[0] : ea.events;
       return event;
-    }).filter((e: any): e is Event => Boolean(e)) || [];
+    }).filter((e): e is Event => Boolean(e)) || [];
 
   const now = new Date();
   upcomingEvents = allEvents.filter((e) => new Date(e.start_date) > now);
   pastEvents = allEvents.filter((e) => new Date(e.start_date) <= now);
 
   // Получаем все предстоящие события для блока "What's happening" (только для своего профиля)
+  // Переменная allUpcomingEvents не используется, но оставлена для будущего использования
   if (isOwnProfile) {
     const { data: allEventsData } = await supabase
       .from("events")
@@ -185,6 +187,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   friendsCount = mutualFriendsCount || 0;
 
   // Получаем взаимных друзей пользователя (только для своего профиля)
+  // Переменная friends не используется, но оставлена для будущего использования
   if (isOwnProfile && authUser) {
     const { data: mutualFriendsData } = await supabase
       .from("mutual_friends")
@@ -219,10 +222,10 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
       .eq("user_id", authUser.id);
 
     friends =
-      mutualFriendsData?.map((mf: any) => {
+      mutualFriendsData?.map((mf: { friend_id: string; profiles: User | User[] }) => {
         const profile = Array.isArray(mf.profiles) ? mf.profiles[0] : mf.profiles;
         return profile;
-      }).filter((p: any): p is User => Boolean(p)) || [];
+      }).filter((p): p is User => Boolean(p)) || [];
   }
 
   // Получаем статус подписки для чужого профиля
@@ -258,6 +261,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   return (
     <>
       <Header />
+      <ProfileViewTracker user={user} isOwnProfile={isOwnProfile} />
       <main className="min-h-screen pt-16 pb-16 bg-[var(--color-background)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
           <ProfileEditProvider>

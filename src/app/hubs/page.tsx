@@ -1,18 +1,20 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Header, Footer } from "@/components/layout";
 import { HubCard } from "@/components/cards/hub-card";
 import { Input } from "@/components/ui";
 import { Search, Users, Globe } from "lucide-react";
 import { getHubs } from "@/lib/api/hubs";
 import type { Hub } from "@/types";
+import { trackEvent } from "@/lib/analytics";
 
 export default function HubsPage() {
   const [hubs, setHubs] = useState<Hub[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const analyticsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch hubs from API
   useEffect(() => {
@@ -45,6 +47,30 @@ export default function HubsPage() {
     }, searchQuery.trim() ? 300 : 0);
 
     return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
+
+  // Дебаунс для аналитики поиска (500ms)
+  useEffect(() => {
+    // Очищаем предыдущий таймер
+    if (analyticsTimeoutRef.current) {
+      clearTimeout(analyticsTimeoutRef.current);
+    }
+
+    // Отправляем аналитику только если есть поисковый запрос
+    if (searchQuery.trim()) {
+      analyticsTimeoutRef.current = setTimeout(() => {
+        trackEvent("hub_search", {
+          event_category: "Hubs",
+          query_length: searchQuery.length,
+        });
+      }, 500);
+    }
+
+    return () => {
+      if (analyticsTimeoutRef.current) {
+        clearTimeout(analyticsTimeoutRef.current);
+      }
+    };
   }, [searchQuery]);
 
   // Calculate total members and countries from fetched hubs
@@ -97,7 +123,9 @@ export default function HubsPage() {
               placeholder="Search hubs by name or country..."
               icon={<Search className="w-4 h-4" />}
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+              }}
             />
           </div>
         </section>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Header, Footer } from "@/components/layout";
 import { Button, Card, Badge } from "@/components/ui";
 import {
@@ -13,6 +13,7 @@ import {
   Wallet,
   Shield,
 } from "lucide-react";
+import { trackEvent } from "@/lib/analytics";
 
 const plans = [
   {
@@ -80,9 +81,27 @@ export default function SubscriptionPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
 
+  useEffect(() => {
+    trackEvent("subscription_page_view", {
+      event_category: "Subscription",
+    });
+  }, []);
+
   const handleUpgrade = async () => {
     setIsLoading(true);
+    trackEvent("subscription_upgrade_click", {
+      event_category: "Subscription",
+      plan_name: "VIP",
+      price_sol: 5,
+    });
+    
     try {
+      trackEvent("subscription_payment_start", {
+        event_category: "Subscription",
+        plan_name: "VIP",
+        price_sol: 5,
+      });
+      
       // TODO: Implement Solana Pay integration
       // Симуляция процесса оплаты
       await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -90,10 +109,21 @@ export default function SubscriptionPage() {
       // После успешной оплаты здесь будет обновление подписки
       // await updateSubscription("vip");
       
+      trackEvent("subscription_payment_success", {
+        event_category: "Subscription",
+        plan_name: "VIP",
+        price_sol: 5,
+      });
+      
       // Показываем успешное сообщение
       alert("VIP подписка активирована! (Это демо-версия)");
     } catch (error) {
       console.error("Error upgrading to VIP:", error);
+      trackEvent("subscription_payment_error", {
+        event_category: "Subscription",
+        plan_name: "VIP",
+        error_message: error instanceof Error ? error.message : "unknown",
+      });
       alert("Не удалось обновить подписку. Пожалуйста, попробуйте еще раз.");
     } finally {
       setIsLoading(false);

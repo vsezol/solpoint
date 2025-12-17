@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { Header, Footer } from "@/components/layout";
 import { Button, EventBadges, Card, AttendeesList } from "@/components/ui";
-import { Calendar, MapPin, Share2, ExternalLink, Twitter, Instagram, Facebook, Globe, Ticket } from "lucide-react";
+import { Calendar, MapPin, Globe, Ticket } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import type { Event, User, EventMember } from "@/types";
 import Image from "next/image";
@@ -10,6 +10,9 @@ import { UserCard } from "@/components/cards/user-card";
 import { AttendButton } from "./attend-button";
 import type { Metadata } from "next";
 import { getAppUrl } from "@/lib/utils";
+import { EventViewTracker } from "@/components/analytics/event-view-tracker";
+import { EventShareButton } from "@/components/analytics/event-share-button";
+import { EventSocialLink } from "@/components/analytics/event-social-link";
 
 interface EventPageProps {
   params: Promise<{ slug: string }>;
@@ -337,6 +340,7 @@ export default async function EventPage({ params }: EventPageProps) {
   return (
     <>
       <Header />
+      <EventViewTracker event={event} isVip={isVip} />
       <main className="min-h-screen pt-16 pb-16 bg-[var(--color-background)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Hero Section */}
@@ -374,9 +378,7 @@ export default async function EventPage({ params }: EventPageProps) {
                     </p>
                   )}
                 </div>
-                <Button variant="ghost" size="sm">
-                  <Share2 className="w-5 h-5" />
-                </Button>
+                <EventShareButton event={event} />
               </div>
 
                  {/* Details Card */}
@@ -468,44 +470,32 @@ export default async function EventPage({ params }: EventPageProps) {
                   </h2>
                   <div className="flex items-center gap-3">
                     {event.socials?.twitter && (
-                      <a
+                      <EventSocialLink
+                        event={event}
+                        platform="twitter"
                         href={event.socials.twitter}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-3 rounded-full bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
-                      >
-                        <Twitter className="w-5 h-5" />
-                      </a>
+                      />
                     )}
                     {event.socials?.instagram && (
-                      <a
+                      <EventSocialLink
+                        event={event}
+                        platform="instagram"
                         href={event.socials.instagram}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-3 rounded-full bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
-                      >
-                        <Instagram className="w-5 h-5" />
-                      </a>
+                      />
                     )}
                     {event.socials?.facebook && (
-                      <a
+                      <EventSocialLink
+                        event={event}
+                        platform="facebook"
                         href={event.socials.facebook}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-3 rounded-full bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
-                      >
-                        <Facebook className="w-5 h-5" />
-                      </a>
+                      />
                     )}
                     {event.socials?.website && (
-                      <a
+                      <EventSocialLink
+                        event={event}
+                        platform="website"
                         href={event.socials.website}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-3 rounded-full bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
-                      >
-                        <ExternalLink className="w-5 h-5" />
-                      </a>
+                      />
                     )}
                   </div>
                 </Card>
@@ -528,6 +518,9 @@ export default async function EventPage({ params }: EventPageProps) {
                   {authUser ? (
                     <AttendButton
                       eventId={event.id}
+                      eventSlug={event.slug}
+                      eventName={event.name}
+                      eventType={event.event_type}
                       isRegistered={isUserRegistered}
                       isPaid={event.is_paid}
                       priceSol={event.price_sol}
@@ -539,10 +532,12 @@ export default async function EventPage({ params }: EventPageProps) {
                       </Link>
                     </Button>
                   )}
-                  <Button variant="outline" className="w-full">
-                    <Share2 className="w-4 h-4 mr-2" />
-                    Share Event
-                  </Button>
+                  <EventShareButton 
+                    event={event} 
+                    variant="outline" 
+                    size="lg"
+                    className="w-full"
+                  />
                 </div>
               </Card>
 

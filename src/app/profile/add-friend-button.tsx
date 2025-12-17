@@ -3,13 +3,15 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui";
 import { UserPlus, Check, X, Loader2 } from "lucide-react";
+import { trackEvent } from "@/lib/analytics";
 
 interface AddFriendButtonProps {
   userId: string;
+  userHandle?: string;
   initialStatus?: "none" | "pending_sent" | "pending_received" | "accepted" | "blocked";
 }
 
-export function AddFriendButton({ userId, initialStatus = "none" }: AddFriendButtonProps) {
+export function AddFriendButton({ userId, userHandle, initialStatus = "none" }: AddFriendButtonProps) {
   const [status, setStatus] = useState(initialStatus);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -19,6 +21,12 @@ export function AddFriendButton({ userId, initialStatus = "none" }: AddFriendBut
 
   const handleAddFriend = async () => {
     setIsLoading(true);
+    trackEvent("profile_add_friend_click", {
+      event_category: "Profiles",
+      event_label: userHandle || userId,
+      target_user_id: userId,
+    });
+    
     try {
       const response = await fetch("/api/friends", {
         method: "POST",
@@ -36,12 +44,31 @@ export function AddFriendButton({ userId, initialStatus = "none" }: AddFriendBut
 
       // Обновляем статус на основе ответа API
       // API возвращает status: "mutual" или "following"
-      if (data.data?.status === "mutual" || data.data?.isMutual) {
+      const isMutual = data.data?.status === "mutual" || data.data?.isMutual;
+      if (isMutual) {
         setStatus("accepted");
+        trackEvent("profile_add_friend_success", {
+          event_category: "Profiles",
+          event_label: userHandle || userId,
+          target_user_id: userId,
+          friendship_type: "mutual",
+        });
       } else if (data.data?.status === "following") {
         setStatus("pending_sent");
+        trackEvent("profile_add_friend_success", {
+          event_category: "Profiles",
+          event_label: userHandle || userId,
+          target_user_id: userId,
+          friendship_type: "following",
+        });
       } else {
         setStatus("pending_sent");
+        trackEvent("profile_add_friend_success", {
+          event_category: "Profiles",
+          event_label: userHandle || userId,
+          target_user_id: userId,
+          friendship_type: "following",
+        });
       }
     } catch (error) {
       console.error("Error adding friend:", error);
@@ -53,6 +80,13 @@ export function AddFriendButton({ userId, initialStatus = "none" }: AddFriendBut
 
   const handleRemoveFriend = async () => {
     setIsLoading(true);
+    trackEvent("profile_remove_friend", {
+      event_category: "Profiles",
+      event_label: userHandle || userId,
+      target_user_id: userId,
+      previous_status: status,
+    });
+    
     try {
       const response = await fetch(`/api/friends?friend_id=${userId}`, {
         method: "DELETE",

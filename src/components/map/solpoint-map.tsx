@@ -10,6 +10,7 @@ import { UserCard } from "@/components/cards/user-card";
 import { EventCard } from "@/components/cards/event-card";
 import { HubCard } from "@/components/cards/hub-card";
 import { createClient } from "@/lib/supabase/client";
+import { trackEvent } from "@/lib/analytics";
 
 // Fix for default markers
 delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: () => void })._getIconUrl;
@@ -153,6 +154,14 @@ export function SolPointMap({
 
   const handleMarkerClick = useCallback(
     (marker: MapMarker) => {
+      trackEvent("map_marker_click", {
+        event_category: "Map",
+        marker_type: marker.type,
+        marker_id: marker.id,
+        marker_name: marker.name || marker.title || "",
+        country: marker.country,
+        city: marker.city,
+      });
       setSelectedMarker(marker);
       onMarkerClick?.(marker);
     },

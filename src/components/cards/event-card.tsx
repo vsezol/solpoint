@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { trackEvent } from "@/lib/analytics";
 
 interface EventCardProps {
   event: Event;
@@ -150,6 +151,16 @@ export function EventCard({
                 href={event.socials.twitter}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  trackEvent("event_social_link_click", {
+                    event_category: "Events",
+                    event_label: event.slug || event.id,
+                    event_id: event.id,
+                    social_platform: "twitter",
+                    source: "event_card_compact",
+                  });
+                }}
                 className="p-1.5 rounded-full bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
               >
                 <Twitter className="w-4 h-4" />
@@ -160,6 +171,16 @@ export function EventCard({
                 href={event.socials.instagram}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  trackEvent("event_social_link_click", {
+                    event_category: "Events",
+                    event_label: event.slug || event.id,
+                    event_id: event.id,
+                    social_platform: "instagram",
+                    source: "event_card_compact",
+                  });
+                }}
                 className="p-1.5 rounded-full bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
               >
                 <Instagram className="w-4 h-4" />
@@ -170,6 +191,16 @@ export function EventCard({
                 href={event.socials.facebook}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  trackEvent("event_social_link_click", {
+                    event_category: "Events",
+                    event_label: event.slug || event.id,
+                    event_id: event.id,
+                    social_platform: "facebook",
+                    source: "event_card_compact",
+                  });
+                }}
                 className="p-1.5 rounded-full bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
               >
                 <Facebook className="w-4 h-4" />
@@ -188,6 +219,14 @@ export function EventCard({
               onClick={(e) => {
                 e.stopPropagation();
                 e.preventDefault();
+                trackEvent("event_share_click", {
+                  event_category: "Events",
+                  event_label: event.slug || event.id,
+                  event_id: event.id,
+                  event_slug: event.slug,
+                  event_name: event.name,
+                  source: "event_card_compact",
+                });
                 // Share functionality
               }}
             >
@@ -201,6 +240,15 @@ export function EventCard({
               onClick={(e) => {
                 e.stopPropagation();
                 e.preventDefault();
+                trackEvent("event_card_click", {
+                  event_category: "Events",
+                  event_label: event.slug || event.id,
+                  event_id: event.id,
+                  event_slug: event.slug,
+                  event_name: event.name,
+                  event_type: event.event_type,
+                  source: "event_card_compact",
+                });
                 router.push(`/events/${event.slug}`);
               }}
             >
@@ -233,7 +281,21 @@ export function EventCard({
 
   // Full card view
   return (
-    <Link href={`/events/${event.slug}`} className="block h-full">
+    <Link 
+      href={`/events/${event.slug}`} 
+      className="block h-full"
+      onClick={() => {
+        trackEvent("event_card_click", {
+          event_category: "Events",
+          event_label: event.slug || event.id,
+          event_id: event.id,
+          event_slug: event.slug,
+          event_name: event.name,
+          event_type: event.event_type,
+          source: "event_card_full",
+        });
+      }}
+    >
       <div className="bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-xl overflow-hidden flex flex-col h-full transition-all duration-200 hover:scale-[1.02] hover:border-white cursor-pointer">
       {/* Image/Icon Section */}
       <div className="relative h-48 bg-gradient-to-br from-[var(--color-primary)]/20 via-[var(--color-primary)]/10 to-[var(--color-secondary)]/20 flex-shrink-0">
@@ -291,25 +353,85 @@ export function EventCard({
 
         {/* Socials */}
         <div className="flex items-center gap-2 mb-4">
-          {event.socials?.instagram && (
-            <a
-              href={event.socials.instagram}
-              target="_blank"
-              rel="noopener noreferrer"
+          {event.socials?.twitter && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                trackEvent("event_social_link_click", {
+                  event_category: "Events",
+                  event_label: event.slug || event.id,
+                  event_id: event.id,
+                  social_platform: "twitter",
+                  source: "event_card_full",
+                });
+                window.open(event.socials?.twitter, '_blank', 'noopener,noreferrer');
+              }}
               className="p-1.5 rounded-full text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+              aria-label="Twitter"
+            >
+              <Twitter className="w-4 h-4" />
+            </button>
+          )}
+          {event.socials?.instagram && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                trackEvent("event_social_link_click", {
+                  event_category: "Events",
+                  event_label: event.slug || event.id,
+                  event_id: event.id,
+                  social_platform: "instagram",
+                  source: "event_card_full",
+                });
+                window.open(event.socials?.instagram, '_blank', 'noopener,noreferrer');
+              }}
+              className="p-1.5 rounded-full text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+              aria-label="Instagram"
             >
               <Instagram className="w-4 h-4" />
-            </a>
+            </button>
+          )}
+          {event.socials?.facebook && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                trackEvent("event_social_link_click", {
+                  event_category: "Events",
+                  event_label: event.slug || event.id,
+                  event_id: event.id,
+                  social_platform: "facebook",
+                  source: "event_card_full",
+                });
+                window.open(event.socials?.facebook, '_blank', 'noopener,noreferrer');
+              }}
+              className="p-1.5 rounded-full text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+              aria-label="Facebook"
+            >
+              <Facebook className="w-4 h-4" />
+            </button>
           )}
           {event.socials?.website && (
-            <a
-              href={event.socials.website}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                trackEvent("event_social_link_click", {
+                  event_category: "Events",
+                  event_label: event.slug || event.id,
+                  event_id: event.id,
+                  social_platform: "website",
+                  source: "event_card_full",
+                });
+                window.open(event.socials?.website, '_blank', 'noopener,noreferrer');
+              }}
               className="p-1.5 rounded-full text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+              aria-label="Website"
             >
               <ExternalLink className="w-4 h-4" />
-            </a>
+            </button>
           )}
         </div>
 
@@ -323,6 +445,14 @@ export function EventCard({
             className="w-full text-[var(--color-primary)] border-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 mt-auto cursor-pointer"
             onClick={(e) => {
               e.stopPropagation();
+              trackEvent("event_share_click", {
+                event_category: "Events",
+                event_label: event.slug || event.id,
+                event_id: event.id,
+                event_slug: event.slug,
+                event_name: event.name,
+                source: "event_card_full",
+              });
               // Share functionality
             }}
           >

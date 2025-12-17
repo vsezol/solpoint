@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Header, Footer } from "@/components/layout";
 import { EventCard, EventCardSkeleton } from "@/components/cards";
 import { Button, Input } from "@/components/ui";
 import { Search, Calendar } from "lucide-react";
 import { getEvents, filterEventsBySearch } from "@/lib/api/events";
 import type { Event } from "@/types";
+import { trackEvent } from "@/lib/analytics";
 
 export default function EventsPage() {
   const [events, setEvents] = useState<Event[]>([]);
@@ -15,6 +16,7 @@ export default function EventsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [isVip] = useState(false); // TODO: Get from auth context
+  const analyticsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const eventTypes = [
     { value: "official", label: "Official" },
@@ -51,6 +53,30 @@ export default function EventsPage() {
     fetchEvents();
   }, [selectedType]);
 
+  // Дебаунс для аналитики поиска (500ms)
+  useEffect(() => {
+    // Очищаем предыдущий таймер
+    if (analyticsTimeoutRef.current) {
+      clearTimeout(analyticsTimeoutRef.current);
+    }
+
+    // Отправляем аналитику только если есть поисковый запрос
+    if (searchQuery.trim()) {
+      analyticsTimeoutRef.current = setTimeout(() => {
+        trackEvent("event_search", {
+          event_category: "Events",
+          query_length: searchQuery.length,
+        });
+      }, 500);
+    }
+
+    return () => {
+      if (analyticsTimeoutRef.current) {
+        clearTimeout(analyticsTimeoutRef.current);
+      }
+    };
+  }, [searchQuery]);
+
   // Filter events by search query
   const searchFilteredEvents = filterEventsBySearch(events, searchQuery);
 
@@ -86,12 +112,21 @@ export default function EventsPage() {
                 placeholder="Search events..."
                 icon={<Search className="w-4 h-4" />}
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                }}
               />
             </div>
             <div className="flex flex-wrap gap-2 items-center">
               <button
-                onClick={() => setSelectedType(null)}
+                onClick={() => {
+                  setSelectedType(null);
+                  trackEvent("event_filter_change", {
+                    event_category: "Events",
+                    filter_type: "event_type",
+                    filter_value: "all",
+                  });
+                }}
                 className={`px-4 py-2 text-sm rounded-full border transition-colors ${
                   !selectedType
                     ? "bg-[var(--color-primary)] text-[var(--color-background)] border-[var(--color-primary)]"
@@ -103,7 +138,14 @@ export default function EventsPage() {
               {eventTypes.map((type) => (
                 <button
                   key={type.value}
-                  onClick={() => setSelectedType(type.value)}
+                  onClick={() => {
+                    setSelectedType(type.value);
+                    trackEvent("event_filter_change", {
+                      event_category: "Events",
+                      filter_type: "event_type",
+                      filter_value: type.value,
+                    });
+                  }}
                   className={`px-4 py-2 text-sm rounded-full border transition-colors ${
                     selectedType === type.value
                       ? "bg-[var(--color-primary)] text-[var(--color-background)] border-[var(--color-primary)]"
