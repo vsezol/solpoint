@@ -152,10 +152,13 @@ export interface CountryStats {
 }
 
 // Filter types
+export type ContentTypeFilter = "all" | "users" | "events";
+
 export interface MapFilters {
   showUsers: boolean;
   showEvents: boolean;
   showHubs: boolean;
+  contentType?: ContentTypeFilter; // Переключатель: all | users | events
   userRoles?: UserRole[];
   eventType?: EventType;
   openToMeet?: boolean;

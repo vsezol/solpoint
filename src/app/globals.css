@@ -184,6 +184,42 @@ input::selection {
     var(--color-background);
 }
 
+/* Grid pattern background */
+.grid-pattern-bg {
+  position: relative;
+  background: var(--color-background);
+}
+
+.grid-pattern-bg::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.15) 1px, transparent 0);
+  background-size: 50px 50px, 50px 50px, 50px 50px;
+  background-position: 0 0, 0 0, 0 0;
+  pointer-events: none;
+  opacity: 0.4;
+}
+
+.grid-pattern-bg::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(ellipse at 20% 30%, rgba(153, 69, 255, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 70%, rgba(20, 241, 149, 0.1) 0%, transparent 50%);
+  pointer-events: none;
+}
+
 /* Glass effect */
 .glass {
   background: rgba(17, 24, 32, 0.8);

@@ -32,6 +32,7 @@ export default function MapPage() {
     showUsers: true,
     showEvents: true,
     showHubs: true,
+    contentType: "all",
   });
   const { user } = useAuth();
   const isVip = user?.subscription_tier === "vip";

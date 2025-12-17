@@ -35,17 +35,21 @@ export function TeamSection() {
   const isInView = useInView(ref, { once: true, amount: 0.3 });
 
   return (
-    <section className="py-24 bg-[var(--color-background)]" ref={ref}>
+    <section className="py-24 relative z-10" ref={ref}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6 }}
-          className="text-center mb-12"
+          className="text-center mb-16"
         >
-          <h3 className="text-sm font-medium text-[var(--color-primary)] underline mb-4">
-            Our Team
-          </h3>
+          <div className="flex items-center justify-center gap-4 mb-6">
+            <div className="h-px w-16 bg-gradient-to-r from-transparent to-[var(--color-surface-border)]" />
+            <h2 className="text-3xl sm:text-4xl font-bold text-[var(--color-text-primary)]">
+              Our Team
+            </h2>
+            <div className="h-px w-16 bg-gradient-to-l from-transparent to-[var(--color-surface-border)]" />
+          </div>
         </motion.div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-10 max-w-6xl mx-auto">

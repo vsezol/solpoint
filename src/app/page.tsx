@@ -5,7 +5,7 @@ export default function Home() {
   return (
     <>
       <Header />
-      <main>
+      <main className="grid-pattern-bg relative">
         <HeroSection />
         <AboutSection />
         <TeamSection />

@@ -8,40 +8,6 @@ import { motion } from "motion/react";
 export function HeroSection() {
   return (
     <section className="relative min-h-screen flex items-center pt-16 overflow-hidden">
-      {/* Background effects */}
-      <div className="absolute inset-0 animated-bg" />
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[var(--color-primary)]/10 rounded-full blur-3xl" />
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[var(--color-secondary)]/10 rounded-full blur-3xl" />
-      
-      {/* Animated lines background */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <svg
-          className="absolute top-0 left-0 w-full h-full opacity-20"
-          viewBox="0 0 1200 800"
-          fill="none"
-        >
-          <path
-            d="M0 400 Q300 300 600 400 Q900 500 1200 400"
-            stroke="url(#heroGrad)"
-            strokeWidth="2"
-            fill="none"
-          />
-          <path
-            d="M0 200 Q300 300 600 200 Q900 100 1200 200"
-            stroke="url(#heroGrad)"
-            strokeWidth="1"
-            fill="none"
-            opacity="0.5"
-          />
-          <defs>
-            <linearGradient id="heroGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#14f195" />
-              <stop offset="50%" stopColor="#9945ff" />
-              <stop offset="100%" stopColor="#00d1ff" />
-            </linearGradient>
-          </defs>
-        </svg>
-      </div>
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
@@ -53,12 +19,12 @@ export function HeroSection() {
             className="space-y-6"
           >
             <h1 
-              className="text-[40px] font-bold leading-[100%] tracking-normal text-[var(--color-text-primary)]"
+              className="text-[40px] font-bold leading-[100%] tracking-normal text-[var(--color-text-primary)] max-w-2xl"
               style={{ fontFamily: 'var(--font-inter)' }}
             >
               Connect, Network, Attend:
               <br />
-              The Global Solana Community Map.
+              <span className="whitespace-nowrap">The Global Solana Community Map.</span>
             </h1>
 
             <p 

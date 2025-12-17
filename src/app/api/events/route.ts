@@ -47,15 +47,17 @@ export async function GET(request: NextRequest) {
     `)
     .order("start_date", { ascending: true });
 
-  // Фильтры
-  const country = searchParams.get("country");
-  if (country) {
-    query = query.eq("country", country);
-  }
-
+  // Фильтры по стране (приоритет country_code, fallback на country для обратной совместимости)
   const countryCode = searchParams.get("country_code");
   if (countryCode) {
-    query = query.eq("country_code", countryCode);
+    // Приоритет: фильтр по коду страны (ISO 3166-1 alpha-2)
+    query = query.eq("country_code", countryCode.toUpperCase());
+  } else {
+    // Fallback: фильтр по названию страны (для обратной совместимости)
+    const country = searchParams.get("country");
+    if (country) {
+      query = query.eq("country", country);
+    }
   }
 
   const city = searchParams.get("city");

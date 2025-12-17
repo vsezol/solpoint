@@ -22,12 +22,11 @@ export async function getMapMarkers(
     if (filters.showUsers) {
       const userParams = new URLSearchParams();
       
-      if (filters.country) {
-        userParams.append("country", filters.country);
-      }
-      
+      // Приоритет: country_code (если есть), иначе country (для обратной совместимости)
       if (filters.countryCode) {
         userParams.append("country_code", filters.countryCode);
+      } else if (filters.country) {
+        userParams.append("country", filters.country);
       }
       
       if (filters.city) {
@@ -73,12 +72,11 @@ export async function getMapMarkers(
     if (filters.showEvents) {
       const eventParams = new URLSearchParams();
       
-      if (filters.country) {
-        eventParams.append("country", filters.country);
-      }
-      
+      // Приоритет: country_code (если есть), иначе country (для обратной совместимости)
       if (filters.countryCode) {
         eventParams.append("country_code", filters.countryCode);
+      } else if (filters.country) {
+        eventParams.append("country", filters.country);
       }
       
       if (filters.city) {
@@ -113,12 +111,11 @@ export async function getMapMarkers(
     if (filters.showHubs) {
       const hubParams = new URLSearchParams();
       
-      if (filters.country) {
-        hubParams.append("country", filters.country);
-      }
-      
+      // Приоритет: country_code (если есть), иначе country (для обратной совместимости)
       if (filters.countryCode) {
         hubParams.append("country_code", filters.countryCode);
+      } else if (filters.country) {
+        hubParams.append("country", filters.country);
       }
       
       if (filters.city) {
@@ -175,7 +172,8 @@ function getUserCoordinates(user: User): { lat: number; lng: number } {
     AU: { lat: -33.8688, lng: 151.2093 }, // Australia
   };
 
-  // Используем country_code если есть, иначе пытаемся найти по country
+  // Приоритет: используем country_code если есть
+  // Fallback: пытаемся найти код по названию страны (для обратной совместимости)
   const code = user.country_code || 
     (user.country ? Object.keys(countryCoordinates).find(k => 
       countryCoordinates[k] && user.country?.toLowerCase().includes(k.toLowerCase())
