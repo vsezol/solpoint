@@ -9,7 +9,7 @@ export function AboutSection() {
   const isInView = useInView(ref, { once: true, amount: 0.3 });
 
   return (
-    <section id="about" className="py-24 relative z-10" ref={ref}>
+    <section id="about" className="pt-24 relative z-10" ref={ref}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section header */}
         <motion.div
@@ -36,16 +36,16 @@ export function AboutSection() {
             className="space-y-6"
           >
             <div>
-              <p className="text-sm font-medium text-[var(--color-text-primary)] mb-2">
-                Our story
-              </p>
+              <h4 className="text-xl font-medium text-[var(--color-primary)] mb-2">
+                Our Story
+              </h4>
               <h3 className="text-2xl sm:text-3xl font-bold text-[var(--color-text-primary)]">
                 Why We Started
               </h3>
             </div>
 
             {/* Decorative 3D shape */}
-            <div className="relative w-fit">
+            <div className="relative w-fit mt-5">
               <Image 
                 src="/sol-crendel.webp" 
                 alt="Solana Crendel"

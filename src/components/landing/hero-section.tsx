@@ -9,7 +9,7 @@ export function HeroSection() {
   return (
     <section className="relative min-h-screen flex items-center pt-16 overflow-hidden">
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-0">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           {/* Content */}
           <motion.div
@@ -19,7 +19,7 @@ export function HeroSection() {
             className="space-y-6"
           >
             <h1 
-              className="text-[40px] font-bold leading-[100%] tracking-normal text-[var(--color-text-primary)] max-w-2xl"
+              className="text-[40px] font-bold leading-[130%] tracking-normal text-[var(--color-text-primary)] max-w-2xl"
               style={{ fontFamily: 'var(--font-inter)' }}
             >
               Connect, Network, Attend:

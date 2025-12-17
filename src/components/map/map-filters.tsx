@@ -76,17 +76,10 @@ export function MapFiltersPanel({
     onFiltersChange({
       ...filters,
       contentType,
-      // Автоматически обновляем showUsers и showEvents в зависимости от выбора
+      // Автоматически обновляем showUsers, showEvents и showHubs в зависимости от выбора
       showUsers: contentType === "all" || contentType === "users",
       showEvents: contentType === "all" || contentType === "events",
-    });
-  };
-
-  const handleHubsCommunitiesToggle = () => {
-    const newShowHubs = !filters.showHubs;
-    onFiltersChange({
-      ...filters,
-      showHubs: newShowHubs,
+      showHubs: contentType === "all" || contentType === "hubs",
     });
   };
 
@@ -136,8 +129,7 @@ export function MapFiltersPanel({
               { value: "users" as ContentTypeFilter, label: "Users" },
               { value: "events" as ContentTypeFilter, label: "Events" },
             ].map((option) => {
-              const isSelected = filters.contentType === option.value || 
-                (!filters.contentType && option.value === "all");
+              const isSelected = filters.contentType === option.value;
               return (
                 <button
                   key={option.value}
@@ -156,10 +148,10 @@ export function MapFiltersPanel({
           </div>
           {/* Hubs/Communities Button */}
           <button
-            onClick={handleHubsCommunitiesToggle}
+            onClick={() => handleContentTypeChange("hubs")}
             className={cn(
               "w-full px-2 py-1 text-xs rounded-md border transition-colors",
-              filters.showHubs
+              filters.contentType === "hubs"
                 ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)] font-medium"
                 : "border-[var(--color-surface-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-text-muted)]"
             )}
@@ -304,7 +296,7 @@ export function MapFiltersPanel({
       </div>
 
       {/* Active Filter Indicator Labels */}
-      {(filters.contentType && filters.contentType !== "all") || !filters.showHubs || filters.country || filters.city || filters.userRoles?.length || filters.eventType ? (
+      {(filters.contentType && filters.contentType !== "all") || filters.country || filters.city || filters.userRoles?.length || filters.eventType ? (
         <div className="p-4 border-t border-[var(--color-surface-border)]">
           <label className="block text-sm text-[var(--color-text-muted)] mb-2">
             Active Filter Indicator Labels:
@@ -312,20 +304,9 @@ export function MapFiltersPanel({
           <div className="flex flex-wrap gap-2">
             {filters.contentType && filters.contentType !== "all" && (
               <span className="px-3 py-1.5 text-sm rounded-full bg-[var(--color-surface-border)] text-[var(--color-text-primary)] flex items-center gap-2">
-                {filters.contentType === "users" ? "Users" : "Events"}
+                {filters.contentType === "users" ? "Users" : filters.contentType === "events" ? "Events" : "Hubs/Communities"}
                 <button
                   onClick={() => handleContentTypeChange("all")}
-                  className="hover:text-[var(--color-primary)] transition-colors"
-                >
-                  ×
-                </button>
-              </span>
-            )}
-            {!filters.showHubs && (
-              <span className="px-3 py-1.5 text-sm rounded-full bg-[var(--color-surface-border)] text-[var(--color-text-primary)] flex items-center gap-2">
-                Hubs/Communities
-                <button
-                  onClick={handleHubsCommunitiesToggle}
                   className="hover:text-[var(--color-primary)] transition-colors"
                 >
                   ×
