@@ -121,6 +121,7 @@ interface SolPointMapProps {
   zoom?: number;
   onMarkerClick?: (marker: MapMarker) => void;
   isVip?: boolean;
+  isAuthenticated?: boolean;
 }
 
 export function SolPointMap({
@@ -129,6 +130,7 @@ export function SolPointMap({
   zoom = 3,
   onMarkerClick,
   isVip = false,
+  isAuthenticated = false,
 }: SolPointMapProps) {
   const [, setSelectedMarker] = useState<MapMarker | null>(null);
   const [worldGeoJson, setWorldGeoJson] = useState<GeoJsonObject | null>(null);
@@ -170,7 +172,7 @@ export function SolPointMap({
       case "vip_user":
         return <UserCard user={marker.data as User} isVip={isVip} compact />;
       case "event":
-        return <EventCard event={marker.data as Event} isVip={isVip} compact />;
+        return <EventCard event={marker.data as Event} isVip={isVip} isAuthenticated={isAuthenticated} compact />;
       case "hub":
         return <HubCard hub={marker.data as Hub} compact />;
       default:

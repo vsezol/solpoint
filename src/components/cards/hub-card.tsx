@@ -4,6 +4,8 @@ import { Button } from "@/components/ui";
 import type { Hub } from "@/types";
 import { Twitter, Instagram, Facebook, ExternalLink, MapPin, Users, Share2 } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 interface HubCardProps {
   hub: Hub;
@@ -11,9 +13,24 @@ interface HubCardProps {
 }
 
 export function HubCard({ hub, compact = false }: HubCardProps) {
+  const router = useRouter();
+
+  const handleCompactCardClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('button') || target.closest('a')) {
+      return;
+    }
+    if (hub.slug) {
+      router.push(`/hubs/${hub.slug}`);
+    }
+  };
+
   if (compact) {
     return (
-      <div className="p-4 min-w-[280px]">
+      <div 
+        onClick={handleCompactCardClick}
+        className="p-4 min-w-[280px] cursor-pointer transition-all duration-300 hover:scale-105"
+      >
         {/* Image */}
         <div className="relative w-20 h-20 mx-auto mb-3 rounded-full overflow-hidden bg-[var(--color-surface-hover)]">
           {hub.image_url ? (
@@ -92,22 +109,44 @@ export function HubCard({ hub, compact = false }: HubCardProps) {
             variant="outline"
             size="sm"
             className="flex-1 text-[var(--color-primary)] border-[var(--color-primary)]"
+            onClick={(e) => {
+              e.stopPropagation();
+              // TODO: Implement share functionality
+            }}
           >
             <Share2 className="w-4 h-4 mr-1" />
             Share
           </Button>
-          <Button variant="outline" size="sm" className="flex-1">
-            <ExternalLink className="w-4 h-4 mr-1" />
-            Details
-          </Button>
+          {hub.slug && (
+            <Button variant="outline" size="sm" className="flex-1" asChild>
+              <Link href={`/hubs/${hub.slug}`}>
+                <ExternalLink className="w-4 h-4 mr-1" />
+                Details
+              </Link>
+            </Button>
+          )}
         </div>
       </div>
     );
   }
 
   // Full card view
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Не переходим если клик был на кнопку или ссылку
+    const target = e.target as HTMLElement;
+    if (target.closest('button') || target.closest('a')) {
+      return;
+    }
+    if (hub.slug) {
+      router.push(`/hubs/${hub.slug}`);
+    }
+  };
+
   return (
-    <div className="bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-xl p-5">
+    <div 
+      onClick={handleCardClick}
+      className="bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-xl p-5 flex flex-col h-full cursor-pointer transition-all duration-300 hover:scale-105 hover:border-white hover:shadow-lg"
+    >
       {/* Header */}
       <div className="flex items-start gap-4 mb-4">
         <div className="relative w-20 h-20 rounded-xl overflow-hidden bg-[var(--color-surface-hover)] flex-shrink-0">
@@ -191,18 +230,31 @@ export function HubCard({ hub, compact = false }: HubCardProps) {
       </div>
 
       {/* Actions */}
-      <div className="flex gap-3">
+      <div className="flex gap-3 mt-auto" onClick={(e) => e.stopPropagation()}>
         <Button
           variant="outline"
           className="flex-1 text-[var(--color-primary)] border-[var(--color-primary)] hover:bg-[var(--color-primary)]/10"
+          onClick={(e) => {
+            e.stopPropagation();
+            // TODO: Implement share functionality
+          }}
         >
           <Share2 className="w-4 h-4 mr-2" />
           Share
         </Button>
-        <Button variant="outline" className="flex-1">
-          <ExternalLink className="w-4 h-4 mr-2" />
-          Details
-        </Button>
+        {hub.slug && (
+          <Button 
+            variant="outline" 
+            className="flex-1"
+            asChild
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Link href={`/hubs/${hub.slug}`}>
+              <ExternalLink className="w-4 h-4 mr-2" />
+              Details
+            </Link>
+          </Button>
+        )}
       </div>
     </div>
   );

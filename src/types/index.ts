@@ -119,6 +119,7 @@ export interface Hub {
   name: string;
   description?: string;
   image_url?: string;
+  slug: string; // Публичная ссылка для SEO
   country: string;
   city?: string;
   latitude: number;

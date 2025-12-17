@@ -428,7 +428,7 @@ export default async function EventPage({ params }: EventPageProps) {
             {/* Sidebar */}
             <div className="space-y-6">
               {/* Register Card */}
-              <Card variant="bordered" className="sticky top-24">
+              <Card variant="bordered">
                 <div className="space-y-4">
                   <div>
                     <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">

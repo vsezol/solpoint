@@ -1,33 +1,55 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Header, Footer } from "@/components/layout";
 import { HubCard } from "@/components/cards/hub-card";
 import { Input } from "@/components/ui";
 import { Search, Users, Globe } from "lucide-react";
-import { mockHubs } from "@/lib/mock-data";
+import { getHubs } from "@/lib/api/hubs";
+import type { Hub } from "@/types";
 
 export default function HubsPage() {
+  const [hubs, setHubs] = useState<Hub[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Filter hubs
-  const filteredHubs = mockHubs.filter((hub) => {
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      if (
-        !hub.name.toLowerCase().includes(query) &&
-        !hub.country.toLowerCase().includes(query) &&
-        !(hub.city?.toLowerCase().includes(query))
-      ) {
-        return false;
+  // Fetch hubs from API
+  useEffect(() => {
+    async function fetchHubs() {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const filters: Parameters<typeof getHubs>[0] = {};
+        
+        // Если есть поисковый запрос, отправляем его на сервер
+        if (searchQuery.trim()) {
+          filters.search = searchQuery.trim();
+        }
+
+        const fetchedHubs = await getHubs(filters);
+        setHubs(fetchedHubs);
+      } catch (err) {
+        console.error("Error fetching hubs:", err);
+        setError("Не удалось загрузить хабы. Попробуйте позже.");
+      } finally {
+        setLoading(false);
       }
     }
-    return true;
-  });
 
-  // Calculate total members
-  const totalMembers = mockHubs.reduce((acc, hub) => acc + hub.members_count, 0);
-  const totalCountries = new Set(mockHubs.map((hub) => hub.country)).size;
+    // Добавляем небольшую задержку для поиска (debounce)
+    // При первой загрузке (пустой searchQuery) загружаем сразу
+    const timeoutId = setTimeout(() => {
+      fetchHubs();
+    }, searchQuery.trim() ? 300 : 0);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
+
+  // Calculate total members and countries from fetched hubs
+  const totalMembers = hubs.reduce((acc, hub) => acc + hub.members_count, 0);
+  const totalCountries = new Set(hubs.map((hub) => hub.country)).size;
 
   return (
     <>
@@ -82,9 +104,32 @@ export default function HubsPage() {
 
         {/* Hubs Grid */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
-          {filteredHubs.length > 0 ? (
+          {loading ? (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredHubs.map((hub) => (
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="bg-[var(--color-surface)] rounded-lg p-6 animate-pulse"
+                >
+                  <div className="h-4 bg-[var(--color-surface-border)] rounded w-3/4 mb-4"></div>
+                  <div className="h-3 bg-[var(--color-surface-border)] rounded w-full mb-2"></div>
+                  <div className="h-3 bg-[var(--color-surface-border)] rounded w-5/6"></div>
+                </div>
+              ))}
+            </div>
+          ) : error ? (
+            <div className="text-center py-12">
+              <p className="text-[var(--color-error)] mb-4">{error}</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="px-4 py-2 bg-[var(--color-primary)] text-[var(--color-background)] rounded-lg hover:opacity-90 transition-opacity"
+              >
+                Попробовать снова
+              </button>
+            </div>
+          ) : hubs.length > 0 ? (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {hubs.map((hub) => (
                 <HubCard key={hub.id} hub={hub} />
               ))}
             </div>
@@ -92,7 +137,7 @@ export default function HubsPage() {
             <div className="text-center py-12">
               <Users className="w-16 h-16 text-[var(--color-text-muted)] mx-auto mb-4" />
               <p className="text-[var(--color-text-secondary)]">
-                No hubs found
+                {searchQuery.trim() ? "Хабы не найдены по вашему запросу" : "Хабы не найдены"}
               </p>
             </div>
           )}

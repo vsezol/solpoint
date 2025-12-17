@@ -36,6 +36,7 @@ export default function MapPage() {
   });
   const { user } = useAuth();
   const isVip = user?.subscription_tier === "vip";
+  const isAuthenticated = !!user;
 
   // Загружаем маркеры при изменении фильтров
   useEffect(() => {
@@ -140,6 +141,7 @@ export default function MapPage() {
                     center={[35, 55]}
                     zoom={4}
                     isVip={isVip}
+                    isAuthenticated={isAuthenticated}
                   />
                 )}
               </div>
