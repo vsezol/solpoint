@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { Card, Badge, Button, Avatar } from "@/components/ui";
 import { 
   Twitter, 
@@ -51,6 +52,7 @@ export function ProfileContent({
   const [totalUsers, setTotalUsers] = useState<number>(0);
   const [usersInCountry, setUsersInCountry] = useState<number>(0);
   const [usersInCity, setUsersInCity] = useState<number>(0);
+  const [isUploadingBanner, setIsUploadingBanner] = useState(false);
 
   // Обновляем локальное состояние при изменении user prop
   useEffect(() => {
@@ -195,6 +197,67 @@ export function ProfileContent({
     }
   };
 
+  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingBanner(true);
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const response = await fetch("/api/profile/banner", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to upload banner");
+      }
+
+      // Обновляем локальное состояние
+      setCurrentUser({ ...currentUser, banner_url: data.banner_url });
+    } catch (error) {
+      console.error("Error uploading banner:", error);
+      alert(error instanceof Error ? error.message : "Failed to upload banner");
+    } finally {
+      setIsUploadingBanner(false);
+      // Сбрасываем input для возможности повторной загрузки того же файла
+      e.target.value = "";
+    }
+  };
+
+  const handleBannerDelete = async () => {
+    if (!confirm("Are you sure you want to remove your banner?")) {
+      return;
+    }
+
+    setIsUploadingBanner(true);
+
+    try {
+      const response = await fetch("/api/profile/banner", {
+        method: "DELETE",
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to delete banner");
+      }
+
+      // Обновляем локальное состояние
+      setCurrentUser({ ...currentUser, banner_url: undefined });
+    } catch (error) {
+      console.error("Error deleting banner:", error);
+      alert(error instanceof Error ? error.message : "Failed to delete banner");
+    } finally {
+      setIsUploadingBanner(false);
+    }
+  };
+
   const formatEventDate = (startDate: string, endDate?: string, timezone?: string) => {
     const start = new Date(startDate);
     const end = endDate ? new Date(endDate) : null;
@@ -241,15 +304,58 @@ export function ProfileContent({
         <div className="flex flex-col gap-6">
           {/* Banner */}
           <div className="relative h-48 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-xl overflow-hidden">
+            {currentUser.banner_url && (
+              <Image
+                src={currentUser.banner_url}
+                alt="Profile banner"
+                fill
+                className="object-cover"
+                unoptimized
+              />
+            )}
             {isOwnProfile && (
-              <button
-                className="absolute top-3 right-3 p-2 rounded-lg bg-black/50 hover:bg-black/70 transition-colors"
-                onClick={() => {
-                  alert("Banner upload coming soon");
-                }}
-              >
-                <Camera className="w-4 h-4 text-white" />
-              </button>
+              <div className="absolute top-3 right-3 flex gap-2">
+                <input
+                  type="file"
+                  id="banner-upload"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="hidden"
+                  onChange={handleBannerUpload}
+                  disabled={isUploadingBanner}
+                />
+                <label
+                  htmlFor="banner-upload"
+                  className={`p-2 rounded-lg bg-black/50 hover:bg-black/70 transition-colors cursor-pointer ${
+                    isUploadingBanner ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
+                >
+                  <Camera className="w-4 h-4 text-white" />
+                </label>
+                {currentUser.banner_url && (
+                  <button
+                    onClick={handleBannerDelete}
+                    disabled={isUploadingBanner}
+                    className={`p-2 rounded-lg bg-black/50 hover:bg-black/70 transition-colors ${
+                      isUploadingBanner ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
+                    title="Remove banner"
+                  >
+                    <svg
+                      className="w-4 h-4 text-white"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                )}
+              </div>
             )}
           </div>
 

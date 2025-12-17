@@ -23,6 +23,7 @@ CREATE TABLE public.profiles (
   twitter_handle TEXT NOT NULL,
   twitter_name TEXT NOT NULL,
   avatar_url TEXT,
+  banner_url TEXT, -- URL баннера профиля из Supabase Storage (bucket: profile-banners)
   bio TEXT CHECK (char_length(bio) <= 150),
   country TEXT NOT NULL,
   city TEXT,

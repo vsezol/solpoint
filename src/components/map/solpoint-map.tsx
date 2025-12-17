@@ -303,14 +303,24 @@ export function SolPointMap({
         const user = marker.data as User;
         const friendshipStatus = friendshipStatuses[user.id] || "none";
         const isFriend = friendshipStatus === "mutual";
+        
+        // Преобразуем статус из формата карты в формат для UserCard
+        let cardFriendshipStatus: "none" | "pending_sent" | "pending_received" | "accepted" | "blocked" = "none";
+        if (friendshipStatus === "mutual") {
+          cardFriendshipStatus = "accepted";
+        } else if (friendshipStatus === "following") {
+          cardFriendshipStatus = "pending_sent";
+        }
+        
         return (
           <UserCard
             user={user}
             isVip={isVip}
             compact
             isFriend={isFriend}
+            friendshipStatus={cardFriendshipStatus}
             onAddFriend={friendshipStatus === "none" ? () => handleAddFriend(user.id) : undefined}
-            onRemoveFriend={friendshipStatus === "following" ? () => handleRemoveFriend(user.id) : undefined}
+            onRemoveFriend={friendshipStatus === "following" || friendshipStatus === "mutual" ? () => handleRemoveFriend(user.id) : undefined}
           />
         );
       }

@@ -14,6 +14,7 @@ export interface User {
   twitter_handle: string;
   twitter_name: string;
   avatar_url: string;
+  banner_url?: string; // URL баннера профиля из Supabase Storage
   bio?: string;
   country?: string; // @deprecated Use country_code instead
   country_code?: string; // ISO 3166-1 alpha-2 (e.g., "US", "RU")

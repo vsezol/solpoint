@@ -2,7 +2,7 @@
 
 import { Avatar, Badge, Button } from "@/components/ui";
 import type { User } from "@/types";
-import { Twitter, Instagram, Facebook, Check } from "lucide-react";
+import { Twitter, Instagram, Facebook, Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
@@ -14,8 +14,9 @@ interface UserCardProps {
   isHost?: boolean;
   isUnauthorized?: boolean;
   isFriend?: boolean; // Является ли пользователь другом (взаимная подписка)
+  friendshipStatus?: "none" | "pending_sent" | "pending_received" | "accepted" | "blocked"; // Детальный статус дружбы
   onAddFriend?: () => void;
-  onRemoveFriend?: () => void; // Для отписки
+  onRemoveFriend?: () => void; // Для отписки/отмены запроса
   onMessage?: () => void;
 }
 
@@ -27,6 +28,7 @@ export function UserCard({
   isHost = false,
   isUnauthorized = false,
   isFriend = false,
+  friendshipStatus,
   onAddFriend,
   onRemoveFriend,
   onMessage,
@@ -173,7 +175,32 @@ export function UserCard({
           </div>
         ) : (
           <div className="flex gap-2">
-            {!isFriend && onAddFriend && (
+            {/* Показываем статус Friends если пользователи друзья */}
+            {(isFriend || friendshipStatus === "accepted") ? (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled
+                className="flex-1 text-[var(--color-text-secondary)] border-[var(--color-surface-border)] font-semibold text-sm leading-none tracking-normal cursor-default"
+                style={{ fontFamily: 'var(--font-inter)' }}
+              >
+                <Check className="w-4 h-4 mr-1" />
+                Friends
+              </Button>
+            ) : friendshipStatus === "pending_sent" && onRemoveFriend ? (
+              // Показываем Cancel Request если запрос отправлен
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onRemoveFriend}
+                className="flex-1 text-[var(--color-text-secondary)] border-[var(--color-surface-border)] font-semibold text-sm leading-none tracking-normal cursor-pointer"
+                style={{ fontFamily: 'var(--font-inter)' }}
+              >
+                <X className="w-4 h-4 mr-1" />
+                Cancel Request
+              </Button>
+            ) : onAddFriend ? (
+              // Показываем Add Friend если нет дружбы
               <Button
                 variant="outline"
                 size="sm"
@@ -184,18 +211,7 @@ export function UserCard({
                 {/* <UserPlus className="w-4 h-4 mr-1" /> */}
                 Add Friend
               </Button>
-            )}
-            {!isFriend && onRemoveFriend && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onRemoveFriend}
-                className="flex-1 text-[var(--color-text-secondary)] border-[var(--color-surface-border)] font-semibold text-sm leading-none tracking-normal cursor-pointer"
-                style={{ fontFamily: 'var(--font-inter)' }}
-              >
-                Unfollow
-              </Button>
-            )}
+            ) : null}
             <Button 
               variant="outline" 
               size="sm" 
@@ -362,7 +378,30 @@ export function UserCard({
         </div>
       ) : (
         <div className="flex gap-3">
-          {!isFriend && onAddFriend && (
+          {/* Показываем статус Friends если пользователи друзья */}
+          {(isFriend || friendshipStatus === "accepted") ? (
+            <Button
+              variant="outline"
+              disabled
+              className="flex-1 text-[var(--color-text-secondary)] border-[var(--color-surface-border)] font-semibold text-sm leading-none tracking-normal cursor-default"
+              style={{ fontFamily: 'var(--font-inter)' }}
+            >
+              <Check className="w-4 h-4 mr-2" />
+              Friends
+            </Button>
+          ) : friendshipStatus === "pending_sent" && onRemoveFriend ? (
+            // Показываем Cancel Request если запрос отправлен
+            <Button
+              variant="outline"
+              onClick={onRemoveFriend}
+              className="flex-1 text-[var(--color-text-secondary)] border-[var(--color-surface-border)] hover:bg-[var(--color-surface-hover)] font-semibold text-sm leading-none tracking-normal cursor-pointer"
+              style={{ fontFamily: 'var(--font-inter)' }}
+            >
+              <X className="w-4 h-4 mr-2" />
+              Cancel Request
+            </Button>
+          ) : onAddFriend ? (
+            // Показываем Add Friend если нет дружбы
             <Button
               variant="outline"
               onClick={onAddFriend}
@@ -372,17 +411,7 @@ export function UserCard({
               {/* <UserPlus className="w-4 h-4 mr-2" /> */}
               Add Friend
             </Button>
-          )}
-          {!isFriend && onRemoveFriend && (
-            <Button
-              variant="outline"
-              onClick={onRemoveFriend}
-              className="flex-1 text-[var(--color-text-secondary)] border-[var(--color-surface-border)] hover:bg-[var(--color-surface-hover)] font-semibold text-sm leading-none tracking-normal cursor-pointer"
-              style={{ fontFamily: 'var(--font-inter)' }}
-            >
-              Unfollow
-            </Button>
-          )}
+          ) : null}
           <Button 
             variant="outline" 
             onClick={onMessage} 
