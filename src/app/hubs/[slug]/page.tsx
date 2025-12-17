@@ -7,9 +7,73 @@ import type { Hub, User } from "@/types";
 import Image from "next/image";
 import Link from "next/link";
 import { UserCard } from "@/components/cards/user-card";
+import type { Metadata } from "next";
+import { getAppUrl } from "@/lib/utils";
 
 interface HubPageProps {
   params: Promise<{ slug: string }>;
+}
+
+export async function generateMetadata({ params }: HubPageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const supabase = await createClient();
+
+  // Получаем хаб для метаданных
+  const { data: hubData } = await supabase
+    .from("hubs")
+    .select("*")
+    .eq("slug", slug)
+    .single();
+
+  if (!hubData) {
+    return {
+      title: "Hub Not Found",
+    };
+  }
+
+  const hub = hubData as Hub;
+  const appUrl = getAppUrl();
+  const hubUrl = `${appUrl}/hubs/${slug}`;
+  // Используем картинку хаба, если она есть, иначе логотип
+  const imageUrl = hub.image_url && hub.image_url.trim() !== ''
+    ? (hub.image_url.startsWith('http://') || hub.image_url.startsWith('https://'))
+      ? hub.image_url
+      : `${appUrl}${hub.image_url.startsWith('/') ? '' : '/'}${hub.image_url}`
+    : `${appUrl}/logo.svg`;
+  
+  const location = hub.city 
+    ? `${hub.city}, ${hub.country}`
+    : hub.country;
+  
+  const description = hub.description 
+    ? `${hub.description} | ${location} | ${hub.members_count} ${hub.members_count === 1 ? "member" : "members"}`
+    : `Solana hub in ${location} | ${hub.members_count} ${hub.members_count === 1 ? "member" : "members"}`;
+
+  return {
+    title: `${hub.name} | SolPoint`,
+    description: description,
+    openGraph: {
+      title: hub.name,
+      description: description,
+      type: "website",
+      url: hubUrl,
+      images: [
+        {
+          url: imageUrl,
+          width: 1200,
+          height: 630,
+          alt: hub.name,
+        },
+      ],
+      siteName: "SolPoint",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: hub.name,
+      description: description,
+      images: [imageUrl],
+    },
+  };
 }
 
 export default async function HubPage({ params }: HubPageProps) {

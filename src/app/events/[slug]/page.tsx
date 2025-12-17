@@ -8,9 +8,110 @@ import Image from "next/image";
 import Link from "next/link";
 import { UserCard } from "@/components/cards/user-card";
 import { AttendButton } from "./attend-button";
+import type { Metadata } from "next";
+import { getAppUrl } from "@/lib/utils";
 
 interface EventPageProps {
   params: Promise<{ slug: string }>;
+}
+
+export async function generateMetadata({ params }: EventPageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const supabase = await createClient();
+
+  // Получаем событие для метаданных
+  const { data: eventData } = await supabase
+    .from("events")
+    .select("*")
+    .eq("slug", slug)
+    .single();
+
+  if (!eventData) {
+    return {
+      title: "Event Not Found",
+    };
+  }
+
+  const event = eventData as Event;
+  const appUrl = getAppUrl();
+  const eventUrl = `${appUrl}/events/${slug}`;
+  // Используем картинку события, если она есть, иначе логотип
+  const imageUrl = event.image_url && event.image_url.trim() !== ''
+    ? (event.image_url.startsWith('http://') || event.image_url.startsWith('https://'))
+      ? event.image_url
+      : `${appUrl}${event.image_url.startsWith('/') ? '' : '/'}${event.image_url}`
+    : `${appUrl}/logo.svg`;
+  
+  // Форматируем дату для описания
+  const formatDate = (startDate: string, endDate?: string) => {
+    const start = new Date(startDate);
+    const startStr = start.toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+
+    if (!endDate) {
+      const timeStr = start.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      return `${startStr} ${timeStr}`;
+    }
+
+    const end = new Date(endDate);
+    const endStr = end.toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+    const endTimeStr = end.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    const startTimeStr = start.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    return `${startStr} ${startTimeStr} - ${endStr} ${endTimeStr}`;
+  };
+
+  const location = event.venue_name 
+    ? `${event.venue_name}, ${event.city}, ${event.country}`
+    : `${event.city}, ${event.country}`;
+  
+  const description = event.description 
+    ? `${event.description} | ${formatDate(event.start_date, event.end_date)} | ${location}`
+    : `${formatDate(event.start_date, event.end_date)} | ${location}`;
+
+  return {
+    title: `${event.name} | SolPoint`,
+    description: description,
+    openGraph: {
+      title: event.name,
+      description: description,
+      type: "website",
+      url: eventUrl,
+      images: [
+        {
+          url: imageUrl,
+          width: 1200,
+          height: 630,
+          alt: event.name,
+        },
+      ],
+      siteName: "SolPoint",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: event.name,
+      description: description,
+      images: [imageUrl],
+    },
+  };
 }
 
 export default async function EventPage({ params }: EventPageProps) {
