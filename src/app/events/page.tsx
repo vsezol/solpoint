@@ -3,19 +3,23 @@
 import { useState, useEffect, useRef } from "react";
 import { Header, Footer } from "@/components/layout";
 import { EventCard, EventCardSkeleton } from "@/components/cards";
-import { Button, Input } from "@/components/ui";
+import { Button, Input, Modal, ModalHeader, ModalTitle, ModalDescription, ModalContent } from "@/components/ui";
+import { CreateEventForm } from "@/components/ui/create-event-form";
 import { Search, Calendar } from "lucide-react";
 import { getEvents, filterEventsBySearch } from "@/lib/api/events";
 import type { Event } from "@/types";
 import { trackEvent } from "@/lib/analytics";
+import { useRouter } from "next/navigation";
 
 export default function EventsPage() {
+  const router = useRouter();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [isVip] = useState(false); // TODO: Get from auth context
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const analyticsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const eventTypes = [
@@ -157,7 +161,16 @@ export default function EventsPage() {
               ))}
             </div>
             <div className="ml-auto">
-              <Button variant="primary" className="whitespace-nowrap">
+              <Button
+                variant="primary"
+                className="whitespace-nowrap"
+                onClick={() => {
+                  setIsCreateModalOpen(true);
+                  trackEvent("event_create_modal_open", {
+                    event_category: "Events",
+                  });
+                }}
+              >
                 Host an event
               </Button>
             </div>
@@ -220,6 +233,48 @@ export default function EventsPage() {
         )}
       </main>
       <Footer />
+
+      {/* Модальное окно создания события */}
+      <Modal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        size="lg"
+        ariaLabel="Create new event"
+      >
+        <ModalHeader>
+          <ModalTitle>Create Event</ModalTitle>
+          <ModalDescription>
+            Fill out the form to create a new event in the Solana ecosystem
+          </ModalDescription>
+        </ModalHeader>
+        <ModalContent>
+          <CreateEventForm
+            onSuccess={async (event) => {
+              setIsCreateModalOpen(false);
+              // Обновляем список событий
+              async function refreshEvents() {
+                try {
+                  const filters: Parameters<typeof getEvents>[0] = {
+                    upcoming: false,
+                  };
+                  if (selectedType) {
+                    filters.event_type = selectedType as "official" | "community" | "private" | "meetup";
+                  }
+                  const fetchedEvents = await getEvents(filters);
+                  setEvents(fetchedEvents);
+                } catch (err) {
+                  console.error("Error refreshing events:", err);
+                }
+              }
+              await refreshEvents();
+              
+              // Используем slug напрямую из созданного события
+              router.push(`/events/${event.slug}`);
+            }}
+            onCancel={() => setIsCreateModalOpen(false)}
+          />
+        </ModalContent>
+      </Modal>
     </>
   );
 }

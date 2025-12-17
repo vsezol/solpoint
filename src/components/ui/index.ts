@@ -11,7 +11,23 @@ export { EventBadges } from "./event-badges";
 export { Input } from "./input";
 export type { InputProps } from "./input";
 
-export { Modal, ModalHeader, ModalTitle, ModalContent, ModalFooter } from "./modal";
+export {
+  Modal,
+  ModalHeader,
+  ModalTitle,
+  ModalDescription,
+  ModalContent,
+  ModalFooter,
+} from "./modal";
+export type {
+  ModalProps,
+  ModalHeaderProps,
+  ModalTitleProps,
+  ModalFooterProps,
+} from "./modal";
 
 export { CountrySelect } from "./country-select";
+
+export { CreateEventForm } from "./create-event-form";
+export { LocationPicker } from "./location-picker";
 

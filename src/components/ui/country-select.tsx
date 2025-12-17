@@ -15,7 +15,7 @@ interface CountrySelectProps {
 export function CountrySelect({
   value,
   onChange,
-  placeholder = "Выберите страну",
+  placeholder = "Select a country",
   className = "",
   disabled = false,
 }: CountrySelectProps) {
@@ -47,7 +47,7 @@ export function CountrySelect({
       value={value || ""}
       onChange={handleChange}
       disabled={disabled || isLoading}
-      className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed ${className}`}
+      className={`w-full px-4 py-2 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] transition-colors focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
     >
       <option value="">{placeholder}</option>
       {countries.map((country) => (
