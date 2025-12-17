@@ -14,6 +14,8 @@ import type { User, Event } from "@/types";
 import { ProfileInfoSection } from "../profile-info-section";
 import { ProfileHeader } from "../profile-header";
 import { ProfileEditProvider } from "../profile-edit-provider";
+import { ProfileMainSection } from "../profile-main-section";
+import { ProfileSidebar } from "../profile-sidebar";
 
 interface ProfilePageProps {
   params: Promise<{ username: string }>;
@@ -54,6 +56,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   // Получаем события пользователя (для любого профиля)
   let upcomingEvents: Event[] = [];
   let pastEvents: Event[] = [];
+  let allUpcomingEvents: Event[] = []; // Все предстоящие события для блока "What's happening"
   let friends: User[] = [];
   let friendshipStatus: "none" | "pending_sent" | "pending_received" | "accepted" | "blocked" = "none";
 
@@ -100,6 +103,18 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   const now = new Date();
   upcomingEvents = allEvents.filter((e) => new Date(e.start_date) > now);
   pastEvents = allEvents.filter((e) => new Date(e.start_date) <= now);
+
+  // Получаем все предстоящие события для блока "What's happening" (только для своего профиля)
+  if (isOwnProfile) {
+    const { data: allEventsData } = await supabase
+      .from("events")
+      .select("*")
+      .gte("start_date", now.toISOString())
+      .order("start_date", { ascending: true })
+      .limit(10);
+
+    allUpcomingEvents = (allEventsData || []) as Event[];
+  }
 
   // Получаем друзей пользователя (только для своего профиля)
   if (isOwnProfile && authUser) {
@@ -170,185 +185,26 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     <>
       <Header />
       <main className="min-h-screen pt-16 pb-16 bg-[var(--color-background)]">
-        {/* Hero / Cover */}
-        <div className="h-48 bg-gradient-to-r from-[var(--color-primary)]/20 via-[var(--color-secondary)]/20 to-[var(--color-accent)]/20" />
-
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
           {isOwnProfile ? (
             <ProfileEditProvider>
-              {/* Profile header */}
-              <div className="relative -mt-16 mb-8">
-                <ProfileHeader user={user} isOwnProfile={isOwnProfile} />
-              </div>
+              {/* Main flex container - row */}
+              <div className="flex flex-row gap-6 items-start">
+                {/* Left column - Profile */}
+                <div className="flex-1 min-w-0 max-w-[600px]">
+                  <ProfileMainSection 
+                    user={user} 
+                    isOwnProfile={isOwnProfile} 
+                    friendsCount={friends.length}
+                  />
+                </div>
 
-              {/* Content grid */}
-              <div className="grid lg:grid-cols-3 gap-6">
-                {/* Left column - Info */}
-                <ProfileInfoSection user={user} isOwnProfile={isOwnProfile} friends={friends} />
-
-                {/* Right column - Activity */}
-                <div className="lg:col-span-2 space-y-6">
-              {/* Subscription status - только для своего профиля */}
-              {isOwnProfile && user.subscription_tier === "free" && (
-                <Card
-                  variant="bordered"
-                  className="bg-gradient-to-r from-[var(--color-primary)]/10 to-[var(--color-secondary)]/10"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-semibold text-[var(--color-text-primary)] mb-1">
-                        Upgrade to VIP
-                      </h3>
-                      <p className="text-sm text-[var(--color-text-secondary)]">
-                        See cities, profiles, send messages, and more
-                      </p>
-                    </div>
-                    <Button asChild>
-                      <Link href="/subscription">
-                        <Crown className="w-4 h-4 mr-2" />
-                        Upgrade
-                      </Link>
-                    </Button>
-                  </div>
-                </Card>
-              )}
-
-              {/* Friends - только для своего профиля */}
-              {isOwnProfile && friends.length > 0 && (
-                <Card variant="bordered">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-semibold text-[var(--color-text-primary)]">
-                      Friends
-                    </h3>
-                    <span className="text-sm text-[var(--color-text-muted)]">
-                      {friends.length} {friends.length === 1 ? "friend" : "friends"}
-                    </span>
-                  </div>
-                  <div className="grid sm:grid-cols-2 gap-3">
-                    {friends.slice(0, 4).map((friend) => (
-                      <div
-                        key={friend.id}
-                        className="flex items-center gap-3 p-3 rounded-lg bg-[var(--color-surface-hover)]"
-                      >
-                        <Avatar
-                          src={friend.avatar_url}
-                          alt={friend.twitter_name}
-                          size="sm"
-                          isVip={friend.subscription_tier === "vip"}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <Link
-                            href={`/profile/${friend.twitter_handle}`}
-                            className="block"
-                          >
-                            <p className="text-sm font-medium text-[var(--color-text-primary)] truncate hover:underline">
-                              {friend.twitter_name}
-                            </p>
-                          </Link>
-                          <p className="text-xs text-[var(--color-text-muted)] truncate">
-                            {friend.city && `${friend.city}, `}
-                            {(friend as User & { countries?: { name: string } })?.countries?.name || friend.country || "Not specified"}
-                          </p>
-                        </div>
-                        <Button variant="ghost" size="sm">
-                          <MessageCircle className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </Card>
-              )}
-
-              {/* Upcoming Events - только для своего профиля */}
-              {isOwnProfile && (
-                <Card variant="bordered">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-semibold text-[var(--color-text-primary)]">
-                      Upcoming Events
-                    </h3>
-                    <Link
-                      href="/events"
-                      className="text-sm text-[var(--color-primary)] hover:underline"
-                    >
-                      View all
-                    </Link>
-                  </div>
-                  {upcomingEvents.length > 0 ? (
-                    <div className="space-y-3">
-                      {upcomingEvents.slice(0, 2).map((event) => (
-                        <Link
-                          key={event.id}
-                          href={`/events/${(event as Event & { slug?: string }).slug || event.id}`}
-                          className="block"
-                        >
-                          <div className="flex items-center gap-3 p-3 rounded-lg bg-[var(--color-surface-hover)] hover:bg-[var(--color-surface-hover)]/80 transition-colors">
-                            <div className="w-12 h-12 rounded-lg bg-[var(--color-primary)]/20 flex items-center justify-center">
-                              <Calendar className="w-6 h-6 text-[var(--color-primary)]" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-[var(--color-text-primary)] truncate">
-                                {event.name}
-                              </p>
-                              <p className="text-xs text-[var(--color-text-muted)]">
-                                {new Date(event.start_date).toLocaleDateString()} •{" "}
-                                {event.city}
-                              </p>
-                            </div>
-                            <Badge variant="primary" size="sm">
-                              {event.event_type}
-                            </Badge>
-                          </div>
-                        </Link>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-center text-[var(--color-text-muted)] py-4">
-                      No upcoming events
-                    </p>
-                  )}
-                </Card>
-              )}
-
-              {/* Past Events - только для своего профиля */}
-              {isOwnProfile && (
-                <Card variant="bordered">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-semibold text-[var(--color-text-primary)]">
-                      Past Events
-                    </h3>
-                  </div>
-                  {pastEvents.length > 0 ? (
-                    <div className="space-y-3">
-                      {pastEvents.slice(0, 2).map((event) => (
-                        <Link
-                          key={event.id}
-                          href={`/events/${(event as Event & { slug?: string }).slug || event.id}`}
-                          className="block"
-                        >
-                          <div className="flex items-center gap-3 p-3 rounded-lg bg-[var(--color-surface-hover)] opacity-70 hover:opacity-100 transition-opacity">
-                            <div className="w-12 h-12 rounded-lg bg-[var(--color-surface-border)] flex items-center justify-center">
-                              <Calendar className="w-6 h-6 text-[var(--color-text-muted)]" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-[var(--color-text-primary)] truncate">
-                                {event.name}
-                              </p>
-                              <p className="text-xs text-[var(--color-text-muted)]">
-                                {new Date(event.start_date).toLocaleDateString()} •{" "}
-                                {event.city}
-                              </p>
-                            </div>
-                          </div>
-                        </Link>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-center text-[var(--color-text-muted)] py-4">
-                      No past events
-                    </p>
-                  )}
-                </Card>
-                )}
+                {/* Right column - Sidebar */}
+                <div className="w-80 flex-shrink-0">
+                  <ProfileSidebar 
+                    user={user} 
+                    upcomingEvents={allUpcomingEvents}
+                  />
                 </div>
               </div>
             </ProfileEditProvider>
