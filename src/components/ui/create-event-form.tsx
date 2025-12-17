@@ -4,7 +4,6 @@ import { useState, FormEvent, useEffect } from "react";
 import { Button, Input, LocationPicker } from "@/components/ui";
 import { CountrySelect } from "@/components/ui/country-select";
 import { createEvent } from "@/lib/api/events";
-import { useGeolocation } from "@/hooks/use-geolocation";
 import { geocodeAddress } from "@/lib/api/geocoding";
 import { MapPin, Calendar, DollarSign, Users, Globe, Twitter, Instagram, Facebook, Link as LinkIcon, Loader2, Search } from "lucide-react";
 import type { EventType, EventVisibility } from "@/types";
@@ -19,7 +18,6 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isGeocoding, setIsGeocoding] = useState(false);
-  const { requestGeolocation, isDetecting } = useGeolocation();
 
   // Основные поля
   const [name, setName] = useState("");
@@ -59,19 +57,6 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
   const [mapCenterLat, setMapCenterLat] = useState<number | undefined>();
   const [mapCenterLng, setMapCenterLng] = useState<number | undefined>();
 
-  // Auto-fill location from user's geolocation
-  const handleAutoFillLocation = async () => {
-    const location = await requestGeolocation();
-    if (location) {
-      if (location.country_code) {
-        setCountryCode(location.country_code);
-      }
-      if (location.city) {
-        setCity(location.city);
-      }
-      // Note: We don't set coordinates here because user's location != event location
-    }
-  };
 
   // Geocode address to coordinates
   const handleGeocodeAddress = async () => {
@@ -147,10 +132,34 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
     }
   };
 
-  // Handle map location change
+  // Handle map location change (when user clicks on map)
   const handleMapLocationChange = (lat: number, lng: number) => {
     setLatitude(lat.toString());
     setLongitude(lng.toString());
+    // Don't update map center here - user is manually selecting location
+  };
+
+  // Handle reverse geocoding result (when user clicks on map)
+  const handleReverseGeocode = (result: {
+    country: string;
+    country_code?: string;
+    city?: string;
+    full_address: string;
+  }) => {
+    // Update country if code is available
+    if (result.country_code) {
+      setCountryCode(result.country_code);
+    }
+    
+    // Update city if available
+    if (result.city) {
+      setCity(result.city);
+    }
+    
+    // Update address with full address
+    if (result.full_address) {
+      setAddress(result.full_address);
+    }
   };
 
   // Update map when coordinates change manually
@@ -509,6 +518,7 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
             latitude={currentLat}
             longitude={currentLng}
             onLocationChange={handleMapLocationChange}
+            onReverseGeocode={handleReverseGeocode}
             centerLat={mapCenterLat}
             centerLng={mapCenterLng}
             centerZoom={13}
@@ -520,26 +530,6 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
             </p>
           )}
         </div>
-
-        <Button
-          type="button"
-          variant="outline"
-          onClick={handleAutoFillLocation}
-          disabled={isDetecting}
-          className="w-full"
-        >
-          {isDetecting ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin mr-2" />
-              Detecting location...
-            </>
-          ) : (
-            <>
-              <MapPin className="w-4 h-4 mr-2" />
-              Auto-fill country and city
-            </>
-          )}
-        </Button>
 
         <div className="flex items-center gap-2">
           <input

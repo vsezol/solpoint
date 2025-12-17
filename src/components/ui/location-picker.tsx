@@ -34,6 +34,12 @@ interface LocationPickerProps {
   latitude: number;
   longitude: number;
   onLocationChange: (lat: number, lng: number) => void;
+  onReverseGeocode?: (result: {
+    country: string;
+    country_code?: string;
+    city?: string;
+    full_address: string;
+  }) => void;
   className?: string;
   height?: string;
   centerLat?: number;
@@ -42,11 +48,40 @@ interface LocationPickerProps {
 }
 
 // Component to handle map clicks
-function MapClickHandler({ onLocationChange }: { onLocationChange: (lat: number, lng: number) => void }) {
+function MapClickHandler({ 
+  onLocationChange,
+  onReverseGeocode 
+}: { 
+  onLocationChange: (lat: number, lng: number) => void;
+  onReverseGeocode?: (result: {
+    country: string;
+    country_code?: string;
+    city?: string;
+    full_address: string;
+  }) => void;
+}) {
   useMapEvents({
-    click: (e) => {
+    click: async (e) => {
       const { lat, lng } = e.latlng;
       onLocationChange(lat, lng);
+      
+      // Perform reverse geocoding if callback provided
+      if (onReverseGeocode) {
+        try {
+          const { reverseGeocode } = await import("@/lib/api/geocoding");
+          const result = await reverseGeocode(lat, lng);
+          if (result) {
+            onReverseGeocode({
+              country: result.country,
+              country_code: result.country_code,
+              city: result.city || undefined,
+              full_address: result.full_address,
+            });
+          }
+        } catch (error) {
+          console.error("Error performing reverse geocoding:", error);
+        }
+      }
     },
   });
   return null;
@@ -83,6 +118,7 @@ export function LocationPicker({
   latitude,
   longitude,
   onLocationChange,
+  onReverseGeocode,
   className,
   height = "400px",
   centerLat,
@@ -160,7 +196,10 @@ export function LocationPicker({
             mapRef.current = map;
           }}
         />
-        <MapClickHandler onLocationChange={handleLocationChange} />
+        <MapClickHandler 
+          onLocationChange={handleLocationChange}
+          onReverseGeocode={onReverseGeocode}
+        />
         {(position[0] !== 0 || position[1] !== 0) && (
           <Marker position={position} icon={createLocationIcon()} />
         )}
