@@ -26,6 +26,18 @@ async function fetchProfile(): Promise<User | null> {
     }
 
     const { profile } = await response.json();
+    
+    // Отладка: логируем данные профиля из API
+    if (profile) {
+      console.log("useAuth - profile from API:", {
+        id: profile.id,
+        twitter_handle: profile.twitter_handle,
+        is_admin: profile.is_admin,
+        has_is_admin: 'is_admin' in profile,
+        all_keys: Object.keys(profile),
+      });
+    }
+    
     return profile as User | null;
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {

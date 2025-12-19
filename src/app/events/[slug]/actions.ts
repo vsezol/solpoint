@@ -107,3 +107,4 @@ export async function attendEvent(eventId: string) {
   }
 }
 
+

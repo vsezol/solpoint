@@ -622,3 +622,4 @@ createMapMarkers(users, events, hubs) {
 **Последнее обновление:** 13 декабря 2025  
 **Статус:** 📸 Snapshot текущего состояния
 
+

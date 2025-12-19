@@ -29,3 +29,4 @@ export async function GET(
   return NextResponse.json({ hub }, { status: 200 });
 }
 
+

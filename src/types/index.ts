@@ -23,6 +23,7 @@ export interface User {
   is_open_to_meet: boolean;
   subscription_tier: SubscriptionTier;
   is_verified: boolean;
+  is_admin?: boolean; // Опционально, так как поле может не существовать до выполнения миграции
   wallet_address?: string;
   socials?: {
     twitter?: string;

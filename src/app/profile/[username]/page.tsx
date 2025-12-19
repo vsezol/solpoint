@@ -109,6 +109,9 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     notFound();
   }
 
+  // Отладка: логируем данные пользователя с сервера (удалить после отладки)
+  // console.log вызывается на сервере, для просмотра используйте терминал
+
   // Определяем, является ли это профилем текущего пользователя
   // Сравниваем ID текущего авторизованного пользователя с ID профиля
   const isOwnProfile = Boolean(authUser?.id && user.id && authUser.id === user.id);

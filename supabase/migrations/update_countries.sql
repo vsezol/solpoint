@@ -254,3 +254,4 @@ INSERT INTO public.countries (code, name) VALUES
   ('ZW', 'Zimbabwe')
 ON CONFLICT (code) DO NOTHING;
 
+

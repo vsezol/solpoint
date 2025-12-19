@@ -31,6 +31,7 @@ CREATE TABLE public.profiles (
   is_open_to_meet BOOLEAN DEFAULT false,
   subscription_tier subscription_tier DEFAULT 'free',
   is_verified BOOLEAN DEFAULT false,
+  is_admin BOOLEAN DEFAULT false NOT NULL,
   wallet_address TEXT,
   socials JSONB DEFAULT '{}',
   last_active_at TIMESTAMPTZ DEFAULT NOW(),
@@ -145,6 +146,7 @@ CREATE INDEX idx_profiles_subscription_tier ON public.profiles(subscription_tier
 CREATE INDEX idx_profiles_last_active ON public.profiles(last_active_at);
 CREATE INDEX idx_profiles_twitter_id ON public.profiles(twitter_id);
 CREATE INDEX idx_profiles_twitter_handle ON public.profiles(twitter_handle);
+CREATE INDEX idx_profiles_is_admin ON public.profiles(is_admin);
 
 CREATE INDEX idx_events_country ON public.events(country);
 CREATE INDEX idx_events_city ON public.events(city);

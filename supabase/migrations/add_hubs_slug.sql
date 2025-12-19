@@ -80,3 +80,4 @@ BEFORE INSERT ON public.hubs
 FOR EACH ROW
 EXECUTE FUNCTION set_hub_slug();
 
+

@@ -83,3 +83,4 @@ SELECT
   ) as referrals_without_mutual_friendships
 FROM public.referrals;
 
+

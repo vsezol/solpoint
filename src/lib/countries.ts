@@ -123,3 +123,4 @@ export const COUNTRIES_STATIC: Country[] = [
   { code: "KE", name: "Kenya" },
 ];
 
+

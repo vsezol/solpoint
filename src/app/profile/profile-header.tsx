@@ -42,6 +42,12 @@ export function ProfileHeader({ user, isOwnProfile, friendshipStatus = "none" }:
                 VIP
               </Badge>
             )}
+            {/* Отладка: показываем статус is_admin */}
+            {('is_admin' in user) && (
+              <Badge variant={user.is_admin === true ? "primary" : "secondary"} size="sm">
+                {String(user.is_admin)} - {user.is_admin === true ? "ADMIN" : "NOT ADMIN"}
+              </Badge>
+            )}
           </div>
           <p className="text-[var(--color-text-muted)]">
             @{user.twitter_handle}
@@ -87,12 +93,18 @@ export function ProfileHeader({ user, isOwnProfile, friendshipStatus = "none" }:
                 VIP
               </Badge>
             )}
-          </div>
-          <p className="text-[var(--color-text-muted)]">
-            @{user.twitter_handle}
-          </p>
+          {/* Отладка: показываем статус is_admin */}
+          {('is_admin' in user) && (
+            <Badge variant={user.is_admin === true ? "primary" : "secondary"} size="sm">
+              {String(user.is_admin)} - {user.is_admin === true ? "ADMIN" : "NOT ADMIN"}
+            </Badge>
+          )}
         </div>
-        <ProfileActions />
+        <p className="text-[var(--color-text-muted)]">
+          @{user.twitter_handle}
+        </p>
+      </div>
+      <ProfileActions />
       </div>
     );
   }
@@ -120,10 +132,16 @@ function ProfileHeaderWithContext({ user }: { user: User }) {
               Verified
             </Badge>
           )}
-          {user.subscription_tier === "vip" && (
-            <Badge variant="warning" size="sm">
-              <Crown className="w-3 h-3 mr-1" />
-              VIP
+            {user.subscription_tier === "vip" && (
+              <Badge variant="warning" size="sm">
+                <Crown className="w-3 h-3 mr-1" />
+                VIP
+              </Badge>
+            )}
+          {/* Отладка: показываем статус is_admin */}
+          {('is_admin' in user) && (
+            <Badge variant={user.is_admin === true ? "primary" : "secondary"} size="sm">
+              {String(user.is_admin)} - {user.is_admin === true ? "ADMIN" : "NOT ADMIN"}
             </Badge>
           )}
         </div>
