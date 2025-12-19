@@ -30,4 +30,10 @@ export { CountrySelect } from "./country-select";
 
 export { CreateEventForm } from "./create-event-form";
 export { LocationPicker } from "./location-picker";
+export { FilterTag } from "./filter-tag";
+export type { FilterTagProps } from "./filter-tag";
+export { FilterRadioGroup } from "./filter-radio-group";
+export type { FilterRadioGroupProps, FilterRadioOption } from "./filter-radio-group";
+export { CheckBox } from "./checkbox";
+export type { CheckBoxProps } from "./checkbox";
 

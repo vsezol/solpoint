@@ -126,10 +126,10 @@ export interface Hub {
   description?: string;
   image_url?: string;
   slug: string; // Публичная ссылка для SEO
-  country: string;
-  city?: string;
-  latitude: number;
-  longitude: number;
+  country?: string | null; // Страна для размещения на карте. NULL для глобальных хабов
+  city?: string | null; // Опционально, если есть локация
+  latitude?: number | null; // Координаты для размещения на карте (не точные). NULL для глобальных хабов
+  longitude?: number | null; // NULL для глобальных хабов
   members_count: number;
   socials?: {
     twitter?: string;
@@ -151,10 +151,10 @@ export interface Community {
   description?: string;
   image_url?: string;
   slug: string; // Публичная ссылка для SEO
-  country: string; // Страна для размещения на карте
-  city?: string; // Опционально, если есть локация
-  latitude: number; // Координаты для размещения на карте (не точные)
-  longitude: number;
+  country?: string | null; // Страна для размещения на карте. NULL для глобальных комьюнити
+  city?: string | null; // Опционально, если есть локация
+  latitude?: number | null; // Координаты для размещения на карте (не точные). NULL для глобальных комьюнити
+  longitude?: number | null; // NULL для глобальных комьюнити
   members_count: number;
   socials?: {
     twitter?: string;
@@ -176,10 +176,10 @@ export interface Project {
   description?: string;
   image_url?: string;
   slug: string; // Публичная ссылка для SEO
-  country: string; // Страна для размещения на карте
-  city?: string; // Опционально, если есть локация
-  latitude: number; // Координаты для размещения на карте (не точные)
-  longitude: number;
+  country?: string | null; // Страна для размещения на карте. NULL для глобальных проектов
+  city?: string | null; // Опционально, если есть локация
+  latitude?: number | null; // Координаты для размещения на карте (не точные). NULL для глобальных проектов
+  longitude?: number | null; // NULL для глобальных проектов
   members_count: number;
   socials?: {
     twitter?: string;

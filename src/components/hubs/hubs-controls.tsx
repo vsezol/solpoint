@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Input } from "@/components/ui";
+import { Input, FilterTag } from "@/components/ui";
 import { Search, ArrowUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useHubsStore } from "@/store/hubs-store";
@@ -43,19 +43,13 @@ export function HubsControls() {
         {/* Entity Type Filters */}
         <div className="flex flex-wrap items-center gap-2">
           {entityTypeButtons.map((button) => (
-            <button
+            <FilterTag
               key={button.value}
+              isActive={entityTypeFilter === button.value}
               onClick={() => setEntityTypeFilter(button.value)}
-              className={cn(
-                "px-2 py-1 sm:px-4 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors",
-                "border border-[var(--color-surface-border)]",
-                entityTypeFilter === button.value
-                  ? "bg-[var(--color-primary)] text-[var(--color-background)] border-[var(--color-primary)]"
-                  : "bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text-primary)]"
-              )}
             >
               {button.label}
-            </button>
+            </FilterTag>
           ))}
         </div>
       </div>
@@ -69,8 +63,8 @@ export function HubsControls() {
             onClick={() => setIsSortOpen(!isSortOpen)}
             className={cn(
               "px-3 py-1.5 rounded-lg text-sm font-medium transition-colors",
-              "bg-[var(--color-primary)] text-[var(--color-background)]",
-              "hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-offset-2"
+              "border border-[var(--color-filter-border)] bg-[var(--color-filter-bg)] text-[var(--color-text-primary)]",
+              "hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-[var(--color-filter-border)] focus:ring-offset-2"
             )}
           >
             {sortOptions.find((opt) => opt.value === sortBy)?.label || "Recommended"}

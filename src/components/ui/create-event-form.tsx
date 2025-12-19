@@ -10,6 +10,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { MapPin, Calendar, DollarSign, Users, Globe, Twitter, Instagram, Facebook, Link as LinkIcon, Loader2, Search, Mail, MessageCircle } from "lucide-react";
 import type { EventType, EventVisibility } from "@/types";
 import { trackEvent } from "@/lib/analytics";
+import { useFormsStore } from "@/store/forms-store";
+import { cn } from "@/lib/utils";
 
 interface CreateEventFormProps {
   onSuccess?: (event: { id: string; slug: string }) => void;
@@ -25,6 +27,7 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
   
   // Refs for scrolling to errors
   const formRef = useRef<HTMLFormElement>(null);
+  const errorRef = useRef<HTMLDivElement>(null);
   const locationErrorRef = useRef<HTMLDivElement>(null);
   const contactErrorRef = useRef<HTMLDivElement>(null);
   
@@ -33,73 +36,59 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
   const [contactEmailError, setContactEmailError] = useState<string | null>(null);
   const [contactTelegramError, setContactTelegramError] = useState<string | null>(null);
   
-  // Contacts for non-admins (required)
-  const [contactEmail, setContactEmail] = useState("");
-  const [contactTelegram, setContactTelegram] = useState("");
-
-  // Basic fields
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
-  
-  // Location
-  const [countryCode, setCountryCode] = useState<string | undefined>();
-  const [city, setCity] = useState("");
-  const [address, setAddress] = useState("");
-  const [latitude, setLatitude] = useState("");
-  const [longitude, setLongitude] = useState("");
-
-  // Dates
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-
-  // Type and visibility
-  const [eventType, setEventType] = useState<EventType>("community");
-  const [visibility, setVisibility] = useState<EventVisibility>("public");
-
-  // Payment
-  const [isPaid, setIsPaid] = useState(false);
-  const [priceSol, setPriceSol] = useState("");
-
-  // Additional
-  const [maxAttendees, setMaxAttendees] = useState("");
-  const [isOnline, setIsOnline] = useState(false);
-
-  // Social networks
-  const [socialsTwitter, setSocialsTwitter] = useState("");
-  const [socialsInstagram, setSocialsInstagram] = useState("");
-  const [socialsFacebook, setSocialsFacebook] = useState("");
-  const [socialsWebsite, setSocialsWebsite] = useState("");
-
-  // Map center coordinates (for auto-zooming to city)
-  const [mapCenterLat, setMapCenterLat] = useState<number | undefined>();
-  const [mapCenterLng, setMapCenterLng] = useState<number | undefined>();
-
-  // Function to reset form
-  const resetForm = () => {
-    setName("");
-    setDescription("");
-    setImageUrl("");
-    setCountryCode(undefined);
-    setCity("");
-    setAddress("");
-    setLatitude("");
-    setLongitude("");
-    setStartDate("");
-    setEndDate("");
-    setEventType("community");
-    setVisibility("public");
-    setIsPaid(false);
-    setPriceSol("");
-    setMaxAttendees("");
-    setIsOnline(false);
-    setSocialsTwitter("");
-    setSocialsInstagram("");
-    setSocialsFacebook("");
-    setSocialsWebsite("");
-    setContactEmail("");
-    setContactTelegram("");
-  };
+  // Use Zustand store for form state
+  const eventForm = useFormsStore((state) => state.eventForm);
+  const {
+    name,
+    description,
+    imageUrl,
+    countryCode,
+    city,
+    address,
+    latitude,
+    longitude,
+    startDate,
+    endDate,
+    eventType,
+    visibility,
+    isPaid,
+    priceSol,
+    maxAttendees,
+    isOnline,
+    socialsTwitter,
+    socialsInstagram,
+    socialsFacebook,
+    socialsWebsite,
+    contactEmail,
+    contactTelegram,
+    mapCenterLat,
+    mapCenterLng,
+    setName,
+    setDescription,
+    setImageUrl,
+    setCountryCode,
+    setCity,
+    setAddress,
+    setLatitude,
+    setLongitude,
+    setStartDate,
+    setEndDate,
+    setEventType,
+    setVisibility,
+    setIsPaid,
+    setPriceSol,
+    setMaxAttendees,
+    setIsOnline,
+    setSocialsTwitter,
+    setSocialsInstagram,
+    setSocialsFacebook,
+    setSocialsWebsite,
+    setContactEmail,
+    setContactTelegram,
+    setMapCenterLat,
+    setMapCenterLng,
+    resetEventForm,
+  } = eventForm;
 
 
   // Geocode address to coordinates
@@ -304,53 +293,75 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
     if (!name.trim()) {
       setError("Event name is required");
       hasErrors = true;
-    }
-    if (!countryCode) {
-      if (!error) setError("Please select a country");
-      hasErrors = true;
-    }
-    if (!city.trim()) {
-      if (!error) setError("City is required");
-      hasErrors = true;
+      if (!firstErrorElement && errorRef.current) {
+        firstErrorElement = errorRef.current;
+      }
     }
     
-    // Check coordinates - now a point on the map is required
-    const lat = latitude.trim() ? parseFloat(latitude) : NaN;
-    const lng = longitude.trim() ? parseFloat(longitude) : NaN;
-    
-    if (!latitude.trim() || !longitude.trim() || isNaN(lat) || isNaN(lng)) {
-      setLocationError("Please select a location on the map to specify the event location");
-      hasErrors = true;
-      if (!firstErrorElement && locationErrorRef.current) {
-        firstErrorElement = locationErrorRef.current;
+    // Валидация локации - если событие не онлайн, требуется локация
+    if (!isOnline) {
+      if (!countryCode) {
+        if (!error) setError("Please select a country");
+        hasErrors = true;
+        if (!firstErrorElement && errorRef.current) {
+          firstErrorElement = errorRef.current;
+        }
       }
-    } else if (lat < -90 || lat > 90) {
-      setLocationError("Latitude must be between -90 and 90");
-      hasErrors = true;
-      if (!firstErrorElement && locationErrorRef.current) {
-        firstErrorElement = locationErrorRef.current;
+      if (!city.trim()) {
+        if (!error) setError("City is required");
+        hasErrors = true;
+        if (!firstErrorElement && errorRef.current) {
+          firstErrorElement = errorRef.current;
+        }
       }
-    } else if (lng < -180 || lng > 180) {
-      setLocationError("Longitude must be between -180 and 180");
-      hasErrors = true;
-      if (!firstErrorElement && locationErrorRef.current) {
-        firstErrorElement = locationErrorRef.current;
+      
+      // Check coordinates - now a point on the map is required
+      const lat = latitude.trim() ? parseFloat(latitude) : NaN;
+      const lng = longitude.trim() ? parseFloat(longitude) : NaN;
+      
+      if (!latitude.trim() || !longitude.trim() || isNaN(lat) || isNaN(lng)) {
+        setLocationError("Please select a location on the map to specify the event location");
+        hasErrors = true;
+        if (!firstErrorElement && locationErrorRef.current) {
+          firstErrorElement = locationErrorRef.current;
+        }
+      } else if (lat < -90 || lat > 90) {
+        setLocationError("Latitude must be between -90 and 90");
+        hasErrors = true;
+        if (!firstErrorElement && locationErrorRef.current) {
+          firstErrorElement = locationErrorRef.current;
+        }
+      } else if (lng < -180 || lng > 180) {
+        setLocationError("Longitude must be between -180 and 180");
+        hasErrors = true;
+        if (!firstErrorElement && locationErrorRef.current) {
+          firstErrorElement = locationErrorRef.current;
+        }
       }
     }
     
     if (!startDate) {
       if (!error) setError("Start date is required");
       hasErrors = true;
+      if (!firstErrorElement && errorRef.current) {
+        firstErrorElement = errorRef.current;
+      }
     }
 
     if (isPaid && (!priceSol || parseFloat(priceSol) <= 0)) {
       if (!error) setError("Please specify a price for paid events");
       hasErrors = true;
+      if (!firstErrorElement && errorRef.current) {
+        firstErrorElement = errorRef.current;
+      }
     }
 
     if (endDate && new Date(endDate) < new Date(startDate)) {
       if (!error) setError("End date cannot be earlier than start date");
       hasErrors = true;
+      if (!firstErrorElement && errorRef.current) {
+        firstErrorElement = errorRef.current;
+      }
     }
 
     // For non-admins, at least one contact is required
@@ -389,9 +400,14 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
     }
 
     // Scroll to first error
-    if (hasErrors && firstErrorElement) {
+    if (hasErrors) {
       setTimeout(() => {
-        firstErrorElement?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        if (firstErrorElement) {
+          firstErrorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else if (errorRef.current) {
+          // Если нет специфического элемента ошибки, скроллим к общему блоку ошибки
+          errorRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
       }, 100);
     }
 
@@ -421,21 +437,29 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
       if (socialsFacebook.trim()) socials.facebook = socialsFacebook.trim();
       if (socialsWebsite.trim()) socials.website = socialsWebsite.trim();
 
-      // Get country name by code
-      const { getCountryByCode } = await import("@/lib/countries");
-      const countryData = await getCountryByCode(countryCode!);
-      const countryName = countryData?.name || countryCode!;
+      // Prepare location data - если событие не онлайн, отправляем локацию
+      let locationData: Record<string, any> = {};
+      if (!isOnline) {
+        // Get country name by code
+        const { getCountryByCode } = await import("@/lib/countries");
+        const countryData = await getCountryByCode(countryCode!);
+        const countryName = countryData?.name || countryCode!;
+
+        locationData = {
+          country: countryName,
+          country_code: countryCode,
+          city: city.trim(),
+          address: address.trim() || undefined,
+          latitude: parseFloat(latitude),
+          longitude: parseFloat(longitude),
+        };
+      }
 
       const eventData = {
         name: name.trim(),
         description: description.trim() || undefined,
         image_url: imageUrl.trim() || undefined,
-        country: countryName,
-        country_code: countryCode,
-        city: city.trim(),
-        address: address.trim() || undefined,
-        latitude: parseFloat(latitude),
-        longitude: parseFloat(longitude),
+        ...locationData,
         start_date: new Date(startDate).toISOString(),
         end_date: endDate ? new Date(endDate).toISOString() : undefined,
         event_type: eventType,
@@ -463,7 +487,7 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
           });
 
           // Reset form
-          resetForm();
+          resetEventForm();
 
           if (onSuccess && createdEvent.slug) {
             onSuccess({ id: createdEvent.id, slug: createdEvent.slug });
@@ -490,7 +514,7 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
           });
 
           // Reset form
-          resetForm();
+          resetEventForm();
 
           // Show success message
           setError(null);
@@ -504,6 +528,12 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
     } catch (err: any) {
       console.error("Error creating event/submission:", err);
       setError(err.message || (isAdmin ? "Failed to create event. Please try again." : "Failed to submit event for review. Please try again."));
+      // Скроллим к ошибке при ошибке сервера
+      setTimeout(() => {
+        if (errorRef.current) {
+          errorRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
     } finally {
       setIsSubmitting(false);
     }
@@ -512,7 +542,7 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
   return (
     <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
       {error && (
-        <div className="p-4 bg-[var(--color-error)]/10 border border-[var(--color-error)] rounded-lg text-[var(--color-error)] text-sm">
+        <div ref={errorRef} className="p-4 bg-[var(--color-error)]/10 border border-[var(--color-error)] rounded-lg text-[var(--color-error)] text-sm">
           {error}
         </div>
       )}
@@ -566,30 +596,67 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
           Location
         </h3>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
-              Country <span className="text-[var(--color-error)]">*</span>
-            </label>
-            <CountrySelect
-              value={countryCode}
-              onChange={setCountryCode}
-              placeholder="Select a country"
+        {/* Online Event Checkbox - Pill Style */}
+        <div className="flex items-center gap-3">
+          <label
+            className={cn(
+              "px-4 py-2 text-sm font-medium rounded-full border transition-all cursor-pointer select-none",
+              isOnline
+                ? "border-[var(--color-primary)] bg-[var(--color-surface-hover)] text-[var(--color-primary)]"
+                : "border-[var(--color-surface-border)] bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:border-[var(--color-text-muted)]"
+            )}
+          >
+            <input
+              type="checkbox"
+              checked={isOnline}
+              onChange={(e) => {
+                setIsOnline(e.target.checked);
+                // Очищаем все поля локации при включении онлайн режима
+                if (e.target.checked) {
+                  setCountryCode(undefined);
+                  setCity("");
+                  setAddress("");
+                  setLatitude("");
+                  setLongitude("");
+                  setMapCenterLat(undefined);
+                  setMapCenterLng(undefined);
+                }
+              }}
+              className="sr-only"
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
-              City <span className="text-[var(--color-error)]">*</span>
-            </label>
-            <Input
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              placeholder="New York"
-              required
-            />
-          </div>
+            <span className="flex items-center gap-2">
+              <Globe className="w-4 h-4" />
+              Online Event
+            </span>
+          </label>
         </div>
+
+        {!isOnline && (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
+                  Country <span className="text-[var(--color-error)]">*</span>
+                </label>
+                <CountrySelect
+                  value={countryCode}
+                  onChange={setCountryCode}
+                  placeholder="Select a country"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
+                  City <span className="text-[var(--color-error)]">*</span>
+                </label>
+                <Input
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  placeholder="New York"
+                  required
+                />
+              </div>
+            </div>
 
         <div>
           <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
@@ -659,18 +726,8 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
           )}
         </div>
 
-        <div className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            id="isOnline"
-            checked={isOnline}
-            onChange={(e) => setIsOnline(e.target.checked)}
-            className="w-4 h-4 rounded border-[var(--color-surface-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
-          />
-          <label htmlFor="isOnline" className="text-sm text-[var(--color-text-secondary)]">
-            Online event
-          </label>
-        </div>
+          </>
+        )}
       </div>
 
       {/* Date & Time */}

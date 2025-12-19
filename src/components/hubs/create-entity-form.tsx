@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, FormEvent, useEffect } from "react";
-import { Button, Input, LocationPicker } from "@/components/ui";
+import { useState, FormEvent, useEffect, useRef } from "react";
+import { Button, Input, LocationPicker, CheckBox } from "@/components/ui";
 import { CountrySelect } from "@/components/ui/country-select";
 import { createHub } from "@/lib/api/hubs";
 import { createCommunity } from "@/lib/api/communities";
@@ -20,9 +20,11 @@ import {
   Search,
   Mail,
   MessageCircle,
+  Flag,
 } from "lucide-react";
 import type { EntityType } from "@/types";
 import { trackEvent } from "@/lib/analytics";
+import { useFormsStore, type LocationType } from "@/store/forms-store";
 
 interface CreateEntityFormProps {
   entityType: EntityType;
@@ -40,48 +42,50 @@ export function CreateEntityForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isGeocoding, setIsGeocoding] = useState(false);
+  
+  // Refs for scrolling to errors
+  const formRef = useRef<HTMLFormElement>(null);
+  const errorRef = useRef<HTMLDivElement>(null);
+  const locationErrorRef = useRef<HTMLDivElement>(null);
+  const contactErrorRef = useRef<HTMLDivElement>(null);
 
-  // Контакты для не-админов (обязательно)
-  const [contactEmail, setContactEmail] = useState("");
-  const [contactTelegram, setContactTelegram] = useState("");
-
-  // Основные поля
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
-
-  // Локация
-  const [countryCode, setCountryCode] = useState<string | undefined>();
-  const [city, setCity] = useState("");
-  const [latitude, setLatitude] = useState("");
-  const [longitude, setLongitude] = useState("");
-
-  // Социальные сети
-  const [socialsTwitter, setSocialsTwitter] = useState("");
-  const [socialsInstagram, setSocialsInstagram] = useState("");
-  const [socialsFacebook, setSocialsFacebook] = useState("");
-  const [socialsWebsite, setSocialsWebsite] = useState("");
-
-  // Map center coordinates (for auto-zooming to city)
-  const [mapCenterLat, setMapCenterLat] = useState<number | undefined>();
-  const [mapCenterLng, setMapCenterLng] = useState<number | undefined>();
-
-  // Функция для очистки формы
-  const resetForm = () => {
-    setName("");
-    setDescription("");
-    setImageUrl("");
-    setCountryCode(undefined);
-    setCity("");
-    setLatitude("");
-    setLongitude("");
-    setSocialsTwitter("");
-    setSocialsInstagram("");
-    setSocialsFacebook("");
-    setSocialsWebsite("");
-    setContactEmail("");
-    setContactTelegram("");
-  };
+  // Use Zustand store for form state
+  const entityForm = useFormsStore((state) => state.entityForm);
+  const {
+    name,
+    description,
+    imageUrl,
+    locationType,
+    countryCode,
+    city,
+    latitude,
+    longitude,
+    socialsTwitter,
+    socialsInstagram,
+    socialsFacebook,
+    socialsWebsite,
+    contactEmail,
+    contactTelegram,
+    mapCenterLat,
+    mapCenterLng,
+    setName,
+    setDescription,
+    setImageUrl,
+    setLocationType,
+    setCountryCode,
+    setCity,
+    setLatitude,
+    setLongitude,
+    setSocialsTwitter,
+    setSocialsInstagram,
+    setSocialsFacebook,
+    setSocialsWebsite,
+    setContactEmail,
+    setContactTelegram,
+    setMapCenterLat,
+    setMapCenterLng,
+    resetEntityForm,
+  } = entityForm;
 
   // Geocode city to coordinates
   const handleGeocodeCity = async () => {
@@ -226,22 +230,58 @@ export function CreateEntityForm({
 
   // Form validation based on entity type and required fields
   const validateForm = (): string | null => {
-    if (!name.trim()) return "Name is required";
-    if (!countryCode) return "Please select a country";
-
-    // Check coordinates
-    const lat = latitude.trim() ? parseFloat(latitude) : NaN;
-    const lng = longitude.trim() ? parseFloat(longitude) : NaN;
-
-    if (!latitude.trim() || !longitude.trim() || isNaN(lat) || isNaN(lng)) {
-      return "Coordinates are required. Use the map to select a location or geocode a city";
+    if (!name.trim()) {
+      return "Name is required";
     }
+    
+    // Валидация локации в зависимости от выбранного типа
+    if (locationType === "global") {
+      // Для глобальных сущностей локация не требуется
+    } else if (locationType === "country") {
+      // Для страны требуется только страна, координаты опциональны
+      if (!countryCode) {
+        return "Please select a country";
+      }
 
-    if (lat < -90 || lat > 90) {
-      return "Latitude must be between -90 and 90";
-    }
-    if (lng < -180 || lng > 180) {
-      return "Longitude must be between -180 and 180";
+      // Если координаты указаны, проверяем их валидность
+      if (latitude.trim() || longitude.trim()) {
+        const lat = latitude.trim() ? parseFloat(latitude) : NaN;
+        const lng = longitude.trim() ? parseFloat(longitude) : NaN;
+
+        if (isNaN(lat) || isNaN(lng)) {
+          return "Invalid coordinates. Please enter valid latitude and longitude or leave them empty";
+        }
+
+        if (lat < -90 || lat > 90) {
+          return "Latitude must be between -90 and 90";
+        }
+        if (lng < -180 || lng > 180) {
+          return "Longitude must be between -180 and 180";
+        }
+      }
+    } else if (locationType === "city") {
+      // Для города требуется страна, город и координаты
+      if (!countryCode) {
+        return "Please select a country";
+      }
+      if (!city.trim()) {
+        return "City is required";
+      }
+
+      // Check coordinates
+      const lat = latitude.trim() ? parseFloat(latitude) : NaN;
+      const lng = longitude.trim() ? parseFloat(longitude) : NaN;
+
+      if (!latitude.trim() || !longitude.trim() || isNaN(lat) || isNaN(lng)) {
+        return "Coordinates are required. Use the map to select a location or geocode a city";
+      }
+
+      if (lat < -90 || lat > 90) {
+        return "Latitude must be between -90 and 90";
+      }
+      if (lng < -180 || lng > 180) {
+        return "Longitude must be between -180 and 180";
+      }
     }
 
     // Для не-админов требуется хотя бы один контакт
@@ -260,6 +300,28 @@ export function CreateEntityForm({
     const validationError = validateForm();
     if (validationError) {
       setError(validationError);
+      
+      // Определяем, к какому элементу нужно скроллить
+      let scrollTarget: HTMLElement | null = null;
+      
+      // Проверяем тип ошибки и выбираем соответствующий элемент
+      if (validationError.includes("Coordinates") || validationError.includes("Latitude") || validationError.includes("Longitude")) {
+        scrollTarget = locationErrorRef.current;
+      } else if (validationError.includes("contact")) {
+        scrollTarget = contactErrorRef.current;
+      } else {
+        scrollTarget = errorRef.current;
+      }
+      
+      // Скроллим к ошибке
+      setTimeout(() => {
+        if (scrollTarget) {
+          scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else if (errorRef.current) {
+          // Если нет специфического элемента, скроллим к общему блоку ошибки
+          errorRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
       return;
     }
 
@@ -273,20 +335,38 @@ export function CreateEntityForm({
       if (socialsFacebook.trim()) socials.facebook = socialsFacebook.trim();
       if (socialsWebsite.trim()) socials.website = socialsWebsite.trim();
 
-      // Получаем название страны по коду
-      const { getCountryByCode } = await import("@/lib/countries");
-      const countryData = await getCountryByCode(countryCode!);
-      const countryName = countryData?.name || countryCode!;
+      // Prepare location data based on locationType
+      let locationData: Record<string, any> = {};
+      if (locationType !== "global") {
+        // Получаем название страны по коду
+        const { getCountryByCode } = await import("@/lib/countries");
+        const countryData = await getCountryByCode(countryCode!);
+        const countryName = countryData?.name || countryCode!;
+
+        // Для "country" координаты опциональны, для "city" обязательны
+        const hasCoordinates = latitude.trim() && longitude.trim();
+        let lat: number | null = null;
+        let lng: number | null = null;
+        
+        if (hasCoordinates) {
+          lat = parseFloat(latitude);
+          lng = parseFloat(longitude);
+        }
+
+        locationData = {
+          country: countryName,
+          country_code: countryCode,
+          city: locationType === "city" ? city.trim() : undefined,
+          latitude: lat,
+          longitude: lng,
+        };
+      }
 
       const entityData = {
         name: name.trim(),
         description: description.trim() || undefined,
         image_url: imageUrl.trim() || undefined,
-        country: countryName,
-        country_code: countryCode,
-        city: city.trim() || undefined,
-        latitude: parseFloat(latitude),
-        longitude: parseFloat(longitude),
+        ...locationData,
         socials: Object.keys(socials).length > 0 ? socials : undefined,
       };
 
@@ -315,7 +395,7 @@ export function CreateEntityForm({
             entity_type: entityType,
           });
 
-          resetForm();
+          resetEntityForm();
 
           if (onSuccess && createdEntity.slug) {
             onSuccess({
@@ -349,7 +429,7 @@ export function CreateEntityForm({
             entity_type: entityType,
           });
 
-          resetForm();
+          resetEntityForm();
           setError(null);
           alert(
             `Your ${entityType} submission has been sent for review. We'll contact you once it's approved!`
@@ -368,6 +448,12 @@ export function CreateEntityForm({
             ? `Failed to create ${entityType}. Please try again.`
             : `Failed to submit ${entityType} for review. Please try again.`)
       );
+      // Скроллим к ошибке при ошибке сервера
+      setTimeout(() => {
+        if (errorRef.current) {
+          errorRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
     } finally {
       setIsSubmitting(false);
     }
@@ -381,9 +467,9 @@ export function CreateEntityForm({
       : "Project";
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
       {error && (
-        <div className="p-4 bg-[var(--color-error)]/10 border border-[var(--color-error)] rounded-lg text-[var(--color-error)] text-sm">
+        <div ref={errorRef} className="p-4 bg-[var(--color-error)]/10 border border-[var(--color-error)] rounded-lg text-[var(--color-error)] text-sm">
           {error}
         </div>
       )}
@@ -439,105 +525,146 @@ export function CreateEntityForm({
           Location
         </h3>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
-              Country <span className="text-[var(--color-error)]">*</span>
-            </label>
-            <CountrySelect
-              value={countryCode}
-              onChange={setCountryCode}
-              placeholder="Select a country"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
-              City
-            </label>
-            <div className="flex gap-2">
-              <Input
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                placeholder="Moscow"
-                className="flex-1"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleGeocodeCity}
-                disabled={isGeocoding || !city.trim()}
-                title="Find coordinates from city"
-              >
-                {isGeocoding ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Search className="w-4 h-4" />
-                )}
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
-              Latitude <span className="text-[var(--color-error)]">*</span>
-            </label>
-            <Input
-              type="number"
-              step="any"
-              value={latitude}
-              onChange={(e) => setLatitude(e.target.value)}
-              placeholder="55.7558"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
-              Longitude <span className="text-[var(--color-error)]">*</span>
-            </label>
-            <Input
-              type="number"
-              step="any"
-              value={longitude}
-              onChange={(e) => setLongitude(e.target.value)}
-              placeholder="37.6173"
-              required
-            />
-          </div>
-        </div>
-
-        {/* Map for location selection */}
-        <div>
+        {/* Location Type Selection */}
+        <div className="space-y-3">
           <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
-            Select Location on Map{" "}
-            <span className="text-[var(--color-text-muted)] text-xs">
-              (Click on map to set coordinates)
-            </span>
+            Location Type <span className="text-[var(--color-error)]">*</span>
           </label>
-          <LocationPicker
-            latitude={currentLat}
-            longitude={currentLng}
-            onLocationChange={handleMapLocationChange}
-            onReverseGeocode={handleReverseGeocode}
-            centerLat={mapCenterLat}
-            centerLng={mapCenterLng}
-            centerZoom={13}
-            height="300px"
-          />
-          {city && countryCode && (
-            <p className="text-xs text-[var(--color-text-muted)] mt-1">
-              Map will automatically center on {city} when you select a city
-            </p>
-          )}
+          <div className="flex flex-col gap-3">
+            <CheckBox
+              type="radio"
+              name="locationType"
+              value="country"
+              checked={locationType === "country"}
+              onChange={(e) => {
+                setLocationType(e.target.value as LocationType);
+                // Очищаем город при выборе страны
+                if (e.target.value === "country") {
+                  setCity("");
+                }
+              }}
+              label="Country"
+              icon={<Flag className="w-4 h-4" />}
+            />
+            <CheckBox
+              type="radio"
+              name="locationType"
+              value="city"
+              checked={locationType === "city"}
+              onChange={(e) => setLocationType(e.target.value as LocationType)}
+              label="Country & City"
+              icon={<MapPin className="w-4 h-4" />}
+            />
+            <CheckBox
+              type="radio"
+              name="locationType"
+              value="global"
+              checked={locationType === "global"}
+              onChange={(e) => {
+                setLocationType(e.target.value as LocationType);
+                // Очищаем все поля локации при выборе глобал
+                if (e.target.value === "global") {
+                  setCountryCode(undefined);
+                  setCity("");
+                  setLatitude("");
+                  setLongitude("");
+                  setMapCenterLat(undefined);
+                  setMapCenterLng(undefined);
+                }
+              }}
+              label="Global"
+              icon={<Globe className="w-4 h-4" />}
+            />
+          </div>
         </div>
+
+        {locationType !== "global" && (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
+                  Country <span className="text-[var(--color-error)]">*</span>
+                </label>
+                <CountrySelect
+                  value={countryCode}
+                  onChange={setCountryCode}
+                  placeholder="Select a country"
+                />
+              </div>
+
+              {locationType === "city" && (
+                <div>
+                  <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
+                    City <span className="text-[var(--color-error)]">*</span>
+                  </label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      placeholder="Moscow"
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleGeocodeCity}
+                      disabled={isGeocoding || !city.trim()}
+                      title="Find coordinates from city"
+                    >
+                      {isGeocoding ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Search className="w-4 h-4" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+          {/* Hidden fields for coordinates */}
+          <input
+            type="hidden"
+            value={latitude}
+            onChange={(e) => setLatitude(e.target.value)}
+          />
+          <input
+            type="hidden"
+            value={longitude}
+            onChange={(e) => setLongitude(e.target.value)}
+          />
+
+          {/* Map for location selection */}
+          <div ref={locationErrorRef}>
+            <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
+              Select Location on Map <span className="text-[var(--color-error)]">*</span>
+              <span className="text-[var(--color-text-muted)] text-xs font-normal ml-2">
+                (Click on map to set coordinates)
+              </span>
+            </label>
+            <LocationPicker
+              latitude={currentLat}
+              longitude={currentLng}
+              onLocationChange={handleMapLocationChange}
+              onReverseGeocode={handleReverseGeocode}
+              centerLat={mapCenterLat}
+              centerLng={mapCenterLng}
+              centerZoom={13}
+              height="300px"
+            />
+            {city && countryCode && (
+              <p className="text-xs text-[var(--color-text-muted)] mt-1">
+                Map will automatically center on {city} when you select a city
+              </p>
+            )}
+          </div>
+          </>
+        )}
       </div>
 
       {/* Contact Information (for non-admins) */}
       {!isAdmin && (
-        <div className="space-y-4">
+        <div ref={contactErrorRef} className="space-y-4">
           <h3 className="text-lg font-semibold text-[var(--color-text-primary)] flex items-center gap-2">
             <Mail className="w-5 h-5" />
             Contact Information

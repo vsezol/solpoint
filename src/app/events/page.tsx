@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Header, Footer } from "@/components/layout";
 import { EventCard, EventCardSkeleton } from "@/components/cards";
-import { Button, Input, Modal, ModalHeader, ModalTitle, ModalDescription, ModalContent } from "@/components/ui";
+import { Button, Input, Modal, ModalHeader, ModalTitle, ModalDescription, ModalContent, FilterTag } from "@/components/ui";
 import { CreateEventForm } from "@/components/ui/create-event-form";
 import { Search, Calendar } from "lucide-react";
 import { getEvents, filterEventsBySearch } from "@/lib/api/events";
@@ -122,7 +122,8 @@ export default function EventsPage() {
               />
             </div>
             <div className="flex flex-wrap gap-2 items-center">
-              <button
+              <FilterTag
+                isActive={!selectedType}
                 onClick={() => {
                   setSelectedType(null);
                   trackEvent("event_filter_change", {
@@ -131,17 +132,13 @@ export default function EventsPage() {
                     filter_value: "all",
                   });
                 }}
-                className={`px-4 py-2 text-sm rounded-full border transition-colors ${
-                  !selectedType
-                    ? "bg-[var(--color-primary)] text-[var(--color-background)] border-[var(--color-primary)]"
-                    : "border-[var(--color-surface-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-text-muted)]"
-                }`}
               >
                 All Events
-              </button>
+              </FilterTag>
               {eventTypes.map((type) => (
-                <button
+                <FilterTag
                   key={type.value}
+                  isActive={selectedType === type.value}
                   onClick={() => {
                     setSelectedType(type.value);
                     trackEvent("event_filter_change", {
@@ -150,14 +147,9 @@ export default function EventsPage() {
                       filter_value: type.value,
                     });
                   }}
-                  className={`px-4 py-2 text-sm rounded-full border transition-colors ${
-                    selectedType === type.value
-                      ? "bg-[var(--color-primary)] text-[var(--color-background)] border-[var(--color-primary)]"
-                      : "border-[var(--color-surface-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-text-muted)]"
-                  }`}
                 >
                   {type.label}
-                </button>
+                </FilterTag>
               ))}
             </div>
             <div className="ml-auto">

@@ -24,11 +24,13 @@ export async function GET(request: NextRequest) {
     .select("*")
     .order("members_count", { ascending: false });
 
-  // Фильтры по стране
+  // Фильтры по стране (приоритет country_code, fallback на country для обратной совместимости)
   const countryCode = searchParams.get("country_code");
   if (countryCode) {
-    query = query.eq("country", countryCode.toUpperCase());
+    // Приоритет: фильтр по коду страны (ISO 3166-1 alpha-2)
+    query = query.eq("country_code", countryCode.toUpperCase());
   } else {
+    // Fallback: фильтр по названию страны (для обратной совместимости)
     const country = searchParams.get("country");
     if (country) {
       query = query.eq("country", country);
@@ -93,6 +95,7 @@ export async function POST(request: NextRequest) {
       image_url,
       slug,
       country,
+      country_code,
       city,
       latitude,
       longitude,
@@ -100,9 +103,24 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // Валидация обязательных полей
-    if (!name || !country || latitude === undefined || longitude === undefined) {
+    if (!name) {
       return NextResponse.json(
-        { error: "Missing required fields: name, country, latitude, longitude" },
+        { error: "Missing required field: name" },
+        { status: 400 }
+      );
+    }
+
+    // Если указана локация, проверяем требования
+    // Если локация не указана (глобальный проект), все поля локации должны быть null
+    const hasLocation = country !== undefined && country !== null;
+    const hasCity = city !== undefined && city !== null && city.trim() !== "";
+    const hasCoordinates = latitude !== undefined && longitude !== undefined && latitude !== null && longitude !== null;
+    
+    // Если указан город, координаты обязательны
+    // Если указана только страна, координаты опциональны
+    if (hasLocation && hasCity && (!hasCoordinates)) {
+      return NextResponse.json(
+        { error: "If city is specified, latitude and longitude are required" },
         { status: 400 }
       );
     }
@@ -115,10 +133,11 @@ export async function POST(request: NextRequest) {
         description,
         image_url,
         slug,
-        country,
-        city,
-        latitude,
-        longitude,
+        country: hasLocation ? country : null,
+        country_code: hasLocation ? (country_code || null) : null,
+        city: hasLocation ? city : null,
+        latitude: hasLocation && hasCoordinates ? latitude : null,
+        longitude: hasLocation && hasCoordinates ? longitude : null,
         socials: socials || {},
         creator_id: user.id,
       })

@@ -103,9 +103,24 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // Валидация обязательных полей
-    if (!name || !country || latitude === undefined || longitude === undefined) {
+    if (!name) {
       return NextResponse.json(
-        { error: "Missing required fields: name, country, latitude, longitude" },
+        { error: "Missing required field: name" },
+        { status: 400 }
+      );
+    }
+
+    // Если указана локация, проверяем требования
+    // Если локация не указана (глобальный хаб), все поля локации должны быть null
+    const hasLocation = country !== undefined && country !== null;
+    const hasCity = city !== undefined && city !== null && city.trim() !== "";
+    const hasCoordinates = latitude !== undefined && longitude !== undefined && latitude !== null && longitude !== null;
+    
+    // Если указан город, координаты обязательны
+    // Если указана только страна, координаты опциональны
+    if (hasLocation && hasCity && (!hasCoordinates)) {
+      return NextResponse.json(
+        { error: "If city is specified, latitude and longitude are required" },
         { status: 400 }
       );
     }
@@ -118,11 +133,11 @@ export async function POST(request: NextRequest) {
         description,
         image_url,
         slug,
-        country,
-        country_code,
-        city,
-        latitude,
-        longitude,
+        country: hasLocation ? country : null,
+        country_code: hasLocation ? (country_code || null) : null,
+        city: hasLocation ? (city || null) : null,
+        latitude: hasLocation && hasCoordinates ? parseFloat(latitude) : null,
+        longitude: hasLocation && hasCoordinates ? parseFloat(longitude) : null,
         socials: socials || {},
         creator_id: user.id,
       })

@@ -164,9 +164,21 @@ export async function POST(request: Request) {
     } = body;
 
     // Валидация обязательных полей
-    if (!name || !country || !city || !latitude || !longitude || !start_date) {
+    if (!name || !start_date) {
       return NextResponse.json(
-        { error: "Missing required fields: name, country, city, latitude, longitude, start_date" },
+        { error: "Missing required fields: name, start_date" },
+        { status: 400 }
+      );
+    }
+
+    // Если указана локация, все поля локации должны быть заполнены
+    // Если локация не указана (глобальное событие), все поля локации должны быть null
+    const hasLocation = country !== undefined && country !== null;
+    const hasCoordinates = latitude !== undefined && longitude !== undefined;
+    
+    if (hasLocation && (!hasCoordinates || latitude === null || longitude === null)) {
+      return NextResponse.json(
+        { error: "If country is specified, latitude and longitude are required" },
         { status: 400 }
       );
     }
@@ -242,7 +254,7 @@ export async function POST(request: Request) {
     const { generateEventSlug, getUniqueEventSlug } = await import(
       "@/lib/utils/event-slug"
     );
-    const baseSlug = generateEventSlug(name, city, start_date);
+    const baseSlug = generateEventSlug(name, city || "global", start_date);
     
     // Проверяем уникальность slug
     const slug = await getUniqueEventSlug(baseSlug, async (slug) => {
@@ -260,13 +272,13 @@ export async function POST(request: Request) {
       description: description || null,
       image_url: image_url || null,
       slug,
-      country,
-      country_code: country_code || null,
-      city,
-      address: address || null,
+      country: hasLocation ? country : null,
+      country_code: hasLocation ? (country_code || null) : null,
+      city: hasLocation ? (city || null) : null,
+      address: hasLocation ? (address || null) : null,
       venue_name: venue_name || null,
-      latitude: parseFloat(latitude),
-      longitude: parseFloat(longitude),
+      latitude: hasLocation ? parseFloat(latitude) : null,
+      longitude: hasLocation ? parseFloat(longitude) : null,
       start_date: new Date(start_date).toISOString(),
       end_date: end_date ? new Date(end_date).toISOString() : null,
       timezone: timezone || null,

@@ -18,6 +18,10 @@
   --color-surface-border: #243040;
   --color-surface-elevated: #182028;
   
+  /* Filter tag colors */
+  --color-filter-border: #00F68B;
+  --color-filter-bg: #072721;
+  
   /* Text */
   --color-text-primary: #ffffff;
   --color-text-secondary: #9ca3af;
