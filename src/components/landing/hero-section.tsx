@@ -9,8 +9,8 @@ export function HeroSection() {
   return (
     <section className="relative min-h-screen flex items-center pt-16 overflow-hidden">
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-0">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 sm:pt-16 md:pt-20 pb-0">
+        <div className="grid lg:grid-cols-2 gap-8 sm:gap-10 lg:gap-12 items-center">
           {/* Content */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -19,16 +19,16 @@ export function HeroSection() {
             className="space-y-6"
           >
             <h1 
-              className="text-[40px] font-bold leading-[130%] tracking-normal text-[var(--color-text-primary)] max-w-2xl"
+              className="text-3xl sm:text-4xl md:text-[40px] font-bold leading-[130%] tracking-normal text-[var(--color-text-primary)] max-w-2xl"
               style={{ fontFamily: 'var(--font-inter)' }}
             >
               Connect, Network, Attend:
               <br />
-              <span className="whitespace-nowrap">The Global Solana Community Map.</span>
+              <span className="whitespace-normal sm:whitespace-nowrap">The Global Solana Community Map.</span>
             </h1>
 
             <p 
-              className="text-[18px] font-normal leading-[30px] tracking-normal text-[var(--color-text-secondary)] max-w-xl"
+              className="text-base sm:text-lg md:text-[18px] font-normal leading-[1.6] sm:leading-[30px] tracking-normal text-[var(--color-text-secondary)] max-w-xl"
               style={{ fontFamily: 'var(--font-inter)' }}
             >
               Landing in a new country and looking to connect with the local Solana
@@ -36,7 +36,7 @@ export function HeroSection() {
             </p>
 
             <p 
-              className="text-[18px] font-normal leading-[30px] tracking-normal text-[var(--color-text-secondary)] max-w-xl"
+              className="text-base sm:text-lg md:text-[18px] font-normal leading-[1.6] sm:leading-[30px] tracking-normal text-[var(--color-text-secondary)] max-w-xl"
               style={{ fontFamily: 'var(--font-inter)' }}
             >
               <span className="font-semibold text-[var(--color-text-primary)]">
@@ -47,11 +47,11 @@ export function HeroSection() {
               takes you.
             </p>
 
-            <div className="flex flex-wrap gap-4 pt-4">
-              <Button size="lg" className="glow-primary" asChild>
+            <div className="flex flex-col sm:flex-row flex-wrap gap-4 pt-4">
+              <Button size="lg" className="glow-primary w-full sm:w-auto" asChild>
                 <Link href="/map">Explore The Map</Link>
               </Button>
-              <Button variant="outline" size="lg" asChild>
+              <Button variant="outline" size="lg" className="w-full sm:w-auto" asChild>
                 <Link href="/about">Learn More</Link>
               </Button>
             </div>

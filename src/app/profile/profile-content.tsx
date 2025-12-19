@@ -327,9 +327,9 @@ export function ProfileContent({
   };
 
   return (
-    <div className="flex flex-row gap-6 items-start">
+    <div className="flex flex-col md:flex-row gap-6 items-start">
       {/* Left column - Profile */}
-      <div className="flex-1 min-w-0 max-w-[600px]">
+      <div className="flex-1 min-w-0 max-w-[600px] w-full">
         <div className="flex flex-col gap-6">
           {/* Banner */}
           <div className="relative h-48 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-xl overflow-hidden">
@@ -648,7 +648,7 @@ export function ProfileContent({
       </div>
 
       {/* Right column - Sidebar */}
-      <div className="w-[557px] flex-shrink-0">
+      <div className="w-full md:w-[557px] flex-shrink-0">
         <div className="flex flex-col gap-6 w-full">
           {/* SolPoint users */}
           <Card variant="bordered" className="w-full">
