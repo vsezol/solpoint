@@ -3,66 +3,64 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { Header, Footer } from "@/components/layout";
 import { HubCard } from "@/components/cards/hub-card";
-import { Input } from "@/components/ui";
+import { HubsControls } from "@/components/hubs/hubs-controls";
+import { CreateEntityForm } from "@/components/hubs/create-entity-form";
+import { Modal, ModalHeader, ModalTitle, ModalContent } from "@/components/ui";
 import { Search, Users, Globe } from "lucide-react";
 import { getHubs } from "@/lib/api/hubs";
-import type { Hub } from "@/types";
+import { getCommunities } from "@/lib/api/communities";
+import { getProjects } from "@/lib/api/projects";
+import type { Hub, Community, Project, EntityType } from "@/types";
+import type { EntityTypeFilter, SortOption } from "@/components/hubs/hubs-controls";
 import { trackEvent } from "@/lib/analytics";
 
 export default function HubsPage() {
   const [hubs, setHubs] = useState<Hub[]>([]);
+  const [communities, setCommunities] = useState<Community[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [entityTypeFilter, setEntityTypeFilter] = useState<EntityTypeFilter>("all");
+  const [sortBy, setSortBy] = useState<SortOption>("recommended");
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [createEntityType, setCreateEntityType] = useState<EntityType>("hub");
   const analyticsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isMountedRef = useRef(true);
 
-  // Fetch hubs from API
+  // Fetch entities from API
   useEffect(() => {
     isMountedRef.current = true;
 
-    async function fetchHubs() {
+    async function fetchEntities() {
       if (!isMountedRef.current) return;
 
       try {
         setLoading(true);
         setError(null);
 
-        const filters: Parameters<typeof getHubs>[0] = {};
-        
-        // Если есть поисковый запрос, отправляем его на сервер
-        if (searchQuery.trim()) {
-          filters.search = searchQuery.trim();
-        }
+        const filters = {
+          search: searchQuery.trim() || undefined,
+        };
 
-        const fetchedHubs = await getHubs(filters);
-        
+        // Загружаем все типы сущностей параллельно
+        const [fetchedHubs, fetchedCommunities, fetchedProjects] = await Promise.all([
+          getHubs(filters),
+          getCommunities(filters),
+          getProjects(filters),
+        ]);
+
         // Проверяем, что компонент еще смонтирован перед обновлением состояния
         if (isMountedRef.current) {
-          // Обновляем только если данные действительно изменились
-          setHubs((prevHubs) => {
-            // Простая проверка: если количество и ID первого элемента совпадают, возможно данные те же
-            if (
-              prevHubs.length === fetchedHubs.length &&
-              prevHubs.length > 0 &&
-              fetchedHubs.length > 0 &&
-              prevHubs[0]?.id === fetchedHubs[0]?.id
-            ) {
-              // Проверяем все ID для точности
-              const prevIds = prevHubs.map((h) => h.id).join(",");
-              const newIds = fetchedHubs.map((h) => h.id).join(",");
-              if (prevIds === newIds) {
-                return prevHubs; // Возвращаем старый массив, чтобы избежать ререндера
-              }
-            }
-            return fetchedHubs;
-          });
+          setHubs(fetchedHubs);
+          setCommunities(fetchedCommunities);
+          setProjects(fetchedProjects);
         }
       } catch (err) {
         if (isMountedRef.current) {
-          console.error("Error fetching hubs:", err);
-          setError("Не удалось загрузить хабы. Попробуйте позже.");
+          console.error("Error fetching entities:", err);
+          setError("Не удалось загрузить данные. Попробуйте позже.");
         }
       } finally {
         if (isMountedRef.current) {
@@ -79,7 +77,7 @@ export default function HubsPage() {
     // Добавляем небольшую задержку для поиска (debounce)
     // При первой загрузке (пустой searchQuery) загружаем сразу
     fetchTimeoutRef.current = setTimeout(() => {
-      fetchHubs();
+      fetchEntities();
     }, searchQuery.trim() ? 300 : 0);
 
     return () => {
@@ -114,12 +112,56 @@ export default function HubsPage() {
     };
   }, [searchQuery]);
 
+  // Фильтрация и сортировка данных
+  const filteredAndSortedEntities = useMemo(() => {
+    let entities: (Hub | Community | Project)[] = [];
+
+    // Фильтрация по типу
+    if (entityTypeFilter === "all") {
+      entities = [...hubs, ...communities, ...projects];
+    } else if (entityTypeFilter === "hubs") {
+      entities = hubs;
+    } else if (entityTypeFilter === "community") {
+      entities = communities;
+    } else if (entityTypeFilter === "projects") {
+      entities = projects;
+    } else if (entityTypeFilter === "workspaces") {
+      // Workspaces - это комбинация hubs и communities
+      entities = [...hubs, ...communities];
+    }
+
+    // Сортировка
+    if (sortBy === "name") {
+      entities.sort((a, b) => a.name.localeCompare(b.name));
+    } else if (sortBy === "members") {
+      entities.sort((a, b) => b.members_count - a.members_count);
+    } else if (sortBy === "country") {
+      entities.sort((a, b) => a.country.localeCompare(b.country));
+    }
+    // "recommended" - оставляем как есть (уже отсортировано по members_count)
+
+    return entities;
+  }, [hubs, communities, projects, entityTypeFilter, sortBy]);
+
   // Мемоизируем вычисления статистики, чтобы избежать лишних ререндеров
   const { totalMembers, totalCountries } = useMemo(() => {
-    const members = hubs.reduce((acc, hub) => acc + hub.members_count, 0);
-    const countries = new Set(hubs.map((hub) => hub.country)).size;
+    const allEntities = [...hubs, ...communities, ...projects];
+    const members = allEntities.reduce((acc, entity) => acc + entity.members_count, 0);
+    const countries = new Set(allEntities.map((entity) => entity.country)).size;
     return { totalMembers: members, totalCountries: countries };
-  }, [hubs]);
+  }, [hubs, communities, projects]);
+
+  const handleAddClick = () => {
+    // По умолчанию создаем хаб, но можно расширить для выбора типа
+    setCreateEntityType("hub");
+    setIsCreateModalOpen(true);
+  };
+
+  const handleCreateSuccess = (entity: { id: string; slug: string; type: EntityType }) => {
+    setIsCreateModalOpen(false);
+    // Перезагружаем данные
+    window.location.reload();
+  };
 
   return (
     <>
@@ -160,18 +202,17 @@ export default function HubsPage() {
           </div>
         </section>
 
-        {/* Search */}
+        {/* Controls */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="max-w-md mx-auto">
-            <Input
-              placeholder="Search hubs by name or country..."
-              icon={<Search className="w-4 h-4" />}
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-              }}
-            />
-          </div>
+          <HubsControls
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            entityTypeFilter={entityTypeFilter}
+            onEntityTypeFilterChange={setEntityTypeFilter}
+            sortBy={sortBy}
+            onSortChange={setSortBy}
+            onAddClick={handleAddClick}
+          />
         </section>
 
         {/* Hubs Grid */}
@@ -199,23 +240,91 @@ export default function HubsPage() {
                 Попробовать снова
               </button>
             </div>
-          ) : hubs.length > 0 ? (
+          ) : filteredAndSortedEntities.length > 0 ? (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {hubs.map((hub) => (
-                <HubCard key={hub.id} hub={hub} />
-              ))}
+              {filteredAndSortedEntities.map((entity) => {
+                // Проверяем тип сущности и рендерим соответствующую карточку
+                if ("slug" in entity && "members_count" in entity) {
+                  // Это может быть Hub, Community или Project
+                  // Пока используем HubCard для всех, можно расширить позже
+                  return <HubCard key={entity.id} hub={entity as Hub} />;
+                }
+                return null;
+              })}
             </div>
           ) : (
             <div className="text-center py-12">
               <Users className="w-16 h-16 text-[var(--color-text-muted)] mx-auto mb-4" />
               <p className="text-[var(--color-text-secondary)]">
-                {searchQuery.trim() ? "Хабы не найдены по вашему запросу" : "Хабы не найдены"}
+                {searchQuery.trim()
+                  ? "No entities found for your query"
+                  : "No entities found"}
               </p>
             </div>
           )}
         </section>
       </main>
       <Footer />
+
+      {/* Create Entity Modal */}
+      <Modal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        size="xl"
+        variant="centered"
+      >
+        <ModalHeader>
+          <ModalTitle>Create Hub, Community, or Project</ModalTitle>
+        </ModalHeader>
+        <ModalContent>
+          {/* Entity Type Selection */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
+              Select Type <span className="text-[var(--color-error)]">*</span>
+            </label>
+            <div className="grid grid-cols-3 gap-3">
+              <button
+                type="button"
+                onClick={() => setCreateEntityType("hub")}
+                className={`px-4 py-3 rounded-lg border transition-colors ${
+                  createEntityType === "hub"
+                    ? "bg-[var(--color-primary)] text-[var(--color-background)] border-[var(--color-primary)]"
+                    : "bg-[var(--color-surface)] text-[var(--color-text-secondary)] border-[var(--color-surface-border)] hover:bg-[var(--color-surface-hover)]"
+                }`}
+              >
+                Hub
+              </button>
+              <button
+                type="button"
+                onClick={() => setCreateEntityType("community")}
+                className={`px-4 py-3 rounded-lg border transition-colors ${
+                  createEntityType === "community"
+                    ? "bg-[var(--color-primary)] text-[var(--color-background)] border-[var(--color-primary)]"
+                    : "bg-[var(--color-surface)] text-[var(--color-text-secondary)] border-[var(--color-surface-border)] hover:bg-[var(--color-surface-hover)]"
+                }`}
+              >
+                Community
+              </button>
+              <button
+                type="button"
+                onClick={() => setCreateEntityType("project")}
+                className={`px-4 py-3 rounded-lg border transition-colors ${
+                  createEntityType === "project"
+                    ? "bg-[var(--color-primary)] text-[var(--color-background)] border-[var(--color-primary)]"
+                    : "bg-[var(--color-surface)] text-[var(--color-text-secondary)] border-[var(--color-surface-border)] hover:bg-[var(--color-surface-hover)]"
+                }`}
+              >
+                Project
+              </button>
+            </div>
+          </div>
+          <CreateEntityForm
+            entityType={createEntityType}
+            onSuccess={handleCreateSuccess}
+            onCancel={() => setIsCreateModalOpen(false)}
+          />
+        </ModalContent>
+      </Modal>
     </>
   );
 }

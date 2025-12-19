@@ -79,6 +79,22 @@ export default async function AdminPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Submissions Moderation */}
+              <a
+                href="/admin/submissions"
+                className="bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg p-6 hover:border-[var(--color-primary)] transition-colors cursor-pointer"
+              >
+                <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">
+                  Submissions Moderation
+                </h2>
+                <p className="text-[var(--color-text-secondary)] mb-2">
+                  Review and approve/reject entity submissions
+                </p>
+                <p className="text-sm text-[var(--color-primary)]">
+                  View submissions →
+                </p>
+              </a>
+
               {/* Статистика */}
               <div className="bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg p-6">
                 <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">

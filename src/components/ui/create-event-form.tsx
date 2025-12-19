@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, FormEvent, useEffect } from "react";
+import { useState, FormEvent, useEffect, useRef } from "react";
 import { Button, Input, LocationPicker } from "@/components/ui";
 import { CountrySelect } from "@/components/ui/country-select";
 import { createEvent } from "@/lib/api/events";
@@ -23,39 +23,49 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [isGeocoding, setIsGeocoding] = useState(false);
   
-  // Контакты для не-админов (обязательно)
+  // Refs for scrolling to errors
+  const formRef = useRef<HTMLFormElement>(null);
+  const locationErrorRef = useRef<HTMLDivElement>(null);
+  const contactErrorRef = useRef<HTMLDivElement>(null);
+  
+  // Validation errors for individual fields
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [contactEmailError, setContactEmailError] = useState<string | null>(null);
+  const [contactTelegramError, setContactTelegramError] = useState<string | null>(null);
+  
+  // Contacts for non-admins (required)
   const [contactEmail, setContactEmail] = useState("");
   const [contactTelegram, setContactTelegram] = useState("");
 
-  // Основные поля
+  // Basic fields
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   
-  // Локация
+  // Location
   const [countryCode, setCountryCode] = useState<string | undefined>();
   const [city, setCity] = useState("");
   const [address, setAddress] = useState("");
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
 
-  // Даты
+  // Dates
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
-  // Тип и видимость
+  // Type and visibility
   const [eventType, setEventType] = useState<EventType>("community");
   const [visibility, setVisibility] = useState<EventVisibility>("public");
 
-  // Оплата
+  // Payment
   const [isPaid, setIsPaid] = useState(false);
   const [priceSol, setPriceSol] = useState("");
 
-  // Дополнительно
+  // Additional
   const [maxAttendees, setMaxAttendees] = useState("");
   const [isOnline, setIsOnline] = useState(false);
 
-  // Социальные сети
+  // Social networks
   const [socialsTwitter, setSocialsTwitter] = useState("");
   const [socialsInstagram, setSocialsInstagram] = useState("");
   const [socialsFacebook, setSocialsFacebook] = useState("");
@@ -65,7 +75,7 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
   const [mapCenterLat, setMapCenterLat] = useState<number | undefined>();
   const [mapCenterLng, setMapCenterLng] = useState<number | undefined>();
 
-  // Функция для очистки формы
+  // Function to reset form
   const resetForm = () => {
     setName("");
     setDescription("");
@@ -101,6 +111,7 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
 
     setIsGeocoding(true);
     setError(null);
+    setLocationError(null);
 
     try {
       // Build address string
@@ -138,6 +149,9 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
         setMapCenterLat(coords.lat);
         setMapCenterLng(coords.lng);
         
+        // Clear location error on successful geocoding
+        setLocationError(null);
+        
         // Optionally update address with the found address
         if (result.primary.display_name && !address.trim()) {
           setAddress(result.primary.display_name);
@@ -156,11 +170,11 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
           }
         }
       } else {
-        setError("Could not find coordinates for this address. Please try a more specific address or select location on the map.");
+        setLocationError("Could not find coordinates for this address. Please try a more specific address or select location on the map.");
       }
     } catch (err: any) {
       console.error("Error geocoding:", err);
-      setError("Failed to geocode address. Please try again or select location on the map.");
+      setLocationError("Failed to geocode address. Please try again or select location on the map.");
     } finally {
       setIsGeocoding(false);
     }
@@ -170,6 +184,8 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
   const handleMapLocationChange = (lat: number, lng: number) => {
     setLatitude(lat.toString());
     setLongitude(lng.toString());
+    // Clear location error when point is selected
+    setLocationError(null);
     // Don't update map center here - user is manually selecting location
   };
 
@@ -275,66 +291,137 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
   }, [city, countryCode]);
 
   // Form validation
-  const validateForm = (): string | null => {
-    if (!name.trim()) return "Event name is required";
-    if (!countryCode) return "Please select a country";
-    if (!city.trim()) return "City is required";
+  const validateForm = (): boolean => {
+    // Clear all errors
+    setError(null);
+    setLocationError(null);
+    setContactEmailError(null);
+    setContactTelegramError(null);
     
-    // Check coordinates
+    let hasErrors = false;
+    let firstErrorElement: HTMLElement | null = null;
+
+    if (!name.trim()) {
+      setError("Event name is required");
+      hasErrors = true;
+    }
+    if (!countryCode) {
+      if (!error) setError("Please select a country");
+      hasErrors = true;
+    }
+    if (!city.trim()) {
+      if (!error) setError("City is required");
+      hasErrors = true;
+    }
+    
+    // Check coordinates - now a point on the map is required
     const lat = latitude.trim() ? parseFloat(latitude) : NaN;
     const lng = longitude.trim() ? parseFloat(longitude) : NaN;
     
     if (!latitude.trim() || !longitude.trim() || isNaN(lat) || isNaN(lng)) {
-      return "Coordinates are required. Use the map to select a location, geocode an address, or enter coordinates manually";
+      setLocationError("Please select a location on the map to specify the event location");
+      hasErrors = true;
+      if (!firstErrorElement && locationErrorRef.current) {
+        firstErrorElement = locationErrorRef.current;
+      }
+    } else if (lat < -90 || lat > 90) {
+      setLocationError("Latitude must be between -90 and 90");
+      hasErrors = true;
+      if (!firstErrorElement && locationErrorRef.current) {
+        firstErrorElement = locationErrorRef.current;
+      }
+    } else if (lng < -180 || lng > 180) {
+      setLocationError("Longitude must be between -180 and 180");
+      hasErrors = true;
+      if (!firstErrorElement && locationErrorRef.current) {
+        firstErrorElement = locationErrorRef.current;
+      }
     }
     
-    if (lat < -90 || lat > 90) {
-      return "Latitude must be between -90 and 90";
+    if (!startDate) {
+      if (!error) setError("Start date is required");
+      hasErrors = true;
     }
-    if (lng < -180 || lng > 180) {
-      return "Longitude must be between -180 and 180";
-    }
-    
-    if (!startDate) return "Start date is required";
 
     if (isPaid && (!priceSol || parseFloat(priceSol) <= 0)) {
-      return "Please specify a price for paid events";
+      if (!error) setError("Please specify a price for paid events");
+      hasErrors = true;
     }
 
     if (endDate && new Date(endDate) < new Date(startDate)) {
-      return "End date cannot be earlier than start date";
+      if (!error) setError("End date cannot be earlier than start date");
+      hasErrors = true;
     }
 
-    // Для не-админов требуется хотя бы один контакт
-    if (!isAdmin && !contactEmail.trim() && !contactTelegram.trim()) {
-      return "Please provide at least one contact method (email or telegram) for review";
+    // For non-admins, at least one contact is required
+    if (!isAdmin) {
+      if (!contactEmail.trim() && !contactTelegram.trim()) {
+        setContactEmailError("Please provide at least one contact method (email or telegram)");
+        setContactTelegramError("Please provide at least one contact method (email or telegram)");
+        hasErrors = true;
+        if (!firstErrorElement && contactErrorRef.current) {
+          firstErrorElement = contactErrorRef.current;
+        }
+      } else {
+        // Validate email if provided
+        if (contactEmail.trim()) {
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (!emailRegex.test(contactEmail.trim())) {
+            setContactEmailError("Please enter a valid email address");
+            hasErrors = true;
+            if (!firstErrorElement && contactErrorRef.current) {
+              firstErrorElement = contactErrorRef.current;
+            }
+          }
+        }
+        // Validate telegram if provided
+        if (contactTelegram.trim()) {
+          const telegramRegex = /^@?[a-zA-Z0-9_]{5,32}$/;
+          if (!telegramRegex.test(contactTelegram.trim().replace('@', ''))) {
+            setContactTelegramError("Please enter a valid telegram username (e.g., @username)");
+            hasErrors = true;
+            if (!firstErrorElement && contactErrorRef.current) {
+              firstErrorElement = contactErrorRef.current;
+            }
+          }
+        }
+      }
     }
 
-    return null;
+    // Scroll to first error
+    if (hasErrors && firstErrorElement) {
+      setTimeout(() => {
+        firstErrorElement?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+    }
+
+    return !hasErrors;
   };
 
-  // Обработка отправки формы
+  // Handle form submission
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
+    setLocationError(null);
+    setContactEmailError(null);
+    setContactTelegramError(null);
 
-    const validationError = validateForm();
-    if (validationError) {
-      setError(validationError);
+    const isValid = validateForm();
+    if (!isValid) {
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      // Подготовка данных социальных сетей
+      // Prepare social media data
       const socials: Record<string, string> = {};
       if (socialsTwitter.trim()) socials.twitter = socialsTwitter.trim();
       if (socialsInstagram.trim()) socials.instagram = socialsInstagram.trim();
       if (socialsFacebook.trim()) socials.facebook = socialsFacebook.trim();
       if (socialsWebsite.trim()) socials.website = socialsWebsite.trim();
 
-      // Получаем название страны по коду
+      // Get country name by code
       const { getCountryByCode } = await import("@/lib/countries");
       const countryData = await getCountryByCode(countryCode!);
       const countryName = countryData?.name || countryCode!;
@@ -365,7 +452,7 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
       };
 
       if (isAdmin) {
-        // Админы создают напрямую
+        // Admins create directly
         const createdEvent = await createEvent(eventData);
 
         if (createdEvent) {
@@ -375,7 +462,7 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
             event_type: eventType,
           });
 
-          // Очистка формы
+          // Reset form
           resetForm();
 
           if (onSuccess && createdEvent.slug) {
@@ -385,7 +472,7 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
           }
         }
       } else {
-        // Не-админы отправляют заявку
+        // Non-admins submit for review
         const submission = await createSubmission({
           entity_type: "event",
           entity_data: eventData,
@@ -402,10 +489,10 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
             event_type: eventType,
           });
 
-          // Очистка формы
+          // Reset form
           resetForm();
 
-          // Показываем сообщение об успехе
+          // Show success message
           setError(null);
           alert("Your event submission has been sent for review. We'll contact you once it's approved!");
           
@@ -423,7 +510,7 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
       {error && (
         <div className="p-4 bg-[var(--color-error)]/10 border border-[var(--color-error)] rounded-lg text-[var(--color-error)] text-sm">
           {error}
@@ -534,40 +621,23 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
-              Latitude <span className="text-[var(--color-error)]">*</span>
-            </label>
-            <Input
-              type="number"
-              step="any"
-              value={latitude}
-              onChange={(e) => setLatitude(e.target.value)}
-              placeholder="40.7128"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
-              Longitude <span className="text-[var(--color-error)]">*</span>
-            </label>
-            <Input
-              type="number"
-              step="any"
-              value={longitude}
-              onChange={(e) => setLongitude(e.target.value)}
-              placeholder="-74.0060"
-              required
-            />
-          </div>
-        </div>
+        {/* Hidden fields for coordinates */}
+        <input
+          type="hidden"
+          value={latitude}
+          onChange={(e) => setLatitude(e.target.value)}
+        />
+        <input
+          type="hidden"
+          value={longitude}
+          onChange={(e) => setLongitude(e.target.value)}
+        />
 
         {/* Map for location selection */}
-        <div>
+        <div ref={locationErrorRef}>
           <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
-            Select Location on Map <span className="text-[var(--color-text-muted)] text-xs">(Click on map to set coordinates)</span>
+            Select Location on Map <span className="text-[var(--color-error)]">*</span>
+            <span className="text-[var(--color-text-muted)] text-xs font-normal ml-2">(Click on map to set coordinates)</span>
           </label>
           <LocationPicker
             latitude={currentLat}
@@ -579,7 +649,10 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
             centerZoom={13}
             height="300px"
           />
-          {city && countryCode && (
+          {locationError && (
+            <p className="mt-2 text-sm text-[var(--color-error)]">{locationError}</p>
+          )}
+          {city && countryCode && !locationError && (
             <p className="text-xs text-[var(--color-text-muted)] mt-1">
               Map will automatically center on {city} when you select a city
             </p>
@@ -734,14 +807,14 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
 
       {/* Contact Information (for non-admins) */}
       {!isAdmin && (
-        <div className="space-y-4">
+        <div className="space-y-4" ref={contactErrorRef}>
           <h3 className="text-lg font-semibold text-[var(--color-text-primary)] flex items-center gap-2">
             <Mail className="w-5 h-5" />
             Contact Information
             <span className="text-sm text-[var(--color-text-muted)] font-normal">(Required for review)</span>
           </h3>
           <p className="text-sm text-[var(--color-text-secondary)]">
-            Please provide at least one contact method so we can reach you during the review process.
+            Please provide at least one contact method (email or telegram) so we can reach you during the review process.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -751,9 +824,13 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
               <Input
                 type="email"
                 value={contactEmail}
-                onChange={(e) => setContactEmail(e.target.value)}
+                onChange={(e) => {
+                  setContactEmail(e.target.value);
+                  setContactEmailError(null);
+                }}
                 placeholder="your@email.com"
                 icon={<Mail className="w-4 h-4" />}
+                error={contactEmailError || undefined}
               />
             </div>
             <div>
@@ -763,9 +840,13 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
               <Input
                 type="text"
                 value={contactTelegram}
-                onChange={(e) => setContactTelegram(e.target.value)}
+                onChange={(e) => {
+                  setContactTelegram(e.target.value);
+                  setContactTelegramError(null);
+                }}
                 placeholder="@username"
                 icon={<MessageCircle className="w-4 h-4" />}
+                error={contactTelegramError || undefined}
               />
             </div>
           </div>

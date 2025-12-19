@@ -103,3 +103,30 @@ export async function getHubBySlug(slug: string): Promise<Hub | null> {
   }
 }
 
+/**
+ * Создать новый хаб
+ */
+export async function createHub(hubData: Partial<Hub>): Promise<Hub | null> {
+  try {
+    const response = await fetch("/api/hubs", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(hubData),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error("Error creating hub:", errorData);
+      throw new Error(errorData.error || "Failed to create hub");
+    }
+
+    const data = await response.json();
+    return data.hub || null;
+  } catch (error) {
+    console.error("Error creating hub:", error);
+    throw error;
+  }
+}
+

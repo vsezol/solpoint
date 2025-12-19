@@ -67,3 +67,83 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ hubs: hubs || [] }, { status: 200 });
 }
 
+/**
+ * POST /api/hubs
+ * Создать новый хаб
+ */
+export async function POST(request: NextRequest) {
+  const supabase = await createClient();
+
+  // Проверка авторизации
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401 }
+    );
+  }
+
+  try {
+    const body = await request.json();
+    const {
+      name,
+      description,
+      image_url,
+      slug,
+      country,
+      country_code,
+      city,
+      latitude,
+      longitude,
+      socials,
+    } = body;
+
+    // Валидация обязательных полей
+    if (!name || !country || latitude === undefined || longitude === undefined) {
+      return NextResponse.json(
+        { error: "Missing required fields: name, country, latitude, longitude" },
+        { status: 400 }
+      );
+    }
+
+    // Создаем хаб
+    const { data: hub, error } = await supabase
+      .from("hubs")
+      .insert({
+        name,
+        description,
+        image_url,
+        slug,
+        country,
+        country_code,
+        city,
+        latitude,
+        longitude,
+        socials: socials || {},
+        creator_id: user.id,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error creating hub:", error);
+      return NextResponse.json(
+        { error: error.message || "Failed to create hub" },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ hub }, { status: 201 });
+  } catch (error) {
+    console.error("Error parsing request:", error);
+    return NextResponse.json(
+      { error: "Invalid request body" },
+      { status: 400 }
+    );
+  }
+}
+
