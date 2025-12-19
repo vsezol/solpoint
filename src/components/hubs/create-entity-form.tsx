@@ -21,6 +21,7 @@ import {
   Mail,
   MessageCircle,
   Flag,
+  CheckCircle,
 } from "lucide-react";
 import type { EntityType } from "@/types";
 import { trackEvent } from "@/lib/analytics";
@@ -42,12 +43,49 @@ export function CreateEntityForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isGeocoding, setIsGeocoding] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   
   // Refs for scrolling to errors
   const formRef = useRef<HTMLFormElement>(null);
   const errorRef = useRef<HTMLDivElement>(null);
   const locationErrorRef = useRef<HTMLDivElement>(null);
   const contactErrorRef = useRef<HTMLDivElement>(null);
+
+  // Функция для скролла к элементу внутри модального окна
+  const scrollToElementInModal = (element: HTMLElement) => {
+    // Ищем прокручиваемый контейнер модального окна
+    let scrollableContainer: HTMLElement | null = null;
+    let current: HTMLElement | null = element.parentElement;
+    
+    while (current) {
+      const style = window.getComputedStyle(current);
+      if (style.overflow === 'auto' || style.overflowY === 'auto' || style.overflow === 'scroll' || style.overflowY === 'scroll') {
+        scrollableContainer = current;
+        break;
+      }
+      // Также проверяем по классам
+      if (current.classList.contains('max-h-[90vh]') || current.classList.contains('overflow-auto')) {
+        scrollableContainer = current;
+        break;
+      }
+      current = current.parentElement;
+    }
+    
+    if (scrollableContainer) {
+      const containerRect = scrollableContainer.getBoundingClientRect();
+      const elementRect = element.getBoundingClientRect();
+      const scrollTop = scrollableContainer.scrollTop;
+      const targetOffset = elementRect.top - containerRect.top + scrollTop - 16; // 16px отступ сверху
+      
+      scrollableContainer.scrollTo({
+        top: Math.max(0, targetOffset),
+        behavior: 'smooth'
+      });
+    } else {
+      // Fallback: обычный scrollIntoView
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
 
   // Use Zustand store for form state
   const entityForm = useFormsStore((state) => state.entityForm);
@@ -296,6 +334,7 @@ export function CreateEntityForm({
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
+    setSuccessMessage(null);
 
     const validationError = validateForm();
     if (validationError) {
@@ -313,15 +352,15 @@ export function CreateEntityForm({
         scrollTarget = errorRef.current;
       }
       
-      // Скроллим к ошибке
+      // Скроллим к ошибке внутри модального окна
       setTimeout(() => {
         if (scrollTarget) {
-          scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          scrollToElementInModal(scrollTarget);
         } else if (errorRef.current) {
           // Если нет специфического элемента, скроллим к общему блоку ошибки
-          errorRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          scrollToElementInModal(errorRef.current);
         }
-      }, 100);
+      }, 150);
       return;
     }
 
@@ -431,13 +470,17 @@ export function CreateEntityForm({
 
           resetEntityForm();
           setError(null);
-          alert(
+          setIsSubmitting(false);
+          setSuccessMessage(
             `Your ${entityType} submission has been sent for review. We'll contact you once it's approved!`
           );
 
-          if (onCancel) {
-            onCancel();
-          }
+          // Скрываем форму через 0.7 секунды
+          setTimeout(() => {
+            if (onCancel) {
+              onCancel();
+            }
+          }, 1500);
         }
       }
     } catch (err: any) {
@@ -451,9 +494,9 @@ export function CreateEntityForm({
       // Скроллим к ошибке при ошибке сервера
       setTimeout(() => {
         if (errorRef.current) {
-          errorRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          scrollToElementInModal(errorRef.current);
         }
-      }, 100);
+      }, 150);
     } finally {
       setIsSubmitting(false);
     }
@@ -469,7 +512,7 @@ export function CreateEntityForm({
   return (
     <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
       {error && (
-        <div ref={errorRef} className="p-4 bg-[var(--color-error)]/10 border border-[var(--color-error)] rounded-lg text-[var(--color-error)] text-sm">
+        <div ref={errorRef} className="p-4 bg-[var(--color-error)]/10 border border-[var(--color-error)] rounded-lg text-[var(--color-error)] text-sm scroll-mt-4">
           {error}
         </div>
       )}
@@ -635,7 +678,7 @@ export function CreateEntityForm({
           />
 
           {/* Map for location selection */}
-          <div ref={locationErrorRef}>
+          <div ref={locationErrorRef} className="scroll-mt-4">
             <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
               Select Location on Map <span className="text-[var(--color-error)]">*</span>
               <span className="text-[var(--color-text-muted)] text-xs font-normal ml-2">
@@ -664,7 +707,7 @@ export function CreateEntityForm({
 
       {/* Contact Information (for non-admins) */}
       {!isAdmin && (
-        <div ref={contactErrorRef} className="space-y-4">
+        <div ref={contactErrorRef} className="space-y-4 scroll-mt-4">
           <h3 className="text-lg font-semibold text-[var(--color-text-primary)] flex items-center gap-2">
             <Mail className="w-5 h-5" />
             Contact Information
@@ -796,6 +839,14 @@ export function CreateEntityForm({
             : `Submit for Review`}
         </Button>
       </div>
+
+      {/* Success Message */}
+      {successMessage && (
+        <div className="mt-4 p-4 bg-[var(--color-success)]/10 border border-[var(--color-success)] rounded-lg text-[var(--color-success)] text-sm flex items-center gap-2">
+          <CheckCircle className="w-5 h-5 flex-shrink-0" />
+          <span>{successMessage}</span>
+        </div>
+      )}
     </form>
   );
 }
