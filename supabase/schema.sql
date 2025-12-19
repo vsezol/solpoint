@@ -16,6 +16,12 @@ CREATE TYPE event_type AS ENUM ('official', 'community', 'private', 'meetup');
 -- Event visibility enum
 CREATE TYPE event_visibility AS ENUM ('public', 'vip_only');
 
+-- Entity type enum (for submissions)
+CREATE TYPE entity_type AS ENUM ('event', 'hub', 'community', 'project');
+
+-- Submission status enum
+CREATE TYPE submission_status AS ENUM ('pending', 'approved', 'rejected');
+
 -- Users table (extends Supabase auth.users)
 CREATE TABLE public.profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -60,6 +66,9 @@ CREATE TABLE public.events (
   attendees_count INTEGER DEFAULT 0,
   socials JSONB DEFAULT '{}',
   organizer_id UUID REFERENCES public.profiles(id),
+  hub_id UUID REFERENCES public.hubs(id) ON DELETE SET NULL,
+  community_id UUID REFERENCES public.communities(id) ON DELETE SET NULL,
+  project_id UUID REFERENCES public.projects(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -70,6 +79,7 @@ CREATE TABLE public.hubs (
   name TEXT NOT NULL,
   description TEXT,
   image_url TEXT,
+  slug TEXT UNIQUE, -- Публичная ссылка для SEO
   country TEXT NOT NULL,
   city TEXT,
   latitude DOUBLE PRECISION NOT NULL,
@@ -77,6 +87,44 @@ CREATE TABLE public.hubs (
   members_count INTEGER DEFAULT 0,
   socials JSONB DEFAULT '{}',
   creator_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Communities table
+-- Комьюнити: нет места в конкретной стране, существуют по всему миру, в основном общение в чатах
+CREATE TABLE public.communities (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name TEXT NOT NULL,
+  description TEXT,
+  image_url TEXT,
+  slug TEXT UNIQUE, -- Публичная ссылка для SEO
+  country TEXT NOT NULL, -- Страна для размещения на карте
+  city TEXT, -- Опционально, если есть локация
+  latitude DOUBLE PRECISION NOT NULL, -- Координаты для размещения на карте (не точные)
+  longitude DOUBLE PRECISION NOT NULL,
+  members_count INTEGER DEFAULT 0,
+  socials JSONB DEFAULT '{}',
+  creator_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Projects table
+-- Проекты: стартапы или продукты, создавать может только юзер
+CREATE TABLE public.projects (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name TEXT NOT NULL,
+  description TEXT,
+  image_url TEXT,
+  slug TEXT UNIQUE, -- Публичная ссылка для SEO
+  country TEXT NOT NULL, -- Страна для размещения на карте
+  city TEXT, -- Опционально, если есть локация
+  latitude DOUBLE PRECISION NOT NULL, -- Координаты для размещения на карте (не точные)
+  longitude DOUBLE PRECISION NOT NULL,
+  members_count INTEGER DEFAULT 0,
+  socials JSONB DEFAULT '{}',
+  creator_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE, -- Проект должен иметь создателя
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -97,6 +145,42 @@ CREATE TABLE public.hub_members (
   user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   joined_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(hub_id, user_id)
+);
+
+-- Community members (many-to-many)
+CREATE TABLE public.community_members (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  community_id UUID NOT NULL REFERENCES public.communities(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  joined_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(community_id, user_id)
+);
+
+-- Project members (many-to-many)
+CREATE TABLE public.project_members (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  project_id UUID NOT NULL REFERENCES public.projects(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  joined_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(project_id, user_id)
+);
+
+-- Entity submissions table (universal moderation system)
+CREATE TABLE public.entity_submissions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  entity_type entity_type NOT NULL,
+  submitter_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  entity_data JSONB NOT NULL,
+  contacts JSONB NOT NULL DEFAULT '{}',
+  status submission_status DEFAULT 'pending',
+  reviewed_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  reviewed_at TIMESTAMPTZ,
+  rejection_reason TEXT,
+  admin_notes TEXT,
+  approved_entity_id UUID,
+  approved_entity_type entity_type,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Messages table
@@ -154,6 +238,32 @@ CREATE INDEX idx_events_start_date ON public.events(start_date);
 CREATE INDEX idx_events_visibility ON public.events(visibility);
 
 CREATE INDEX idx_hubs_country ON public.hubs(country);
+CREATE INDEX idx_hubs_slug ON public.hubs(slug);
+
+CREATE INDEX idx_communities_country ON public.communities(country);
+CREATE INDEX idx_communities_creator_id ON public.communities(creator_id);
+CREATE INDEX idx_communities_slug ON public.communities(slug);
+
+CREATE INDEX idx_projects_country ON public.projects(country);
+CREATE INDEX idx_projects_creator_id ON public.projects(creator_id);
+CREATE INDEX idx_projects_slug ON public.projects(slug);
+
+CREATE INDEX idx_community_members_community_id ON public.community_members(community_id);
+CREATE INDEX idx_community_members_user_id ON public.community_members(user_id);
+
+CREATE INDEX idx_project_members_project_id ON public.project_members(project_id);
+CREATE INDEX idx_project_members_user_id ON public.project_members(user_id);
+
+CREATE INDEX idx_entity_submissions_entity_type ON public.entity_submissions(entity_type);
+CREATE INDEX idx_entity_submissions_status ON public.entity_submissions(status);
+CREATE INDEX idx_entity_submissions_submitter_id ON public.entity_submissions(submitter_id);
+CREATE INDEX idx_entity_submissions_reviewed_by ON public.entity_submissions(reviewed_by);
+CREATE INDEX idx_entity_submissions_created_at ON public.entity_submissions(created_at DESC);
+CREATE INDEX idx_entity_submissions_type_status ON public.entity_submissions(entity_type, status, created_at DESC);
+
+CREATE INDEX idx_events_hub_id ON public.events(hub_id);
+CREATE INDEX idx_events_community_id ON public.events(community_id);
+CREATE INDEX idx_events_project_id ON public.events(project_id);
 
 CREATE INDEX idx_messages_sender ON public.messages(sender_id);
 CREATE INDEX idx_messages_receiver ON public.messages(receiver_id);
@@ -163,11 +273,16 @@ CREATE INDEX idx_messages_created ON public.messages(created_at);
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.hubs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.communities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.projects ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.friends ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.event_attendees ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.hub_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.community_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.project_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.entity_submissions ENABLE ROW LEVEL SECURITY;
 
 -- Profiles policies
 CREATE POLICY "Public profiles are viewable by everyone"
@@ -283,6 +398,98 @@ CREATE POLICY "Users can leave hubs"
   ON public.hub_members FOR DELETE
   USING (auth.uid() = user_id);
 
+-- Communities policies
+CREATE POLICY "Communities are viewable by everyone"
+  ON public.communities FOR SELECT
+  USING (true);
+
+CREATE POLICY "Creators can update their communities"
+  ON public.communities FOR UPDATE
+  USING (creator_id = auth.uid());
+
+CREATE POLICY "Authenticated users can create communities"
+  ON public.communities FOR INSERT
+  WITH CHECK (auth.uid() IS NOT NULL);
+
+-- Projects policies
+CREATE POLICY "Projects are viewable by everyone"
+  ON public.projects FOR SELECT
+  USING (true);
+
+CREATE POLICY "Creators can update their projects"
+  ON public.projects FOR UPDATE
+  USING (creator_id = auth.uid());
+
+CREATE POLICY "Authenticated users can create projects"
+  ON public.projects FOR INSERT
+  WITH CHECK (auth.uid() IS NOT NULL);
+
+-- Community members policies
+CREATE POLICY "Community members are viewable by authenticated users"
+  ON public.community_members FOR SELECT
+  USING (auth.uid() IS NOT NULL);
+
+CREATE POLICY "Users can join communities"
+  ON public.community_members FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can leave communities"
+  ON public.community_members FOR DELETE
+  USING (auth.uid() = user_id);
+
+-- Project members policies
+CREATE POLICY "Project members are viewable by authenticated users"
+  ON public.project_members FOR SELECT
+  USING (auth.uid() IS NOT NULL);
+
+CREATE POLICY "Users can join projects"
+  ON public.project_members FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can leave projects"
+  ON public.project_members FOR DELETE
+  USING (auth.uid() = user_id);
+
+-- Entity submissions policies
+CREATE POLICY "Users can view their own submissions"
+  ON public.entity_submissions FOR SELECT
+  USING (submitter_id = auth.uid());
+
+CREATE POLICY "Admins can view all submissions"
+  ON public.entity_submissions FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles 
+      WHERE id = auth.uid() 
+      AND is_admin = true
+    )
+  );
+
+CREATE POLICY "Users can create their own submissions"
+  ON public.entity_submissions FOR INSERT
+  WITH CHECK (auth.uid() = submitter_id);
+
+CREATE POLICY "Admins can update submissions"
+  ON public.entity_submissions FOR UPDATE
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles 
+      WHERE id = auth.uid() 
+      AND is_admin = true
+    )
+  );
+
+CREATE POLICY "Users can update their own pending submissions"
+  ON public.entity_submissions FOR UPDATE
+  USING (
+    submitter_id = auth.uid() 
+    AND status = 'pending'
+  )
+  WITH CHECK (
+    submitter_id = auth.uid() 
+    AND status = 'pending'
+  );
+
 -- Triggers for updating counts
 CREATE OR REPLACE FUNCTION update_event_attendees_count()
 RETURNS TRIGGER AS $$
@@ -326,6 +533,48 @@ CREATE TRIGGER hub_members_count_trigger
 AFTER INSERT OR DELETE ON public.hub_members
 FOR EACH ROW EXECUTE FUNCTION update_hub_members_count();
 
+CREATE OR REPLACE FUNCTION update_community_members_count()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    UPDATE public.communities 
+    SET members_count = members_count + 1 
+    WHERE id = NEW.community_id;
+    RETURN NEW;
+  ELSIF TG_OP = 'DELETE' THEN
+    UPDATE public.communities 
+    SET members_count = members_count - 1 
+    WHERE id = OLD.community_id;
+    RETURN OLD;
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER community_members_count_trigger
+AFTER INSERT OR DELETE ON public.community_members
+FOR EACH ROW EXECUTE FUNCTION update_community_members_count();
+
+CREATE OR REPLACE FUNCTION update_project_members_count()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    UPDATE public.projects 
+    SET members_count = members_count + 1 
+    WHERE id = NEW.project_id;
+    RETURN NEW;
+  ELSIF TG_OP = 'DELETE' THEN
+    UPDATE public.projects 
+    SET members_count = members_count - 1 
+    WHERE id = OLD.project_id;
+    RETURN OLD;
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER project_members_count_trigger
+AFTER INSERT OR DELETE ON public.project_members
+FOR EACH ROW EXECUTE FUNCTION update_project_members_count();
+
 -- Trigger for updating updated_at
 CREATE OR REPLACE FUNCTION update_updated_at()
 RETURNS TRIGGER AS $$
@@ -345,5 +594,17 @@ FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 CREATE TRIGGER hubs_updated_at
 BEFORE UPDATE ON public.hubs
+FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+CREATE TRIGGER communities_updated_at
+BEFORE UPDATE ON public.communities
+FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+CREATE TRIGGER projects_updated_at
+BEFORE UPDATE ON public.projects
+FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+CREATE TRIGGER entity_submissions_updated_at
+BEFORE UPDATE ON public.entity_submissions
 FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 

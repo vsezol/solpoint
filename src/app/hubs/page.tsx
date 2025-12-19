@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Header, Footer } from "@/components/layout";
 import { HubCard } from "@/components/cards/hub-card";
 import { Input } from "@/components/ui";
@@ -15,10 +15,16 @@ export default function HubsPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const analyticsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isMountedRef = useRef(true);
 
   // Fetch hubs from API
   useEffect(() => {
+    isMountedRef.current = true;
+
     async function fetchHubs() {
+      if (!isMountedRef.current) return;
+
       try {
         setLoading(true);
         setError(null);
@@ -31,22 +37,57 @@ export default function HubsPage() {
         }
 
         const fetchedHubs = await getHubs(filters);
-        setHubs(fetchedHubs);
+        
+        // Проверяем, что компонент еще смонтирован перед обновлением состояния
+        if (isMountedRef.current) {
+          // Обновляем только если данные действительно изменились
+          setHubs((prevHubs) => {
+            // Простая проверка: если количество и ID первого элемента совпадают, возможно данные те же
+            if (
+              prevHubs.length === fetchedHubs.length &&
+              prevHubs.length > 0 &&
+              fetchedHubs.length > 0 &&
+              prevHubs[0]?.id === fetchedHubs[0]?.id
+            ) {
+              // Проверяем все ID для точности
+              const prevIds = prevHubs.map((h) => h.id).join(",");
+              const newIds = fetchedHubs.map((h) => h.id).join(",");
+              if (prevIds === newIds) {
+                return prevHubs; // Возвращаем старый массив, чтобы избежать ререндера
+              }
+            }
+            return fetchedHubs;
+          });
+        }
       } catch (err) {
-        console.error("Error fetching hubs:", err);
-        setError("Не удалось загрузить хабы. Попробуйте позже.");
+        if (isMountedRef.current) {
+          console.error("Error fetching hubs:", err);
+          setError("Не удалось загрузить хабы. Попробуйте позже.");
+        }
       } finally {
-        setLoading(false);
+        if (isMountedRef.current) {
+          setLoading(false);
+        }
       }
+    }
+
+    // Очищаем предыдущий таймер
+    if (fetchTimeoutRef.current) {
+      clearTimeout(fetchTimeoutRef.current);
     }
 
     // Добавляем небольшую задержку для поиска (debounce)
     // При первой загрузке (пустой searchQuery) загружаем сразу
-    const timeoutId = setTimeout(() => {
+    fetchTimeoutRef.current = setTimeout(() => {
       fetchHubs();
     }, searchQuery.trim() ? 300 : 0);
 
-    return () => clearTimeout(timeoutId);
+    return () => {
+      if (fetchTimeoutRef.current) {
+        clearTimeout(fetchTimeoutRef.current);
+      }
+      isMountedRef.current = false;
+    };
   }, [searchQuery]);
 
   // Дебаунс для аналитики поиска (500ms)
@@ -73,9 +114,12 @@ export default function HubsPage() {
     };
   }, [searchQuery]);
 
-  // Calculate total members and countries from fetched hubs
-  const totalMembers = hubs.reduce((acc, hub) => acc + hub.members_count, 0);
-  const totalCountries = new Set(hubs.map((hub) => hub.country)).size;
+  // Мемоизируем вычисления статистики, чтобы избежать лишних ререндеров
+  const { totalMembers, totalCountries } = useMemo(() => {
+    const members = hubs.reduce((acc, hub) => acc + hub.members_count, 0);
+    const countries = new Set(hubs.map((hub) => hub.country)).size;
+    return { totalMembers: members, totalCountries: countries };
+  }, [hubs]);
 
   return (
     <>

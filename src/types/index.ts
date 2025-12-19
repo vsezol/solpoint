@@ -89,6 +89,10 @@ export interface Event {
   organizer?: User; // При загрузке с JOIN
   hub_id?: string; // Связь с хабом (опционально)
   hub?: Hub; // При загрузке с JOIN
+  community_id?: string; // Связь с комьюнити (опционально)
+  community?: Community; // При загрузке с JOIN
+  project_id?: string; // Связь с проектом (опционально)
+  project?: Project; // При загрузке с JOIN
   created_at: string;
   updated_at?: string;
 }
@@ -136,15 +140,66 @@ export interface Hub {
   creator_id?: string;
   creator?: User; // При загрузке с JOIN
   created_at: string;
+  updated_at?: string;
+}
+
+// Community types
+// Комьюнити: нет места в конкретной стране, существуют по всему миру, в основном общение в чатах
+export interface Community {
+  id: string;
+  name: string;
+  description?: string;
+  image_url?: string;
+  slug: string; // Публичная ссылка для SEO
+  country: string; // Страна для размещения на карте
+  city?: string; // Опционально, если есть локация
+  latitude: number; // Координаты для размещения на карте (не точные)
+  longitude: number;
+  members_count: number;
+  socials?: {
+    twitter?: string;
+    instagram?: string;
+    facebook?: string;
+    website?: string;
+  };
+  creator_id?: string;
+  creator?: User; // При загрузке с JOIN
+  created_at: string;
+  updated_at?: string;
+}
+
+// Project types
+// Проекты: стартапы или продукты, создавать может только юзер
+export interface Project {
+  id: string;
+  name: string;
+  description?: string;
+  image_url?: string;
+  slug: string; // Публичная ссылка для SEO
+  country: string; // Страна для размещения на карте
+  city?: string; // Опционально, если есть локация
+  latitude: number; // Координаты для размещения на карте (не точные)
+  longitude: number;
+  members_count: number;
+  socials?: {
+    twitter?: string;
+    instagram?: string;
+    facebook?: string;
+    website?: string;
+  };
+  creator_id: string; // Проект должен иметь создателя
+  creator?: User; // При загрузке с JOIN
+  created_at: string;
+  updated_at?: string;
 }
 
 // Map types
 export interface MapMarker {
   id: string;
-  type: "user" | "vip_user" | "event" | "hub";
+  type: "user" | "vip_user" | "event" | "hub" | "community" | "project";
   latitude: number;
   longitude: number;
-  data: User | Event | Hub;
+  data: User | Event | Hub | Community | Project;
 }
 
 export interface CountryStats {
@@ -154,16 +209,20 @@ export interface CountryStats {
   vip_users_count: number;
   events_count?: number;
   hubs_count?: number;
+  communities_count?: number;
+  projects_count?: number;
 }
 
 // Filter types
-export type ContentTypeFilter = "all" | "users" | "events" | "hubs";
+export type ContentTypeFilter = "all" | "users" | "events" | "hubs" | "communities" | "projects";
 
 export interface MapFilters {
   showUsers: boolean;
   showEvents: boolean;
   showHubs: boolean;
-  contentType?: ContentTypeFilter; // Переключатель: all | users | events | hubs
+  showCommunities?: boolean;
+  showProjects?: boolean;
+  contentType?: ContentTypeFilter; // Переключатель: all | users | events | hubs | communities | projects
   userRoles?: UserRole[];
   eventType?: EventType;
   openToMeet?: boolean;
@@ -234,5 +293,51 @@ export interface Referral {
   inviter_user_id: string;
   invited_user_id: string;
   created_at: string;
+}
+
+// Entity submission types (for moderation system)
+export type EntityType = "event" | "hub" | "community" | "project";
+export type SubmissionStatus = "pending" | "approved" | "rejected";
+
+export interface EntitySubmission {
+  id: string;
+  entity_type: EntityType;
+  submitter_id: string;
+  submitter?: User; // При загрузке с JOIN
+  entity_data: Record<string, any>; // JSONB данные сущности
+  contacts: {
+    email?: string;
+    telegram?: string;
+    phone?: string;
+  };
+  status: SubmissionStatus;
+  reviewed_by?: string;
+  reviewed_by_user?: User; // При загрузке с JOIN
+  reviewed_at?: string;
+  rejection_reason?: string;
+  admin_notes?: string;
+  approved_entity_id?: string;
+  approved_entity_type?: EntityType;
+  created_at: string;
+  updated_at?: string;
+}
+
+// Типы для создания заявки
+export interface CreateSubmissionRequest {
+  entity_type: EntityType;
+  entity_data: Record<string, any>;
+  contacts: {
+    email?: string;
+    telegram?: string;
+    phone?: string;
+  };
+}
+
+// Типы для админки
+export interface SubmissionFilters {
+  entity_type?: EntityType;
+  status?: SubmissionStatus;
+  limit?: number;
+  offset?: number;
 }
 

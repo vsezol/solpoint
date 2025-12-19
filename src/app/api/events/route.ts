@@ -37,13 +37,15 @@ export async function GET(request: NextRequest) {
     isVip = profile?.subscription_tier === "vip";
   }
 
-  // Строим запрос
+    // Строим запрос
   let query = supabase
     .from("events")
     .select(`
       *,
       organizer:profiles!events_organizer_id_fkey(id, twitter_handle, twitter_name, avatar_url),
-      hub:hubs(id, name, image_url)
+      hub:hubs(id, name, image_url),
+      community:communities(id, name, image_url),
+      project:projects(id, name, image_url)
     `)
     .order("start_date", { ascending: true });
 
@@ -157,6 +159,8 @@ export async function POST(request: Request) {
       socials,
       contacts,
       hub_id,
+      community_id,
+      project_id,
     } = body;
 
     // Валидация обязательных полей
@@ -165,6 +169,73 @@ export async function POST(request: Request) {
         { error: "Missing required fields: name, country, city, latitude, longitude, start_date" },
         { status: 400 }
       );
+    }
+
+    // Валидация: если указан hub_id, community_id или project_id, проверяем что пользователь является создателем
+    if (hub_id) {
+      const { data: hub, error: hubError } = await supabase
+        .from("hubs")
+        .select("creator_id")
+        .eq("id", hub_id)
+        .single();
+
+      if (hubError || !hub) {
+        return NextResponse.json(
+          { error: "Hub not found" },
+          { status: 404 }
+        );
+      }
+
+      if (hub.creator_id !== authUser.id) {
+        return NextResponse.json(
+          { error: "You are not the creator of this hub" },
+          { status: 403 }
+        );
+      }
+    }
+
+    if (community_id) {
+      const { data: community, error: communityError } = await supabase
+        .from("communities")
+        .select("creator_id")
+        .eq("id", community_id)
+        .single();
+
+      if (communityError || !community) {
+        return NextResponse.json(
+          { error: "Community not found" },
+          { status: 404 }
+        );
+      }
+
+      if (community.creator_id !== authUser.id) {
+        return NextResponse.json(
+          { error: "You are not the creator of this community" },
+          { status: 403 }
+        );
+      }
+    }
+
+    if (project_id) {
+      const { data: project, error: projectError } = await supabase
+        .from("projects")
+        .select("creator_id")
+        .eq("id", project_id)
+        .single();
+
+      if (projectError || !project) {
+        return NextResponse.json(
+          { error: "Project not found" },
+          { status: 404 }
+        );
+      }
+
+      if (project.creator_id !== authUser.id) {
+        return NextResponse.json(
+          { error: "You are not the creator of this project" },
+          { status: 403 }
+        );
+      }
     }
 
     // Генерация slug
@@ -213,6 +284,8 @@ export async function POST(request: Request) {
       contacts: contacts || {},
       organizer_id: authUser.id,
       hub_id: hub_id || null,
+      community_id: community_id || null,
+      project_id: project_id || null,
       attendees_count: 0,
     };
 
@@ -228,7 +301,9 @@ export async function POST(request: Request) {
       .select(`
         *,
         organizer:profiles!events_organizer_id_fkey(id, twitter_handle, twitter_name, avatar_url),
-        hub:hubs(id, name, image_url)
+        hub:hubs(id, name, image_url),
+        community:communities(id, name, image_url),
+        project:projects(id, name, image_url)
       `)
       .single();
 

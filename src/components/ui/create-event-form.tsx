@@ -4,8 +4,10 @@ import { useState, FormEvent, useEffect } from "react";
 import { Button, Input, LocationPicker } from "@/components/ui";
 import { CountrySelect } from "@/components/ui/country-select";
 import { createEvent } from "@/lib/api/events";
+import { createSubmission } from "@/lib/api/submissions";
 import { geocodeAddress } from "@/lib/api/geocoding";
-import { MapPin, Calendar, DollarSign, Users, Globe, Twitter, Instagram, Facebook, Link as LinkIcon, Loader2, Search } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+import { MapPin, Calendar, DollarSign, Users, Globe, Twitter, Instagram, Facebook, Link as LinkIcon, Loader2, Search, Mail, MessageCircle } from "lucide-react";
 import type { EventType, EventVisibility } from "@/types";
 import { trackEvent } from "@/lib/analytics";
 
@@ -15,9 +17,15 @@ interface CreateEventFormProps {
 }
 
 export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
+  const { user } = useAuth();
+  const isAdmin = user?.is_admin || false;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isGeocoding, setIsGeocoding] = useState(false);
+  
+  // Контакты для не-админов (обязательно)
+  const [contactEmail, setContactEmail] = useState("");
+  const [contactTelegram, setContactTelegram] = useState("");
 
   // Основные поля
   const [name, setName] = useState("");
@@ -56,6 +64,32 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
   // Map center coordinates (for auto-zooming to city)
   const [mapCenterLat, setMapCenterLat] = useState<number | undefined>();
   const [mapCenterLng, setMapCenterLng] = useState<number | undefined>();
+
+  // Функция для очистки формы
+  const resetForm = () => {
+    setName("");
+    setDescription("");
+    setImageUrl("");
+    setCountryCode(undefined);
+    setCity("");
+    setAddress("");
+    setLatitude("");
+    setLongitude("");
+    setStartDate("");
+    setEndDate("");
+    setEventType("community");
+    setVisibility("public");
+    setIsPaid(false);
+    setPriceSol("");
+    setMaxAttendees("");
+    setIsOnline(false);
+    setSocialsTwitter("");
+    setSocialsInstagram("");
+    setSocialsFacebook("");
+    setSocialsWebsite("");
+    setContactEmail("");
+    setContactTelegram("");
+  };
 
 
   // Geocode address to coordinates
@@ -271,6 +305,11 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
       return "End date cannot be earlier than start date";
     }
 
+    // Для не-админов требуется хотя бы один контакт
+    if (!isAdmin && !contactEmail.trim() && !contactTelegram.trim()) {
+      return "Please provide at least one contact method (email or telegram) for review";
+    }
+
     return null;
   };
 
@@ -319,49 +358,65 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
         max_attendees: maxAttendees ? parseInt(maxAttendees, 10) : undefined,
         is_online: isOnline,
         socials: Object.keys(socials).length > 0 ? socials : undefined,
+        contacts: {
+          email: contactEmail.trim() || undefined,
+          telegram: contactTelegram.trim() || undefined,
+        },
       };
 
-      const createdEvent = await createEvent(eventData);
+      if (isAdmin) {
+        // Админы создают напрямую
+        const createdEvent = await createEvent(eventData);
 
-      if (createdEvent) {
-        trackEvent("event_created", {
-          event_category: "Events",
-          event_id: createdEvent.id,
-          event_type: eventType,
+        if (createdEvent) {
+          trackEvent("event_created", {
+            event_category: "Events",
+            event_id: createdEvent.id,
+            event_type: eventType,
+          });
+
+          // Очистка формы
+          resetForm();
+
+          if (onSuccess && createdEvent.slug) {
+            onSuccess({ id: createdEvent.id, slug: createdEvent.slug });
+          } else if (onSuccess) {
+            onSuccess({ id: createdEvent.id, slug: createdEvent.id });
+          }
+        }
+      } else {
+        // Не-админы отправляют заявку
+        const submission = await createSubmission({
+          entity_type: "event",
+          entity_data: eventData,
+          contacts: {
+            email: contactEmail.trim() || undefined,
+            telegram: contactTelegram.trim() || undefined,
+          },
         });
 
-        // Очистка формы
-        setName("");
-        setDescription("");
-        setImageUrl("");
-        setCountryCode(undefined);
-        setCity("");
-        setAddress("");
-        setLatitude("");
-        setLongitude("");
-        setStartDate("");
-        setEndDate("");
-        setEventType("community");
-        setVisibility("public");
-        setIsPaid(false);
-        setPriceSol("");
-        setMaxAttendees("");
-        setIsOnline(false);
-        setSocialsTwitter("");
-        setSocialsInstagram("");
-        setSocialsFacebook("");
-        setSocialsWebsite("");
+        if (submission) {
+          trackEvent("event_submission_created", {
+            event_category: "Events",
+            submission_id: submission.id,
+            event_type: eventType,
+          });
 
-        if (onSuccess && createdEvent.slug) {
-          onSuccess({ id: createdEvent.id, slug: createdEvent.slug });
-        } else if (onSuccess) {
-          // Fallback if slug is missing (shouldn't happen, but just in case)
-          onSuccess({ id: createdEvent.id, slug: createdEvent.id });
+          // Очистка формы
+          resetForm();
+
+          // Показываем сообщение об успехе
+          setError(null);
+          alert("Your event submission has been sent for review. We'll contact you once it's approved!");
+          
+          if (onCancel) {
+            onCancel();
+          }
         }
       }
     } catch (err: any) {
-      console.error("Error creating event:", err);
-      setError(err.message || "Failed to create event. Please try again.");
+      console.error("Error creating event/submission:", err);
+      setError(err.message || (isAdmin ? "Failed to create event. Please try again." : "Failed to submit event for review. Please try again."));
     } finally {
       setIsSubmitting(false);
     }
@@ -677,6 +732,46 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
         </div>
       </div>
 
+      {/* Contact Information (for non-admins) */}
+      {!isAdmin && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-[var(--color-text-primary)] flex items-center gap-2">
+            <Mail className="w-5 h-5" />
+            Contact Information
+            <span className="text-sm text-[var(--color-text-muted)] font-normal">(Required for review)</span>
+          </h3>
+          <p className="text-sm text-[var(--color-text-secondary)]">
+            Please provide at least one contact method so we can reach you during the review process.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
+                Email
+              </label>
+              <Input
+                type="email"
+                value={contactEmail}
+                onChange={(e) => setContactEmail(e.target.value)}
+                placeholder="your@email.com"
+                icon={<Mail className="w-4 h-4" />}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
+                Telegram
+              </label>
+              <Input
+                type="text"
+                value={contactTelegram}
+                onChange={(e) => setContactTelegram(e.target.value)}
+                placeholder="@username"
+                icon={<MessageCircle className="w-4 h-4" />}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Social Media */}
       <div className="space-y-4">
         <h3 className="text-lg font-semibold text-[var(--color-text-primary)] flex items-center gap-2">
@@ -759,7 +854,13 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
           isLoading={isSubmitting}
           className="flex-1"
         >
-          {isSubmitting ? "Creating..." : "Create Event"}
+          {isSubmitting
+            ? isAdmin
+              ? "Creating..."
+              : "Submitting..."
+            : isAdmin
+            ? "Create Event"
+            : "Submit for Review"}
         </Button>
       </div>
     </form>
