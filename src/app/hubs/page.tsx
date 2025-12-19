@@ -6,13 +6,14 @@ import { HubCard } from "@/components/cards/hub-card";
 import { HubsControls } from "@/components/hubs/hubs-controls";
 import { CreateEntityForm } from "@/components/hubs/create-entity-form";
 import { Modal, ModalHeader, ModalTitle, ModalContent } from "@/components/ui";
-import { Search, Users, Globe } from "lucide-react";
+import { Users, Globe, Home } from "lucide-react";
 import { getHubs } from "@/lib/api/hubs";
 import { getCommunities } from "@/lib/api/communities";
 import { getProjects } from "@/lib/api/projects";
 import type { Hub, Community, Project, EntityType } from "@/types";
-import type { EntityTypeFilter, SortOption } from "@/components/hubs/hubs-controls";
+import { useHubsStore } from "@/store/hubs-store";
 import { trackEvent } from "@/lib/analytics";
+import { cn } from "@/lib/utils";
 
 export default function HubsPage() {
   const [hubs, setHubs] = useState<Hub[]>([]);
@@ -20,14 +21,13 @@ export default function HubsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [entityTypeFilter, setEntityTypeFilter] = useState<EntityTypeFilter>("all");
-  const [sortBy, setSortBy] = useState<SortOption>("recommended");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [createEntityType, setCreateEntityType] = useState<EntityType>("hub");
   const analyticsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isMountedRef = useRef(true);
+  
+  const { searchQuery, entityTypeFilter, sortBy } = useHubsStore();
 
   // Fetch entities from API
   useEffect(() => {
@@ -204,19 +204,40 @@ export default function HubsPage() {
 
         {/* Controls */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <HubsControls
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            entityTypeFilter={entityTypeFilter}
-            onEntityTypeFilterChange={setEntityTypeFilter}
-            sortBy={sortBy}
-            onSortChange={setSortBy}
-            onAddClick={handleAddClick}
-          />
+          <HubsControls />
         </section>
 
         {/* Hubs Grid */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+          {/* Header with filter label and Add button */}
+          <div className="flex items-center justify-between w-full mb-6">
+            <div className="flex items-center gap-2">
+              <Home className="w-4 h-4 sm:w-5 sm:h-5 text-[var(--color-primary)]" />
+              <h2 className="text-lg sm:text-xl font-semibold text-[var(--color-text-primary)]">
+                {entityTypeFilter === "all" 
+                  ? "All" 
+                  : entityTypeFilter === "hubs" 
+                  ? "Hubs" 
+                  : entityTypeFilter === "community"
+                  ? "Community"
+                  : entityTypeFilter === "workspaces"
+                  ? "Workspaces"
+                  : "Projects"}
+              </h2>
+            </div>
+            <button
+              onClick={handleAddClick}
+              className={cn(
+                "px-3 py-1.5 sm:px-6 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-colors",
+                "bg-[var(--color-primary)] text-[var(--color-background)]",
+                "hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-offset-2"
+              )}
+            >
+              <span className="hidden sm:inline">Add your hub, community, or project</span>
+              <span className="sm:hidden">Add hub/community/project</span>
+            </button>
+          </div>
+
           {loading ? (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {Array.from({ length: 6 }).map((_, i) => (

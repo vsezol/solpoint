@@ -2,32 +2,14 @@
 
 import { useState } from "react";
 import { Input } from "@/components/ui";
-import { Search, ArrowUpDown, Home } from "lucide-react";
+import { Search, ArrowUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useHubsStore } from "@/store/hubs-store";
+import type { EntityTypeFilter, SortOption } from "@/store/hubs-store";
 
-export type EntityTypeFilter = "all" | "community" | "hubs" | "workspaces" | "projects";
-export type SortOption = "recommended" | "name" | "members" | "country";
-
-export interface HubsControlsProps {
-  searchQuery: string;
-  onSearchChange: (query: string) => void;
-  entityTypeFilter: EntityTypeFilter;
-  onEntityTypeFilterChange: (filter: EntityTypeFilter) => void;
-  sortBy: SortOption;
-  onSortChange: (sort: SortOption) => void;
-  onAddClick?: () => void;
-}
-
-export function HubsControls({
-  searchQuery,
-  onSearchChange,
-  entityTypeFilter,
-  onEntityTypeFilterChange,
-  sortBy,
-  onSortChange,
-  onAddClick,
-}: HubsControlsProps) {
+export function HubsControls() {
   const [isSortOpen, setIsSortOpen] = useState(false);
+  const { searchQuery, setSearchQuery, sortBy, setSortBy, entityTypeFilter, setEntityTypeFilter } = useHubsStore();
 
   const entityTypeButtons: { value: EntityTypeFilter; label: string }[] = [
     { value: "all", label: "All" },
@@ -54,30 +36,27 @@ export function HubsControls({
             placeholder="Search by name, city, or country..."
             icon={<Search className="w-4 h-4" />}
             value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
+            onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
 
         {/* Entity Type Filters */}
         <div className="flex flex-wrap items-center gap-2">
-          <Home className="w-4 h-4 text-[var(--color-primary)] mr-1" />
-          <div className="flex flex-wrap gap-2">
-            {entityTypeButtons.map((button) => (
-              <button
-                key={button.value}
-                onClick={() => onEntityTypeFilterChange(button.value)}
-                className={cn(
-                  "px-4 py-1.5 rounded-lg text-sm font-medium transition-colors",
-                  "border border-[var(--color-surface-border)]",
-                  entityTypeFilter === button.value
-                    ? "bg-[var(--color-primary)] text-[var(--color-background)] border-[var(--color-primary)]"
-                    : "bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text-primary)]"
-                )}
-              >
-                {button.label}
-              </button>
-            ))}
-          </div>
+          {entityTypeButtons.map((button) => (
+            <button
+              key={button.value}
+              onClick={() => setEntityTypeFilter(button.value)}
+              className={cn(
+                "px-2 py-1 sm:px-4 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors",
+                "border border-[var(--color-surface-border)]",
+                entityTypeFilter === button.value
+                  ? "bg-[var(--color-primary)] text-[var(--color-background)] border-[var(--color-primary)]"
+                  : "bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text-primary)]"
+              )}
+            >
+              {button.label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -109,7 +88,7 @@ export function HubsControls({
                   <button
                     key={option.value}
                     onClick={() => {
-                      onSortChange(option.value);
+                      setSortBy(option.value);
                       setIsSortOpen(false);
                     }}
                     className={cn(
@@ -127,27 +106,6 @@ export function HubsControls({
           )}
         </div>
       </div>
-
-      {/* Add Button */}
-      {onAddClick && (
-        <div className="flex justify-end">
-          <div className="w-full sm:w-auto">
-            <div className="text-sm text-[var(--color-text-secondary)] mb-2 sm:hidden">
-              Are you a founder or organizer?
-            </div>
-            <button
-              onClick={onAddClick}
-              className={cn(
-                "w-full sm:w-auto px-6 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                "bg-[var(--color-primary)] text-[var(--color-background)]",
-                "hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-offset-2"
-              )}
-            >
-              Add your hub, community, or project
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
