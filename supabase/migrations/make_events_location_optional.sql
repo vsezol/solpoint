@@ -15,3 +15,4 @@ COMMENT ON COLUMN public.events.city IS 'City for map placement. NULL for global
 COMMENT ON COLUMN public.events.latitude IS 'Coordinates for map placement. NULL for global events.';
 COMMENT ON COLUMN public.events.longitude IS 'Coordinates for map placement. NULL for global events.';
 
+

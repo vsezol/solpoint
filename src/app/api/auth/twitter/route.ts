@@ -3,8 +3,13 @@ import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
   const supabase = await createClient();
-  const { searchParams, origin } = new URL(request.url);
+  const { searchParams } = new URL(request.url);
   const redirectTo = searchParams.get("redirect_to") || "/profile";
+
+  // Используем переменную окружения для Ngrok или берем origin из запроса
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL;
+  const requestUrl = new URL(request.url);
+  const origin = baseUrl || requestUrl.origin;
 
   // Инициируем OAuth flow с Twitter через Supabase
   const { data, error } = await supabase.auth.signInWithOAuth({

@@ -341,3 +341,75 @@ export interface SubmissionFilters {
   offset?: number;
 }
 
+// Subscription types
+export type SubscriptionStatus = "active" | "expired" | "cancelled" | "pending";
+export type PaymentStatus = "pending" | "waiting" | "confirming" | "confirmed" | "finished" | "failed" | "refunded" | "expired";
+
+export interface Plan {
+  id: string;
+  code: string; // "monthly", "yearly"
+  price: number;
+  currency: string;
+  interval_days: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Payment {
+  id: string;
+  user_id: string;
+  provider: string; // "nowpayments"
+  provider_payment_id?: string; // payment_id от провайдера
+  tx_hash?: string; // hash транзакции
+  amount: number;
+  currency: string;
+  status: PaymentStatus;
+  created_at: string;
+  confirmed_at?: string;
+  updated_at: string;
+  // Дополнительные поля для NowPayments
+  parent_payment_id?: string;
+  purchase_id?: string;
+  pay_address?: string;
+  pay_amount?: number;
+  pay_currency?: string;
+  price_amount?: number;
+  price_currency?: string;
+  outcome_amount?: number;
+  outcome_currency?: string;
+}
+
+export interface Subscription {
+  id: string;
+  user_id: string;
+  plan_id: string;
+  plan?: Plan; // При загрузке с JOIN
+  status: SubscriptionStatus;
+  current_period_end: string;
+  created_at: string;
+  updated_at: string;
+  last_payment_id?: string;
+  last_payment?: Payment; // При загрузке с JOIN
+}
+
+// Типы для создания платежа
+export interface CreatePaymentRequest {
+  plan_id: string;
+  success_url?: string;
+  cancel_url?: string;
+  ipn_callback_url?: string;
+}
+
+export interface CreatePaymentResponse {
+  payment_id: string;
+  payment_url?: string; // URL для редиректа пользователя
+  pay_address?: string; // Адрес для депозита
+  pay_amount?: number;
+  pay_currency?: string;
+  price_amount: number;
+  price_currency: string;
+  status: PaymentStatus;
+  expires_at?: string;
+}
+

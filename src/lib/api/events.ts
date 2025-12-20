@@ -172,3 +172,4 @@ export function filterEventsBySearch(events: Event[], searchQuery: string): Even
 }
 
 
+

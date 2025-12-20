@@ -191,6 +191,74 @@ CREATE INDEX idx_profiles_twitter_handle ON public.profiles(twitter_handle);
 
 ---
 
+### 8. `add_subscriptions_system.sql` ✨ НОВАЯ
+
+Создает полную систему подписок с интеграцией NowPayments.
+
+**Что делает:**
+
+1. **Удаляет старую таблицу `subscriptions`**
+   - Старая структура заменяется новой
+
+2. **Создает таблицу `plans`**
+   - Планы подписки (monthly, yearly)
+   - Поля: `id`, `code`, `price`, `currency`, `interval_days`, `is_active`, `created_at`, `updated_at`
+
+3. **Создает таблицу `payments`**
+   - Платежи через NowPayments и другие провайдеры
+   - Основные поля: `id`, `user_id`, `provider`, `provider_payment_id`, `tx_hash`, `amount`, `currency`, `status`, `created_at`, `confirmed_at`
+   - Дополнительные поля для NowPayments: `parent_payment_id`, `purchase_id`, `pay_address`, `pay_amount`, `pay_currency`, `price_amount`, `price_currency`, `outcome_amount`, `outcome_currency`
+   - Статусы: `pending`, `waiting`, `confirming`, `confirmed`, `finished`, `failed`, `refunded`, `expired`
+
+4. **Создает таблицу `subscriptions`**
+   - Активные подписки пользователей
+   - Поля: `id`, `user_id`, `plan_id`, `status`, `current_period_end`, `created_at`, `updated_at`, `last_payment_id`
+   - Статусы: `active`, `expired`, `cancelled`, `pending`
+
+5. **Автоматическое обновление `subscription_tier`**
+   - Триггер автоматически обновляет `subscription_tier` в таблице `profiles` на основе активных подписок
+   - Если есть активная подписка → `vip`, иначе → `free`
+
+6. **RLS политики**
+   - Планы видны всем, редактирование только админам
+   - Пользователи видят только свои платежи и подписки
+   - Админы видят все платежи и подписки
+
+**Применение:**
+
+```bash
+# 1. Примените миграцию через Supabase SQL Editor
+# Файл: supabase/migrations/add_subscriptions_system.sql
+
+# 2. Заполните начальные планы подписки
+# Файл: supabase/migrations/seed_subscription_plans.sql
+```
+
+**Интеграция с NowPayments:**
+- Поле `provider_payment_id` хранит `payment_id` из NowPayments API
+- Поле `tx_hash` хранит hash транзакции блокчейна
+- Поддержка всех статусов платежей NowPayments
+- Дополнительные поля для полной интеграции (pay_address, pay_amount, outcome_amount и т.д.)
+
+---
+
+### 9. `seed_subscription_plans.sql` ✨ НОВАЯ
+
+Заполняет таблицу `plans` начальными планами подписки.
+
+**Что делает:**
+- Вставляет планы: `monthly` (9.99 USD, 30 дней) и `yearly` (99.99 USD, 365 дней)
+- Использует `ON CONFLICT DO UPDATE` для безопасного повторного выполнения
+
+**Применение:**
+
+```bash
+# Выполните после add_subscriptions_system.sql
+# Файл: supabase/migrations/seed_subscription_plans.sql
+```
+
+---
+
 ## Порядок применения миграций
 
 Если вы настраиваете проект с нуля:
@@ -202,6 +270,8 @@ CREATE INDEX idx_profiles_twitter_handle ON public.profiles(twitter_handle);
 5. `seed_countries.sql` - заполнение таблицы countries (249 стран)
 6. `migrate_friends_to_follows.sql` - миграция на систему подписок (Instagram/Twitter модель)
 7. `drop_friends_table.sql` - удаление устаревшей таблицы friends (опционально, только после проверки)
+8. `add_subscriptions_system.sql` - система подписок с интеграцией NowPayments
+9. `seed_subscription_plans.sql` - заполнение начальных планов подписки
 
 ## Проверка статуса миграций
 

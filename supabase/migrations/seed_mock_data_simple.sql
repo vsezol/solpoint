@@ -339,3 +339,4 @@ ON CONFLICT (event_id, user_id) DO NOTHING;
 -- - attendees_count и capacity_remaining в events
 
 
+

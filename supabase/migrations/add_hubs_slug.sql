@@ -81,3 +81,4 @@ FOR EACH ROW
 EXECUTE FUNCTION set_hub_slug();
 
 
+

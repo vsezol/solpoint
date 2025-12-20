@@ -195,3 +195,4 @@ COMMENT ON FUNCTION public.get_following_count IS 'Get count of users the given 
 COMMENT ON FUNCTION public.get_mutual_friends_count IS 'Get count of mutual friends for the given user';
 
 
+

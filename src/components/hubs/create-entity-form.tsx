@@ -51,42 +51,6 @@ export function CreateEntityForm({
   const locationErrorRef = useRef<HTMLDivElement>(null);
   const contactErrorRef = useRef<HTMLDivElement>(null);
 
-  // Функция для скролла к элементу внутри модального окна
-  const scrollToElementInModal = (element: HTMLElement) => {
-    // Ищем прокручиваемый контейнер модального окна
-    let scrollableContainer: HTMLElement | null = null;
-    let current: HTMLElement | null = element.parentElement;
-    
-    while (current) {
-      const style = window.getComputedStyle(current);
-      if (style.overflow === 'auto' || style.overflowY === 'auto' || style.overflow === 'scroll' || style.overflowY === 'scroll') {
-        scrollableContainer = current;
-        break;
-      }
-      // Также проверяем по классам
-      if (current.classList.contains('max-h-[90vh]') || current.classList.contains('overflow-auto')) {
-        scrollableContainer = current;
-        break;
-      }
-      current = current.parentElement;
-    }
-    
-    if (scrollableContainer) {
-      const containerRect = scrollableContainer.getBoundingClientRect();
-      const elementRect = element.getBoundingClientRect();
-      const scrollTop = scrollableContainer.scrollTop;
-      const targetOffset = elementRect.top - containerRect.top + scrollTop - 16; // 16px отступ сверху
-      
-      scrollableContainer.scrollTo({
-        top: Math.max(0, targetOffset),
-        behavior: 'smooth'
-      });
-    } else {
-      // Fallback: обычный scrollIntoView
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  };
-
   // Use Zustand store for form state
   const entityForm = useFormsStore((state) => state.entityForm);
   const {
@@ -267,9 +231,19 @@ export function CreateEntityForm({
   }, [city, countryCode]);
 
   // Form validation based on entity type and required fields
-  const validateForm = (): string | null => {
+  const validateForm = (): boolean => {
+    // Clear all errors
+    setError(null);
+    
+    let hasErrors = false;
+    let firstErrorElement: HTMLElement | null = null;
+
     if (!name.trim()) {
-      return "Name is required";
+      setError("Name is required");
+      hasErrors = true;
+      if (!firstErrorElement && errorRef.current) {
+        firstErrorElement = errorRef.current;
+      }
     }
     
     // Валидация локации в зависимости от выбранного типа
@@ -278,7 +252,11 @@ export function CreateEntityForm({
     } else if (locationType === "country") {
       // Для страны требуется только страна, координаты опциональны
       if (!countryCode) {
-        return "Please select a country";
+        if (!error) setError("Please select a country");
+        hasErrors = true;
+        if (!firstErrorElement && errorRef.current) {
+          firstErrorElement = errorRef.current;
+        }
       }
 
       // Если координаты указаны, проверяем их валидность
@@ -287,23 +265,43 @@ export function CreateEntityForm({
         const lng = longitude.trim() ? parseFloat(longitude) : NaN;
 
         if (isNaN(lat) || isNaN(lng)) {
-          return "Invalid coordinates. Please enter valid latitude and longitude or leave them empty";
-        }
-
-        if (lat < -90 || lat > 90) {
-          return "Latitude must be between -90 and 90";
-        }
-        if (lng < -180 || lng > 180) {
-          return "Longitude must be between -180 and 180";
+          if (!error) setError("Invalid coordinates. Please enter valid latitude and longitude or leave them empty");
+          hasErrors = true;
+          if (!firstErrorElement && locationErrorRef.current) {
+            firstErrorElement = locationErrorRef.current;
+          }
+        } else {
+          if (lat < -90 || lat > 90) {
+            if (!error) setError("Latitude must be between -90 and 90");
+            hasErrors = true;
+            if (!firstErrorElement && locationErrorRef.current) {
+              firstErrorElement = locationErrorRef.current;
+            }
+          }
+          if (lng < -180 || lng > 180) {
+            if (!error) setError("Longitude must be between -180 and 180");
+            hasErrors = true;
+            if (!firstErrorElement && locationErrorRef.current) {
+              firstErrorElement = locationErrorRef.current;
+            }
+          }
         }
       }
     } else if (locationType === "city") {
       // Для города требуется страна, город и координаты
       if (!countryCode) {
-        return "Please select a country";
+        if (!error) setError("Please select a country");
+        hasErrors = true;
+        if (!firstErrorElement && errorRef.current) {
+          firstErrorElement = errorRef.current;
+        }
       }
       if (!city.trim()) {
-        return "City is required";
+        if (!error) setError("City is required");
+        hasErrors = true;
+        if (!firstErrorElement && errorRef.current) {
+          firstErrorElement = errorRef.current;
+        }
       }
 
       // Check coordinates
@@ -311,56 +309,60 @@ export function CreateEntityForm({
       const lng = longitude.trim() ? parseFloat(longitude) : NaN;
 
       if (!latitude.trim() || !longitude.trim() || isNaN(lat) || isNaN(lng)) {
-        return "Coordinates are required. Use the map to select a location or geocode a city";
-      }
-
-      if (lat < -90 || lat > 90) {
-        return "Latitude must be between -90 and 90";
-      }
-      if (lng < -180 || lng > 180) {
-        return "Longitude must be between -180 and 180";
+        if (!error) setError("Coordinates are required. Use the map to select a location or geocode a city");
+        hasErrors = true;
+        if (!firstErrorElement && locationErrorRef.current) {
+          firstErrorElement = locationErrorRef.current;
+        }
+      } else {
+        if (lat < -90 || lat > 90) {
+          if (!error) setError("Latitude must be between -90 and 90");
+          hasErrors = true;
+          if (!firstErrorElement && locationErrorRef.current) {
+            firstErrorElement = locationErrorRef.current;
+          }
+        }
+        if (lng < -180 || lng > 180) {
+          if (!error) setError("Longitude must be between -180 and 180");
+          hasErrors = true;
+          if (!firstErrorElement && locationErrorRef.current) {
+            firstErrorElement = locationErrorRef.current;
+          }
+        }
       }
     }
 
     // Для не-админов требуется хотя бы один контакт
     if (!isAdmin && !contactEmail.trim() && !contactTelegram.trim()) {
-      return "Please provide at least one contact method (email or telegram) for review";
+      if (!error) setError("Please provide at least one contact method (email or telegram) for review");
+      hasErrors = true;
+      if (!firstErrorElement && contactErrorRef.current) {
+        firstErrorElement = contactErrorRef.current;
+      }
     }
 
-    return null;
+    // Scroll to first error
+    if (hasErrors) {
+      setTimeout(() => {
+        if (firstErrorElement) {
+          firstErrorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else if (errorRef.current) {
+          // Если нет специфического элемента ошибки, скроллим к общему блоку ошибки
+          errorRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+    }
+
+    return !hasErrors;
   };
 
   // Обработка отправки формы
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setError(null);
     setSuccessMessage(null);
 
-    const validationError = validateForm();
-    if (validationError) {
-      setError(validationError);
-      
-      // Определяем, к какому элементу нужно скроллить
-      let scrollTarget: HTMLElement | null = null;
-      
-      // Проверяем тип ошибки и выбираем соответствующий элемент
-      if (validationError.includes("Coordinates") || validationError.includes("Latitude") || validationError.includes("Longitude")) {
-        scrollTarget = locationErrorRef.current;
-      } else if (validationError.includes("contact")) {
-        scrollTarget = contactErrorRef.current;
-      } else {
-        scrollTarget = errorRef.current;
-      }
-      
-      // Скроллим к ошибке внутри модального окна
-      setTimeout(() => {
-        if (scrollTarget) {
-          scrollToElementInModal(scrollTarget);
-        } else if (errorRef.current) {
-          // Если нет специфического элемента, скроллим к общему блоку ошибки
-          scrollToElementInModal(errorRef.current);
-        }
-      }, 150);
+    const isValid = validateForm();
+    if (!isValid) {
       return;
     }
 
@@ -494,9 +496,9 @@ export function CreateEntityForm({
       // Скроллим к ошибке при ошибке сервера
       setTimeout(() => {
         if (errorRef.current) {
-          scrollToElementInModal(errorRef.current);
+          errorRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
-      }, 150);
+      }, 100);
     } finally {
       setIsSubmitting(false);
     }

@@ -623,3 +623,4 @@ createMapMarkers(users, events, hubs) {
 **Статус:** 📸 Snapshot текущего состояния
 
 
+
