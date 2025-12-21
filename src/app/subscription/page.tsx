@@ -205,32 +205,41 @@ export default function SubscriptionPage() {
         });
         setPaymentModalOpen(true);
         
-        // Начинаем проверку статуса подписки каждые 3 секунды
-        // Webhook активирует подписку когда платеж finished
+        // Начинаем проверку платежей каждые 5 секунд
+        // Проверяем платежи в NowPayments и активируем подписку если нужно
         const checkInterval = setInterval(async () => {
           try {
-            const statusResponse = await fetch(`/api/subscriptions/current`);
-            const statusData = await statusResponse.json();
-            
-            // Если подписка стала активной - показываем успех и обновляем
-            if (statusData.subscription && statusData.subscription.status === "active") {
-              clearInterval(checkInterval);
-              setPaymentModalOpen(false);
-              setSubscriptionActivated(true);
+            // Вызываем manual-check который проверит платежи и активирует подписку
+            const checkResponse = await fetch("/api/subscriptions/manual-check", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+            });
+
+            if (checkResponse.ok) {
+              const checkData = await checkResponse.json();
               
-              // Обновляем данные на странице
-              await fetchCurrentSubscription();
-              await fetchPlans();
-              
-              trackEvent("subscription_activated", {
-                event_category: "Subscription",
-                plan_id: statusData.subscription.plan_id,
-              });
+              // Если подписка была активирована - показываем успех
+              if (checkData.activated > 0) {
+                clearInterval(checkInterval);
+                setPaymentModalOpen(false);
+                setSubscriptionActivated(true);
+                
+                // Обновляем данные на странице
+                await fetchCurrentSubscription();
+                await fetchPlans();
+                
+                trackEvent("subscription_activated", {
+                  event_category: "Subscription",
+                  activated_count: checkData.activated,
+                });
+              }
             }
           } catch (error) {
-            console.error("Error checking subscription status:", error);
+            console.error("Error checking payments:", error);
           }
-        }, 3000);
+        }, 5000);
         
         // Останавливаем проверку через 10 минут
         setTimeout(() => {
