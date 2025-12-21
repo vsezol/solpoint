@@ -7,10 +7,10 @@ import Link from "next/link";
 import { EntityMembersList } from "./entity-members-list";
 import { EntitySettings } from "./entity-settings";
 import { EntityEventsList } from "./entity-events-list";
-import type { Hub, Community, Project, User } from "@/types";
+import type { Hub, Community, Project, Event, User } from "@/types";
 
-type EntityType = "hub" | "community" | "project" | "workspace";
-type Entity = Hub | Community | Project;
+type EntityType = "hub" | "community" | "project" | "workspace" | "event";
+type Entity = Hub | Community | Project | Event;
 
 interface EntityEditPageProps {
   params: Promise<{ entityType: EntityType; entityId: string }>;
@@ -68,6 +68,17 @@ export default async function EntityEditPage({ params }: EntityEditPageProps) {
       entity = data as Project;
       creatorId = entity.creator_id || null;
     }
+  } else if (entityType === "event") {
+    const { data, error } = await supabase
+      .from("events")
+      .select("*")
+      .eq("id", entityId)
+      .single();
+    
+    if (!error && data) {
+      entity = data as Event;
+      creatorId = entity.organizer_id || null;
+    }
   } else {
     notFound();
   }
@@ -76,15 +87,30 @@ export default async function EntityEditPage({ params }: EntityEditPageProps) {
     notFound();
   }
 
-  // Проверяем, является ли пользователь создателем
+  // Проверяем, является ли пользователь создателем/организатором
   if (creatorId !== authUser.id) {
     redirect("/dashboard");
   }
 
-  // Получаем участников
+  // Получаем участников (для событий - это attendees)
   let members: (User & { joined_at?: string; role?: "owner" | "member" })[] = [];
 
-  if (entityType === "hub") {
+  if (entityType === "event") {
+    const { data: attendeesData } = await supabase
+      .from("event_attendees")
+      .select(`
+        registered_at,
+        user:profiles!event_attendees_user_id_fkey(*)
+      `)
+      .eq("event_id", entityId)
+      .order("registered_at", { ascending: false });
+
+    members = (attendeesData || []).map((m: any) => ({
+      ...m.user,
+      joined_at: m.registered_at,
+      role: m.user.id === creatorId ? "owner" : "member",
+    })).filter((u): u is User & { joined_at?: string; role: "owner" | "member" } => u !== null);
+  } else if (entityType === "hub") {
     const { data: membersData } = await supabase
       .from("hub_members")
       .select(`
@@ -171,10 +197,12 @@ export default async function EntityEditPage({ params }: EntityEditPageProps) {
                 entityType={entityType}
                 entityId={entityId}
               />
-              <EntityEventsList
-                entityId={entityId}
-                entityType={entityType}
-              />
+              {entityType !== "event" && (
+                <EntityEventsList
+                  entityId={entityId}
+                  entityType={entityType}
+                />
+              )}
             </div>
 
             {/* Right Side - Members (60% on desktop, full width on mobile) */}

@@ -10,7 +10,7 @@ interface EntityMembersListProps {
   members: (User & { joined_at?: string; role?: "owner" | "member" })[];
   creator: User;
   entityId: string;
-  entityType: "hub" | "community" | "project" | "workspace";
+  entityType: "hub" | "community" | "project" | "workspace" | "event";
   currentUserId: string;
 }
 
@@ -59,6 +59,8 @@ export function EntityMembersList({
         endpoint = `/api/communities/${entityId}/members/${userId}`;
       } else if (entityType === "project" || entityType === "workspace") {
         endpoint = `/api/projects/${entityId}/members/${userId}`;
+      } else if (entityType === "event") {
+        endpoint = `/api/events/${entityId}/members/${userId}`;
       }
 
       const response = await fetch(endpoint, {

@@ -165,7 +165,7 @@ export default async function DashboardPage() {
                           )}
                           <div className="flex items-center gap-2">
                             <Button variant="outline" size="sm" asChild>
-                              <Link href={`/events/${event.slug}/edit`}>
+                              <Link href={`/dashboard/event/${event.id}/edit`}>
                                 <Edit className="w-4 h-4 mr-1" />
                                 Manage
                               </Link>
