@@ -92,10 +92,11 @@ export default async function EntityEditPage({ params }: EntityEditPageProps) {
     redirect("/dashboard");
   }
 
-  // Получаем участников (для событий - это attendees)
-  let members: (User & { joined_at?: string; role?: "owner" | "member" })[] = [];
+  // Получаем участников с ролями из БД
+  let members: (User & { joined_at?: string; role?: "owner" | "moderator" | "member" })[] = [];
 
   if (entityType === "event") {
+    // Для событий нужно объединить attendees с event_roles
     const { data: attendeesData } = await supabase
       .from("event_attendees")
       .select(`
@@ -105,16 +106,35 @@ export default async function EntityEditPage({ params }: EntityEditPageProps) {
       .eq("event_id", entityId)
       .order("registered_at", { ascending: false });
 
-    members = (attendeesData || []).map((m: any) => ({
-      ...m.user,
-      joined_at: m.registered_at,
-      role: m.user.id === creatorId ? "owner" : "member",
-    })).filter((u): u is User & { joined_at?: string; role: "owner" | "member" } => u !== null);
+    // Получаем роли из event_roles
+    const { data: rolesData } = await supabase
+      .from("event_roles")
+      .select("user_id, role")
+      .eq("event_id", entityId);
+
+    const rolesMap = new Map(
+      (rolesData || []).map((r: any) => [r.user_id, r.role])
+    );
+
+    members = (attendeesData || []).map((m: any) => {
+      let role: "owner" | "moderator" | "member" = "member";
+      if (m.user.id === creatorId) {
+        role = "owner";
+      } else if (rolesMap.has(m.user.id)) {
+        role = rolesMap.get(m.user.id) as "moderator";
+      }
+      return {
+        ...m.user,
+        joined_at: m.registered_at,
+        role,
+      };
+    }).filter((u): u is User & { joined_at?: string; role: "owner" | "moderator" | "member" } => u !== null);
   } else if (entityType === "hub") {
     const { data: membersData } = await supabase
       .from("hub_members")
       .select(`
         joined_at,
+        role,
         user:profiles!hub_members_user_id_fkey(*)
       `)
       .eq("hub_id", entityId)
@@ -123,13 +143,14 @@ export default async function EntityEditPage({ params }: EntityEditPageProps) {
     members = (membersData || []).map((m: any) => ({
       ...m.user,
       joined_at: m.joined_at,
-      role: m.user.id === creatorId ? "owner" : "member",
-    })).filter((u): u is User & { joined_at?: string; role: "owner" | "member" } => u !== null);
+      role: (m.role || (m.user.id === creatorId ? "owner" : "member")) as "owner" | "moderator" | "member",
+    })).filter((u): u is User & { joined_at?: string; role: "owner" | "moderator" | "member" } => u !== null);
   } else if (entityType === "community") {
     const { data: membersData } = await supabase
       .from("community_members")
       .select(`
         joined_at,
+        role,
         user:profiles!community_members_user_id_fkey(*)
       `)
       .eq("community_id", entityId)
@@ -138,13 +159,14 @@ export default async function EntityEditPage({ params }: EntityEditPageProps) {
     members = (membersData || []).map((m: any) => ({
       ...m.user,
       joined_at: m.joined_at,
-      role: m.user.id === creatorId ? "owner" : "member",
-    })).filter((u): u is User & { joined_at?: string; role: "owner" | "member" } => u !== null);
+      role: (m.role || (m.user.id === creatorId ? "owner" : "member")) as "owner" | "moderator" | "member",
+    })).filter((u): u is User & { joined_at?: string; role: "owner" | "moderator" | "member" } => u !== null);
   } else if (entityType === "project" || entityType === "workspace") {
     const { data: membersData } = await supabase
       .from("project_members")
       .select(`
         joined_at,
+        role,
         user:profiles!project_members_user_id_fkey(*)
       `)
       .eq("project_id", entityId)
@@ -153,8 +175,8 @@ export default async function EntityEditPage({ params }: EntityEditPageProps) {
     members = (membersData || []).map((m: any) => ({
       ...m.user,
       joined_at: m.joined_at,
-      role: m.user.id === creatorId ? "owner" : "member",
-    })).filter((u): u is User & { joined_at?: string; role: "owner" | "member" } => u !== null);
+      role: (m.role || (m.user.id === creatorId ? "owner" : "member")) as "owner" | "moderator" | "member",
+    })).filter((u): u is User & { joined_at?: string; role: "owner" | "moderator" | "member" } => u !== null);
   }
 
   // Получаем создателя

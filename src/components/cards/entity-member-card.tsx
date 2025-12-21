@@ -56,20 +56,16 @@ export function EntityMemberCard({
       // Владелец - нельзя менять (но можно удалить, если это не текущий пользователь)
       // На самом деле владельца нельзя удалить через UI, так что без действий
     } else if (role === "moderator") {
-      // Модератор - можно изменить роль или удалить
+      // Модератор - можно понизить до member или удалить
       if (onRoleChange) {
         availableActions.push({
-          label: "Change role",
-          onClick: () => {
-            // Можно понизить до member или повысить до owner
-            // Пока упростим - просто понижение
-            onRoleChange(user.id, "member");
-          },
+          label: "Demote to member",
+          onClick: () => onRoleChange(user.id, "member"),
         });
       }
       if (onRemove) {
         availableActions.push({
-          label: "Remove from community",
+          label: "Remove",
           onClick: () => onRemove(user.id),
           variant: "destructive" as const,
         });
@@ -84,7 +80,7 @@ export function EntityMemberCard({
       }
       if (onRemove) {
         availableActions.push({
-          label: "Remove from community",
+          label: "Remove",
           onClick: () => onRemove(user.id),
           variant: "destructive" as const,
         });
@@ -138,7 +134,7 @@ export function EntityMemberCard({
                           action.onClick();
                         }}
                         className={cn(
-                          "text-xs text-left text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors flex items-center gap-2",
+                          "text-xs text-left text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors flex items-center gap-2 cursor-pointer",
                           action.variant === "destructive" && "text-red-500 hover:text-red-600"
                         )}
                       >
