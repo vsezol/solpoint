@@ -1,72 +1,99 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Header, Footer } from "@/components/layout";
 import { Button, Card, Badge, Modal, ModalHeader, ModalTitle, ModalDescription, ModalContent } from "@/components/ui";
 import {
-  Crown,
   Check,
   MapPin,
   MessageCircle,
-  Users,
-  Calendar,
   Wallet,
   Shield,
   Loader2,
   Copy,
   CheckCircle2,
+  Eye,
+  Wrench,
+  Lock,
+  Star,
+  Compass,
+  UserPlus,
 } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
 import type { Plan, Subscription } from "@/types";
 
 const freePlanFeatures = [
-  { text: "View users by country", included: true },
-  { text: "See official events", included: true },
-  { text: "Access public hubs", included: true },
-  { text: "View city-level locations", included: false },
-  { text: "See user profiles & bios", included: false },
-  { text: "Send direct messages", included: false },
-  { text: "Access private events", included: false },
-  { text: "Advanced filters", included: false },
+  { text: "See users on map by country", included: true },
+  { text: "Browse hubs, communities, projects", included: true },
+  { text: "See profiles of hubs, communities, projects", included: true },
+  { text: "View cards and public info", included: true },
+  { text: "View user profiles", included: false },
+  { text: "Message users", included: false },
+  { text: "City-level access", included: false },
+  { text: "Create hubs or events", included: false },
 ];
 
 const vipPlanFeatures = [
-  { text: "View users by country", included: true },
-  { text: "See official events", included: true },
-  { text: "Access public hubs", included: true },
-  { text: "View city-level locations", included: true },
-  { text: "See user profiles & bios", included: true },
-  { text: "Send direct messages", included: true },
-  { text: "Access private events", included: true },
-  { text: "Advanced filters", included: true },
+  { text: "Everything in Free", included: true },
+  { text: "View full user profiles", included: true },
+  { text: "Direct messaging", included: true },
+  { text: "City & role filters", included: true },
+  { text: "Create hubs, projects, events", included: true },
+  { text: "Private events access", included: true },
+  { text: "Badges & gold map marker", included: true },
+  { text: "See all lists of friends and people", included: true },
 ];
 
 const vipBenefits = [
   {
-    icon: MapPin,
-    title: "City-Level Access",
-    description: "See exactly where users are located down to the city level",
+    icon: UserPlus,
+    title: "Full People Access",
+    description: "See full user profiles and real identities behind hubs, communities, and projects. No previews — full visibility.",
   },
   {
     icon: MessageCircle,
     title: "Direct Messaging",
-    description: "Connect directly with any user in the ecosystem",
+    description: "Message builders, founders, and organizers directly on SolPoint. Turn discovery into real conversations.",
   },
   {
-    icon: Users,
-    title: "Full Profiles",
-    description: "View complete bios, social links, and user information",
+    icon: MapPin,
+    title: "City-Level Access",
+    description: "Unlock cities and explore who's active in specific locations. Perfect for travel, relocation, and local networking.",
   },
   {
-    icon: Calendar,
-    title: "Private Events",
-    description: "Access exclusive VIP-only meetups and networking events",
+    icon: Eye,
+    title: "Show All Everywhere",
+    description: "Open full lists instead of previews: members of hubs & communities, people attending events, users in your city. See who exactly is there.",
+  },
+  {
+    icon: Wrench,
+    title: "Create & Organize",
+    description: "Create hubs, communities, projects, workspaces, and events. Keep SolPoint curated and spam-free.",
+  },
+  {
+    icon: Lock,
+    title: "Private & Closed Events",
+    description: "Get access to invite-only and private events. Some opportunities aren't public.",
+  },
+  {
+    icon: Star,
+    title: "VIP Map Presence",
+    description: "Stand out with a gold marker on the map. Free users appear with a red marker. Visibility matters.",
+  },
+  {
+    icon: Compass,
+    title: "Role-Based Discovery",
+    description: "Filter the map by roles: developers, founders, designers, community leads. Find the right people, not just more people.",
+  },
+  {
+    icon: Shield,
+    title: "Badges & Reputation",
+    description: "Display verified badges: Superteam member, DAO contributor, NFT holder. Build trust and credibility instantly.",
   },
 ];
 
 export default function SubscriptionPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -302,7 +329,7 @@ export default function SubscriptionPage() {
   const displayPlans = [
     {
       id: "free",
-      name: "Free",
+      name: "Basic",
       price: 0,
       period: "forever",
       description: "Basic access to the Solana community map",
@@ -319,7 +346,7 @@ export default function SubscriptionPage() {
       } else if (plan.code === "yearly") {
         planName = "VIP Yearly";
       } else if (plan.code === "pro") {
-        planName = "Pro";
+        planName = "PRO";
       }
       
       // Определяем период
@@ -337,7 +364,7 @@ export default function SubscriptionPage() {
         name: planName,
         price: plan.price,
         period: period,
-        description: "Full access to unlock the power of Solana networking",
+        description: "Connect & build",
         features: vipPlanFeatures,
         cta: currentSubscription?.plan_id === plan.id ? "Current Plan" : "Upgrade",
         highlighted: true,
@@ -350,30 +377,53 @@ export default function SubscriptionPage() {
   return (
     <>
       <Header />
-      <main className="min-h-screen pt-16 pb-16 bg-[var(--color-background)]">
+      <main className="min-h-screen pt-16 pb-16 animated-bg">
         {/* Hero */}
-        <section className="py-16 text-center animated-bg relative overflow-hidden">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[var(--color-warning)]/10 rounded-full blur-3xl" />
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[var(--color-secondary)]/10 rounded-full blur-3xl" />
-
+        <section className="py-16 text-center relative overflow-hidden">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--color-warning)]/20 text-[var(--color-warning)] mb-6">
-              <Crown className="w-5 h-5" />
-              <span className="font-medium">VIP Membership</span>
-            </div>
             <h1 className="text-4xl sm:text-5xl font-bold text-[var(--color-text-primary)] mb-4">
               Unlock the Full Power of{" "}
               <span className="text-gradient">SolPoint</span>
             </h1>
-            <p className="text-lg text-[var(--color-text-secondary)] max-w-2xl mx-auto">
-              Get unlimited access to profiles, messages, and exclusive events
-              with VIP membership.
+            <p className="text-lg text-[var(--color-text-secondary)] max-w-2xl mx-auto mb-6">
+              Get real connections in the Solana ecosystem with SolPoint PRO
             </p>
+            {/* White line divider */}
+            <div className="w-24 h-px bg-white mx-auto"></div>
+          </div>
+        </section>
+
+        {/* Benefits */}
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+          <div className="text-center mb-12">
+            <h2 className="text-2xl font-bold text-[var(--color-text-primary)] mb-4">
+              PRO benefits
+            </h2>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {vipBenefits.map((benefit, index) => (
+              <Card
+                key={index}
+                variant="bordered"
+                className="p-6 bg-[#0D1316]"
+              >
+                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-[var(--color-warning)]/20 to-[var(--color-warning)]/10 flex items-center justify-center mb-4">
+                  <benefit.icon className="w-6 h-6 text-[var(--color-warning)]" />
+                </div>
+                <h3 className="font-semibold text-[var(--color-text-primary)] mb-2">
+                  {benefit.title}
+                </h3>
+                <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">
+                  {benefit.description}
+                </p>
+              </Card>
+            ))}
           </div>
         </section>
 
         {/* Pricing Cards */}
-        <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-20">
+        <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-20">
           {loadingPlans ? (
             <div className="flex justify-center items-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-[var(--color-primary)]" />
@@ -389,42 +439,33 @@ export default function SubscriptionPage() {
                   <Card
                     key={plan.id}
                     variant="bordered"
-                    className={`p-8 relative ${
+                    className={`p-8 relative bg-[#0D1316] ${
                       plan.highlighted
-                        ? "border-[var(--color-warning)] ring-2 ring-[var(--color-warning)]/20"
+                        ? "border-[var(--color-warning)]"
                         : ""
                     }`}
                   >
-                    {plan.highlighted && (
-                      <Badge
-                        variant="warning"
-                        className="absolute -top-3 left-1/2 -translate-x-1/2"
-                      >
-                        <Crown className="w-3 h-3 mr-1" />
-                        Most Popular
-                      </Badge>
-                    )}
-
-                    <div className="text-center mb-6">
-                      <h3 className="text-xl font-bold text-[var(--color-text-primary)] mb-2">
-                        {plan.name}
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-2xl font-bold text-[var(--color-text-primary)]">
+                        {plan.name === "Free" ? "Basic" : plan.name}
                       </h3>
-                      <div className="flex items-baseline justify-center gap-1">
-                        <span className="text-4xl font-bold text-[var(--color-text-primary)]">
-                          {plan.price === 0
-                            ? "Free"
-                            : `$${plan.price} ${plan.period !== "forever" ? "" : ""}`}
-                        </span>
-                        {plan.period !== "forever" && (
-                          <span className="text-[var(--color-text-muted)]">
-                            /{plan.period}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-sm text-[var(--color-text-secondary)] mt-2">
-                        {plan.description}
-                      </p>
+                      {plan.isFree ? (
+                        <Badge variant="outline" className="bg-[#0D1316]">
+                          Free
+                        </Badge>
+                      ) : plan.highlighted ? (
+                        <div className="text-right">
+                          <Badge variant="warning" className="bg-[var(--color-warning)] text-[var(--color-background)]">
+                            ${plan.price} / month
+                          </Badge>
+                          <p className="text-xs text-[var(--color-text-muted)] mt-1">Early access price</p>
+                        </div>
+                      ) : null}
                     </div>
+                    
+                    <p className="text-sm text-[var(--color-text-secondary)] mb-6">
+                      {plan.isFree ? "Explore the ecosystem" : "Connect & build"}
+                    </p>
 
                     <ul className="space-y-3 mb-8">
                       {plan.features.map((feature, index) => (
@@ -433,11 +474,11 @@ export default function SubscriptionPage() {
                           className={`flex items-center gap-3 ${
                             feature.included
                               ? "text-[var(--color-text-secondary)]"
-                              : "text-[var(--color-text-muted)] line-through"
+                              : "text-[var(--color-text-muted)]"
                           }`}
                         >
                           <div
-                            className={`w-5 h-5 rounded-full flex items-center justify-center ${
+                            className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${
                               feature.included
                                 ? "bg-[var(--color-primary)]/20 text-[var(--color-primary)]"
                                 : "bg-[var(--color-surface-border)]"
@@ -445,7 +486,7 @@ export default function SubscriptionPage() {
                           >
                             {feature.included && <Check className="w-3 h-3" />}
                           </div>
-                          {feature.text}
+                          <span className="text-sm">{feature.text}</span>
                         </li>
                       ))}
                     </ul>
@@ -467,9 +508,9 @@ export default function SubscriptionPage() {
                       }
                     >
                       {plan.highlighted && canUpgrade && (
-                        <Crown className="w-5 h-5 mr-2" />
+                        <Check className="w-5 h-5 mr-2" />
                       )}
-                      {isCurrentPlan ? "Current Plan" : plan.cta}
+                      {isCurrentPlan ? "Current plan" : (plan.highlighted && canUpgrade ? "Upgrade to PRO" : plan.cta)}
                     </Button>
                   </Card>
                 );
@@ -478,36 +519,9 @@ export default function SubscriptionPage() {
           )}
         </section>
 
-        {/* Benefits */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
-          <h2 className="text-2xl font-bold text-center text-[var(--color-text-primary)] mb-12">
-            VIP Benefits
-          </h2>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {vipBenefits.map((benefit, index) => (
-              <Card
-                key={index}
-                variant="bordered"
-                className="text-center p-6"
-              >
-                <div className="w-12 h-12 rounded-xl bg-[var(--color-warning)]/20 flex items-center justify-center mx-auto mb-4">
-                  <benefit.icon className="w-6 h-6 text-[var(--color-warning)]" />
-                </div>
-                <h3 className="font-semibold text-[var(--color-text-primary)] mb-2">
-                  {benefit.title}
-                </h3>
-                <p className="text-sm text-[var(--color-text-secondary)]">
-                  {benefit.description}
-                </p>
-              </Card>
-            ))}
-          </div>
-        </section>
-
         {/* Payment info */}
         <section className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pb-16 space-y-6">
-          <Card variant="bordered" className="p-8 text-center">
+          <Card variant="bordered" className="p-8 text-center bg-[#0D1316]">
             <div className="flex items-center justify-center gap-3 mb-4">
               <Wallet className="w-6 h-6 text-[var(--color-primary)]" />
               <h3 className="text-xl font-semibold text-[var(--color-text-primary)]">
@@ -535,7 +549,7 @@ export default function SubscriptionPage() {
           </Card>
 
           {/* Manual check button */}
-          <Card variant="bordered" className="p-6">
+          <Card variant="bordered" className="p-6 bg-[#0D1316]">
             <div className="text-center">
               <p className="text-sm text-[var(--color-text-secondary)] mb-4">
                 Если вы уже оплатили, но подписка не активировалась автоматически
