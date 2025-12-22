@@ -273,6 +273,56 @@ export async function PATCH(
             break;
           }
 
+          case "workspace": {
+            const { generateHubSlug, getUniqueHubSlug } = await import(
+              "@/lib/utils/hub-slug"
+            );
+            const entityData = submission.entity_data;
+            
+            // Для workspace адрес обязателен
+            if (!entityData.address) {
+              throw new Error("Address is required for workspace");
+            }
+
+            const baseSlug = generateHubSlug(entityData.name, entityData.city || entityData.country);
+            const slug = await getUniqueHubSlug(baseSlug, async (slug) => {
+              const { data } = await supabase
+                .from("workspaces")
+                .select("id")
+                .eq("slug", slug)
+                .maybeSingle();
+              return !!data;
+            });
+
+            const { data: workspace, error: workspaceError } = await supabase
+              .from("workspaces")
+              .insert({
+                name: entityData.name,
+                description: entityData.description,
+                image_url: entityData.image_url,
+                slug,
+                country: entityData.country,
+                country_code: entityData.country_code,
+                city: entityData.city || null,
+                address: entityData.address,
+                latitude: parseFloat(entityData.latitude),
+                longitude: parseFloat(entityData.longitude),
+                socials: entityData.socials || {},
+                owner_id: submission.submitter_id,
+                members_count: 0,
+              })
+              .select("id")
+              .single();
+
+            if (workspaceError) {
+              throw new Error(
+                `Failed to create workspace: ${workspaceError.message}`
+              );
+            }
+            createdEntityId = workspace.id;
+            break;
+          }
+
           default:
             return NextResponse.json(
               { error: `Unknown entity type: ${submission.entity_type}` },

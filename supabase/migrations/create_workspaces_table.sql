@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS public.workspaces (
   image_url TEXT,
   slug TEXT UNIQUE, -- Публичная ссылка для SEO
   country TEXT NOT NULL, -- Страна обязательна
+  country_code TEXT, -- Код страны (ISO 3166-1 alpha-2)
   city TEXT, -- Город опционален
   address TEXT NOT NULL, -- Адрес обязателен для workspaces
   latitude DOUBLE PRECISION NOT NULL,
@@ -33,6 +34,7 @@ CREATE TABLE IF NOT EXISTS public.workspace_members (
 
 -- 3. Создать индексы
 CREATE INDEX IF NOT EXISTS idx_workspaces_country ON public.workspaces(country);
+CREATE INDEX IF NOT EXISTS idx_workspaces_country_code ON public.workspaces(country_code);
 CREATE INDEX IF NOT EXISTS idx_workspaces_city ON public.workspaces(city);
 CREATE INDEX IF NOT EXISTS idx_workspaces_slug ON public.workspaces(slug);
 CREATE INDEX IF NOT EXISTS idx_workspaces_owner_id ON public.workspaces(owner_id);

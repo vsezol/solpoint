@@ -7,11 +7,13 @@ import type { MemberRole } from "@/components/cards";
 import { Users, ChevronDown, ChevronUp } from "lucide-react";
 import type { User } from "@/types";
 
+import { getEntityConfig, type EntityType } from "@/lib/entity-config";
+
 interface EntityMembersListProps {
   members: (User & { joined_at?: string; role?: "owner" | "moderator" | "member" })[];
   creator: User;
   entityId: string;
-  entityType: "hub" | "community" | "project" | "workspace" | "event";
+  entityType: EntityType;
   currentUserId: string;
 }
 
@@ -23,6 +25,7 @@ export function EntityMembersList({
   entityType,
   currentUserId,
 }: EntityMembersListProps) {
+  const config = getEntityConfig(entityType);
   const [showAllMembers, setShowAllMembers] = useState(false);
   const [members, setMembers] = useState(initialMembers);
 
@@ -57,15 +60,9 @@ export function EntityMembersList({
     );
 
     try {
-      let endpoint = "";
-      if (entityType === "hub") {
-        endpoint = `/api/hubs/${entityId}/members/${userId}/role`;
-      } else if (entityType === "community") {
-        endpoint = `/api/communities/${entityId}/members/${userId}/role`;
-      } else if (entityType === "project" || entityType === "workspace") {
-        endpoint = `/api/projects/${entityId}/members/${userId}/role`;
-      } else if (entityType === "event") {
-        endpoint = `/api/events/${entityId}/members/${userId}/role`;
+      const endpoint = config.rolesEndpoint?.(entityId, userId);
+      if (!endpoint) {
+        throw new Error("Roles endpoint not configured");
       }
 
       const response = await fetch(endpoint, {
@@ -103,15 +100,9 @@ export function EntityMembersList({
     );
 
     try {
-      let endpoint = "";
-      if (entityType === "hub") {
-        endpoint = `/api/hubs/${entityId}/members/${userId}/role`;
-      } else if (entityType === "community") {
-        endpoint = `/api/communities/${entityId}/members/${userId}/role`;
-      } else if (entityType === "project" || entityType === "workspace") {
-        endpoint = `/api/projects/${entityId}/members/${userId}/role`;
-      } else if (entityType === "event") {
-        endpoint = `/api/events/${entityId}/members/${userId}/role`;
+      const endpoint = config.rolesEndpoint?.(entityId, userId);
+      if (!endpoint) {
+        throw new Error("Roles endpoint not configured");
       }
 
       const response = await fetch(endpoint, {
@@ -146,16 +137,7 @@ export function EntityMembersList({
     setMembers((prevMembers) => prevMembers.filter((member) => member.id !== userId));
 
     try {
-      let endpoint = "";
-      if (entityType === "hub") {
-        endpoint = `/api/hubs/${entityId}/members/${userId}`;
-      } else if (entityType === "community") {
-        endpoint = `/api/communities/${entityId}/members/${userId}`;
-      } else if (entityType === "project" || entityType === "workspace") {
-        endpoint = `/api/projects/${entityId}/members/${userId}`;
-      } else if (entityType === "event") {
-        endpoint = `/api/events/${entityId}/members/${userId}`;
-      }
+      const endpoint = config.membersEndpoint(entityId, userId);
 
       const response = await fetch(endpoint, {
         method: "DELETE",
@@ -184,7 +166,7 @@ export function EntityMembersList({
         <div className="flex items-center gap-2">
           <Users className="w-5 h-5 text-[var(--color-primary)]" />
           <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">
-            Members ({members.length})
+            {config.membersLabel} ({members.length})
           </h2>
         </div>
         {hasMoreMembers && (

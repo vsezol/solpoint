@@ -298,7 +298,7 @@ export default function HubsPage() {
         variant="centered"
       >
         <ModalHeader>
-          <ModalTitle>Create Hub, Community, or Project</ModalTitle>
+          <ModalTitle>Create Hub, Community, Project, or Workspace</ModalTitle>
         </ModalHeader>
         <ModalContent>
           {/* Entity Type Selection */}
@@ -306,7 +306,7 @@ export default function HubsPage() {
             <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
               Select Type <span className="text-[var(--color-error)]">*</span>
             </label>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <button
                 type="button"
                 onClick={() => setCreateEntityType("hub")}
@@ -339,6 +339,17 @@ export default function HubsPage() {
                 }`}
               >
                 Project
+              </button>
+              <button
+                type="button"
+                onClick={() => setCreateEntityType("workspace")}
+                className={`px-4 py-3 rounded-lg border transition-colors ${
+                  createEntityType === "workspace"
+                    ? "bg-[var(--color-primary)] text-[var(--color-background)] border-[var(--color-primary)]"
+                    : "bg-[var(--color-surface)] text-[var(--color-text-secondary)] border-[var(--color-surface-border)] hover:bg-[var(--color-surface-hover)]"
+                }`}
+              >
+                Workspace
               </button>
             </div>
           </div>

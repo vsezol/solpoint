@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
         latitude: hasLocation && hasCoordinates ? parseFloat(latitude) : 0,
         longitude: hasLocation && hasCoordinates ? parseFloat(longitude) : 0,
         socials: socials || {},
-        owner_id: user.id,
+        owner_id: user.id, // Устанавливаем owner_id из текущего пользователя
       })
       .select()
       .single();

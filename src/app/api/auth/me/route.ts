@@ -24,15 +24,58 @@ export async function GET() {
     return NextResponse.json({ user: authUser, profile: null });
   }
 
-  // Отладка: логируем что возвращается
-  console.log("API /api/auth/me - profile data:", {
-    id: profile.id,
-    twitter_handle: profile.twitter_handle,
-    is_admin: profile.is_admin,
-    has_is_admin: 'is_admin' in profile,
-    all_keys: Object.keys(profile),
-  });
+  // Проверяем, есть ли у пользователя хотя бы одна сущность, которой он владеет
+  const userId = authUser.id;
+  
+  // Проверяем events (где owner_type = 'user' AND owner_id = userId)
+  const { count: eventsCount } = await supabase
+    .from("events")
+    .select("*", { count: "exact", head: true })
+    .eq("owner_type", "user")
+    .eq("owner_id", userId)
+    .limit(1);
 
-  return NextResponse.json({ user: authUser, profile });
+  // Проверяем hubs
+  const { count: hubsCount } = await supabase
+    .from("hubs")
+    .select("*", { count: "exact", head: true })
+    .eq("owner_id", userId)
+    .limit(1);
+
+  // Проверяем communities
+  const { count: communitiesCount } = await supabase
+    .from("communities")
+    .select("*", { count: "exact", head: true })
+    .eq("owner_id", userId)
+    .limit(1);
+
+  // Проверяем projects
+  const { count: projectsCount } = await supabase
+    .from("projects")
+    .select("*", { count: "exact", head: true })
+    .eq("owner_id", userId)
+    .limit(1);
+
+  // Проверяем workspaces
+  const { count: workspacesCount } = await supabase
+    .from("workspaces")
+    .select("*", { count: "exact", head: true })
+    .eq("owner_id", userId)
+    .limit(1);
+
+  // Если есть хотя бы одна сущность, включаем Dashboard
+  const enableDashboard = 
+    (eventsCount && eventsCount > 0) ||
+    (hubsCount && hubsCount > 0) ||
+    (communitiesCount && communitiesCount > 0) ||
+    (projectsCount && projectsCount > 0) ||
+    (workspacesCount && workspacesCount > 0);
+
+  // Добавляем поле enable_dashboard в профиль
+  const profileWithDashboard = {
+    ...profile,
+    enable_dashboard: enableDashboard,
+  };
+
+  return NextResponse.json({ user: authUser, profile: profileWithDashboard });
 }
-

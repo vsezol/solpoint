@@ -1,6 +1,7 @@
 -- Migration: Add entity_submissions table for moderation system
--- Description: Universal moderation system for events, hubs, communities, and projects
+-- Description: Universal moderation system for events, hubs, communities, projects, and workspaces
 -- Date: 2024
+-- Note: 'workspace' was added later in migration add_workspace_to_entity_type.sql
 
 -- Enum для типов сущностей
 CREATE TYPE entity_type AS ENUM ('event', 'hub', 'community', 'project');

@@ -40,7 +40,9 @@ export function EntitySettings({
   }>({ hubs: [], communities: [], projects: [], workspaces: [] });
   
   const isEvent = entityType === "event";
+  const isWorkspace = entityType === "workspace";
   const event = isEvent ? (entity as Event) : null;
+  const workspace = isWorkspace ? (entity as Workspace) : null;
   
   // Получаем доступные сущности для transfer ownership (только для events)
   useEffect(() => {
@@ -82,6 +84,17 @@ export function EntitySettings({
         venueName: event.venue_name || "",
       };
     }
+
+    if (isWorkspace && workspace) {
+      return {
+        ...base,
+        country: workspace.country || "",
+        city: workspace.city || "",
+        address: workspace.address || "",
+        latitude: workspace.latitude?.toString() || "",
+        longitude: workspace.longitude?.toString() || "",
+      };
+    }
     
     return base;
   };
@@ -100,9 +113,19 @@ export function EntitySettings({
       } else if (entityType === "community") {
         endpoint = `/api/communities/${entityId}`;
         body = { description: formData.description || null };
-      } else if (entityType === "project" || entityType === "workspace") {
+      } else if (entityType === "project") {
         endpoint = `/api/projects/${entityId}`;
         body = { description: formData.description || null };
+      } else if (entityType === "workspace") {
+        endpoint = `/api/workspaces/${entityId}`;
+        body = {
+          description: formData.description || null,
+          country: formData.country || null,
+          city: formData.city || null,
+          address: formData.address || null,
+          latitude: formData.latitude ? parseFloat(formData.latitude) : null,
+          longitude: formData.longitude ? parseFloat(formData.longitude) : null,
+        };
       } else if (entityType === "event") {
         endpoint = `/api/events/${entityId}`;
         body = {
@@ -481,6 +504,78 @@ export function EntitySettings({
               )}
             </div>
           </>
+        )}
+
+        {/* Location для workspace */}
+        {isWorkspace && (
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
+              Location
+            </label>
+            {isEditing ? (
+              <div className="space-y-2">
+                <Input
+                  value={formData.address}
+                  onChange={(e) =>
+                    setFormData({ ...formData, address: e.target.value })
+                  }
+                  placeholder="Address"
+                  className="w-full"
+                />
+                <Input
+                  value={formData.city}
+                  onChange={(e) =>
+                    setFormData({ ...formData, city: e.target.value })
+                  }
+                  placeholder="City"
+                  className="w-full"
+                />
+                <Input
+                  value={formData.country}
+                  onChange={(e) =>
+                    setFormData({ ...formData, country: e.target.value })
+                  }
+                  placeholder="Country"
+                  className="w-full"
+                />
+                <Input
+                  type="number"
+                  step="any"
+                  value={formData.latitude}
+                  onChange={(e) =>
+                    setFormData({ ...formData, latitude: e.target.value })
+                  }
+                  placeholder="Latitude"
+                  className="w-full"
+                />
+                <Input
+                  type="number"
+                  step="any"
+                  value={formData.longitude}
+                  onChange={(e) =>
+                    setFormData({ ...formData, longitude: e.target.value })
+                  }
+                  placeholder="Longitude"
+                  className="w-full"
+                />
+              </div>
+            ) : (
+              <p className="text-[var(--color-text-secondary)]">
+                {[
+                  formData.address,
+                  formData.city,
+                  formData.country,
+                ]
+                  .filter(Boolean)
+                  .join(", ") || "Not specified"}
+                {formData.latitude && formData.longitude && (
+                  <span className="text-xs text-[var(--color-text-muted)] block mt-1">
+                    Coordinates: {formData.latitude}, {formData.longitude}
+                  </span>
+                )}
+              </p>
+            )}
+          </div>
         )}
 
         {/* Who can invite */}

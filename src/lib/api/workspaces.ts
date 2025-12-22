@@ -53,3 +53,47 @@ export async function getWorkspaces(
   return data || [];
 }
 
+/**
+ * Создать новый workspace
+ */
+export async function createWorkspace(data: {
+  name: string;
+  description?: string;
+  image_url?: string;
+  slug?: string;
+  country?: string;
+  country_code?: string;
+  city?: string;
+  address: string; // Обязательно для workspace
+  latitude: number;
+  longitude: number;
+  socials?: {
+    twitter?: string;
+    instagram?: string;
+    facebook?: string;
+    website?: string;
+  };
+}): Promise<Workspace | null> {
+  try {
+    const response = await fetch("/api/workspaces", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error("Error creating workspace:", errorData);
+      throw new Error(errorData.error || "Failed to create workspace");
+    }
+
+    const result = await response.json();
+    return result.workspace || null;
+  } catch (error) {
+    console.error("Error creating workspace:", error);
+    throw error;
+  }
+}
+

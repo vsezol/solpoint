@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@/types";
@@ -17,6 +17,7 @@ async function fetchProfile(): Promise<User | null> {
       headers: {
         "Content-Type": "application/json",
       },
+      cache: "no-store",
     });
 
     clearTimeout(timeoutId);
@@ -26,18 +27,6 @@ async function fetchProfile(): Promise<User | null> {
     }
 
     const { profile } = await response.json();
-    
-    // Отладка: логируем данные профиля из API
-    if (profile) {
-      console.log("useAuth - profile from API:", {
-        id: profile.id,
-        twitter_handle: profile.twitter_handle,
-        is_admin: profile.is_admin,
-        has_is_admin: 'is_admin' in profile,
-        all_keys: Object.keys(profile),
-      });
-    }
-    
     return profile as User | null;
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
@@ -49,11 +38,18 @@ async function fetchProfile(): Promise<User | null> {
 
 export function useAuth() {
   const queryClient = useQueryClient();
-  
-  // Флаг для отслеживания первого вызова onAuthStateChange
-  // onAuthStateChange всегда сначала вызывает callback с текущим состоянием сессии
-  // Если это первый вызов и сессия уже есть - это восстановление из cookies, не логин
   const isFirstCall = useRef(true);
+  const [isFromCallback, setIsFromCallback] = useState(false);
+
+  // Проверяем URL на наличие параметра auth=success (только на клиенте)
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get("auth") === "success") {
+        setIsFromCallback(true);
+      }
+    }
+  }, []);
 
   // Используем React Query для загрузки профиля
   const {
@@ -63,25 +59,42 @@ export function useAuth() {
     queryKey: ["auth", "profile"],
     queryFn: fetchProfile,
     retry: 1,
-    staleTime: 5 * 60 * 1000, // 5 минут кэш
-    gcTime: 10 * 60 * 1000, // 10 минут в памяти
+    staleTime: 0,
+    gcTime: 0,
   });
+
+  // Принудительно обновляем данные после callback
+  useEffect(() => {
+    if (isFromCallback) {
+      queryClient.invalidateQueries({ queryKey: ["auth", "profile"] });
+      if (typeof window !== "undefined") {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("auth");
+        window.history.replaceState({}, "", url.toString());
+        setIsFromCallback(false);
+      }
+    }
+  }, [isFromCallback, queryClient]);
 
   // Подписываемся на изменения аутентификации
   useEffect(() => {
     const supabase = createClient();
 
+    // Проверяем текущую сессию при инициализации
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        queryClient.invalidateQueries({ queryKey: ["auth", "profile"] });
+        setUserId(session.user.id);
+      }
+    });
+
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "SIGNED_IN" && session?.user) {
-        // Инвалидируем кэш при входе - React Query автоматически перезагрузит данные
         queryClient.invalidateQueries({ queryKey: ["auth", "profile"] });
-        // Устанавливаем user ID в GA
         setUserId(session.user.id);
         
-        // Отправляем событие только если это реальный логин, а не восстановление сессии
-        // Если это первый вызов и сессия уже есть - это восстановление, пропускаем событие
         if (!isFirstCall.current) {
           trackEvent("login_success", {
             event_category: "Authentication",
@@ -89,26 +102,22 @@ export function useAuth() {
           });
         }
         
-        // После первого вызова помечаем, что это уже не первый раз
         isFirstCall.current = false;
       } else if (event === "SIGNED_OUT") {
-        // Очищаем кэш при выходе
         queryClient.setQueryData(["auth", "profile"], null);
-        // Очищаем user ID в GA
         setUserId(null);
-        // Сбрасываем флаг при выходе, чтобы при следующем логине событие отправилось
         isFirstCall.current = false;
         trackEvent("logout", {
           event_category: "Authentication",
         });
       } else if (event === "TOKEN_REFRESHED" && session?.user) {
-        // Обновляем профиль при обновлении токена
         queryClient.invalidateQueries({ queryKey: ["auth", "profile"] });
-        // После первого вызова помечаем, что это уже не первый раз
+        isFirstCall.current = false;
+      } else if (event === "INITIAL_SESSION" && session?.user) {
+        queryClient.invalidateQueries({ queryKey: ["auth", "profile"] });
+        setUserId(session.user.id);
         isFirstCall.current = false;
       } else {
-        // Любое другое событие (включая INITIAL_SESSION) - это первый вызов
-        // Помечаем, что первый вызов прошел
         isFirstCall.current = false;
       }
     });
@@ -123,16 +132,11 @@ export function useAuth() {
       trackEvent("logout", {
         event_category: "Authentication",
       });
-      // Вызываем API route для logout
       await fetch("/api/auth/logout", { method: "POST" });
-      // Очищаем кэш при выходе
       queryClient.setQueryData(["auth", "profile"], null);
-      // Очищаем user ID в GA
       setUserId(null);
-      // Редиректим на главную
       window.location.href = "/";
     } catch (error) {
-      // Даже если signOut не удался, очищаем кэш и редиректим
       queryClient.setQueryData(["auth", "profile"], null);
       setUserId(null);
       window.location.href = "/";

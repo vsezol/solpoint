@@ -24,7 +24,6 @@ export default function LoginPage() {
       // Редиректим на API route для инициации Twitter OAuth
       window.location.href = "/api/auth/twitter";
     } catch (error) {
-      console.error("Error initiating Twitter login:", error);
       setIsLoading(false);
       trackEvent("login_error", {
         event_category: "Authentication",

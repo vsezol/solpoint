@@ -21,27 +21,15 @@ export function EntityEventsList({
   useEffect(() => {
     const fetchEvents = async () => {
       try {
-        // Получаем все события и фильтруем на клиенте, так как API не поддерживает фильтрацию по hub_id/community_id/project_id напрямую
-        const response = await fetch(`/api/events`);
+        // Используем безопасный endpoint дашборда, который проверяет права доступа на бэкенде
+        const response = await fetch(`/api/dashboard/events/${entityType}/${entityId}`);
         if (!response.ok) {
           throw new Error("Failed to fetch events");
         }
 
         const data = await response.json();
-        const allEvents = data.events || [];
+        const filteredEvents = data.events || [];
         
-        // Фильтруем события по типу сущности
-        const filteredEvents = allEvents.filter((event: Event) => {
-          if (entityType === "hub") {
-            return event.hub_id === entityId;
-          } else if (entityType === "community") {
-            return event.community_id === entityId;
-          } else if (entityType === "project" || entityType === "workspace") {
-            return event.project_id === entityId;
-          }
-          return false;
-        });
-
         setEvents(filteredEvents);
       } catch (error) {
         console.error("Error fetching events:", error);

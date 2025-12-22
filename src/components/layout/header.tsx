@@ -25,6 +25,22 @@ export function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { user, isAuthenticated, isLoading } = useAuth();
 
+  // Формируем динамический список ссылок навигации
+  const dynamicNavLinks = [...navLinks];
+  
+  // Добавляем Dashboard после "About us" если enable_dashboard = true
+  if (user?.enable_dashboard) {
+    const aboutIndex = dynamicNavLinks.findIndex(link => link.href === "/about");
+    if (aboutIndex !== -1) {
+      dynamicNavLinks.splice(aboutIndex + 1, 0, { href: "/dashboard", label: "Dashboard" });
+    }
+  }
+  
+  // Добавляем Admin если is_admin = true
+  if (user?.is_admin) {
+    dynamicNavLinks.push({ href: "/admin", label: "Admin" });
+  }
+
   return (
     <header className="fixed top-0 left-0 right-0 z-50 glass">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -49,7 +65,7 @@ export function Header() {
           <div className="hidden lg:flex items-center gap-1">
             {/* Desktop Navigation */}
             <nav className="flex items-center gap-1">
-              {navLinks.map((link) => {
+              {dynamicNavLinks.map((link) => {
                 const isActive = pathname === link.href;
                 return (
                   <Link
@@ -142,7 +158,7 @@ export function Header() {
             className="lg:hidden border-t border-[var(--color-surface-border)] bg-[var(--color-surface)]"
           >
             <nav className="px-4 py-4 space-y-1">
-              {navLinks.map((link) => {
+              {dynamicNavLinks.map((link) => {
                 const isActive = pathname === link.href;
                 return (
                   <Link

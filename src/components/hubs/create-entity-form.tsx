@@ -6,6 +6,7 @@ import { CountrySelect } from "@/components/ui/country-select";
 import { createHub } from "@/lib/api/hubs";
 import { createCommunity } from "@/lib/api/communities";
 import { createProject } from "@/lib/api/projects";
+import { createWorkspace } from "@/lib/api/workspaces";
 import { createSubmission } from "@/lib/api/submissions";
 import { geocodeAddress } from "@/lib/api/geocoding";
 import { useAuth } from "@/hooks/use-auth";
@@ -88,6 +89,13 @@ export function CreateEntityForm({
     setMapCenterLng,
     resetEntityForm,
   } = entityForm;
+
+  // Для workspace адрес обязателен, поэтому по умолчанию выбираем "city"
+  useEffect(() => {
+    if (entityType === "workspace" && locationType === "global") {
+      setLocationType("city");
+    }
+  }, [entityType, locationType, setLocationType]);
 
   // Geocode city to coordinates
   const handleGeocodeCity = async () => {
@@ -243,6 +251,17 @@ export function CreateEntityForm({
       hasErrors = true;
       if (!firstErrorElement && errorRef.current) {
         firstErrorElement = errorRef.current;
+      }
+    }
+
+    // Для workspace адрес обязателен
+    if (entityType === "workspace") {
+      if (locationType === "global" || !city || !latitude || !longitude) {
+        setError("Address is required for workspace. Please select a location with address.");
+        hasErrors = true;
+        if (!firstErrorElement && locationErrorRef.current) {
+          firstErrorElement = locationErrorRef.current;
+        }
       }
     }
     
@@ -411,6 +430,15 @@ export function CreateEntityForm({
         socials: Object.keys(socials).length > 0 ? socials : undefined,
       };
 
+      // Для workspace адрес обязателен - формируем его из city и country
+      if (entityType === "workspace" && locationType !== "global" && city) {
+        const { getCountryByCode } = await import("@/lib/countries");
+        const countryData = countryCode ? await getCountryByCode(countryCode) : null;
+        const countryName = countryData?.name || "";
+        const fullAddress = [city, countryName].filter(Boolean).join(", ");
+        entityData.address = fullAddress || city;
+      }
+
       if (isAdmin) {
         // Админы создают напрямую
         let createdEntity;
@@ -421,6 +449,22 @@ export function CreateEntityForm({
           createdEntity = await createCommunity(entityData);
         } else if (entityType === "project") {
           createdEntity = await createProject(entityData);
+        } else if (entityType === "workspace") {
+          // Для workspace адрес обязателен
+          if (locationType === "global" || !city || !latitude || !longitude) {
+            throw new Error("Address is required for workspace. Please select a location with address.");
+          }
+          // Формируем полный адрес из city и country
+          const { getCountryByCode } = await import("@/lib/countries");
+          const countryData = countryCode ? await getCountryByCode(countryCode) : null;
+          const countryName = countryData?.name || "";
+          const fullAddress = [city, countryName].filter(Boolean).join(", ");
+          createdEntity = await createWorkspace({
+            ...entityData,
+            address: fullAddress || city, // Используем полный адрес или city
+            latitude: parseFloat(latitude),
+            longitude: parseFloat(longitude),
+          });
         } else {
           throw new Error("Invalid entity type");
         }
@@ -505,7 +549,9 @@ export function CreateEntityForm({
       ? "Hub"
       : entityType === "community"
       ? "Community"
-      : "Project";
+      : entityType === "project"
+      ? "Project"
+      : "Workspace";
 
   return (
     <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
@@ -596,26 +642,28 @@ export function CreateEntityForm({
               label="Country & City"
               icon={<MapPin className="w-4 h-4" />}
             />
-            <CheckBox
-              type="radio"
-              name="locationType"
-              value="global"
-              checked={locationType === "global"}
-              onChange={(e) => {
-                setLocationType(e.target.value as LocationType);
-                // Очищаем все поля локации при выборе глобал
-                if (e.target.value === "global") {
-                  setCountryCode(undefined);
-                  setCity("");
-                  setLatitude("");
-                  setLongitude("");
-                  setMapCenterLat(undefined);
-                  setMapCenterLng(undefined);
-                }
-              }}
-              label="Global"
-              icon={<Globe className="w-4 h-4" />}
-            />
+            {entityType !== "workspace" && (
+              <CheckBox
+                type="radio"
+                name="locationType"
+                value="global"
+                checked={locationType === "global"}
+                onChange={(e) => {
+                  setLocationType(e.target.value as LocationType);
+                  // Очищаем все поля локации при выборе глобал
+                  if (e.target.value === "global") {
+                    setCountryCode(undefined);
+                    setCity("");
+                    setLatitude("");
+                    setLongitude("");
+                    setMapCenterLat(undefined);
+                    setMapCenterLng(undefined);
+                  }
+                }}
+                label="Global"
+                icon={<Globe className="w-4 h-4" />}
+              />
+            )}
           </div>
         </div>
 

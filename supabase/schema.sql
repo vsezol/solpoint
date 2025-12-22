@@ -17,7 +17,7 @@ CREATE TYPE event_type AS ENUM ('official', 'community', 'private', 'meetup');
 CREATE TYPE event_visibility AS ENUM ('public', 'vip_only');
 
 -- Entity type enum (for submissions)
-CREATE TYPE entity_type AS ENUM ('event', 'hub', 'community', 'project');
+CREATE TYPE entity_type AS ENUM ('event', 'hub', 'community', 'project', 'workspace');
 
 -- Submission status enum
 CREATE TYPE submission_status AS ENUM ('pending', 'approved', 'rejected');

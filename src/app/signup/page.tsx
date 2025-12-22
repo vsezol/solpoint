@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Button, Card, Input } from "@/components/ui";
 import { Header, Footer } from "@/components/layout";
-import { Twitter, MapPin, Shield, Globe } from "lucide-react";
+import { Twitter, MapPin, Shield, Globe, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
@@ -21,6 +21,7 @@ export default function SignupPage() {
   const { requestGeolocation } = useGeolocation();
   const stepFromUrl = searchParams.get("step");
   const inviteCode = searchParams.get("invite");
+  const message = searchParams.get("message");
   
   const [step, setStep] = useState<Step>(
     (stepFromUrl === "location" ? "location" : 
@@ -231,6 +232,16 @@ export default function SignupPage() {
               />
             ))}
           </div>
+
+          {/* Message from callback */}
+          {message && (
+            <div className="mb-4 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+              <div className="flex items-start gap-2 text-blue-500">
+                <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                <p className="text-sm font-medium">{decodeURIComponent(message)}</p>
+              </div>
+            </div>
+          )}
 
           <AnimatePresence mode="wait">
             {/* Step 1: Twitter Auth */}

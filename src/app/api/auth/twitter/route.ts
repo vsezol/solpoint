@@ -11,16 +11,17 @@ export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const origin = baseUrl || requestUrl.origin;
 
+  const callbackUrl = `${origin}/api/auth/callback?redirect_to=${encodeURIComponent(redirectTo)}`;
+
   // Инициируем OAuth flow с Twitter через Supabase
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "twitter",
     options: {
-      redirectTo: `${origin}/api/auth/callback?redirect_to=${encodeURIComponent(redirectTo)}`,
+      redirectTo: callbackUrl,
     },
   });
 
   if (error) {
-    console.error("Twitter OAuth error:", error);
     return NextResponse.redirect(
       `${origin}/login?error=${encodeURIComponent(error.message)}`
     );
