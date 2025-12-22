@@ -40,7 +40,7 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { name, description, image_url, socials } = body;
+    const { name, description, image_url, socials, country, country_code, city, latitude, longitude } = body;
 
     const updates: any = {
       updated_at: new Date().toISOString(),
@@ -50,6 +50,13 @@ export async function PATCH(
     if (description !== undefined) updates.description = description || null;
     if (image_url !== undefined) updates.image_url = image_url || null;
     if (socials !== undefined) updates.socials = socials || {};
+    
+    // Location fields
+    if (country !== undefined) updates.country = country || null;
+    if (country_code !== undefined) updates.country_code = country_code || null;
+    if (city !== undefined) updates.city = city || null;
+    if (latitude !== undefined) updates.latitude = latitude ? parseFloat(latitude) : null;
+    if (longitude !== undefined) updates.longitude = longitude ? parseFloat(longitude) : null;
 
     const { data: updatedProject, error: updateError } = await supabase
       .from("projects")

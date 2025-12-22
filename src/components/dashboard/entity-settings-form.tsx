@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card, Button, Input } from "@/components/ui";
+import { Card, Button, Input, CheckBox } from "@/components/ui";
 import { CountrySelect } from "@/components/ui/country-select";
 import { Settings, Edit, Save, X, UserPlus, Globe, MapPin } from "lucide-react";
 import { getEntityConfig, type EntityType, type FieldConfig } from "@/lib/entity-config";
@@ -271,7 +271,25 @@ export function EntitySettingsForm({
               <input
                 type="checkbox"
                 checked={value || false}
-                onChange={(e) => setFormData({ ...formData, [field.key]: e.target.checked })}
+                onChange={(e) => {
+                  const newValue = e.target.checked;
+                  const newFormData = { ...formData, [field.key]: newValue };
+                  
+                  // Если это is_online для events, очищаем поля локации
+                  if (field.key === "is_online" && newValue === true) {
+                    if (formData.location) {
+                      newFormData.location = {
+                        venue_name: "",
+                        address: "",
+                        city: "",
+                        country: "",
+                        country_code: "",
+                      };
+                    }
+                  }
+                  
+                  setFormData(newFormData);
+                }}
                 className="rounded border-[var(--color-surface-border)]"
               />
               <span className="text-sm text-[var(--color-text-secondary)]">
@@ -349,41 +367,21 @@ export function EntitySettingsForm({
                 })}
                 className="w-full"
               />
-              <Input
-                placeholder="Country"
-                value={value.country || ""}
-                onChange={(e) => setFormData({
-                  ...formData,
-                  [field.key]: { ...value, country: e.target.value }
-                })}
-                className="w-full"
+              <CountrySelect
+                value={value.country_code || value.country}
+                onChange={async (code) => {
+                  let countryName = "";
+                  if (code) {
+                    const countryData = await getCountryByCode(code);
+                    countryName = countryData?.name || "";
+                  }
+                  setFormData({
+                    ...formData,
+                    [field.key]: { ...value, country: countryName, country_code: code }
+                  });
+                }}
+                placeholder="Select a country"
               />
-              {value.latitude !== undefined && value.longitude !== undefined && (
-                <>
-                  <Input
-                    type="number"
-                    step="any"
-                    placeholder="Latitude"
-                    value={value.latitude || ""}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      [field.key]: { ...value, latitude: e.target.value }
-                    })}
-                    className="w-full"
-                  />
-                  <Input
-                    type="number"
-                    step="any"
-                    placeholder="Longitude"
-                    value={value.longitude || ""}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      [field.key]: { ...value, longitude: e.target.value }
-                    })}
-                    className="w-full"
-                  />
-                </>
-              )}
             </div>
           </div>
         );
@@ -395,50 +393,41 @@ export function EntitySettingsForm({
               {field.label}
             </label>
             <div className="space-y-3">
-              {/* Radio buttons for location type */}
+              {/* Radio buttons for location type using CheckBox component */}
               <div className="flex gap-4">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name={`${field.key}-locationType`}
-                    value="country"
-                    checked={!value.isGlobal}
-                    onChange={() => setFormData({
+                <CheckBox
+                  type="radio"
+                  name={`${field.key}-locationType`}
+                  value="country"
+                  checked={!value.isGlobal}
+                  onChange={() => setFormData({
+                    ...formData,
+                    [field.key]: { ...value, isGlobal: false }
+                  })}
+                  label="Country & City"
+                  icon={<MapPin className="w-4 h-4" />}
+                />
+                <CheckBox
+                  type="radio"
+                  name={`${field.key}-locationType`}
+                  value="global"
+                  checked={value.isGlobal}
+                  onChange={() => {
+                    setFormData({
                       ...formData,
-                      [field.key]: { ...value, isGlobal: false }
-                    })}
-                    className="rounded border-[var(--color-surface-border)]"
-                  />
-                  <MapPin className="w-4 h-4 text-[var(--color-text-secondary)]" />
-                  <span className="text-sm text-[var(--color-text-secondary)]">
-                    Country & City
-                  </span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name={`${field.key}-locationType`}
-                    value="global"
-                    checked={value.isGlobal}
-                    onChange={() => {
-                      setFormData({
-                        ...formData,
-                        [field.key]: {
-                          isGlobal: true,
-                          country: "",
-                          city: "",
-                          latitude: "",
-                          longitude: "",
-                        }
-                      });
-                    }}
-                    className="rounded border-[var(--color-surface-border)]"
-                  />
-                  <Globe className="w-4 h-4 text-[var(--color-text-secondary)]" />
-                  <span className="text-sm text-[var(--color-text-secondary)]">
-                    Global
-                  </span>
-                </label>
+                      [field.key]: {
+                        isGlobal: true,
+                        country: "",
+                        country_code: "",
+                        city: "",
+                        latitude: "",
+                        longitude: "",
+                      }
+                    });
+                  }}
+                  label="Global"
+                  icon={<Globe className="w-4 h-4" />}
+                />
               </div>
 
               {/* Location fields (only if not global) */}

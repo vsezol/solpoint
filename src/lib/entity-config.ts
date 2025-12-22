@@ -166,6 +166,40 @@ export const ENTITY_CONFIGS: Record<EntityType, EntityTypeConfig> = {
         type: "textarea",
         editable: true,
       },
+      {
+        key: "location",
+        label: "Location",
+        type: "location-global",
+        editable: true,
+        transform: {
+          get: (entity: Project) => ({
+            isGlobal: !entity.country && !entity.city,
+            country: entity.country || "",
+            country_code: (entity as any).country_code || "",
+            city: entity.city || "",
+            latitude: entity.latitude?.toString() || "",
+            longitude: entity.longitude?.toString() || "",
+          }),
+          set: (value: any) => {
+            if (value.isGlobal) {
+              return {
+                country: null,
+                country_code: null,
+                city: null,
+                latitude: null,
+                longitude: null,
+              };
+            }
+            return {
+              country: value.country || null,
+              country_code: value.country_code || null,
+              city: value.city || null,
+              latitude: value.latitude ? parseFloat(value.latitude) : null,
+              longitude: value.longitude ? parseFloat(value.longitude) : null,
+            };
+          },
+        },
+      },
     ],
   },
 
@@ -291,18 +325,22 @@ export const ENTITY_CONFIGS: Record<EntityType, EntityTypeConfig> = {
         label: "Location",
         type: "location",
         editable: true,
+        dependsOn: "is_online",
+        dependsOnValue: false, // Показываем только если is_online = false
         transform: {
           get: (entity: Event) => ({
             venue_name: entity.venue_name || "",
             address: entity.address || "",
             city: entity.city || "",
             country: entity.country || "",
+            country_code: (entity as any).country_code || "",
           }),
           set: (value: any) => ({
             venue_name: value.venue_name || null,
             address: value.address || null,
             city: value.city || null,
             country: value.country || null,
+            country_code: value.country_code || null,
           }),
         },
       },

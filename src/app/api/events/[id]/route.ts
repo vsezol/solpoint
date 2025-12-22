@@ -58,6 +58,15 @@ export async function PATCH(
       is_online,
       socials,
       contacts,
+      venue_name,
+      address,
+      city,
+      country,
+      country_code,
+      latitude,
+      longitude,
+      start_date,
+      end_date,
     } = body;
 
     // Подготавливаем обновления
@@ -113,6 +122,34 @@ export async function PATCH(
     }
     if (contacts !== undefined) {
       updates.contacts = contacts || {};
+    }
+    
+    // Location fields (only if not online)
+    if (is_online === false) {
+      if (venue_name !== undefined) updates.venue_name = venue_name || null;
+      if (address !== undefined) updates.address = address || null;
+      if (city !== undefined) updates.city = city || null;
+      if (country !== undefined) updates.country = country || null;
+      if (country_code !== undefined) updates.country_code = country_code || null;
+      if (latitude !== undefined) updates.latitude = latitude ? parseFloat(latitude) : null;
+      if (longitude !== undefined) updates.longitude = longitude ? parseFloat(longitude) : null;
+    } else if (is_online === true) {
+      // Clear location fields for online events
+      updates.venue_name = null;
+      updates.address = null;
+      updates.city = null;
+      updates.country = null;
+      updates.country_code = null;
+      updates.latitude = null;
+      updates.longitude = null;
+    }
+    
+    // Date fields
+    if (start_date !== undefined) {
+      updates.start_date = start_date ? new Date(start_date).toISOString() : null;
+    }
+    if (end_date !== undefined) {
+      updates.end_date = end_date ? new Date(end_date).toISOString() : null;
     }
 
     // Обновляем событие
