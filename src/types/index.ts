@@ -46,6 +46,7 @@ export interface UserProfile extends User {
 export type EventType = "official" | "community" | "private" | "meetup";
 export type EventVisibility = "public" | "vip_only";
 export type AttendeeStatus = "going" | "maybe" | "not_going";
+export type OwnerType = "user" | "hub" | "community" | "project" | "workspace";
 
 export interface Event {
   id: string;
@@ -85,14 +86,15 @@ export interface Event {
     phone?: string;
     other?: string; // Другие контакты
   };
-  organizer_id?: string;
-  organizer?: User; // При загрузке с JOIN
-  hub_id?: string; // Связь с хабом (опционально)
-  hub?: Hub; // При загрузке с JOIN
-  community_id?: string; // Связь с комьюнити (опционально)
-  community?: Community; // При загрузке с JOIN
-  project_id?: string; // Связь с проектом (опционально)
-  project?: Project; // При загрузке с JOIN
+  // Унифицированные поля
+  owner_type: OwnerType;
+  owner_id: string;
+  // Связанные данные (при загрузке с JOIN)
+  owner_user?: User;
+  owner_hub?: Hub;
+  owner_community?: Community;
+  owner_project?: Project;
+  owner_workspace?: Workspace;
   created_at: string;
   updated_at?: string;
 }
@@ -137,8 +139,9 @@ export interface Hub {
     facebook?: string;
     website?: string;
   };
-  creator_id?: string;
-  creator?: User; // При загрузке с JOIN
+  // Унифицированное поле
+  owner_id: string;
+  owner?: User; // При загрузке с JOIN
   created_at: string;
   updated_at?: string;
 }
@@ -162,8 +165,9 @@ export interface Community {
     facebook?: string;
     website?: string;
   };
-  creator_id?: string;
-  creator?: User; // При загрузке с JOIN
+  // Унифицированное поле
+  owner_id?: string;
+  owner?: User; // При загрузке с JOIN
   created_at: string;
   updated_at?: string;
 }
@@ -187,8 +191,34 @@ export interface Project {
     facebook?: string;
     website?: string;
   };
-  creator_id: string; // Проект должен иметь создателя
-  creator?: User; // При загрузке с JOIN
+  // Унифицированное поле
+  owner_id: string; // Проект должен иметь владельца
+  owner?: User; // При загрузке с JOIN
+  created_at: string;
+  updated_at?: string;
+}
+
+// Workspace types
+// Workspaces: коворкинги, похожи на hubs, но с обязательным адресом
+export interface Workspace {
+  id: string;
+  name: string;
+  description?: string;
+  image_url?: string;
+  slug: string; // Публичная ссылка для SEO
+  country: string; // Страна обязательна
+  city?: string | null; // Опционально
+  address: string; // Адрес обязателен для workspaces
+  latitude: number;
+  longitude: number;
+  members_count: number;
+  socials?: {
+    twitter?: string;
+    instagram?: string;
+    facebook?: string;
+    website?: string;
+  };
+  owner_id: string;
   created_at: string;
   updated_at?: string;
 }
@@ -296,7 +326,7 @@ export interface Referral {
 }
 
 // Entity submission types (for moderation system)
-export type EntityType = "event" | "hub" | "community" | "project";
+export type EntityType = "event" | "hub" | "community" | "project" | "workspace";
 export type SubmissionStatus = "pending" | "approved" | "rejected";
 
 export interface EntitySubmission {

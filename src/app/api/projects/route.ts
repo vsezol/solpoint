@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
         latitude: hasLocation && hasCoordinates ? latitude : null,
         longitude: hasLocation && hasCoordinates ? longitude : null,
         socials: socials || {},
-        creator_id: user.id,
+        owner_id: user.id,
       })
       .select()
       .single();

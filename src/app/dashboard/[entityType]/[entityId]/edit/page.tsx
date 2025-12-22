@@ -32,7 +32,8 @@ export default async function EntityEditPage({ params }: EntityEditPageProps) {
 
   // Получаем сущность в зависимости от типа
   let entity: Entity | null = null;
-  let creatorId: string | null = null;
+  let ownerId: string | null = null;
+  let ownerUserId: string | null = null; // ID пользователя-владельца (для events может быть через сущность)
 
   if (entityType === "hub") {
     const { data, error } = await supabase
@@ -43,7 +44,8 @@ export default async function EntityEditPage({ params }: EntityEditPageProps) {
     
     if (!error && data) {
       entity = data as Hub;
-      creatorId = entity.creator_id || null;
+      ownerId = entity.owner_id || null;
+      ownerUserId = ownerId; // Для hubs owner_id это user_id
     }
   } else if (entityType === "community") {
     const { data, error } = await supabase
@@ -54,7 +56,8 @@ export default async function EntityEditPage({ params }: EntityEditPageProps) {
     
     if (!error && data) {
       entity = data as Community;
-      creatorId = entity.creator_id || null;
+      ownerId = entity.owner_id || null;
+      ownerUserId = ownerId; // Для communities owner_id это user_id
     }
   } else if (entityType === "project" || entityType === "workspace") {
     // workspace и project - это одно и то же
@@ -66,29 +69,60 @@ export default async function EntityEditPage({ params }: EntityEditPageProps) {
     
     if (!error && data) {
       entity = data as Project;
-      creatorId = entity.creator_id || null;
+      ownerId = entity.owner_id || null;
+      ownerUserId = ownerId; // Для projects owner_id это user_id
     }
   } else if (entityType === "event") {
     const { data, error } = await supabase
       .from("events")
-      .select("*")
+      .select("*, owner_type, owner_id")
       .eq("id", entityId)
       .single();
     
     if (!error && data) {
       entity = data as Event;
-      creatorId = entity.organizer_id || null;
+      const event = entity as Event;
+      
+      // Для events owner может быть user или сущность
+      if (event.owner_type === "user") {
+        ownerUserId = event.owner_id;
+      } else {
+        // Если owner - сущность, получаем owner_id этой сущности
+        ownerId = event.owner_id;
+        if (event.owner_type === "hub") {
+          const { data: hub } = await supabase
+            .from("hubs")
+            .select("owner_id")
+            .eq("id", event.owner_id)
+            .single();
+          ownerUserId = hub?.owner_id || null;
+        } else if (event.owner_type === "community") {
+          const { data: community } = await supabase
+            .from("communities")
+            .select("owner_id")
+            .eq("id", event.owner_id)
+            .single();
+          ownerUserId = community?.owner_id || null;
+        } else if (event.owner_type === "project") {
+          const { data: project } = await supabase
+            .from("projects")
+            .select("owner_id")
+            .eq("id", event.owner_id)
+            .single();
+          ownerUserId = project?.owner_id || null;
+        }
+      }
     }
   } else {
     notFound();
   }
 
-  if (!entity || !creatorId) {
+  if (!entity || !ownerUserId) {
     notFound();
   }
 
-  // Проверяем, является ли пользователь создателем/организатором
-  if (creatorId !== authUser.id) {
+  // Проверяем, является ли пользователь владельцем
+  if (ownerUserId !== authUser.id) {
     redirect("/dashboard");
   }
 
@@ -118,7 +152,7 @@ export default async function EntityEditPage({ params }: EntityEditPageProps) {
 
     members = (attendeesData || []).map((m: any) => {
       let role: "owner" | "moderator" | "member" = "member";
-      if (m.user.id === creatorId) {
+      if (m.user.id === ownerUserId) {
         role = "owner";
       } else if (rolesMap.has(m.user.id)) {
         role = rolesMap.get(m.user.id) as "moderator";
@@ -143,7 +177,7 @@ export default async function EntityEditPage({ params }: EntityEditPageProps) {
     members = (membersData || []).map((m: any) => ({
       ...m.user,
       joined_at: m.joined_at,
-      role: (m.role || (m.user.id === creatorId ? "owner" : "member")) as "owner" | "moderator" | "member",
+      role: (m.role || (m.user.id === ownerUserId ? "owner" : "member")) as "owner" | "moderator" | "member",
     })).filter((u): u is User & { joined_at?: string; role: "owner" | "moderator" | "member" } => u !== null);
   } else if (entityType === "community") {
     const { data: membersData } = await supabase
@@ -159,7 +193,7 @@ export default async function EntityEditPage({ params }: EntityEditPageProps) {
     members = (membersData || []).map((m: any) => ({
       ...m.user,
       joined_at: m.joined_at,
-      role: (m.role || (m.user.id === creatorId ? "owner" : "member")) as "owner" | "moderator" | "member",
+      role: (m.role || (m.user.id === ownerUserId ? "owner" : "member")) as "owner" | "moderator" | "member",
     })).filter((u): u is User & { joined_at?: string; role: "owner" | "moderator" | "member" } => u !== null);
   } else if (entityType === "project" || entityType === "workspace") {
     const { data: membersData } = await supabase
@@ -175,15 +209,15 @@ export default async function EntityEditPage({ params }: EntityEditPageProps) {
     members = (membersData || []).map((m: any) => ({
       ...m.user,
       joined_at: m.joined_at,
-      role: (m.role || (m.user.id === creatorId ? "owner" : "member")) as "owner" | "moderator" | "member",
+      role: (m.role || (m.user.id === ownerUserId ? "owner" : "member")) as "owner" | "moderator" | "member",
     })).filter((u): u is User & { joined_at?: string; role: "owner" | "moderator" | "member" } => u !== null);
   }
 
-  // Получаем создателя
+  // Получаем владельца
   const { data: creator } = await supabase
     .from("profiles")
     .select("*")
-    .eq("id", creatorId)
+    .eq("id", ownerUserId)
     .single();
 
   return (
@@ -218,6 +252,8 @@ export default async function EntityEditPage({ params }: EntityEditPageProps) {
                 entity={entity}
                 entityType={entityType}
                 entityId={entityId}
+                members={members}
+                currentUserId={authUser.id}
               />
               {entityType !== "event" && (
                 <EntityEventsList

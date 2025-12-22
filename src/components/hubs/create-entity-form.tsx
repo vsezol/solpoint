@@ -420,11 +420,7 @@ export function CreateEntityForm({
         } else if (entityType === "community") {
           createdEntity = await createCommunity(entityData);
         } else if (entityType === "project") {
-          // Проект требует creator_id
-          createdEntity = await createProject({
-            ...entityData,
-            creator_id: user!.id,
-          });
+          createdEntity = await createProject(entityData);
         } else {
           throw new Error("Invalid entity type");
         }

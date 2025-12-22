@@ -34,7 +34,7 @@ export async function PATCH(
     // Проверяем, существует ли хаб
     const { data: hub, error: hubError } = await supabase
       .from("hubs")
-      .select("creator_id")
+      .select("owner_id")
       .eq("id", id)
       .single();
 
@@ -57,10 +57,10 @@ export async function PATCH(
       );
     }
 
-    // Нельзя изменить роль создателя
-    if (userId === hub.creator_id && role !== "owner") {
+    // Нельзя изменить роль владельца
+    if (userId === hub.owner_id && role !== "owner") {
       return NextResponse.json(
-        { error: "Cannot change creator's role" },
+        { error: "Cannot change owner's role" },
         { status: 400 }
       );
     }
@@ -80,8 +80,8 @@ export async function PATCH(
       );
     }
 
-    // Нельзя назначить роль owner через этот эндпоинт (только создатель может быть owner)
-    if (role === "owner" && userId !== hub.creator_id) {
+    // Нельзя назначить роль owner через этот эндпоинт (только владелец может быть owner)
+    if (role === "owner" && userId !== hub.owner_id) {
       return NextResponse.json(
         { error: "Cannot assign owner role" },
         { status: 400 }

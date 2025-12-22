@@ -10,7 +10,8 @@ import { Users, Globe, Home } from "lucide-react";
 import { getHubs } from "@/lib/api/hubs";
 import { getCommunities } from "@/lib/api/communities";
 import { getProjects } from "@/lib/api/projects";
-import type { Hub, Community, Project, EntityType } from "@/types";
+import { getWorkspaces } from "@/lib/api/workspaces";
+import type { Hub, Community, Project, Workspace, EntityType } from "@/types";
 import { useHubsStore } from "@/store/hubs-store";
 import { trackEvent } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
@@ -19,6 +20,7 @@ export default function HubsPage() {
   const [hubs, setHubs] = useState<Hub[]>([]);
   const [communities, setCommunities] = useState<Community[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -45,10 +47,11 @@ export default function HubsPage() {
         };
 
         // Загружаем все типы сущностей параллельно
-        const [fetchedHubs, fetchedCommunities, fetchedProjects] = await Promise.all([
+        const [fetchedHubs, fetchedCommunities, fetchedProjects, fetchedWorkspaces] = await Promise.all([
           getHubs(filters),
           getCommunities(filters),
           getProjects(filters),
+          getWorkspaces(filters),
         ]);
 
         // Проверяем, что компонент еще смонтирован перед обновлением состояния
@@ -56,6 +59,7 @@ export default function HubsPage() {
           setHubs(fetchedHubs);
           setCommunities(fetchedCommunities);
           setProjects(fetchedProjects);
+          setWorkspaces(fetchedWorkspaces);
         }
       } catch (err) {
         if (isMountedRef.current) {
@@ -114,11 +118,11 @@ export default function HubsPage() {
 
   // Фильтрация и сортировка данных
   const filteredAndSortedEntities = useMemo(() => {
-    let entities: (Hub | Community | Project)[] = [];
+    let entities: (Hub | Community | Project | Workspace)[] = [];
 
     // Фильтрация по типу
     if (entityTypeFilter === "all") {
-      entities = [...hubs, ...communities, ...projects];
+      entities = [...hubs, ...communities, ...projects, ...workspaces];
     } else if (entityTypeFilter === "hubs") {
       entities = hubs;
     } else if (entityTypeFilter === "community") {
@@ -126,8 +130,7 @@ export default function HubsPage() {
     } else if (entityTypeFilter === "projects") {
       entities = projects;
     } else if (entityTypeFilter === "workspaces") {
-      // Workspaces - это комбинация hubs и communities
-      entities = [...hubs, ...communities];
+      entities = workspaces;
     }
 
     // Сортировка
@@ -141,15 +144,15 @@ export default function HubsPage() {
     // "recommended" - оставляем как есть (уже отсортировано по members_count)
 
     return entities;
-  }, [hubs, communities, projects, entityTypeFilter, sortBy]);
+  }, [hubs, communities, projects, workspaces, entityTypeFilter, sortBy]);
 
   // Мемоизируем вычисления статистики, чтобы избежать лишних ререндеров
   const { totalMembers, totalCountries } = useMemo(() => {
-    const allEntities = [...hubs, ...communities, ...projects];
+    const allEntities = [...hubs, ...communities, ...projects, ...workspaces];
     const members = allEntities.reduce((acc, entity) => acc + entity.members_count, 0);
-    const countries = new Set(allEntities.map((entity) => entity.country)).size;
+    const countries = new Set(allEntities.map((entity) => entity.country).filter(Boolean)).size;
     return { totalMembers: members, totalCountries: countries };
-  }, [hubs, communities, projects]);
+  }, [hubs, communities, projects, workspaces]);
 
   const handleAddClick = () => {
     // По умолчанию создаем хаб, но можно расширить для выбора типа
@@ -266,9 +269,9 @@ export default function HubsPage() {
               {filteredAndSortedEntities.map((entity) => {
                 // Проверяем тип сущности и рендерим соответствующую карточку
                 if ("slug" in entity && "members_count" in entity) {
-                  // Это может быть Hub, Community или Project
-                  // Пока используем HubCard для всех, можно расширить позже
-                  return <HubCard key={entity.id} hub={entity as Hub} />;
+                  // Это может быть Hub, Community, Project или Workspace
+                  // HubCard поддерживает все эти типы
+                  return <HubCard key={entity.id} hub={entity as Hub | Workspace} />;
                 }
                 return null;
               })}

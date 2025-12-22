@@ -2,10 +2,10 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Header, Footer } from "@/components/layout";
 import { Card, Button } from "@/components/ui";
-import { Calendar, Users, Briefcase, Globe, ExternalLink, Edit } from "lucide-react";
+import { Calendar, Users, Briefcase, Globe, Home, ExternalLink, Edit } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import type { Event, Hub, Project, Community } from "@/types";
+import type { Event, Hub, Project, Community, Workspace } from "@/types";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -21,35 +21,42 @@ export default async function DashboardPage() {
   }
 
   // Получаем все сущности пользователя напрямую из БД
-  const [eventsResult, hubsResult, projectsResult, communitiesResult] = await Promise.all([
+  // Для events нужно проверить owner_type и owner_id (может быть user или сущность)
+  const [eventsResult, hubsResult, projectsResult, communitiesResult, workspacesResult] = await Promise.all([
     supabase
       .from("events")
       .select("*")
-      .eq("organizer_id", authUser.id)
+      .or(`owner_type.eq.user,owner_id.eq.${authUser.id}`)
       .order("created_at", { ascending: false }),
     supabase
       .from("hubs")
       .select("*")
-      .eq("creator_id", authUser.id)
+      .eq("owner_id", authUser.id)
       .order("created_at", { ascending: false }),
     supabase
       .from("projects")
       .select("*")
-      .eq("creator_id", authUser.id)
+      .eq("owner_id", authUser.id)
       .order("created_at", { ascending: false }),
     supabase
       .from("communities")
       .select("*")
-      .eq("creator_id", authUser.id)
+      .eq("owner_id", authUser.id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("workspaces")
+      .select("*")
+      .eq("owner_id", authUser.id)
       .order("created_at", { ascending: false }),
   ]);
 
   const events = eventsResult.data || [];
   const hubs = hubsResult.data || [];
+  const workspaces = workspacesResult.data || [];
   const projects = projectsResult.data || [];
   const communities = communitiesResult.data || [];
 
-  const totalCount = events.length + hubs.length + projects.length + communities.length;
+  const totalCount = events.length + hubs.length + projects.length + communities.length + workspaces.length;
 
   return (
     <>
@@ -67,7 +74,7 @@ export default async function DashboardPage() {
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
             <Card variant="bordered" className="p-4">
               <div className="flex items-center gap-3">
                 <Calendar className="w-5 h-5 text-[var(--color-primary)]" />
@@ -108,6 +115,17 @@ export default async function DashboardPage() {
                   <p className="text-sm text-[var(--color-text-muted)]">Communities</p>
                   <p className="text-2xl font-bold text-[var(--color-text-primary)]">
                     {communities.length}
+                  </p>
+                </div>
+              </div>
+            </Card>
+            <Card variant="bordered" className="p-4">
+              <div className="flex items-center gap-3">
+                <Home className="w-5 h-5 text-[var(--color-primary)]" />
+                <div>
+                  <p className="text-sm text-[var(--color-text-muted)]">Workspaces</p>
+                  <p className="text-2xl font-bold text-[var(--color-text-primary)]">
+                    {workspaces.length}
                   </p>
                 </div>
               </div>
@@ -351,6 +369,65 @@ export default async function DashboardPage() {
                             </Button>
                             <Button variant="outline" size="sm" asChild>
                               <Link href={`/communities/${community.slug}`}>
+                                <ExternalLink className="w-4 h-4 mr-1" />
+                                View
+                              </Link>
+                            </Button>
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* Workspaces */}
+              {workspaces.length > 0 && (
+                <section>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-2xl font-semibold text-[var(--color-text-primary)] flex items-center gap-2">
+                      <Home className="w-6 h-6" />
+                      Workspaces ({workspaces.length})
+                    </h2>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {workspaces.map((workspace: Workspace) => (
+                      <Card key={workspace.id} variant="bordered" className="overflow-hidden">
+                        {workspace.image_url ? (
+                          <div className="relative h-32 w-full">
+                            <Image
+                              src={workspace.image_url}
+                              alt={workspace.name}
+                              fill
+                              className="object-cover"
+                            />
+                          </div>
+                        ) : null}
+                        <div className="p-4">
+                          <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">
+                            {workspace.name}
+                          </h3>
+                          {workspace.description && (
+                            <p className="text-sm text-[var(--color-text-secondary)] mb-3 line-clamp-2">
+                              {workspace.description}
+                            </p>
+                          )}
+                          {workspace.address && (
+                            <p className="text-xs text-[var(--color-text-muted)] mb-3">
+                              📍 {workspace.address}
+                              {workspace.city && `, ${workspace.city}`}
+                              {workspace.country && `, ${workspace.country}`}
+                            </p>
+                          )}
+                          <div className="flex items-center gap-2">
+                            <Button variant="outline" size="sm" asChild>
+                              <Link href={`/dashboard/workspace/${workspace.id}/edit`}>
+                                <Edit className="w-4 h-4 mr-1" />
+                                Manage
+                              </Link>
+                            </Button>
+                            <Button variant="outline" size="sm" asChild>
+                              <Link href={`/hubs/${workspace.slug}`}>
                                 <ExternalLink className="w-4 h-4 mr-1" />
                                 View
                               </Link>

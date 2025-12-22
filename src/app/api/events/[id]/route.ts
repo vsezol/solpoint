@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { isEventOwner } from "@/lib/utils/entity-ownership";
 
 /**
  * PATCH /api/events/[id]
@@ -24,10 +25,10 @@ export async function PATCH(
   }
 
   try {
-    // Проверяем, является ли пользователь организатором события
+    // Проверяем, является ли пользователь владельцем события
     const { data: event, error: eventError } = await supabase
       .from("events")
-      .select("organizer_id")
+      .select("id")
       .eq("id", id)
       .single();
 
@@ -35,9 +36,10 @@ export async function PATCH(
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
-    if (event.organizer_id !== authUser.id) {
+    const isOwner = await isEventOwner(id, authUser.id);
+    if (!isOwner) {
       return NextResponse.json(
-        { error: "Forbidden: You are not the organizer of this event" },
+        { error: "Forbidden: You are not the owner of this event" },
         { status: 403 }
       );
     }
@@ -120,10 +122,11 @@ export async function PATCH(
       .eq("id", id)
       .select(`
         *,
-        organizer:profiles!events_organizer_id_fkey(id, twitter_handle, twitter_name, avatar_url),
-        hub:hubs(id, name, image_url),
-        community:communities(id, name, image_url),
-        project:projects(id, name, image_url)
+        owner_user:profiles!events_owner_id_fkey(id, twitter_handle, twitter_name, avatar_url),
+        owner_hub:hubs!events_owner_id_fkey(id, name, image_url),
+        owner_community:communities!events_owner_id_fkey(id, name, image_url),
+        owner_project:projects!events_owner_id_fkey(id, name, image_url),
+        owner_workspace:workspaces!events_owner_id_fkey(id, name, image_url)
       `)
       .single();
 

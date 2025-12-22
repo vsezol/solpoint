@@ -24,7 +24,7 @@ export async function DELETE(
   try {
     const { data: hub, error: hubError } = await supabase
       .from("hubs")
-      .select("creator_id")
+      .select("owner_id")
       .eq("id", id)
       .single();
 
@@ -32,17 +32,17 @@ export async function DELETE(
       return NextResponse.json({ error: "Hub not found" }, { status: 404 });
     }
 
-    if (hub.creator_id !== authUser.id) {
+    if (hub.owner_id !== authUser.id) {
       return NextResponse.json(
-        { error: "Forbidden: You are not the creator of this hub" },
+        { error: "Forbidden: You are not the owner of this hub" },
         { status: 403 }
       );
     }
 
-    // Нельзя удалить создателя
-    if (userId === hub.creator_id) {
+    // Нельзя удалить владельца
+    if (userId === hub.owner_id) {
       return NextResponse.json(
-        { error: "Cannot remove the creator" },
+        { error: "Cannot remove the owner" },
         { status: 400 }
       );
     }

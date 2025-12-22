@@ -136,12 +136,12 @@ export default async function EventPage({ params }: EventPageProps) {
     isVip = profile?.subscription_tier === "vip";
   }
 
-  // Получаем событие по slug с организатором
+  // Получаем событие по slug с владельцем
   const { data: eventData, error: eventError } = await supabase
     .from("events")
     .select(`
       *,
-      organizer:profiles!events_organizer_id_fkey(
+      owner_user:profiles!events_owner_id_fkey(
         id,
         twitter_id,
         twitter_handle,
@@ -163,7 +163,11 @@ export default async function EventPage({ params }: EventPageProps) {
         countries!fk_profiles_country_code (
           name
         )
-      )
+      ),
+      owner_hub:hubs!events_owner_id_fkey(id, name, slug, image_url),
+      owner_community:communities!events_owner_id_fkey(id, name, slug, image_url),
+      owner_project:projects!events_owner_id_fkey(id, name, slug, image_url),
+      owner_workspace:workspaces!events_owner_id_fkey(id, name, slug, image_url)
     `)
     .eq("slug", slug)
     .single();
@@ -178,17 +182,23 @@ export default async function EventPage({ params }: EventPageProps) {
   }
 
   // Преобразуем данные события
+  // Определяем owner в зависимости от owner_type
+  let ownerUser: User | undefined;
+  if (eventData.owner_type === "user" && eventData.owner_user) {
+    ownerUser = {
+      ...eventData.owner_user,
+      countries: eventData.owner_user.countries,
+    } as User & { countries?: { name: string } };
+  }
+
   const event = {
     ...eventData,
-    organizer: eventData.organizer ? {
-      ...eventData.organizer,
-      countries: eventData.organizer.countries,
-    } : undefined,
-  } as Event & { organizer?: User & { countries?: { name: string } } };
+    owner_user: ownerUser,
+  } as Event & { owner_user?: User & { countries?: { name: string } } };
 
-  const organizer = event.organizer ? {
-    ...event.organizer,
-    country: (event.organizer as User & { countries?: { name: string } }).countries?.name || event.organizer.country,
+  const organizer = ownerUser ? {
+    ...ownerUser,
+    country: (ownerUser as User & { countries?: { name: string } }).countries?.name || ownerUser.country,
   } as User : undefined;
 
   // Получаем участников события (только если авторизован)

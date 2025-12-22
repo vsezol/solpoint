@@ -24,7 +24,7 @@ export async function DELETE(
   try {
     const { data: community, error: communityError } = await supabase
       .from("communities")
-      .select("creator_id")
+      .select("owner_id")
       .eq("id", id)
       .single();
 
@@ -35,16 +35,16 @@ export async function DELETE(
       );
     }
 
-    if (community.creator_id !== authUser.id) {
+    if (community.owner_id !== authUser.id) {
       return NextResponse.json(
-        { error: "Forbidden: You are not the creator of this community" },
+        { error: "Forbidden: You are not the owner of this community" },
         { status: 403 }
       );
     }
 
-    if (userId === community.creator_id) {
+    if (userId === community.owner_id) {
       return NextResponse.json(
-        { error: "Cannot remove the creator" },
+        { error: "Cannot remove the owner" },
         { status: 400 }
       );
     }

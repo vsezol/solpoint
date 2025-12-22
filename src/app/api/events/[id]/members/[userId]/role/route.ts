@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { isEventOwner, getEventOwnerUserId } from "@/lib/utils/entity-ownership";
 
 /**
  * PATCH /api/events/[id]/members/[userId]/role
@@ -34,7 +35,7 @@ export async function PATCH(
     // Проверяем, существует ли событие
     const { data: event, error: eventError } = await supabase
       .from("events")
-      .select("organizer_id")
+      .select("id")
       .eq("id", id)
       .single();
 
@@ -42,18 +43,22 @@ export async function PATCH(
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
-    // Проверяем, является ли текущий пользователь организатором (owner)
-    if (event.organizer_id !== authUser.id) {
+    // Проверяем, является ли текущий пользователь владельцем (owner)
+    const isOwner = await isEventOwner(id, authUser.id);
+    if (!isOwner) {
       return NextResponse.json(
-        { error: "Forbidden: Only organizers can change member roles" },
+        { error: "Forbidden: Only owners can change member roles" },
         { status: 403 }
       );
     }
 
-    // Нельзя изменить роль организатора
-    if (userId === event.organizer_id && role !== "owner") {
+    // Получаем ID пользователя-владельца события
+    const ownerUserId = await getEventOwnerUserId(id);
+    
+    // Нельзя изменить роль владельца
+    if (ownerUserId && userId === ownerUserId && role !== "owner") {
       return NextResponse.json(
-        { error: "Cannot change organizer's role" },
+        { error: "Cannot change owner's role" },
         { status: 400 }
       );
     }

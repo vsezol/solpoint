@@ -34,7 +34,7 @@ export async function PATCH(
     // Проверяем, существует ли сообщество
     const { data: community, error: communityError } = await supabase
       .from("communities")
-      .select("creator_id")
+      .select("owner_id")
       .eq("id", id)
       .single();
 
@@ -61,9 +61,9 @@ export async function PATCH(
     }
 
     // Нельзя изменить роль создателя
-    if (userId === community.creator_id && role !== "owner") {
+    if (userId === community.owner_id && role !== "owner") {
       return NextResponse.json(
-        { error: "Cannot change creator's role" },
+        { error: "Cannot change owner's role" },
         { status: 400 }
       );
     }
@@ -84,7 +84,7 @@ export async function PATCH(
     }
 
     // Нельзя назначить роль owner через этот эндпоинт (только создатель может быть owner)
-    if (role === "owner" && userId !== community.creator_id) {
+    if (role === "owner" && userId !== community.owner_id) {
       return NextResponse.json(
         { error: "Cannot assign owner role" },
         { status: 400 }

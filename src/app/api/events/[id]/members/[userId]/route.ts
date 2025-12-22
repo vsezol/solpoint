@@ -1,9 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { isEventOwner, getEventOwnerUserId } from "@/lib/utils/entity-ownership";
 
 /**
  * DELETE /api/events/[id]/members/[userId]
- * Удалить участника из события (только для организатора)
+ * Удалить участника из события (только для владельца)
  */
 export async function DELETE(
   request: Request,
@@ -24,7 +25,7 @@ export async function DELETE(
   try {
     const { data: event, error: eventError } = await supabase
       .from("events")
-      .select("organizer_id")
+      .select("id")
       .eq("id", id)
       .single();
 
@@ -32,17 +33,21 @@ export async function DELETE(
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
-    if (event.organizer_id !== authUser.id) {
+    const isOwner = await isEventOwner(id, authUser.id);
+    if (!isOwner) {
       return NextResponse.json(
-        { error: "Forbidden: You are not the organizer of this event" },
+        { error: "Forbidden: You are not the owner of this event" },
         { status: 403 }
       );
     }
 
-    // Нельзя удалить организатора
-    if (userId === event.organizer_id) {
+    // Получаем ID пользователя-владельца события
+    const ownerUserId = await getEventOwnerUserId(id);
+    
+    // Нельзя удалить владельца
+    if (ownerUserId && userId === ownerUserId) {
       return NextResponse.json(
-        { error: "Cannot remove the organizer" },
+        { error: "Cannot remove the owner" },
         { status: 400 }
       );
     }

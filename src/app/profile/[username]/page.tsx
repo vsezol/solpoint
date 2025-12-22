@@ -156,8 +156,8 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
         is_online,
         socials,
         contacts,
-        organizer_id,
-        hub_id,
+        owner_type,
+        owner_id,
         slug,
         created_at,
         updated_at

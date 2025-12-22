@@ -301,7 +301,7 @@ export async function PATCH(
     // Проверяем, зарегистрирован ли пользователь
     const { data: existingMember } = await supabase
       .from("event_members")
-      .select("id")
+      .select("id, status")
       .eq("event_id", id)
       .eq("user_id", authUser.id)
       .single();

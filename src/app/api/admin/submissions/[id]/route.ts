@@ -134,10 +134,8 @@ export async function PATCH(
                 is_online: entityData.is_online || false,
                 socials: entityData.socials || {},
                 contacts: entityData.contacts || {},
-                organizer_id: submission.submitter_id,
-                hub_id: entityData.hub_id || null,
-                community_id: entityData.community_id || null,
-                project_id: entityData.project_id || null,
+                owner_type: entityData.hub_id ? "hub" : entityData.community_id ? "community" : entityData.project_id ? "project" : entityData.workspace_id ? "workspace" : "user",
+                owner_id: entityData.hub_id || entityData.community_id || entityData.project_id || entityData.workspace_id || submission.submitter_id,
                 attendees_count: 0,
                 capacity_remaining: entityData.max_attendees || null,
               })
@@ -178,7 +176,7 @@ export async function PATCH(
                 latitude: parseFloat(entityData.latitude),
                 longitude: parseFloat(entityData.longitude),
                 socials: entityData.socials || {},
-                creator_id: submission.submitter_id,
+                owner_id: submission.submitter_id,
                 members_count: 0,
               })
               .select("id")
@@ -218,7 +216,7 @@ export async function PATCH(
                 latitude: parseFloat(entityData.latitude),
                 longitude: parseFloat(entityData.longitude),
                 socials: entityData.socials || {},
-                creator_id: submission.submitter_id,
+                owner_id: submission.submitter_id,
                 members_count: 0,
               })
               .select("id")
@@ -260,7 +258,7 @@ export async function PATCH(
                 latitude: parseFloat(entityData.latitude),
                 longitude: parseFloat(entityData.longitude),
                 socials: entityData.socials || {},
-                creator_id: submission.submitter_id,
+                owner_id: submission.submitter_id,
                 members_count: 0,
               })
               .select("id")

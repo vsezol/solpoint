@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui";
-import type { Hub } from "@/types";
+import type { Hub, Workspace } from "@/types";
 import { Twitter, Instagram, Facebook, ExternalLink, MapPin, Users, Share2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 import { trackEvent } from "@/lib/analytics";
 
 interface HubCardProps {
-  hub: Hub;
+  hub: Hub | Workspace;
   compact?: boolean;
 }
 
@@ -64,8 +64,11 @@ export function HubCard({ hub, compact = false }: HubCardProps) {
         {/* Location */}
         <div className="space-y-1 text-sm mb-3">
           <p className="text-[var(--color-text-secondary)]">
-            <span className="text-[var(--color-primary)]">Country:</span>{" "}
-            {hub.country}
+            <span className="text-[var(--color-primary)]">
+              {"address" in hub && hub.address ? "Address:" : "Country:"}
+            </span>{" "}
+            {"address" in hub && hub.address ? hub.address : hub.country}
+            {hub.city && `, ${hub.city}`}
           </p>
           {hub.description && (
             <div className="mt-2">
@@ -236,8 +239,14 @@ export function HubCard({ hub, compact = false }: HubCardProps) {
           <div className="flex items-center gap-2 text-[var(--color-text-secondary)]">
             <MapPin className="w-4 h-4" />
             <span>
-              {hub.country}
-              {hub.city && `, ${hub.city}`}
+              {"address" in hub && hub.address ? (
+                `${hub.address}${hub.city ? `, ${hub.city}` : ""}${hub.country ? `, ${hub.country}` : ""}`
+              ) : (
+                <>
+                  {hub.country}
+                  {hub.city && `, ${hub.city}`}
+                </>
+              )}
             </span>
           </div>
         </div>

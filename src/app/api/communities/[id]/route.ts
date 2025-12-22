@@ -24,7 +24,7 @@ export async function PATCH(
   try {
     const { data: community, error: communityError } = await supabase
       .from("communities")
-      .select("creator_id")
+      .select("owner_id")
       .eq("id", id)
       .single();
 
@@ -35,9 +35,9 @@ export async function PATCH(
       );
     }
 
-    if (community.creator_id !== authUser.id) {
+    if (community.owner_id !== authUser.id) {
       return NextResponse.json(
-        { error: "Forbidden: You are not the creator of this community" },
+        { error: "Forbidden: You are not the owner of this community" },
         { status: 403 }
       );
     }

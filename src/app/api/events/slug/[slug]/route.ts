@@ -34,7 +34,7 @@ export async function GET(
     .from("events")
     .select(`
       *,
-      organizer:profiles!events_organizer_id_fkey(
+      owner_user:profiles!events_owner_id_fkey(
         id,
         twitter_handle,
         twitter_name,
@@ -43,13 +43,38 @@ export async function GET(
         country,
         city
       ),
-      hub:hubs(
+      owner_hub:hubs!events_owner_id_fkey(
         id,
         name,
         description,
         image_url,
         country,
         city
+      ),
+      owner_community:communities!events_owner_id_fkey(
+        id,
+        name,
+        description,
+        image_url,
+        country,
+        city
+      ),
+      owner_project:projects!events_owner_id_fkey(
+        id,
+        name,
+        description,
+        image_url,
+        country,
+        city
+      ),
+      owner_workspace:workspaces!events_owner_id_fkey(
+        id,
+        name,
+        description,
+        image_url,
+        country,
+        city,
+        address
       )
     `)
     .eq("slug", slug)

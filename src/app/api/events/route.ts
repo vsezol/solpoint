@@ -42,10 +42,11 @@ export async function GET(request: NextRequest) {
     .from("events")
     .select(`
       *,
-      organizer:profiles!events_organizer_id_fkey(id, twitter_handle, twitter_name, avatar_url),
-      hub:hubs(id, name, image_url),
-      community:communities(id, name, image_url),
-      project:projects(id, name, image_url)
+      owner_user:profiles!events_owner_id_fkey(id, twitter_handle, twitter_name, avatar_url),
+      owner_hub:hubs!events_owner_id_fkey(id, name, image_url),
+      owner_community:communities!events_owner_id_fkey(id, name, image_url),
+      owner_project:projects!events_owner_id_fkey(id, name, image_url),
+      owner_workspace:workspaces!events_owner_id_fkey(id, name, image_url)
     `)
     .order("start_date", { ascending: true });
 
@@ -183,11 +184,15 @@ export async function POST(request: Request) {
       );
     }
 
-    // Валидация: если указан hub_id, community_id или project_id, проверяем что пользователь является создателем
+    // Определяем owner_type и owner_id
+    let ownerType: "user" | "hub" | "community" | "project" = "user";
+    let ownerId: string = authUser.id;
+
+    // Валидация: если указан hub_id, community_id или project_id, проверяем что пользователь является владельцем
     if (hub_id) {
       const { data: hub, error: hubError } = await supabase
         .from("hubs")
-        .select("creator_id")
+        .select("owner_id")
         .eq("id", hub_id)
         .single();
 
@@ -198,18 +203,19 @@ export async function POST(request: Request) {
         );
       }
 
-      if (hub.creator_id !== authUser.id) {
+      if (hub.owner_id !== authUser.id) {
         return NextResponse.json(
-          { error: "You are not the creator of this hub" },
+          { error: "You are not the owner of this hub" },
           { status: 403 }
         );
       }
-    }
 
-    if (community_id) {
+      ownerType = "hub";
+      ownerId = hub_id;
+    } else if (community_id) {
       const { data: community, error: communityError } = await supabase
         .from("communities")
-        .select("creator_id")
+        .select("owner_id")
         .eq("id", community_id)
         .single();
 
@@ -220,18 +226,19 @@ export async function POST(request: Request) {
         );
       }
 
-      if (community.creator_id !== authUser.id) {
+      if (community.owner_id !== authUser.id) {
         return NextResponse.json(
-          { error: "You are not the creator of this community" },
+          { error: "You are not the owner of this community" },
           { status: 403 }
         );
       }
-    }
 
-    if (project_id) {
+      ownerType = "community";
+      ownerId = community_id;
+    } else if (project_id) {
       const { data: project, error: projectError } = await supabase
         .from("projects")
-        .select("creator_id")
+        .select("owner_id")
         .eq("id", project_id)
         .single();
 
@@ -242,12 +249,15 @@ export async function POST(request: Request) {
         );
       }
 
-      if (project.creator_id !== authUser.id) {
+      if (project.owner_id !== authUser.id) {
         return NextResponse.json(
-          { error: "You are not the creator of this project" },
+          { error: "You are not the owner of this project" },
           { status: 403 }
         );
       }
+
+      ownerType = "project";
+      ownerId = project_id;
     }
 
     // Генерация slug
@@ -294,10 +304,9 @@ export async function POST(request: Request) {
       is_online: is_online || false,
       socials: socials || {},
       contacts: contacts || {},
-      organizer_id: authUser.id,
-      hub_id: hub_id || null,
-      community_id: community_id || null,
-      project_id: project_id || null,
+      // Унифицированные поля
+      owner_type: ownerType,
+      owner_id: ownerId,
       attendees_count: 0,
     };
 

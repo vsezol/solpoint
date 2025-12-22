@@ -24,7 +24,7 @@ export async function PATCH(
   try {
     const { data: project, error: projectError } = await supabase
       .from("projects")
-      .select("creator_id")
+      .select("owner_id")
       .eq("id", id)
       .single();
 
@@ -32,9 +32,9 @@ export async function PATCH(
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    if (project.creator_id !== authUser.id) {
+    if (project.owner_id !== authUser.id) {
       return NextResponse.json(
-        { error: "Forbidden: You are not the creator of this project" },
+        { error: "Forbidden: You are not the owner of this project" },
         { status: 403 }
       );
     }

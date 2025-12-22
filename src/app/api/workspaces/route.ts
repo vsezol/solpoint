@@ -3,34 +3,22 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 /**
- * GET /api/hubs
- * Список хабов с фильтрами для карты
- * 
- * Query params:
- * - country: фильтр по стране
- * - country_code: фильтр по коду страны (ISO 3166-1 alpha-2)
- * - city: фильтр по городу
- * - search: поиск по названию, стране, городу
- * - limit: количество результатов (по умолчанию 500)
- * - offset: смещение для пагинации
+ * GET /api/workspaces
+ * Список workspaces с фильтрами
  */
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
   const { searchParams } = new URL(request.url);
 
-  // Строим запрос
   let query = supabase
-    .from("hubs")
+    .from("workspaces")
     .select("*")
     .order("members_count", { ascending: false });
 
-  // Фильтры по стране (приоритет country_code, fallback на country для обратной совместимости)
   const countryCode = searchParams.get("country_code");
   if (countryCode) {
-    // Приоритет: фильтр по коду страны (ISO 3166-1 alpha-2)
     query = query.eq("country_code", countryCode.toUpperCase());
   } else {
-    // Fallback: фильтр по названию страны (для обратной совместимости)
     const country = searchParams.get("country");
     if (country) {
       query = query.eq("country", country);
@@ -45,36 +33,34 @@ export async function GET(request: NextRequest) {
   const search = searchParams.get("search");
   if (search) {
     query = query.or(
-      `name.ilike.%${search}%,country.ilike.%${search}%,city.ilike.%${search}%,description.ilike.%${search}%`
+      `name.ilike.%${search}%,country.ilike.%${search}%,city.ilike.%${search}%,description.ilike.%${search}%,address.ilike.%${search}%`
     );
   }
 
-  // Пагинация
   const limit = parseInt(searchParams.get("limit") || "500", 10);
   const offset = parseInt(searchParams.get("offset") || "0", 10);
   query = query.range(offset, offset + limit - 1);
 
-  const { data: hubs, error } = await query;
+  const { data: workspaces, error } = await query;
 
   if (error) {
-    console.error("Error fetching hubs:", error);
+    console.error("Error fetching workspaces:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to fetch hubs" },
+      { error: error.message || "Failed to fetch workspaces" },
       { status: 500 }
     );
   }
 
-  return NextResponse.json({ hubs: hubs || [] }, { status: 200 });
+  return NextResponse.json({ workspaces: workspaces || [] }, { status: 200 });
 }
 
 /**
- * POST /api/hubs
- * Создать новый хаб
+ * POST /api/workspaces
+ * Создать новый workspace
  */
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
 
-  // Проверка авторизации
   const {
     data: { user },
     error: authError,
@@ -97,27 +83,23 @@ export async function POST(request: NextRequest) {
       country,
       country_code,
       city,
+      address,
       latitude,
       longitude,
       socials,
     } = body;
 
-    // Валидация обязательных полей
-    if (!name) {
+    if (!name || !address) {
       return NextResponse.json(
-        { error: "Missing required field: name" },
+        { error: "Missing required fields: name, address" },
         { status: 400 }
       );
     }
 
-    // Если указана локация, проверяем требования
-    // Если локация не указана (глобальный хаб), все поля локации должны быть null
     const hasLocation = country !== undefined && country !== null;
     const hasCity = city !== undefined && city !== null && city.trim() !== "";
     const hasCoordinates = latitude !== undefined && longitude !== undefined && latitude !== null && longitude !== null;
     
-    // Если указан город, координаты обязательны
-    // Если указана только страна, координаты опциональны
     if (hasLocation && hasCity && (!hasCoordinates)) {
       return NextResponse.json(
         { error: "If city is specified, latitude and longitude are required" },
@@ -125,9 +107,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Создаем хаб
-    const { data: hub, error } = await supabase
-      .from("hubs")
+    const { data: workspace, error } = await supabase
+      .from("workspaces")
       .insert({
         name,
         description,
@@ -136,8 +117,9 @@ export async function POST(request: NextRequest) {
         country: hasLocation ? country : null,
         country_code: hasLocation ? (country_code || null) : null,
         city: hasLocation ? (city || null) : null,
-        latitude: hasLocation && hasCoordinates ? parseFloat(latitude) : null,
-        longitude: hasLocation && hasCoordinates ? parseFloat(longitude) : null,
+        address: address, // Обязательно
+        latitude: hasLocation && hasCoordinates ? parseFloat(latitude) : 0,
+        longitude: hasLocation && hasCoordinates ? parseFloat(longitude) : 0,
         socials: socials || {},
         owner_id: user.id,
       })
@@ -145,14 +127,14 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error("Error creating hub:", error);
+      console.error("Error creating workspace:", error);
       return NextResponse.json(
-        { error: error.message || "Failed to create hub" },
+        { error: error.message || "Failed to create workspace" },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ hub }, { status: 201 });
+    return NextResponse.json({ workspace }, { status: 201 });
   } catch (error) {
     console.error("Error parsing request:", error);
     return NextResponse.json(

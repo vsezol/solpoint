@@ -24,37 +24,48 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Получаем хабы, где пользователь является создателем
+    // Получаем хабы, где пользователь является владельцем
     const { data: hubs, error: hubsError } = await supabase
       .from("hubs")
       .select("id, name, slug")
-      .eq("creator_id", user.id)
+      .eq("owner_id", user.id)
       .order("name");
 
     if (hubsError) {
       console.error("Error fetching user hubs:", hubsError);
     }
 
-    // Получаем проекты, где пользователь является создателем
+    // Получаем проекты, где пользователь является владельцем
     const { data: projects, error: projectsError } = await supabase
       .from("projects")
       .select("id, name, slug")
-      .eq("creator_id", user.id)
+      .eq("owner_id", user.id)
       .order("name");
 
     if (projectsError) {
       console.error("Error fetching user projects:", projectsError);
     }
 
-    // Получаем комьюнити, где пользователь является создателем
+    // Получаем комьюнити, где пользователь является владельцем
     const { data: communities, error: communitiesError } = await supabase
       .from("communities")
       .select("id, name, slug")
-      .eq("creator_id", user.id)
+      .eq("owner_id", user.id)
       .order("name");
 
     if (communitiesError) {
       console.error("Error fetching user communities:", communitiesError);
+    }
+
+    // Получаем workspaces, где пользователь является владельцем
+    const { data: workspaces, error: workspacesError } = await supabase
+      .from("workspaces")
+      .select("id, name, slug")
+      .eq("owner_id", user.id)
+      .order("name");
+
+    if (workspacesError) {
+      console.error("Error fetching user workspaces:", workspacesError);
     }
 
     return NextResponse.json(
@@ -62,6 +73,7 @@ export async function GET(request: NextRequest) {
         hubs: hubs || [],
         projects: projects || [],
         communities: communities || [],
+        workspaces: workspaces || [],
       },
       { status: 200 }
     );

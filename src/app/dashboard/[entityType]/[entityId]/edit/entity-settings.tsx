@@ -1,17 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, Button, Input } from "@/components/ui";
 import { Settings, Edit, Save, X, UserPlus } from "lucide-react";
-import type { Hub, Community, Project, Event } from "@/types";
+import type { Hub, Community, Project, Event, User, Workspace } from "@/types";
 
 type EntityType = "hub" | "community" | "project" | "workspace" | "event";
-type Entity = Hub | Community | Project | Event;
+type Entity = Hub | Community | Project | Event | Workspace;
 
 interface EntitySettingsProps {
   entity: Entity;
   entityType: EntityType;
   entityId: string;
+  members: (User & { role?: "owner" | "moderator" | "member" })[];
+  currentUserId: string;
 }
 
 // Заглушки для типов сообществ
@@ -24,12 +26,38 @@ export function EntitySettings({
   entity,
   entityType,
   entityId,
+  members,
+  currentUserId,
 }: EntitySettingsProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isTransferring, setIsTransferring] = useState(false);
+  const [availableEntities, setAvailableEntities] = useState<{
+    hubs: Hub[];
+    communities: Community[];
+    projects: Project[];
+    workspaces: Workspace[];
+  }>({ hubs: [], communities: [], projects: [], workspaces: [] });
   
   const isEvent = entityType === "event";
   const event = isEvent ? (entity as Event) : null;
+  
+  // Получаем доступные сущности для transfer ownership (только для events)
+  useEffect(() => {
+    if (isEvent) {
+      fetch("/api/users/created-entities")
+        .then((res) => res.json())
+        .then((data) => {
+          setAvailableEntities({
+            hubs: data.hubs || [],
+            communities: data.communities || [],
+            projects: data.projects || [],
+            workspaces: data.workspaces || [],
+          });
+        })
+        .catch((err) => console.error("Error fetching entities:", err));
+    }
+  }, [isEvent]);
   
   // Инициализация formData
   const getInitialFormData = () => {
@@ -117,6 +145,60 @@ export function EntitySettings({
   const handleInviteMember = () => {
     // TODO: Реализовать модальное окно для приглашения участника
     alert("Invite member functionality coming soon");
+  };
+
+  const handleTransferOwnership = async () => {
+    if (!formData.transferOwnership) {
+      alert("Please select a new owner");
+      return;
+    }
+
+    if (!confirm("Are you sure you want to transfer ownership? This action cannot be undone.")) {
+      return;
+    }
+
+    setIsTransferring(true);
+    try {
+      let endpoint = "";
+      let body: any = {};
+
+      if (isEvent) {
+        // Для events может быть передача пользователю или сущности
+        const [ownerType, ownerId] = formData.transferOwnership.split(":");
+        endpoint = `/api/events/${entityId}/transfer-ownership`;
+        body = {
+          new_owner_type: ownerType,
+          new_owner_id: ownerId,
+        };
+      } else {
+        // Для других сущностей только пользователю
+        endpoint = `/api/${entityType === "workspace" ? "workspaces" : `${entityType}s`}/${entityId}/transfer-ownership`;
+        body = {
+          new_owner_id: formData.transferOwnership,
+        };
+      }
+
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to transfer ownership");
+      }
+
+      alert("Ownership transferred successfully!");
+      window.location.reload();
+    } catch (error) {
+      console.error("Error transferring ownership:", error);
+      alert(error instanceof Error ? error.message : "Failed to transfer ownership. Please try again.");
+    } finally {
+      setIsTransferring(false);
+    }
   };
 
   return (
@@ -431,31 +513,103 @@ export function EntitySettings({
           </p>
         </div>
 
-        {/* Transfer ownership */}
-        <div>
-          <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
-            Transfer ownership
-          </label>
-          {isEditing ? (
-            <select
-              value={formData.transferOwnership}
-              onChange={(e) =>
-                setFormData({ ...formData, transferOwnership: e.target.value })
-              }
-              className="w-full px-3 py-2 rounded-lg border border-[var(--color-surface-border)] bg-[var(--color-surface)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
-              disabled
-            >
-              <option value="">Select a member...</option>
-            </select>
-          ) : (
-            <p className="text-[var(--color-text-secondary)]">
-              Not available
+        {/* Transfer ownership - только для owner */}
+        {members.find((m) => m.id === currentUserId)?.role === "owner" && (
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
+              Transfer ownership
+            </label>
+            {isEditing ? (
+              <div className="space-y-2">
+                <select
+                  value={formData.transferOwnership}
+                  onChange={(e) =>
+                    setFormData({ ...formData, transferOwnership: e.target.value })
+                  }
+                  className="w-full px-3 py-2 rounded-lg border border-[var(--color-surface-border)] bg-[var(--color-surface)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+                  disabled={isTransferring}
+                >
+                  <option value="">Select a new owner...</option>
+                  {isEvent ? (
+                    <>
+                      <optgroup label="Members">
+                        {members
+                          .filter((m) => m.id !== currentUserId)
+                          .map((member) => (
+                            <option key={member.id} value={`user:${member.id}`}>
+                              {member.twitter_name} (@{member.twitter_handle})
+                            </option>
+                          ))}
+                      </optgroup>
+                      {availableEntities.hubs.length > 0 && (
+                        <optgroup label="Your Hubs">
+                          {availableEntities.hubs.map((hub) => (
+                            <option key={hub.id} value={`hub:${hub.id}`}>
+                              {hub.name}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
+                      {availableEntities.communities.length > 0 && (
+                        <optgroup label="Your Communities">
+                          {availableEntities.communities.map((community) => (
+                            <option key={community.id} value={`community:${community.id}`}>
+                              {community.name}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
+                      {availableEntities.projects.length > 0 && (
+                        <optgroup label="Your Projects">
+                          {availableEntities.projects.map((project) => (
+                            <option key={project.id} value={`project:${project.id}`}>
+                              {project.name}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
+                      {availableEntities.workspaces.length > 0 && (
+                        <optgroup label="Your Workspaces">
+                          {availableEntities.workspaces.map((workspace) => (
+                            <option key={workspace.id} value={`workspace:${workspace.id}`}>
+                              {workspace.name}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
+                    </>
+                  ) : (
+                    members
+                      .filter((m) => m.id !== currentUserId)
+                      .map((member) => (
+                        <option key={member.id} value={member.id}>
+                          {member.twitter_name} (@{member.twitter_handle})
+                        </option>
+                      ))
+                  )}
+                </select>
+                {formData.transferOwnership && (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={handleTransferOwnership}
+                    disabled={isTransferring}
+                    className="w-full"
+                  >
+                    {isTransferring ? "Transferring..." : "Transfer Ownership"}
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <p className="text-[var(--color-text-secondary)]">
+                Available in edit mode
+              </p>
+            )}
+            <p className="text-xs text-[var(--color-text-muted)] mt-1">
+              Only the current owner can transfer ownership
             </p>
-          )}
-          <p className="text-xs text-[var(--color-text-muted)] mt-1">
-            (Coming soon)
-          </p>
-        </div>
+          </div>
+        )}
 
         {/* Invite member button */}
         <div className="pt-4">
