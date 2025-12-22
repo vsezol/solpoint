@@ -276,5 +276,87 @@ export const COUNTRY_CENTERS: Record<string, [number, number]> = {
   KN: [17.3578, -62.7830],
 };
 
+/**
+ * Координаты крупных городов мира (lat, lng)
+ */
+export const MAJOR_CITIES: Array<{ name: string; lat: number; lng: number; countryCode: string }> = [
+  // Европа
+  { name: "London", lat: 51.5074, lng: -0.1278, countryCode: "GB" },
+  { name: "Paris", lat: 48.8566, lng: 2.3522, countryCode: "FR" },
+  { name: "Berlin", lat: 52.5200, lng: 13.4050, countryCode: "DE" },
+  { name: "Madrid", lat: 40.4168, lng: -3.7038, countryCode: "ES" },
+  { name: "Rome", lat: 41.9028, lng: 12.4964, countryCode: "IT" },
+  { name: "Amsterdam", lat: 52.3676, lng: 4.9041, countryCode: "NL" },
+  { name: "Vienna", lat: 48.2082, lng: 16.3738, countryCode: "AT" },
+  { name: "Prague", lat: 50.0755, lng: 14.4378, countryCode: "CZ" },
+  { name: "Warsaw", lat: 52.2297, lng: 21.0122, countryCode: "PL" },
+  { name: "Stockholm", lat: 59.3293, lng: 18.0686, countryCode: "SE" },
+  { name: "Copenhagen", lat: 55.6761, lng: 12.5683, countryCode: "DK" },
+  { name: "Oslo", lat: 59.9139, lng: 10.7522, countryCode: "NO" },
+  { name: "Helsinki", lat: 60.1699, lng: 24.9384, countryCode: "FI" },
+  { name: "Dublin", lat: 53.3498, lng: -6.2603, countryCode: "IE" },
+  { name: "Brussels", lat: 50.8503, lng: 4.3517, countryCode: "BE" },
+  { name: "Zurich", lat: 47.3769, lng: 8.5417, countryCode: "CH" },
+  { name: "Lisbon", lat: 38.7223, lng: -9.1393, countryCode: "PT" },
+  { name: "Athens", lat: 37.9838, lng: 23.7275, countryCode: "GR" },
+  { name: "Istanbul", lat: 41.0082, lng: 28.9784, countryCode: "TR" },
+  { name: "Moscow", lat: 55.7558, lng: 37.6173, countryCode: "RU" },
+  { name: "Kiev", lat: 50.4501, lng: 30.5234, countryCode: "UA" },
+  
+  // Азия
+  { name: "Tokyo", lat: 35.6762, lng: 139.6503, countryCode: "JP" },
+  { name: "Beijing", lat: 39.9042, lng: 116.4074, countryCode: "CN" },
+  { name: "Shanghai", lat: 31.2304, lng: 121.4737, countryCode: "CN" },
+  { name: "Seoul", lat: 37.5665, lng: 126.9780, countryCode: "KR" },
+  { name: "Singapore", lat: 1.3521, lng: 103.8198, countryCode: "SG" },
+  { name: "Bangkok", lat: 13.7563, lng: 100.5018, countryCode: "TH" },
+  { name: "Mumbai", lat: 19.0760, lng: 72.8777, countryCode: "IN" },
+  { name: "Delhi", lat: 28.6139, lng: 77.2090, countryCode: "IN" },
+  { name: "Bangalore", lat: 12.9716, lng: 77.5946, countryCode: "IN" },
+  { name: "Jakarta", lat: -6.2088, lng: 106.8456, countryCode: "ID" },
+  { name: "Manila", lat: 14.5995, lng: 120.9842, countryCode: "PH" },
+  { name: "Ho Chi Minh City", lat: 10.8231, lng: 106.6297, countryCode: "VN" },
+  { name: "Hanoi", lat: 21.0285, lng: 105.8542, countryCode: "VN" },
+  { name: "Dubai", lat: 25.2048, lng: 55.2708, countryCode: "AE" },
+  { name: "Abu Dhabi", lat: 24.4539, lng: 54.3773, countryCode: "AE" },
+  { name: "Riyadh", lat: 24.7136, lng: 46.6753, countryCode: "SA" },
+  { name: "Tel Aviv", lat: 32.0853, lng: 34.7818, countryCode: "IL" },
+  { name: "Almaty", lat: 43.2566, lng: 76.9286, countryCode: "KZ" },
+  { name: "Astana", lat: 51.1694, lng: 71.4491, countryCode: "KZ" },
+  { name: "Tashkent", lat: 41.2995, lng: 69.2401, countryCode: "UZ" },
+  { name: "Bishkek", lat: 42.8746, lng: 74.5698, countryCode: "KG" },
+  
+  // Северная Америка
+  { name: "New York", lat: 40.7128, lng: -74.0060, countryCode: "US" },
+  { name: "Los Angeles", lat: 34.0522, lng: -118.2437, countryCode: "US" },
+  { name: "San Francisco", lat: 37.7749, lng: -122.4194, countryCode: "US" },
+  { name: "Chicago", lat: 41.8781, lng: -87.6298, countryCode: "US" },
+  { name: "Miami", lat: 25.7617, lng: -80.1918, countryCode: "US" },
+  { name: "Toronto", lat: 43.6532, lng: -79.3832, countryCode: "CA" },
+  { name: "Vancouver", lat: 49.2827, lng: -123.1207, countryCode: "CA" },
+  { name: "Mexico City", lat: 19.4326, lng: -99.1332, countryCode: "MX" },
+  
+  // Южная Америка
+  { name: "São Paulo", lat: -23.5505, lng: -46.6333, countryCode: "BR" },
+  { name: "Rio de Janeiro", lat: -22.9068, lng: -43.1729, countryCode: "BR" },
+  { name: "Buenos Aires", lat: -34.6037, lng: -58.3816, countryCode: "AR" },
+  { name: "Santiago", lat: -33.4489, lng: -70.6693, countryCode: "CL" },
+  { name: "Lima", lat: -12.0464, lng: -77.0428, countryCode: "PE" },
+  { name: "Bogotá", lat: 4.7110, lng: -74.0721, countryCode: "CO" },
+  
+  // Африка
+  { name: "Cairo", lat: 30.0444, lng: 31.2357, countryCode: "EG" },
+  { name: "Johannesburg", lat: -26.2041, lng: 28.0473, countryCode: "ZA" },
+  { name: "Cape Town", lat: -33.9249, lng: 18.4241, countryCode: "ZA" },
+  { name: "Lagos", lat: 6.5244, lng: 3.3792, countryCode: "NG" },
+  { name: "Nairobi", lat: -1.2921, lng: 36.8219, countryCode: "KE" },
+  { name: "Casablanca", lat: 33.5731, lng: -7.5898, countryCode: "MA" },
+  
+  // Австралия и Океания
+  { name: "Sydney", lat: -33.8688, lng: 151.2093, countryCode: "AU" },
+  { name: "Melbourne", lat: -37.8136, lng: 144.9631, countryCode: "AU" },
+  { name: "Auckland", lat: -36.8485, lng: 174.7633, countryCode: "NZ" },
+];
+
 
 

@@ -11,7 +11,7 @@ import { EventCard } from "@/components/cards/event-card";
 import { HubCard } from "@/components/cards/hub-card";
 import { createClient } from "@/lib/supabase/client";
 import { trackEvent } from "@/lib/analytics";
-import { COUNTRIES_STATIC, COUNTRY_CENTERS } from "@/lib/countries";
+import { COUNTRIES_STATIC, COUNTRY_CENTERS, MAJOR_CITIES } from "@/lib/countries";
 
 // Fix for default markers (только в браузере)
 if (typeof window !== "undefined") {
@@ -203,7 +203,20 @@ export function SolPointMap({
       }
     });
 
-    // Также добавляем страны из маркеров (если их нет в статическом списке)
+    // Добавляем крупные города из статического списка
+    MAJOR_CITIES.forEach((city) => {
+      const cityKey = `${city.name.toLowerCase()}-${city.countryCode}`;
+      if (!cityMap.has(cityKey)) {
+        cityMap.set(cityKey, {
+          name: city.name,
+          lat: city.lat,
+          lng: city.lng,
+          countryCode: city.countryCode,
+        });
+      }
+    });
+
+    // Также добавляем страны и города из маркеров
     markers.forEach((marker) => {
       if (!marker.latitude || !marker.longitude) return;
 
@@ -251,7 +264,7 @@ export function SolPointMap({
         }
       }
 
-      // Обрабатываем города
+      // Обрабатываем города из маркеров (добавляем, если их нет в списке крупных городов)
       if (cityName && cityName.trim()) {
         const cityKey = `${cityName.trim().toLowerCase()}-${countryCode || ""}`;
         if (!cityMap.has(cityKey)) {
@@ -500,26 +513,33 @@ export function SolPointMap({
         {worldGeoJson && (
           <GeoJSON
             data={worldGeoJson}
-            style={() => ({
-              fillColor: "#452D9F", // Фиолетовый для материков
-              fillOpacity: 1,
-              color: "#A4E3B4", // Светло-зеленый для границ стран
-              weight: 1.5,
-              opacity: 1,
-            })}
+            style={(feature) => {
+              // Более детальная визуализация в зависимости от зума
+              const baseWeight = currentZoom < 5 ? 1.5 : currentZoom < 7 ? 1.2 : 1;
+              return {
+                fillColor: "#452D9F", // Фиолетовый для материков
+                fillOpacity: 0.9,
+                color: currentZoom >= 5 ? "#8B7EC8" : "#A4E3B4", // Более темные границы при приближении
+                weight: baseWeight,
+                opacity: 1,
+              };
+            }}
             eventHandlers={{
               mouseover: (e) => {
                 const layer = e.target;
                 layer.setStyle({
-                  fillOpacity: 0.95,
-                  weight: 2,
+                  fillOpacity: 0.85,
+                  weight: currentZoom >= 5 ? 1.5 : 2,
+                  color: "#C4B5FD",
                 });
               },
               mouseout: (e) => {
                 const layer = e.target;
+                const baseWeight = currentZoom < 5 ? 1.5 : currentZoom < 7 ? 1.2 : 1;
                 layer.setStyle({
-                  fillOpacity: 1,
-                  weight: 1.5,
+                  fillOpacity: 0.9,
+                  weight: baseWeight,
+                  color: currentZoom >= 5 ? "#8B7EC8" : "#A4E3B4",
                 });
               },
             }}
