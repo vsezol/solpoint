@@ -66,6 +66,16 @@ export async function getMapMarkers(
               // В будущем можно добавить геокодинг или хранить координаты в профиле
               const coords = getUserCoordinates(user);
               
+              // Пропускаем пользователей с невалидными координатами (0, 0)
+              if (coords.lat === 0 && coords.lng === 0) {
+                return;
+              }
+              
+              // Проверяем валидность координат
+              if (isNaN(coords.lat) || isNaN(coords.lng) || coords.lat < -90 || coords.lat > 90 || coords.lng < -180 || coords.lng > 180) {
+                return;
+              }
+              
               markers.push({
                 id: `user-${user.id}`,
                 type: user.subscription_tier === "vip" ? "vip_user" : "user",
@@ -111,11 +121,24 @@ export async function getMapMarkers(
           const { events } = data;
           if (events && Array.isArray(events)) {
             events.forEach((event: Event) => {
+              // Пропускаем события без координат или онлайн события
+              if (event.is_online || event.latitude == null || event.longitude == null) {
+                return;
+              }
+              
+              // Проверяем валидность координат
+              const lat = typeof event.latitude === "number" ? event.latitude : parseFloat(String(event.latitude));
+              const lng = typeof event.longitude === "number" ? event.longitude : parseFloat(String(event.longitude));
+              
+              if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+                return;
+              }
+              
               markers.push({
                 id: `event-${event.id}`,
                 type: "event",
-                latitude: event.latitude,
-                longitude: event.longitude,
+                latitude: lat,
+                longitude: lng,
                 data: event,
               });
             });
@@ -149,11 +172,24 @@ export async function getMapMarkers(
           const { hubs } = data;
           if (hubs && Array.isArray(hubs)) {
             hubs.forEach((hub: Hub) => {
+              // Пропускаем хабы без координат
+              if (hub.latitude == null || hub.longitude == null) {
+                return;
+              }
+              
+              // Проверяем валидность координат
+              const lat = typeof hub.latitude === "number" ? hub.latitude : parseFloat(String(hub.latitude));
+              const lng = typeof hub.longitude === "number" ? hub.longitude : parseFloat(String(hub.longitude));
+              
+              if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+                return;
+              }
+              
               markers.push({
                 id: `hub-${hub.id}`,
                 type: "hub",
-                latitude: hub.latitude,
-                longitude: hub.longitude,
+                latitude: lat,
+                longitude: lng,
                 data: hub,
               });
             });

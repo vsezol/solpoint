@@ -111,8 +111,12 @@ function MapController({ center, zoom }: MapControllerProps) {
   const map = useMap();
 
   useEffect(() => {
-    if (center && zoom) {
-      map.setView(center, zoom);
+    if (map && center && zoom) {
+      try {
+        map.setView(center, zoom);
+      } catch (error) {
+        console.error("Error setting map view:", error);
+      }
     }
   }, [map, center, zoom]);
 
@@ -387,26 +391,40 @@ export function SolPointMap({
         )}
         <MapController center={center} zoom={zoom} />
 
-        {markers.map((marker) => (
-          <Marker
-            key={marker.id}
-            position={[marker.latitude, marker.longitude]}
-            icon={getIcon(marker)}
-            eventHandlers={{
-              click: () => handleMarkerClick(marker),
-            }}
-          >
-            <Popup
-              className="solpoint-popup"
-              closeButton={true}
-              autoPan={true}
-              maxWidth={350}
-              minWidth={280}
+        {markers
+          .filter((marker) => {
+            // Фильтруем маркеры с валидными координатами
+            return (
+              marker.latitude != null &&
+              marker.longitude != null &&
+              !isNaN(marker.latitude) &&
+              !isNaN(marker.longitude) &&
+              marker.latitude >= -90 &&
+              marker.latitude <= 90 &&
+              marker.longitude >= -180 &&
+              marker.longitude <= 180
+            );
+          })
+          .map((marker) => (
+            <Marker
+              key={marker.id}
+              position={[marker.latitude, marker.longitude]}
+              icon={getIcon(marker)}
+              eventHandlers={{
+                click: () => handleMarkerClick(marker),
+              }}
             >
-              {renderPopupContent(marker)}
-            </Popup>
-          </Marker>
-        ))}
+              <Popup
+                className="solpoint-popup"
+                closeButton={true}
+                autoPan={true}
+                maxWidth={350}
+                minWidth={280}
+              >
+                {renderPopupContent(marker)}
+              </Popup>
+            </Marker>
+          ))}
       </MapContainer>
 
       {/* Custom styles for markers and map */}

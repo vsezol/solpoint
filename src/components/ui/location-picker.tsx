@@ -67,7 +67,20 @@ function MapClickHandler({
 }) {
   useMapEvents({
     click: async (e) => {
+      // Проверяем, что latlng существует
+      if (!e.latlng) {
+        console.error("Map click event has no latlng");
+        return;
+      }
+      
       const { lat, lng } = e.latlng;
+      
+      // Проверяем, что координаты валидны
+      if (typeof lat !== "number" || typeof lng !== "number" || isNaN(lat) || isNaN(lng)) {
+        console.error("Invalid coordinates:", { lat, lng });
+        return;
+      }
+      
       onLocationChange(lat, lng);
       
       // Perform reverse geocoding if callback provided
