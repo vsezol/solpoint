@@ -11,7 +11,7 @@ import { EventCard } from "@/components/cards/event-card";
 import { HubCard } from "@/components/cards/hub-card";
 import { createClient } from "@/lib/supabase/client";
 import { trackEvent } from "@/lib/analytics";
-import { COUNTRIES_STATIC } from "@/lib/countries";
+import { COUNTRIES_STATIC, COUNTRY_CENTERS } from "@/lib/countries";
 
 // Fix for default markers (только в браузере)
 if (typeof window !== "undefined") {
@@ -186,11 +186,24 @@ export function SolPointMap({
   const [friendshipStatuses, setFriendshipStatuses] = useState<Record<string, "none" | "following" | "mutual">>({});
   const [currentZoom, setCurrentZoom] = useState(zoom);
 
-  // Собираем уникальные страны и города из маркеров
+  // Собираем страны и города
   const { countries, cities } = useMemo(() => {
-    const countryMap = new Map<string, { name: string; lat: number; lng: number; count: number }>();
+    const countryMap = new Map<string, { name: string; lat: number; lng: number }>();
     const cityMap = new Map<string, { name: string; lat: number; lng: number; countryCode?: string }>();
 
+    // Добавляем все страны из статического списка с их координатами
+    COUNTRIES_STATIC.forEach((country) => {
+      const center = COUNTRY_CENTERS[country.code];
+      if (center && !countryMap.has(country.code)) {
+        countryMap.set(country.code, {
+          name: country.name,
+          lat: center[0],
+          lng: center[1],
+        });
+      }
+    });
+
+    // Также добавляем страны из маркеров (если их нет в статическом списке)
     markers.forEach((marker) => {
       if (!marker.latitude || !marker.longitude) return;
 
@@ -205,7 +218,6 @@ export function SolPointMap({
       }
       if ("country" in data && data.country) {
         countryName = data.country as string;
-        // Пытаемся найти код страны по названию
         if (!countryCode) {
           const country = COUNTRIES_STATIC.find(
             (c) => c.name.toLowerCase() === countryName!.toLowerCase()
@@ -220,24 +232,22 @@ export function SolPointMap({
         cityName = data.city as string;
       }
 
-      // Обрабатываем страны
-      if (countryCode) {
-        const country = COUNTRIES_STATIC.find((c) => c.code === countryCode);
-        const name = country?.name || countryName || countryCode;
-        
-        if (!countryMap.has(countryCode)) {
+      // Добавляем страну, если её нет в списке
+      if (countryCode && !countryMap.has(countryCode)) {
+        const center = COUNTRY_CENTERS[countryCode];
+        if (center) {
           countryMap.set(countryCode, {
-            name,
-            lat: marker.latitude,
-            lng: marker.longitude,
-            count: 1,
+            name: countryName || countryCode,
+            lat: center[0],
+            lng: center[1],
           });
         } else {
-          const existing = countryMap.get(countryCode)!;
-          // Обновляем центр страны (среднее арифметическое)
-          existing.lat = (existing.lat * existing.count + marker.latitude) / (existing.count + 1);
-          existing.lng = (existing.lng * existing.count + marker.longitude) / (existing.count + 1);
-          existing.count++;
+          // Если нет координат в списке, используем координаты маркера
+          countryMap.set(countryCode, {
+            name: countryName || countryCode,
+            lat: marker.latitude,
+            lng: marker.longitude,
+          });
         }
       }
 
