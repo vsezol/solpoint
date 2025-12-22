@@ -28,17 +28,21 @@ export function Header() {
   // Формируем динамический список ссылок навигации
   const dynamicNavLinks = [...navLinks];
   
-  // Добавляем Dashboard после "About us" если enable_dashboard = true
+  // Собираем дополнительные ссылки (Dashboard и Admin)
+  const additionalLinks = [];
   if (user?.enable_dashboard) {
-    const aboutIndex = dynamicNavLinks.findIndex(link => link.href === "/about");
-    if (aboutIndex !== -1) {
-      dynamicNavLinks.splice(aboutIndex + 1, 0, { href: "/dashboard", label: "Dashboard" });
-    }
+    additionalLinks.push({ href: "/dashboard", label: "Dashboard" });
+  }
+  if (user?.is_admin) {
+    additionalLinks.push({ href: "/admin", label: "Admin" });
   }
   
-  // Добавляем Admin если is_admin = true
-  if (user?.is_admin) {
-    dynamicNavLinks.push({ href: "/admin", label: "Admin" });
+  // Вставляем дополнительные ссылки перед "About us"
+  if (additionalLinks.length > 0) {
+    const aboutIndex = dynamicNavLinks.findIndex(link => link.href === "/about");
+    if (aboutIndex !== -1) {
+      dynamicNavLinks.splice(aboutIndex, 0, ...additionalLinks);
+    }
   }
 
   return (
