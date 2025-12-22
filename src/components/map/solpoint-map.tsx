@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { MapContainer, Marker, Popup, useMap, GeoJSON } from "react-leaflet";
+import { useEffect, useState, useCallback, useMemo } from "react";
+import { MapContainer, Marker, Popup, useMap, GeoJSON, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { MapMarker, User, Event, Hub, Community, Workspace } from "@/types";
@@ -11,6 +11,7 @@ import { EventCard } from "@/components/cards/event-card";
 import { HubCard } from "@/components/cards/hub-card";
 import { createClient } from "@/lib/supabase/client";
 import { trackEvent } from "@/lib/analytics";
+import { COUNTRIES_STATIC } from "@/lib/countries";
 
 // Fix for default markers (только в браузере)
 if (typeof window !== "undefined") {
@@ -123,6 +124,44 @@ function MapController({ center, zoom }: MapControllerProps) {
   return null;
 }
 
+// Компонент для отслеживания уровня зума
+function ZoomTracker({ onZoomChange }: { onZoomChange: (zoom: number) => void }) {
+  const map = useMapEvents({
+    zoomend: () => {
+      onZoomChange(map.getZoom());
+    },
+  });
+
+  useEffect(() => {
+    onZoomChange(map.getZoom());
+  }, [map, onZoomChange]);
+
+  return null;
+}
+
+// Функция для создания текстовой метки
+const createTextLabel = (text: string, fontSize: number = 14) => {
+  return L.divIcon({
+    html: `<div style="
+      color: #000000;
+      text-shadow: 
+        -1px -1px 0 #ffffff,
+        1px -1px 0 #ffffff,
+        -1px 1px 0 #ffffff,
+        1px 1px 0 #ffffff,
+        0 0 2px #ffffff;
+      font-weight: bold;
+      font-size: ${fontSize}px;
+      white-space: nowrap;
+      pointer-events: none;
+      user-select: none;
+    ">${text}</div>`,
+    className: "text-label",
+    iconSize: [0, 0],
+    iconAnchor: [0, 0],
+  });
+};
+
 interface SolPointMapProps {
   markers: MapMarker[];
   center?: [number, number];
@@ -145,6 +184,87 @@ export function SolPointMap({
   const [, setSelectedMarker] = useState<MapMarker | null>(null);
   const [worldGeoJson, setWorldGeoJson] = useState<GeoJsonObject | null>(null);
   const [friendshipStatuses, setFriendshipStatuses] = useState<Record<string, "none" | "following" | "mutual">>({});
+  const [currentZoom, setCurrentZoom] = useState(zoom);
+
+  // Собираем уникальные страны и города из маркеров
+  const { countries, cities } = useMemo(() => {
+    const countryMap = new Map<string, { name: string; lat: number; lng: number; count: number }>();
+    const cityMap = new Map<string, { name: string; lat: number; lng: number; countryCode?: string }>();
+
+    markers.forEach((marker) => {
+      if (!marker.latitude || !marker.longitude) return;
+
+      const data = marker.data;
+      let countryCode: string | undefined;
+      let countryName: string | undefined;
+      let cityName: string | undefined;
+
+      // Получаем данные о стране и городе в зависимости от типа маркера
+      if ("country_code" in data && data.country_code) {
+        countryCode = data.country_code as string;
+      }
+      if ("country" in data && data.country) {
+        countryName = data.country as string;
+        // Пытаемся найти код страны по названию
+        if (!countryCode) {
+          const country = COUNTRIES_STATIC.find(
+            (c) => c.name.toLowerCase() === countryName!.toLowerCase()
+          );
+          if (country) {
+            countryCode = country.code;
+          }
+        }
+      }
+
+      if ("city" in data && data.city) {
+        cityName = data.city as string;
+      }
+
+      // Обрабатываем страны
+      if (countryCode) {
+        const country = COUNTRIES_STATIC.find((c) => c.code === countryCode);
+        const name = country?.name || countryName || countryCode;
+        
+        if (!countryMap.has(countryCode)) {
+          countryMap.set(countryCode, {
+            name,
+            lat: marker.latitude,
+            lng: marker.longitude,
+            count: 1,
+          });
+        } else {
+          const existing = countryMap.get(countryCode)!;
+          // Обновляем центр страны (среднее арифметическое)
+          existing.lat = (existing.lat * existing.count + marker.latitude) / (existing.count + 1);
+          existing.lng = (existing.lng * existing.count + marker.longitude) / (existing.count + 1);
+          existing.count++;
+        }
+      }
+
+      // Обрабатываем города
+      if (cityName && cityName.trim()) {
+        const cityKey = `${cityName.trim().toLowerCase()}-${countryCode || ""}`;
+        if (!cityMap.has(cityKey)) {
+          cityMap.set(cityKey, {
+            name: cityName.trim(),
+            lat: marker.latitude,
+            lng: marker.longitude,
+            countryCode,
+          });
+        } else {
+          // Если город уже есть, обновляем координаты (среднее)
+          const existing = cityMap.get(cityKey)!;
+          existing.lat = (existing.lat + marker.latitude) / 2;
+          existing.lng = (existing.lng + marker.longitude) / 2;
+        }
+      }
+    });
+
+    return {
+      countries: Array.from(countryMap.values()),
+      cities: Array.from(cityMap.values()),
+    };
+  }, [markers]);
 
   // Load GeoJSON data for world countries
   useEffect(() => {
@@ -396,6 +516,29 @@ export function SolPointMap({
           />
         )}
         <MapController center={center} zoom={zoom} />
+        <ZoomTracker onZoomChange={setCurrentZoom} />
+
+        {/* Названия стран (при малом зуме < 5) */}
+        {currentZoom < 5 &&
+          countries.map((country, index) => (
+            <Marker
+              key={`country-${index}`}
+              position={[country.lat, country.lng]}
+              icon={createTextLabel(country.name, 16)}
+              interactive={false}
+            />
+          ))}
+
+        {/* Названия городов (при большом зуме >= 5) */}
+        {currentZoom >= 5 &&
+          cities.map((city, index) => (
+            <Marker
+              key={`city-${index}`}
+              position={[city.lat, city.lng]}
+              icon={createTextLabel(city.name, 14)}
+              interactive={false}
+            />
+          ))}
 
         {markers
           .filter((marker) => {

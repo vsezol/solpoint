@@ -3,6 +3,7 @@ import { Space_Grotesk, JetBrains_Mono, Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/components/providers/auth-provider";
 import { QueryProvider } from "@/components/providers/query-provider";
+import { WalletContextProvider } from "@/components/providers/wallet-provider";
 import { GoogleAnalytics } from "@/components/analytics/google-analytics";
 
 const spaceGrotesk = Space_Grotesk({
@@ -65,7 +66,9 @@ export default function RootLayout({
       >
         <GoogleAnalytics />
         <QueryProvider>
-          <AuthProvider>{children}</AuthProvider>
+          <WalletContextProvider>
+            <AuthProvider>{children}</AuthProvider>
+          </WalletContextProvider>
         </QueryProvider>
       </body>
     </html>

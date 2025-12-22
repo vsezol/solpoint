@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
 import type { Plan, Subscription } from "@/types";
+import { SolanaPaymentButton } from "@/components/subscription/solana-payment-button";
 
 const freePlanFeatures = [
   { text: "See users on map by country", included: true },
@@ -34,7 +35,7 @@ const freePlanFeatures = [
   { text: "Create hubs or events", included: false },
 ];
 
-const vipPlanFeatures = [
+const proPlanFeatures = [
   { text: "Everything in Free", included: true },
   { text: "View full user profiles", included: true },
   { text: "Direct messaging", included: true },
@@ -45,7 +46,7 @@ const vipPlanFeatures = [
   { text: "See all lists of friends and people", included: true },
 ];
 
-const vipBenefits = [
+const proBenefits = [
   {
     icon: UserPlus,
     title: "Full People Access",
@@ -78,7 +79,7 @@ const vipBenefits = [
   },
   {
     icon: Star,
-    title: "VIP Map Presence",
+    title: "PRO Map Presence",
     description: "Stand out with a gold marker on the map. Free users appear with a red marker. Visibility matters.",
   },
   {
@@ -112,6 +113,8 @@ export default function SubscriptionPage() {
   const [addressCopied, setAddressCopied] = useState(false);
   const [checkingManually, setCheckingManually] = useState(false);
   const [subscriptionActivated, setSubscriptionActivated] = useState(false);
+  const [paymentMethodModalOpen, setPaymentMethodModalOpen] = useState(false);
+  const [selectedPaymentPlan, setSelectedPaymentPlan] = useState<Plan | null>(null);
 
   // Проверяем параметры URL для успешной/отмененной оплаты
   useEffect(() => {
@@ -167,13 +170,9 @@ export default function SubscriptionPage() {
   };
 
   const handleUpgrade = async (planId: string) => {
-    setIsLoading(true);
-    setSelectedPlan(planId);
-    
     const plan = plans.find((p) => p.id === planId);
     if (!plan) {
-      alert("План не найден");
-      setIsLoading(false);
+      alert("Plan not found");
       return;
     }
 
@@ -183,11 +182,23 @@ export default function SubscriptionPage() {
       price: plan.price,
     });
 
+    // Показываем модальное окно выбора способа оплаты
+    setSelectedPaymentPlan(plan);
+    setPaymentMethodModalOpen(true);
+  };
+
+  const handleNowPaymentsPayment = async () => {
+    if (!selectedPaymentPlan) return;
+    
+    setIsLoading(true);
+    setSelectedPlan(selectedPaymentPlan.id);
+    setPaymentMethodModalOpen(false);
+
     try {
       trackEvent("subscription_payment_start", {
         event_category: "Subscription",
-        plan_name: plan.code,
-        price: plan.price,
+        plan_name: selectedPaymentPlan.code,
+        price: selectedPaymentPlan.price,
       });
 
       // Создаем платеж через NowPayments
@@ -197,7 +208,7 @@ export default function SubscriptionPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          plan_id: planId,
+          plan_id: selectedPaymentPlan.id,
           success_url: `${window.location.origin}/subscription?success=true`,
           cancel_url: `${window.location.origin}/subscription?cancelled=true`,
         }),
@@ -274,17 +285,17 @@ export default function SubscriptionPage() {
         }, 10 * 60 * 1000);
       } else {
         console.error("Invalid payment data:", paymentResponse);
-        throw new Error("Не получены данные для оплаты от платежного сервиса");
+        throw new Error("Payment data not received from payment service");
       }
     } catch (error) {
       console.error("Error creating payment:", error);
       trackEvent("subscription_payment_error", {
         event_category: "Subscription",
-        plan_name: plan.code,
+        plan_name: selectedPaymentPlan?.code || "unknown",
         error_message: error instanceof Error ? error.message : "unknown",
       });
       alert(
-        `Не удалось создать платеж: ${error instanceof Error ? error.message : "Неизвестная ошибка"}`
+        `Failed to create payment: ${error instanceof Error ? error.message : "Unknown error"}`
       );
     } finally {
       setIsLoading(false);
@@ -306,20 +317,20 @@ export default function SubscriptionPage() {
       
       if (response.ok) {
         if (data.activated > 0) {
-          alert(`✅ Проверено платежей: ${data.checked}\n✅ Активировано подписок: ${data.activated}\n\nПодписка активирована! Обновляю страницу...`);
+          alert(`✅ Checked payments: ${data.checked}\n✅ Activated subscriptions: ${data.activated}\n\nSubscription activated! Reloading page...`);
           await fetchCurrentSubscription();
           await fetchPlans();
           window.location.reload();
         } else {
-          alert(`Проверено платежей: ${data.checked}\nАктивировано подписок: ${data.activated}\n\n${data.message || "Нет завершенных платежей для активации"}`);
+          alert(`Checked payments: ${data.checked}\nActivated subscriptions: ${data.activated}\n\n${data.message || "No completed payments to activate"}`);
           await fetchCurrentSubscription();
         }
       } else {
-        alert(`Ошибка: ${data.error || "Неизвестная ошибка"}`);
+        alert(`Error: ${data.error || "Unknown error"}`);
       }
     } catch (error) {
       console.error("Error manual check:", error);
-      alert(`Ошибка при проверке: ${error instanceof Error ? error.message : "Неизвестная ошибка"}`);
+      alert(`Error checking payments: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
       setCheckingManually(false);
     }
@@ -334,17 +345,17 @@ export default function SubscriptionPage() {
       period: "forever",
       description: "Basic access to the Solana community map",
       features: freePlanFeatures,
-      cta: currentSubscription ? "Current Plan" : "Current Plan",
+      cta: "Current Plan", // Will be overridden by button logic
       highlighted: false,
       isFree: true,
     },
     ...plans.map((plan) => {
       // Определяем название плана
-      let planName = "VIP";
+      let planName = "PRO";
       if (plan.code === "monthly") {
-        planName = "VIP Monthly";
+        planName = "PRO Monthly";
       } else if (plan.code === "yearly") {
-        planName = "VIP Yearly";
+        planName = "PRO Yearly";
       } else if (plan.code === "pro") {
         planName = "PRO";
       }
@@ -365,7 +376,7 @@ export default function SubscriptionPage() {
         price: plan.price,
         period: period,
         description: "Connect & build",
-        features: vipPlanFeatures,
+        features: proPlanFeatures,
         cta: currentSubscription?.plan_id === plan.id ? "Current Plan" : "Upgrade",
         highlighted: true,
         isFree: false,
@@ -402,7 +413,7 @@ export default function SubscriptionPage() {
           </div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {vipBenefits.map((benefit, index) => (
+            {proBenefits.map((benefit, index) => (
               <Card
                 key={index}
                 variant="bordered"
@@ -431,9 +442,14 @@ export default function SubscriptionPage() {
           ) : (
             <div className="grid md:grid-cols-2 gap-8">
               {displayPlans.map((plan) => {
-                const isCurrentPlan = currentSubscription?.plan_id === plan.id;
-                const isVipPlan = !plan.isFree;
-                const canUpgrade = isVipPlan && !isCurrentPlan;
+                // Для Basic плана (id === "free") проверяем отсутствие подписки
+                // Для PRO планов проверяем совпадение plan_id
+                const isCurrentPlan = plan.isFree 
+                  ? !currentSubscription  // Basic - текущий план если нет подписки
+                  : currentSubscription?.plan_id === plan.id;  // PRO - текущий план если совпадает plan_id
+                const isProPlan = !plan.isFree;
+                const canUpgrade = isProPlan && !isCurrentPlan;
+                
 
                 return (
                   <Card
@@ -499,7 +515,7 @@ export default function SubscriptionPage() {
                       }`}
                       variant={plan.highlighted && canUpgrade ? "primary" : "outline"}
                       size="lg"
-                      disabled={!canUpgrade || isLoading}
+                      disabled={(!canUpgrade && !plan.isFree) || isLoading || (plan.isFree && currentSubscription)}
                       isLoading={isLoading && selectedPlan === plan.id}
                       onClick={
                         canUpgrade && plan.id !== "free"
@@ -510,7 +526,13 @@ export default function SubscriptionPage() {
                       {plan.highlighted && canUpgrade && (
                         <Check className="w-5 h-5 mr-2" />
                       )}
-                      {isCurrentPlan ? "Current plan" : (plan.highlighted && canUpgrade ? "Upgrade to PRO" : plan.cta)}
+                      {isCurrentPlan 
+                        ? "Current plan" 
+                        : plan.highlighted && canUpgrade 
+                          ? "Upgrade to PRO" 
+                          : plan.isFree
+                            ? (currentSubscription ? "Basic Plan" : "Current Plan")
+                            : plan.cta}
                     </Button>
                   </Card>
                 );
@@ -529,7 +551,7 @@ export default function SubscriptionPage() {
               </h3>
             </div>
             <p className="text-[var(--color-text-secondary)] mb-6">
-              VIP subscriptions are paid via NowPayments. You can pay with TRX, USDC, MATIC, or other cryptocurrencies.
+              PRO subscriptions are paid via NowPayments or Solana. You can pay with TRX, USDC, MATIC, SOL, or other cryptocurrencies.
               Your subscription will be activated automatically after payment confirmation.
             </p>
             <div className="flex items-center justify-center gap-6 text-sm text-[var(--color-text-muted)]">
@@ -581,9 +603,9 @@ export default function SubscriptionPage() {
         closeOnOverlayClick={false}
       >
         <ModalHeader>
-          <ModalTitle>Подписка активирована!</ModalTitle>
+          <ModalTitle>Subscription Activated!</ModalTitle>
           <ModalDescription>
-            Ваша VIP подписка успешно активирована
+            Your PRO subscription has been successfully activated
           </ModalDescription>
         </ModalHeader>
         <ModalContent>
@@ -592,10 +614,10 @@ export default function SubscriptionPage() {
               <CheckCircle2 className="w-12 h-12 text-green-500" />
             </div>
             <h3 className="text-xl font-bold text-[var(--color-text-primary)] mb-2">
-              Добро пожаловать в VIP!
+              Welcome to PRO!
             </h3>
             <p className="text-[var(--color-text-secondary)] mb-6">
-              Теперь у вас есть полный доступ ко всем VIP функциям SolPoint
+              You now have full access to all PRO features on SolPoint
             </p>
             <Button
               variant="primary"
@@ -606,12 +628,98 @@ export default function SubscriptionPage() {
                 window.location.reload();
               }}
             >
-              Отлично!
+              Great!
             </Button>
           </div>
         </ModalContent>
       </Modal>
       
+      {/* Payment Method Selection Modal */}
+      <Modal
+        isOpen={paymentMethodModalOpen}
+        onClose={() => {
+          setPaymentMethodModalOpen(false);
+          setSelectedPaymentPlan(null);
+        }}
+        size="md"
+        variant="centered"
+      >
+        <ModalHeader>
+          <ModalTitle>Choose Payment Method</ModalTitle>
+          <ModalDescription>
+            Select payment method for {selectedPaymentPlan?.code} subscription
+          </ModalDescription>
+        </ModalHeader>
+        <ModalContent>
+          {selectedPaymentPlan && (
+            <div className="space-y-4">
+              <div className="text-center mb-6">
+                <p className="text-2xl font-bold text-[var(--color-text-primary)]">
+                  ${selectedPaymentPlan.price} {selectedPaymentPlan.currency.toUpperCase()}
+                </p>
+                <p className="text-sm text-[var(--color-text-secondary)] mt-1">
+                  {selectedPaymentPlan.interval_days} days subscription
+                </p>
+              </div>
+
+              {/* NowPayments Option */}
+              <Card variant="bordered" className="p-4 cursor-pointer hover:border-[var(--color-primary)] transition-colors">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold text-[var(--color-text-primary)] mb-1">
+                      Cryptocurrencies (NowPayments)
+                    </h3>
+                    <p className="text-sm text-[var(--color-text-secondary)]">
+                      TRX, USDC, MATIC, BNB and others
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={handleNowPaymentsPayment}
+                  >
+                    Select
+                  </Button>
+                </div>
+              </Card>
+
+              {/* Solana Option */}
+              <Card variant="bordered" className="p-4 border-[var(--color-primary)]">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="font-semibold text-[var(--color-text-primary)] mb-1">
+                      Solana (SOL)
+                    </h3>
+                    <p className="text-sm text-[var(--color-text-secondary)]">
+                      Direct transfer via WalletConnect
+                    </p>
+                  </div>
+                  <Badge variant="primary" className="bg-[var(--color-primary)]">
+                      Recommended
+                    </Badge>
+                </div>
+                <SolanaPaymentButton
+                  plan={selectedPaymentPlan}
+                  onSuccess={() => {
+                    setPaymentMethodModalOpen(false);
+                    setSelectedPaymentPlan(null);
+                    setSubscriptionActivated(true);
+                    fetchCurrentSubscription();
+                    fetchPlans();
+                    trackEvent("subscription_activated", {
+                      event_category: "Subscription",
+                      payment_method: "solana",
+                    });
+                  }}
+                  onError={(error) => {
+                    alert(`Ошибка оплаты: ${error}`);
+                  }}
+                />
+              </Card>
+            </div>
+          )}
+        </ModalContent>
+      </Modal>
+
       {/* Payment Modal */}
       <Modal
         isOpen={paymentModalOpen}

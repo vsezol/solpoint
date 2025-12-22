@@ -264,7 +264,6 @@ export async function getMapMarkers(
         if (workspacesResponse.ok) {
           const data = await workspacesResponse.json().catch(() => ({}));
           const { workspaces } = data;
-          console.log(workspaces, 'workspaces');
           if (workspaces && Array.isArray(workspaces)) {
             workspaces.forEach((workspace: Workspace) => {
               // Пропускаем workspaces без координат
