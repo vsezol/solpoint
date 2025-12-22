@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { MapContainer, Marker, Popup, useMap, GeoJSON, useMapEvents } from "react-leaflet";
+import { MapContainer, Marker, Popup, useMap, GeoJSON, useMapEvents, TileLayer } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { MapMarker, User, Event, Hub, Community, Workspace } from "@/types";
@@ -509,7 +509,18 @@ export function SolPointMap({
         dragging={true}
         attributionControl={false}
       >
-        {/* GeoJSON layer with custom colors from Figma */}
+        <MapController center={center} zoom={zoom} />
+        <ZoomTracker onZoomChange={setCurrentZoom} />
+
+        {/* Базовый тайловый слой с деталями карты (города, дороги, границы) */}
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          opacity={0.6}
+          maxZoom={19}
+        />
+
+        {/* GeoJSON layer with custom colors from Figma - поверх тайлов для стилизации */}
         {worldGeoJson && (
           <GeoJSON
             data={worldGeoJson}
@@ -518,7 +529,7 @@ export function SolPointMap({
               const baseWeight = currentZoom < 5 ? 1.5 : currentZoom < 7 ? 1.2 : 1;
               return {
                 fillColor: "#452D9F", // Фиолетовый для материков
-                fillOpacity: 0.9,
+                fillOpacity: 0.7, // Прозрачность, чтобы были видны детали карты под ним
                 color: currentZoom >= 5 ? "#8B7EC8" : "#A4E3B4", // Более темные границы при приближении
                 weight: baseWeight,
                 opacity: 1,
@@ -537,7 +548,7 @@ export function SolPointMap({
                 const layer = e.target;
                 const baseWeight = currentZoom < 5 ? 1.5 : currentZoom < 7 ? 1.2 : 1;
                 layer.setStyle({
-                  fillOpacity: 0.9,
+                  fillOpacity: 0.7,
                   weight: baseWeight,
                   color: currentZoom >= 5 ? "#8B7EC8" : "#A4E3B4",
                 });
@@ -545,8 +556,6 @@ export function SolPointMap({
             }}
           />
         )}
-        <MapController center={center} zoom={zoom} />
-        <ZoomTracker onZoomChange={setCurrentZoom} />
 
         {/* Названия стран (при малом зуме < 5) */}
         {currentZoom < 5 &&
