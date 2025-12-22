@@ -228,10 +228,10 @@ export interface Workspace {
 // Map types
 export interface MapMarker {
   id: string;
-  type: "user" | "vip_user" | "event" | "hub" | "community" | "project";
+  type: "user" | "vip_user" | "event" | "hub" | "community" | "project" | "workspace";
   latitude: number;
   longitude: number;
-  data: User | Event | Hub | Community | Project;
+  data: User | Event | Hub | Community | Project | Workspace;
 }
 
 export interface CountryStats {
@@ -246,7 +246,7 @@ export interface CountryStats {
 }
 
 // Filter types
-export type ContentTypeFilter = "all" | "users" | "events" | "hubs" | "communities" | "projects";
+export type ContentTypeFilter = "all" | "users" | "events" | "hubs" | "communities" | "projects" | "workspaces";
 
 export interface MapFilters {
   showUsers: boolean;
@@ -254,7 +254,8 @@ export interface MapFilters {
   showHubs: boolean;
   showCommunities?: boolean;
   showProjects?: boolean;
-  contentType?: ContentTypeFilter; // Переключатель: all | users | events | hubs | communities | projects
+  showWorkspaces?: boolean;
+  contentType?: ContentTypeFilter; // Переключатель: all | users | events | hubs | communities | projects | workspaces
   userRoles?: UserRole[];
   eventType?: EventType;
   openToMeet?: boolean;

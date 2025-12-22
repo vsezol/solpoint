@@ -15,14 +15,10 @@ export async function GET(request: NextRequest) {
     .select("*")
     .order("members_count", { ascending: false });
 
+  // Фильтры по стране - используем только country_code
   const countryCode = searchParams.get("country_code");
   if (countryCode) {
     query = query.eq("country_code", countryCode.toUpperCase());
-  } else {
-    const country = searchParams.get("country");
-    if (country) {
-      query = query.eq("country", country);
-    }
   }
 
   const city = searchParams.get("city");

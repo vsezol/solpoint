@@ -33,6 +33,8 @@ export default function MapPage() {
     showUsers: true,
     showEvents: true,
     showHubs: true,
+    showCommunities: true,
+    showWorkspaces: true,
     contentType: "all",
   });
   const { user } = useAuth();

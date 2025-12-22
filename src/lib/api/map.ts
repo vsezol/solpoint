@@ -1,4 +1,4 @@
-import type { MapMarker, MapFilters, User, Event, Hub } from "@/types";
+import type { MapMarker, MapFilters, User, Event, Hub, Community, Workspace } from "@/types";
 
 export interface GetMapMarkersResponse {
   markers: MapMarker[];
@@ -15,6 +15,7 @@ export async function getMapMarkers(
     showUsers: true,
     showEvents: true,
     showHubs: true,
+    showWorkspaces: true,
   },
   currentUserId?: string
 ): Promise<MapMarker[]> {
@@ -154,11 +155,8 @@ export async function getMapMarkers(
     if (filters.showHubs) {
       const hubParams = new URLSearchParams();
       
-      // Приоритет: country_code (если есть), иначе country (для обратной совместимости)
       if (filters.countryCode) {
         hubParams.append("country_code", filters.countryCode);
-      } else if (filters.country) {
-        hubParams.append("country", filters.country);
       }
       
       if (filters.city) {
@@ -198,6 +196,103 @@ export async function getMapMarkers(
       } catch (error) {
         console.error("Error fetching hubs for map:", error);
         // Продолжаем работу даже если не удалось загрузить хабы
+      }
+    }
+
+    // Получить communities
+    if (filters.showCommunities) {
+      const communityParams = new URLSearchParams();
+      
+      if (filters.countryCode) {
+        communityParams.append("country_code", filters.countryCode);
+      }
+      
+      if (filters.city) {
+        communityParams.append("city", filters.city);
+      }
+
+      try {
+        const communitiesResponse = await fetch(`/api/communities?${communityParams.toString()}`);
+        if (communitiesResponse.ok) {
+          const data = await communitiesResponse.json().catch(() => ({}));
+          const { communities } = data;
+          if (communities && Array.isArray(communities)) {
+            communities.forEach((community: Community) => {
+              // Пропускаем communities без координат
+              if (community.latitude == null || community.longitude == null) {
+                return;
+              }
+              
+              // Проверяем валидность координат
+              const lat = typeof community.latitude === "number" ? community.latitude : parseFloat(String(community.latitude));
+              const lng = typeof community.longitude === "number" ? community.longitude : parseFloat(String(community.longitude));
+              
+              if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+                return;
+              }
+              
+              markers.push({
+                id: `community-${community.id}`,
+                type: "community",
+                latitude: lat,
+                longitude: lng,
+                data: community,
+              });
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching communities for map:", error);
+        // Продолжаем работу даже если не удалось загрузить communities
+      }
+    }
+
+    // Получить workspaces
+    if (filters.showWorkspaces) {
+      const workspaceParams = new URLSearchParams();
+      
+      if (filters.countryCode) {
+        workspaceParams.append("country_code", filters.countryCode);
+      }
+      
+      if (filters.city) {
+        workspaceParams.append("city", filters.city);
+      }
+
+      try {
+        const workspacesResponse = await fetch(`/api/workspaces?${workspaceParams.toString()}`);
+        if (workspacesResponse.ok) {
+          const data = await workspacesResponse.json().catch(() => ({}));
+          const { workspaces } = data;
+          console.log(workspaces, 'workspaces');
+          if (workspaces && Array.isArray(workspaces)) {
+            workspaces.forEach((workspace: Workspace) => {
+              // Пропускаем workspaces без координат
+              if (workspace.latitude == null || workspace.longitude == null) {
+                return;
+              }
+              
+              // Проверяем валидность координат
+              const lat = typeof workspace.latitude === "number" ? workspace.latitude : parseFloat(String(workspace.latitude));
+              const lng = typeof workspace.longitude === "number" ? workspace.longitude : parseFloat(String(workspace.longitude));
+              
+              if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+                return;
+              }
+              
+              markers.push({
+                id: `workspace-${workspace.id}`,
+                type: "workspace",
+                latitude: lat,
+                longitude: lng,
+                data: workspace,
+              });
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching workspaces for map:", error);
+        // Продолжаем работу даже если не удалось загрузить workspaces
       }
     }
   } catch (error) {

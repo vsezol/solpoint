@@ -24,17 +24,10 @@ export async function GET(request: NextRequest) {
     .select("*")
     .order("members_count", { ascending: false });
 
-  // Фильтры по стране (приоритет country_code, fallback на country для обратной совместимости)
+  // Фильтры по стране - используем только country_code
   const countryCode = searchParams.get("country_code");
   if (countryCode) {
-    // Приоритет: фильтр по коду страны (ISO 3166-1 alpha-2)
     query = query.eq("country_code", countryCode.toUpperCase());
-  } else {
-    // Fallback: фильтр по названию страны (для обратной совместимости)
-    const country = searchParams.get("country");
-    if (country) {
-      query = query.eq("country", country);
-    }
   }
 
   const city = searchParams.get("city");

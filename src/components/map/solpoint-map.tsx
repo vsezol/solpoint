@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { MapContainer, Marker, Popup, useMap, GeoJSON } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import type { MapMarker, User, Event, Hub } from "@/types";
+import type { MapMarker, User, Event, Hub, Community, Workspace } from "@/types";
 import type { GeoJsonObject } from "geojson";
 import { UserCard } from "@/components/cards/user-card";
 import { EventCard } from "@/components/cards/event-card";
@@ -239,6 +239,8 @@ export function SolPointMap({
   const getIcon = (marker: MapMarker) => {
     switch (marker.type) {
       case "hub":
+      case "workspace":
+      case "community":
         return createHubIcon();
       case "event":
         return createEventIcon();
@@ -343,6 +345,10 @@ export function SolPointMap({
         return <EventCard event={marker.data as Event} isVip={isVip} isAuthenticated={isAuthenticated} compact />;
       case "hub":
         return <HubCard hub={marker.data as Hub} compact />;
+      case "workspace":
+        return <HubCard hub={marker.data as Workspace} compact />;
+      case "community":
+        return <HubCard hub={marker.data as Community} compact />;
       default:
         return null;
     }

@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui";
-import type { Hub, Workspace } from "@/types";
+import type { Hub, Community, Workspace } from "@/types";
 import { Twitter, Instagram, Facebook, ExternalLink, MapPin, Users, Share2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 import { trackEvent } from "@/lib/analytics";
 
 interface HubCardProps {
-  hub: Hub | Workspace;
+  hub: Hub | Community | Workspace;
   compact?: boolean;
 }
 

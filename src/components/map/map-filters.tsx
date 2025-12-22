@@ -65,6 +65,8 @@ export function MapFiltersPanel({
       showUsers: true,
       showEvents: true,
       showHubs: true,
+      showCommunities: true,
+      showWorkspaces: true,
       contentType: "all",
       userRoles: undefined,
       eventType: undefined,
@@ -85,10 +87,12 @@ export function MapFiltersPanel({
     onFiltersChange({
       ...filters,
       contentType,
-      // Автоматически обновляем showUsers, showEvents и showHubs в зависимости от выбора
+      // Автоматически обновляем showUsers, showEvents, showHubs, showCommunities и showWorkspaces в зависимости от выбора
       showUsers: contentType === "all" || contentType === "users",
       showEvents: contentType === "all" || contentType === "events",
-      showHubs: contentType === "all" || contentType === "hubs",
+      showHubs: contentType === "all" || contentType === "hubs" || contentType === "workspaces",
+      showCommunities: contentType === "all" || contentType === "hubs" || contentType === "workspaces",
+      showWorkspaces: contentType === "all" || contentType === "hubs" || contentType === "workspaces",
     });
   };
 
@@ -167,7 +171,7 @@ export function MapFiltersPanel({
               );
             })}
           </div>
-          {/* Hubs/Communities Button */}
+          {/* Hubs/Communities/Workspaces Button */}
           <button
             onClick={() => handleContentTypeChange("hubs")}
             className={cn(
@@ -177,7 +181,7 @@ export function MapFiltersPanel({
                 : "border-[var(--color-surface-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-text-muted)]"
             )}
           >
-            Hubs/Communities
+            Hubs/Communities/Workspaces
           </button>
         </div>
 
@@ -272,6 +276,8 @@ export function MapFiltersPanel({
                     showUsers: true,
                     showEvents: false,
                     showHubs: false,
+                    showCommunities: false,
+                    showWorkspaces: false,
                     contentType: "users",
                     userRoles: undefined,
                     eventType: undefined,
@@ -351,7 +357,7 @@ export function MapFiltersPanel({
           <div className="flex flex-wrap gap-2">
             {filters.contentType && filters.contentType !== "all" && (
               <span className="px-3 py-1.5 text-sm rounded-full bg-[var(--color-surface-border)] text-[var(--color-text-primary)] flex items-center gap-2">
-                {filters.contentType === "users" ? "Users" : filters.contentType === "events" ? "Events" : "Hubs/Communities"}
+                {filters.contentType === "users" ? "Users" : filters.contentType === "events" ? "Events" : filters.contentType === "workspaces" ? "Workspaces" : "Hubs/Communities/Workspaces"}
                 <button
                   onClick={() => handleContentTypeChange("all")}
                   className="hover:text-[var(--color-primary)] transition-colors"
