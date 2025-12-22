@@ -38,16 +38,12 @@ export async function GET(request: NextRequest) {
   }
 
     // Строим запрос
+    // Примечание: owner_id - полиморфное поле, поэтому нельзя использовать внешний ключ
+    // Данные владельца получаем отдельно или на клиенте
+    // Показываем ВСЕ события (worldwide) - фильтрация по владельцу только в dashboard
   let query = supabase
     .from("events")
-    .select(`
-      *,
-      owner_user:profiles!events_owner_id_fkey(id, twitter_handle, twitter_name, avatar_url),
-      owner_hub:hubs!events_owner_id_fkey(id, name, image_url),
-      owner_community:communities!events_owner_id_fkey(id, name, image_url),
-      owner_project:projects!events_owner_id_fkey(id, name, image_url),
-      owner_workspace:workspaces!events_owner_id_fkey(id, name, image_url)
-    `)
+    .select("*")
     .order("start_date", { ascending: true });
 
   // Фильтры по стране (приоритет country_code, fallback на country для обратной совместимости)
@@ -89,6 +85,11 @@ export async function GET(request: NextRequest) {
   const isPaid = searchParams.get("is_paid");
   if (isPaid !== null) {
     query = query.eq("is_paid", isPaid === "true");
+  }
+
+  const isRecommended = searchParams.get("is_recommended");
+  if (isRecommended !== null) {
+    query = query.eq("is_recommended", isRecommended === "true");
   }
 
   // Только предстоящие ивенты

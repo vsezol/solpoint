@@ -75,6 +75,7 @@ export interface Event {
   capacity_remaining?: number; // Оставшиеся места
   registration_deadline?: string; // Дедлайн регистрации
   is_online: boolean; // Онлайн/офлайн (гибрид пока не делаем)
+  is_recommended?: boolean; // Рекомендованное событие (показывается в приоритете)
   socials?: {
     twitter?: string;
     instagram?: string;

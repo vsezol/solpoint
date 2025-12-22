@@ -9,6 +9,7 @@ export interface EventFilters {
   visibility?: "public" | "vip_only";
   is_online?: boolean;
   is_paid?: boolean;
+  is_recommended?: boolean; // Фильтр по рекомендованным событиям
   upcoming?: boolean;
   limit?: number;
   offset?: number;
@@ -54,6 +55,10 @@ export async function getEvents(filters: EventFilters = {}): Promise<Event[]> {
       params.append("is_paid", String(filters.is_paid));
     }
 
+    if (filters.is_recommended !== undefined) {
+      params.append("is_recommended", String(filters.is_recommended));
+    }
+
     if (filters.upcoming) {
       params.append("upcoming", "true");
     }
@@ -75,7 +80,85 @@ export async function getEvents(filters: EventFilters = {}): Promise<Event[]> {
     }
 
     const data: GetEventsResponse = await response.json();
-    return data.events || [];
+    let events = data.events || [];
+    
+    // Сортировка событий:
+    // 1. Для авторизованного пользователя: локальные (из его страны) -> рекомендованные -> остальные
+    // 2. Для неавторизованного: рекомендованные -> остальные
+    // Внутри каждой группы сортируем по start_date
+    try {
+      const profileResponse = await fetch("/api/auth/me");
+      if (profileResponse.ok) {
+        const { profile } = await profileResponse.json();
+        const userCountryCode = profile?.country_code;
+        
+        if (userCountryCode) {
+          // Авторизованный пользователь: локальные -> рекомендованные -> остальные
+          events.sort((a, b) => {
+            const aIsLocal = a.country_code?.toUpperCase() === userCountryCode.toUpperCase();
+            const bIsLocal = b.country_code?.toUpperCase() === userCountryCode.toUpperCase();
+            const aIsRecommended = a.is_recommended === true;
+            const bIsRecommended = b.is_recommended === true;
+            
+            // Приоритет 1: Локальные события
+            if (aIsLocal && !bIsLocal) return -1;
+            if (!aIsLocal && bIsLocal) return 1;
+            
+            // Приоритет 2: Рекомендованные (только если оба не локальные или оба локальные)
+            if (aIsLocal === bIsLocal) {
+              if (aIsRecommended && !bIsRecommended) return -1;
+              if (!aIsRecommended && bIsRecommended) return 1;
+            }
+            
+            // Приоритет 3: По дате
+            const dateA = new Date(a.start_date).getTime();
+            const dateB = new Date(b.start_date).getTime();
+            return dateA - dateB;
+          });
+        } else {
+          // Авторизован, но нет country_code: рекомендованные -> остальные
+          events.sort((a, b) => {
+            const aIsRecommended = a.is_recommended === true;
+            const bIsRecommended = b.is_recommended === true;
+            
+            if (aIsRecommended && !bIsRecommended) return -1;
+            if (!aIsRecommended && bIsRecommended) return 1;
+            
+            const dateA = new Date(a.start_date).getTime();
+            const dateB = new Date(b.start_date).getTime();
+            return dateA - dateB;
+          });
+        }
+      } else {
+        // Неавторизованный пользователь: рекомендованные -> остальные
+        events.sort((a, b) => {
+          const aIsRecommended = a.is_recommended === true;
+          const bIsRecommended = b.is_recommended === true;
+          
+          if (aIsRecommended && !bIsRecommended) return -1;
+          if (!aIsRecommended && bIsRecommended) return 1;
+          
+          const dateA = new Date(a.start_date).getTime();
+          const dateB = new Date(b.start_date).getTime();
+          return dateA - dateB;
+        });
+      }
+    } catch (error) {
+      // В случае ошибки: рекомендованные -> остальные
+      events.sort((a, b) => {
+        const aIsRecommended = a.is_recommended === true;
+        const bIsRecommended = b.is_recommended === true;
+        
+        if (aIsRecommended && !bIsRecommended) return -1;
+        if (!aIsRecommended && bIsRecommended) return 1;
+        
+        const dateA = new Date(a.start_date).getTime();
+        const dateB = new Date(b.start_date).getTime();
+        return dateA - dateB;
+      });
+    }
+    
+    return events;
   } catch (error) {
     console.error("Error fetching events:", error);
     return [];
