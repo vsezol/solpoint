@@ -229,6 +229,7 @@ export const ENTITY_CONFIGS: Record<EntityType, EntityTypeConfig> = {
         transform: {
           get: (entity: Workspace) => ({
             country: entity.country || "",
+            country_code: (entity as any).country_code || "",
             city: entity.city || "",
             address: entity.address || "",
             latitude: entity.latitude?.toString() || "",
@@ -236,6 +237,7 @@ export const ENTITY_CONFIGS: Record<EntityType, EntityTypeConfig> = {
           }),
           set: (value: any) => ({
             country: value.country || null,
+            country_code: value.country_code || null,
             city: value.city || null,
             address: value.address || null,
             latitude: value.latitude ? parseFloat(value.latitude) : null,

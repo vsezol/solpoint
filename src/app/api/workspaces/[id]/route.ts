@@ -74,7 +74,9 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const updates: Record<string, any> = {};
+    const updates: Record<string, any> = {
+      updated_at: new Date().toISOString(),
+    };
 
     if (body.description !== undefined) {
       updates.description = body.description;
@@ -85,7 +87,7 @@ export async function PATCH(
       updates.country = body.country;
     }
     if (body.country_code !== undefined) {
-      updates.country_code = body.country_code;
+      updates.country_code = body.country_code ? body.country_code.toUpperCase() : null;
     }
     if (body.city !== undefined) {
       updates.city = body.city;

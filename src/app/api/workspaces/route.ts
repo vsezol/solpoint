@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
         image_url,
         slug,
         country: hasLocation ? country : null,
-        country_code: hasLocation ? (country_code || null) : null,
+        country_code: hasLocation && country_code ? country_code.toUpperCase() : null,
         city: hasLocation ? (city || null) : null,
         address: address, // Обязательно
         latitude: hasLocation && hasCoordinates ? parseFloat(latitude) : 0,

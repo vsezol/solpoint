@@ -29,7 +29,9 @@ export type {
 export { CountrySelect } from "./country-select";
 
 export { CreateEventForm } from "./create-event-form";
-export { LocationPicker } from "./location-picker";
+// LocationPicker is NOT exported here to avoid SSR issues with leaflet
+// Import it directly with dynamic import: 
+// const LocationPicker = dynamic(() => import("@/components/ui/location-picker").then(mod => mod.LocationPicker), { ssr: false });
 export { FilterTag } from "./filter-tag";
 export type { FilterTagProps } from "./filter-tag";
 export { FilterRadioGroup } from "./filter-radio-group";

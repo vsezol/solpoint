@@ -1,7 +1,21 @@
 "use client";
 
 import { useState, FormEvent, useEffect, useRef } from "react";
-import { Button, Input, LocationPicker, CheckBox } from "@/components/ui";
+import dynamic from "next/dynamic";
+import { Button, Input, CheckBox } from "@/components/ui";
+
+// Dynamic import for LocationPicker to avoid SSR issues with leaflet
+const LocationPicker = dynamic(
+  () => import("@/components/ui/location-picker").then((mod) => mod.LocationPicker),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-full h-[300px] flex items-center justify-center bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg">
+        <div className="text-[var(--color-text-muted)]">Loading map...</div>
+      </div>
+    ),
+  }
+);
 import { CountrySelect } from "@/components/ui/country-select";
 import { createHub } from "@/lib/api/hubs";
 import { createCommunity } from "@/lib/api/communities";
