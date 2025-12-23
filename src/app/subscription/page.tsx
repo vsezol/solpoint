@@ -19,6 +19,7 @@ import {
   Star,
   Compass,
   UserPlus,
+  AlertCircle,
 } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
 import type { Plan, Subscription } from "@/types";
@@ -115,6 +116,11 @@ export default function SubscriptionPage() {
   const [subscriptionActivated, setSubscriptionActivated] = useState(false);
   const [paymentMethodModalOpen, setPaymentMethodModalOpen] = useState(false);
   const [selectedPaymentPlan, setSelectedPaymentPlan] = useState<Plan | null>(null);
+  const [email, setEmail] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [currentIntentId, setCurrentIntentId] = useState<string | null>(null);
+  const [solanaPaymentStatus, setSolanaPaymentStatus] = useState<string>("");
+  const [solanaPaymentError, setSolanaPaymentError] = useState<string>("");
 
   // Проверяем параметры URL для успешной/отмененной оплаты
   useEffect(() => {
@@ -182,13 +188,79 @@ export default function SubscriptionPage() {
       price: plan.price,
     });
 
+    // Сбрасываем форму
+    setEmail("");
+    setEmailError("");
+    setCurrentIntentId(null);
+    setSolanaPaymentStatus("");
+    setSolanaPaymentError("");
+    
     // Показываем модальное окно выбора способа оплаты
     setSelectedPaymentPlan(plan);
     setPaymentMethodModalOpen(true);
   };
 
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const handleCreateIntent = async (): Promise<string | null> => {
+    if (!selectedPaymentPlan) return null;
+
+    if (!email) {
+      setEmailError("Email is required");
+      return null;
+    }
+
+    if (!validateEmail(email)) {
+      setEmailError("Please enter a valid email address");
+      return null;
+    }
+
+    setEmailError("");
+
+    try {
+      const response = await fetch("/api/subscriptions/create-intent", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          plan_id: selectedPaymentPlan.id,
+          email: email.trim(),
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to create intent");
+      }
+
+      const data = await response.json();
+      
+      // Сохраняем intent_id в localStorage
+      if (typeof window !== "undefined") {
+        localStorage.setItem("subscription_intent_id", data.intent_id);
+      }
+      
+      setCurrentIntentId(data.intent_id);
+      return data.intent_id;
+    } catch (error) {
+      console.error("Error creating intent:", error);
+      setEmailError(error instanceof Error ? error.message : "Failed to create intent");
+      return null;
+    }
+  };
+
   const handleNowPaymentsPayment = async () => {
     if (!selectedPaymentPlan) return;
+    
+    // Создаем intent перед оплатой
+    const intentId = await handleCreateIntent();
+    if (!intentId) {
+      return; // Ошибка уже показана в handleCreateIntent
+    }
     
     setIsLoading(true);
     setSelectedPlan(selectedPaymentPlan.id);
@@ -201,16 +273,14 @@ export default function SubscriptionPage() {
         price: selectedPaymentPlan.price,
       });
 
-      // Создаем платеж через NowPayments
+      // Создаем платеж через NowPayments с intent_id
       const response = await fetch("/api/subscriptions/create-payment", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          plan_id: selectedPaymentPlan.id,
-          success_url: `${window.location.origin}/subscription?success=true`,
-          cancel_url: `${window.location.origin}/subscription?cancelled=true`,
+          intent_id: intentId,
         }),
       });
 
@@ -230,6 +300,9 @@ export default function SubscriptionPage() {
       
       console.log("Payment data received:", paymentResponse);
 
+      // Сохраняем intent_id для проверки статуса
+      setCurrentIntentId(intentId);
+
       // NowPayments возвращает адрес для оплаты (pay_address)
       // Показываем модальное окно с QR-кодом и адресом
       if (paymentResponse.pay_address && paymentResponse.pay_amount) {
@@ -244,38 +317,27 @@ export default function SubscriptionPage() {
         setPaymentModalOpen(true);
         
         // Начинаем проверку платежей каждые 5 секунд
-        // Проверяем платежи в NowPayments и активируем подписку если нужно
+        // Проверяем статус intent и редиректим на активацию когда оплата подтверждена
         const checkInterval = setInterval(async () => {
           try {
-            // Вызываем manual-check который проверит платежи и активирует подписку
-            const checkResponse = await fetch("/api/subscriptions/manual-check", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-            });
-
-            if (checkResponse.ok) {
-              const checkData = await checkResponse.json();
+            if (!intentId) return;
+            
+            // Проверяем статус intent
+            const intentResponse = await fetch(`/api/subscriptions/intent?code=${intentId}`);
+            if (intentResponse.ok) {
+              const intentData = await intentResponse.json();
               
-              // Если подписка была активирована - показываем успех
-              if (checkData.activated > 0) {
+              // Если intent стал paid, редиректим на активацию
+              if (intentData.intent?.status === "paid") {
                 clearInterval(checkInterval);
                 setPaymentModalOpen(false);
-                setSubscriptionActivated(true);
                 
-                // Обновляем данные на странице
-                await fetchCurrentSubscription();
-                await fetchPlans();
-                
-                trackEvent("subscription_activated", {
-                  event_category: "Subscription",
-                  activated_count: checkData.activated,
-                });
+                // Редиректим на страницу активации
+                window.location.href = `/activate?code=${intentId}`;
               }
             }
           } catch (error) {
-            console.error("Error checking payments:", error);
+            console.error("Error checking intent status:", error);
           }
         }, 5000);
         
@@ -640,6 +702,8 @@ export default function SubscriptionPage() {
         onClose={() => {
           setPaymentMethodModalOpen(false);
           setSelectedPaymentPlan(null);
+          setSolanaPaymentStatus("");
+          setSolanaPaymentError("");
         }}
         size="md"
         variant="centered"
@@ -662,6 +726,31 @@ export default function SubscriptionPage() {
                 </p>
               </div>
 
+              {/* Email Form */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-[var(--color-text-primary)]">
+                  Email address <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setEmailError("");
+                  }}
+                  placeholder="your@email.com"
+                  className={`w-full px-3 py-2 bg-[var(--color-surface)] border ${
+                    emailError ? "border-red-500" : "border-[var(--color-surface-border)]"
+                  } rounded-lg text-sm text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]`}
+                />
+                {emailError && (
+                  <p className="text-xs text-red-500">{emailError}</p>
+                )}
+                <p className="text-xs text-[var(--color-text-muted)]">
+                  We'll use this email to activate your subscription after payment
+                </p>
+              </div>
+
               {/* NowPayments Option */}
               <Card variant="bordered" className="p-4 cursor-pointer hover:border-[var(--color-primary)] transition-colors">
                 <div className="flex items-center justify-between">
@@ -676,6 +765,7 @@ export default function SubscriptionPage() {
                   <Button
                     variant="outline"
                     onClick={handleNowPaymentsPayment}
+                    disabled={!email || !!emailError}
                   >
                     Select
                   </Button>
@@ -699,21 +789,67 @@ export default function SubscriptionPage() {
                 </div>
                 <SolanaPaymentButton
                   plan={selectedPaymentPlan}
-                  onSuccess={() => {
-                    setPaymentMethodModalOpen(false);
-                    setSelectedPaymentPlan(null);
-                    setSubscriptionActivated(true);
-                    fetchCurrentSubscription();
-                    fetchPlans();
+                  email={email}
+                  onStatusChange={(status, message) => {
+                    setSolanaPaymentStatus(status);
+                    setSolanaPaymentError("");
+                  }}
+                  onSuccess={(intentId) => {
+                    // Редиректим на страницу активации
+                    window.location.href = `/activate?code=${intentId}`;
                     trackEvent("subscription_activated", {
                       event_category: "Subscription",
                       payment_method: "solana",
                     });
                   }}
                   onError={(error) => {
-                    alert(`Ошибка оплаты: ${error}`);
+                    setSolanaPaymentError(error);
+                    setSolanaPaymentStatus("error");
                   }}
                 />
+                
+                {/* Status and Error Display */}
+                {solanaPaymentStatus && solanaPaymentStatus !== "error" && (
+                  <div className="p-3 bg-[var(--color-surface)] rounded-lg">
+                    <p className="text-sm text-[var(--color-text-secondary)] text-center">
+                      {solanaPaymentStatus === "calculating" && "Calculating SOL amount..."}
+                      {solanaPaymentStatus === "preparing" && "Preparing transaction..."}
+                      {solanaPaymentStatus === "connecting" && "Connecting to Solana network..."}
+                      {solanaPaymentStatus === "sending" && "Sending transaction to your wallet. Please confirm in your wallet."}
+                      {solanaPaymentStatus === "creating_intent" && "Creating payment record..."}
+                      {solanaPaymentStatus === "confirming" && "Waiting for transaction confirmation..."}
+                      {solanaPaymentStatus === "verifying" && "Verifying payment..."}
+                      {solanaPaymentStatus === "success" && "Payment verified! Redirecting..."}
+                    </p>
+                  </div>
+                )}
+                
+                {solanaPaymentError && (
+                  <div className="mt-4 p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-red-500 mb-1">
+                          Payment Error
+                        </p>
+                        <div className="text-sm text-red-400 mb-3 break-words">
+                          {solanaPaymentError}
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSolanaPaymentError("");
+                            setSolanaPaymentStatus("");
+                          }}
+                          className="w-auto min-w-[120px]"
+                        >
+                          Try Again
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </Card>
             </div>
           )}

@@ -6,41 +6,56 @@ const NOWPAYMENTS_API_URL = "https://api.nowpayments.io/v1";
 export async function POST(request: Request) {
   const supabase = await createClient();
 
-  // Проверяем аутентификацию
-  const {
-    data: { user: authUser },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError || !authUser) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
-  }
-
   try {
     const body = await request.json();
-    const { plan_id } = body;
+    const { intent_id } = body;
 
-    if (!plan_id) {
+    if (!intent_id) {
       return NextResponse.json(
-        { error: "plan_id is required" },
+        { error: "intent_id is required" },
         { status: 400 }
       );
     }
 
-    // Получаем план подписки
-    const { data: plan, error: planError } = await supabase
-      .from("plans")
-      .select("*")
-      .eq("id", plan_id)
-      .eq("is_active", true)
+    // Получаем intent
+    const { data: intent, error: intentError } = await supabase
+      .from("subscription_intents")
+      .select("*, plans(*)")
+      .eq("intent_id", intent_id)
       .single();
 
-    if (planError || !plan) {
+    if (intentError || !intent) {
       return NextResponse.json(
-        { error: "Plan not found or inactive" },
+        { error: "Intent not found" },
+        { status: 404 }
+      );
+    }
+
+    // Проверяем статус intent
+    if (intent.status !== "pending") {
+      return NextResponse.json(
+        { error: `Intent is not pending. Current status: ${intent.status}` },
+        { status: 400 }
+      );
+    }
+
+    // Проверяем, не истек ли intent
+    if (new Date(intent.expires_at) < new Date()) {
+      await supabase
+        .from("subscription_intents")
+        .update({ status: "expired" })
+        .eq("id", intent.id);
+      
+      return NextResponse.json(
+        { error: "Intent has expired" },
+        { status: 400 }
+      );
+    }
+
+    const plan = intent.plans as any;
+    if (!plan) {
+      return NextResponse.json(
+        { error: "Plan not found for this intent" },
         { status: 404 }
       );
     }
@@ -110,7 +125,7 @@ export async function POST(request: Request) {
       price_amount: plan.price,
       price_currency: plan.currency.toUpperCase(), // USD
       pay_currency: currency,
-      order_id: `subscription_${authUser.id}_${plan.id}_${Date.now()}`,
+      order_id: `intent_${intent.intent_id}_${Date.now()}`,
       order_description: `Subscription: ${plan.code} plan (${plan.interval_days} days)`,
       ipn_callback_url: ipnCallbackUrl,
       is_fee_paid_by_user: true, // Комиссия за счет клиента
@@ -290,60 +305,45 @@ export async function POST(request: Request) {
       order_id: paymentData.order_id,
     });
 
-    // Сохраняем платеж в базу данных
-    // Сохраняем plan_id в purchase_id для последующего использования в webhook
+    // Обновляем intent с provider_payment_id
     const providerPaymentId = paymentData.payment_id?.toString();
     
-    console.log("Saving payment to DB:", {
+    console.log("Updating intent with payment info:", {
+      intent_id: intent.intent_id,
       provider_payment_id: providerPaymentId,
-      user_id: authUser.id,
-      plan_id: plan.id,
       order_id: paymentData.order_id,
     });
     
-    const { data: payment, error: paymentError } = await supabase
-      .from("payments")
-      .insert({
-        user_id: authUser.id,
+    const { error: updateIntentError } = await supabase
+      .from("subscription_intents")
+      .update({
         provider: "nowpayments",
         provider_payment_id: providerPaymentId,
-        amount: plan.price,
-        currency: plan.currency,
-        status: paymentData.payment_status || "waiting",
-        pay_address: paymentData.pay_address,
-        pay_amount: paymentData.pay_amount,
-        pay_currency: paymentData.pay_currency,
-        price_amount: paymentData.price_amount,
-        price_currency: paymentData.price_currency,
-        purchase_id: plan.id, // Сохраняем plan_id для активации подписки в webhook
+        updated_at: new Date().toISOString(),
       })
-      .select()
-      .single();
+      .eq("id", intent.id);
 
-    if (paymentError) {
-      console.error("Error saving payment to DB:", paymentError);
-      // Платеж создан в NowPayments, но не сохранен в БД
-      // Webhook все равно сможет обработать платеж по payment_id или order_id
+    if (updateIntentError) {
+      console.error("Error updating intent:", updateIntentError);
+      // Платеж создан в NowPayments, но intent не обновлен
+      // Webhook все равно сможет обработать платеж по order_id
     } else {
-      console.log("Payment saved successfully:", {
-        local_payment_id: payment?.id,
-        provider_payment_id: payment?.provider_payment_id,
-      });
+      console.log("Intent updated successfully with payment info");
     }
 
     // Возвращаем данные для фронтенда
-    // Показываем адрес для оплаты и сумму в MATIC
+    // Показываем адрес для оплаты и сумму
     return NextResponse.json({
       payment_id: paymentData.payment_id,
-      pay_address: paymentData.pay_address, // Адрес для отправки MATIC
-      pay_amount: paymentData.pay_amount, // Сумма в MATIC
+      pay_address: paymentData.pay_address,
+      pay_amount: paymentData.pay_amount,
       pay_currency: paymentData.pay_currency?.toUpperCase() || "MATIC",
-      price_amount: paymentData.price_amount, // Сумма в USD
+      price_amount: paymentData.price_amount,
       price_currency: paymentData.price_currency?.toUpperCase() || "USD",
       status: paymentData.payment_status || "waiting",
       expires_at: paymentData.expiration_estimate_date,
       order_id: paymentData.order_id,
-      local_payment_id: payment?.id,
+      intent_id: intent.intent_id,
     });
   } catch (error) {
     console.error("Unexpected error:", error);

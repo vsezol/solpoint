@@ -10,19 +10,6 @@ const SOLANA_RPC_URL = process.env.SOLANA_RPC_URL || "https://solana-rpc.publicn
 export async function POST(request: Request) {
   const supabase = await createClient();
 
-  // Проверяем аутентификацию
-  const {
-    data: { user: authUser },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError || !authUser) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
-  }
-
   if (!RECIPIENT_ADDRESS) {
     return NextResponse.json(
       { error: "Payment service configuration error: recipient address not set" },
@@ -32,7 +19,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { signature, payer, plan_id } = body;
+    const { signature, payer, intent_id } = body;
 
     if (!signature || !payer) {
       return NextResponse.json(
@@ -41,24 +28,60 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!plan_id) {
+    if (!intent_id) {
       return NextResponse.json(
-        { error: "plan_id is required" },
+        { error: "intent_id is required" },
         { status: 400 }
       );
     }
 
-    // Получаем план подписки
-    const { data: plan, error: planError } = await supabase
-      .from("plans")
-      .select("*")
-      .eq("id", plan_id)
-      .eq("is_active", true)
+    // Получаем intent
+    const { data: intent, error: intentError } = await supabase
+      .from("subscription_intents")
+      .select("*, plans(*)")
+      .eq("intent_id", intent_id)
       .single();
 
-    if (planError || !plan) {
+    if (intentError || !intent) {
       return NextResponse.json(
-        { error: "Plan not found or inactive" },
+        { error: "Intent not found" },
+        { status: 404 }
+      );
+    }
+
+    // Проверяем, что signature в запросе совпадает с signature в intent
+    if (intent.tx_signature !== signature) {
+      return NextResponse.json(
+        { error: "Transaction signature does not match the intent. Please use the correct transaction." },
+        { status: 400 }
+      );
+    }
+
+    // Проверяем статус intent
+    if (intent.status !== "pending") {
+      return NextResponse.json(
+        { error: `Intent is not pending. Current status: ${intent.status}` },
+        { status: 400 }
+      );
+    }
+
+    // Проверяем, не истек ли intent
+    if (new Date(intent.expires_at) < new Date()) {
+      await supabase
+        .from("subscription_intents")
+        .update({ status: "expired" })
+        .eq("id", intent.id);
+      
+      return NextResponse.json(
+        { error: "Intent has expired" },
+        { status: 400 }
+      );
+    }
+
+    const plan = intent.plans as any;
+    if (!plan) {
+      return NextResponse.json(
+        { error: "Plan not found for this intent" },
         { status: 404 }
       );
     }
@@ -71,6 +94,20 @@ export async function POST(request: Request) {
       .single();
 
     if (existingPayment) {
+      return NextResponse.json(
+        { error: "This transaction signature has already been used" },
+        { status: 400 }
+      );
+    }
+
+    // Проверяем, не использовалась ли эта signature в другом intent
+    const { data: existingIntent } = await supabase
+      .from("subscription_intents")
+      .select("id")
+      .eq("tx_signature", signature)
+      .single();
+
+    if (existingIntent) {
       return NextResponse.json(
         { error: "This transaction signature has already been used" },
         { status: 400 }
@@ -190,96 +227,38 @@ export async function POST(request: Request) {
       );
     }
 
-    // Все проверки пройдены - сохраняем платеж в БД
+    // Все проверки пройдены - обновляем intent на "paid"
     const amountInSOL = totalAmount / 1e9;
-    const { data: payment, error: paymentError } = await supabase
-      .from("payments")
-      .insert({
-        user_id: authUser.id,
+    
+    const { error: updateIntentError } = await supabase
+      .from("subscription_intents")
+      .update({
+        status: "paid",
+        tx_signature: signature,
         provider: "solana",
-        provider_payment_id: signature,
-        tx_hash: signature,
-        amount: plan.price, // Цена в USD
-        currency: plan.currency,
-        status: "finished",
-        confirmed_at: new Date().toISOString(),
-        pay_address: RECIPIENT_ADDRESS,
-        pay_amount: amountInSOL,
-        pay_currency: "sol",
-        price_amount: plan.price,
-        price_currency: plan.currency,
-        purchase_id: plan.id,
+        updated_at: new Date().toISOString(),
       })
-      .select()
-      .single();
+      .eq("id", intent.id);
 
-    if (paymentError) {
-      console.error("Error saving payment:", paymentError);
+    if (updateIntentError) {
+      console.error("Error updating intent:", updateIntentError);
       return NextResponse.json(
-        { error: "Failed to save payment", details: paymentError },
+        { error: "Failed to update intent", details: updateIntentError },
         { status: 500 }
       );
     }
 
-    // Активируем подписку
-    const periodEnd = new Date();
-    periodEnd.setDate(periodEnd.getDate() + plan.interval_days);
-
-    // Проверяем существующую подписку
-    const { data: existingSubscription } = await supabase
-      .from("subscriptions")
-      .select("*")
-      .eq("user_id", authUser.id)
-      .eq("status", "active")
-      .gt("current_period_end", new Date().toISOString())
-      .maybeSingle();
-
-    if (existingSubscription) {
-      // Обновляем существующую
-      const { error: updateSubError } = await supabase
-        .from("subscriptions")
-        .update({
-          plan_id: plan.id,
-          status: "active",
-          current_period_end: periodEnd.toISOString(),
-          last_payment_id: payment.id,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", existingSubscription.id);
-
-      if (updateSubError) {
-        console.error("Error updating subscription:", updateSubError);
-        return NextResponse.json(
-          { error: "Payment saved but failed to activate subscription", details: updateSubError },
-          { status: 500 }
-        );
-      }
-    } else {
-      // Создаем новую
-      const { error: insertSubError } = await supabase
-        .from("subscriptions")
-        .insert({
-          user_id: authUser.id,
-          plan_id: plan.id,
-          status: "active",
-          current_period_end: periodEnd.toISOString(),
-          last_payment_id: payment.id,
-        });
-
-      if (insertSubError) {
-        console.error("Error creating subscription:", insertSubError);
-        return NextResponse.json(
-          { error: "Payment saved but failed to activate subscription", details: insertSubError },
-          { status: 500 }
-        );
-      }
-    }
+    // Используем переменную окружения для URL или берем origin из заголовков
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL;
+    const origin = baseUrl || request.headers.get("origin") || "http://localhost:3000";
+    const activateUrl = `${origin}/activate?code=${intent.intent_id}`;
 
     return NextResponse.json({
       success: true,
-      message: "Payment verified and subscription activated",
+      message: "Payment verified. Redirecting to activation...",
+      intent_id: intent.intent_id,
+      redirect_url: activateUrl,
       payment: {
-        id: payment.id,
         signature,
         amount: amountInSOL,
         currency: "SOL",
