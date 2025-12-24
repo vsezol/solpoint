@@ -1,47 +1,60 @@
-import { createClient } from "./supabase/client";
 import type { Country } from "@/types";
 
 /**
- * Получить все доступные страны из базы данных
+ * Получить все доступные страны из базы данных через API
  */
 export async function getCountries(): Promise<Country[]> {
-  const supabase = createClient();
-  
-  const { data, error } = await supabase
-    .from("countries")
-    .select("code, name")
-    .order("name", { ascending: true });
+  try {
+    const response = await fetch("/api/countries", {
+      headers: {
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    });
 
-  if (error) {
+    if (!response.ok) {
+      console.error("Error fetching countries:", response.status);
+      return [];
+    }
+
+    const { countries } = await response.json();
+    return countries || [];
+  } catch (error) {
     console.error("Error fetching countries:", error);
     return [];
   }
-
-  return data || [];
 }
 
 /**
- * Получить страну по коду
+ * Получить страну по коду через API
  */
 export async function getCountryByCode(code: string): Promise<Country | null> {
   if (!code || code.length !== 2) {
     return null;
   }
 
-  const supabase = createClient();
-  
-  const { data, error } = await supabase
-    .from("countries")
-    .select("code, name")
-    .eq("code", code.toUpperCase())
-    .single();
+  try {
+    const response = await fetch(`/api/countries/${code.toUpperCase()}`, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    });
 
-  if (error) {
+    if (!response.ok) {
+      if (response.status === 404) {
+        return null;
+      }
+      console.error("Error fetching country:", response.status);
+      return null;
+    }
+
+    const { country } = await response.json();
+    return country || null;
+  } catch (error) {
     console.error("Error fetching country:", error);
     return null;
   }
-
-  return data;
 }
 
 /**

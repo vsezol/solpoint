@@ -1,4 +1,3 @@
-import { createClient } from "@/lib/supabase/client";
 import type { Workspace } from "@/types";
 
 interface WorkspaceFilters {
@@ -11,46 +10,54 @@ interface WorkspaceFilters {
 }
 
 /**
- * Получить список workspaces с фильтрами
+ * Получить список workspaces с фильтрами через API
  */
 export async function getWorkspaces(
   filters: WorkspaceFilters = {}
 ): Promise<Workspace[]> {
-  const supabase = createClient();
-  
-  let query = supabase
-    .from("workspaces")
-    .select("*")
-    .order("members_count", { ascending: false });
+  try {
+    const params = new URLSearchParams();
 
-  if (filters.country_code) {
-    query = query.eq("country_code", filters.country_code.toUpperCase());
-  } else if (filters.country) {
-    query = query.eq("country", filters.country);
-  }
+    if (filters.country_code) {
+      params.append("country_code", filters.country_code.toUpperCase());
+    } else if (filters.country) {
+      params.append("country", filters.country);
+    }
 
-  if (filters.city) {
-    query = query.ilike("city", `%${filters.city}%`);
-  }
+    if (filters.city) {
+      params.append("city", filters.city);
+    }
 
-  if (filters.search) {
-    query = query.or(
-      `name.ilike.%${filters.search}%,country.ilike.%${filters.search}%,city.ilike.%${filters.search}%,description.ilike.%${filters.search}%,address.ilike.%${filters.search}%`
-    );
-  }
+    if (filters.search) {
+      params.append("search", filters.search);
+    }
 
-  const limit = filters.limit || 500;
-  const offset = filters.offset || 0;
-  query = query.range(offset, offset + limit - 1);
+    if (filters.limit) {
+      params.append("limit", filters.limit.toString());
+    }
 
-  const { data, error } = await query;
+    if (filters.offset) {
+      params.append("offset", filters.offset.toString());
+    }
 
-  if (error) {
+    const response = await fetch(`/api/workspaces?${params.toString()}`, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      console.error("Get workspaces error:", response.status);
+      return [];
+    }
+
+    const { workspaces } = await response.json();
+    return workspaces || [];
+  } catch (error) {
     console.error("Get workspaces error:", error);
     return [];
   }
-
-  return data || [];
 }
 
 /**

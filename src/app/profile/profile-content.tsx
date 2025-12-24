@@ -20,7 +20,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import type { User, Event, Invite } from "@/types";
-import { createClient } from "@/lib/supabase/client";
 import { getAppUrl } from "@/lib/utils";
 import { ProfileEditForm } from "./profile-edit-form";
 import { useProfileEdit } from "./profile-edit-provider";
@@ -72,28 +71,28 @@ export function ProfileContent({
 
   const fetchStatistics = async () => {
     try {
-      const supabase = createClient();
-      
-      const { count: totalCount } = await supabase
-        .from("profiles")
-        .select("*", { count: "exact", head: true });
-      setTotalUsers(totalCount || 0);
-
+      const params = new URLSearchParams();
       if (user.country_code) {
-        const { count: countryCount } = await supabase
-          .from("profiles")
-          .select("*", { count: "exact", head: true })
-          .eq("country_code", user.country_code);
-        setUsersInCountry(countryCount || 0);
+        params.append("country_code", user.country_code);
+      }
+      if (user.city) {
+        params.append("city", user.city);
       }
 
-      if (user.city) {
-        const { count: cityCount } = await supabase
-          .from("profiles")
-          .select("*", { count: "exact", head: true })
-          .eq("city", user.city);
-        setUsersInCity(cityCount || 0);
+      const response = await fetch(`/api/profile/stats?${params.toString()}`, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
+
+      const data = await response.json();
+      setTotalUsers(data.total || 0);
+      setUsersInCountry(data.inCountry || 0);
+      setUsersInCity(data.inCity || 0);
     } catch (error) {
       console.error("Error fetching statistics:", error);
     }
@@ -146,14 +145,20 @@ export function ProfileContent({
     setIsOpenToMeet(newValue);
     
     try {
-      const supabase = createClient();
-      const { error } = await supabase
-        .from("profiles")
-        .update({ is_open_to_meet: newValue })
-        .eq("id", user.id);
+      const response = await fetch("/api/profile/open-to-meet", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ is_open_to_meet: newValue }),
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
 
+      const { profile } = await response.json();
       setCurrentUser({ ...currentUser, is_open_to_meet: newValue });
     } catch (error) {
       console.error("Error updating open to meet:", error);

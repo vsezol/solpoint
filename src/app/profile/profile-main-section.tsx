@@ -20,7 +20,6 @@ import { ProfileEditForm } from "./profile-edit-form";
 import { useProfileEdit } from "./profile-edit-provider";
 import { EditProfileButton } from "./edit-profile-button";
 import type { User, Invite } from "@/types";
-import { createClient } from "@/lib/supabase/client";
 import { getAppUrl } from "@/lib/utils";
 
 interface ProfileMainSectionProps {
@@ -96,14 +95,20 @@ export function ProfileMainSection({ user, isOwnProfile, friendsCount = 0 }: Pro
     setIsOpenToMeet(newValue);
     
     try {
-      const supabase = createClient();
-      const { error } = await supabase
-        .from("profiles")
-        .update({ is_open_to_meet: newValue })
-        .eq("id", user.id);
+      const response = await fetch("/api/profile/open-to-meet", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ is_open_to_meet: newValue }),
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
 
+      const { profile } = await response.json();
       setCurrentUser({ ...currentUser, is_open_to_meet: newValue });
     } catch (error) {
       console.error("Error updating open to meet:", error);

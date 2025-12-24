@@ -9,7 +9,6 @@ import type { GeoJsonObject } from "geojson";
 import { UserCard } from "@/components/cards/user-card";
 import { EventCard } from "@/components/cards/event-card";
 import { HubCard } from "@/components/cards/hub-card";
-import { createClient } from "@/lib/supabase/client";
 import { trackEvent } from "@/lib/analytics";
 import { COUNTRIES_STATIC, COUNTRY_CENTERS, MAJOR_CITIES } from "@/lib/countries";
 
@@ -324,7 +323,6 @@ export function SolPointMap({
     }
 
     const checkFriendshipStatuses = async () => {
-      const supabase = createClient();
       const userMarkers = markers.filter(
         (m) => m.type === "user" || m.type === "vip_user"
       );
@@ -334,46 +332,26 @@ export function SolPointMap({
       }
 
       const userIds = userMarkers.map((m) => (m.data as User).id);
-      const statuses: Record<string, "none" | "following" | "mutual"> = {};
 
-      // Проверяем статус подписки через таблицу follows
-      for (const userId of userIds) {
-        if (userId === currentUserId) {
-          continue;
+      try {
+        const response = await fetch("/api/friends/status", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ user_ids: userIds }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        try {
-          // Проверяем, подписан ли текущий пользователь на другого
-          const { data: userFollowsOther } = await supabase
-            .from("follows")
-            .select("*")
-            .eq("follower_id", currentUserId)
-            .eq("following_id", userId)
-            .maybeSingle();
-
-          // Проверяем, подписан ли другой пользователь на текущего
-          const { data: otherFollowsUser } = await supabase
-            .from("follows")
-            .select("*")
-            .eq("follower_id", userId)
-            .eq("following_id", currentUserId)
-            .maybeSingle();
-
-          // Определяем статус
-          if (userFollowsOther && otherFollowsUser) {
-            statuses[userId] = "mutual"; // Взаимная подписка (друзья)
-          } else if (userFollowsOther) {
-            statuses[userId] = "following"; // Текущий пользователь подписан
-          } else {
-            statuses[userId] = "none"; // Не подписан
-          }
-        } catch (error) {
-          console.error(`Error checking friendship status for user ${userId}:`, error);
-          statuses[userId] = "none";
-        }
+        const { statuses } = await response.json();
+        setFriendshipStatuses(statuses || {});
+      } catch (error) {
+        console.error("Error checking friendship statuses:", error);
+        setFriendshipStatuses({});
       }
-
-      setFriendshipStatuses(statuses);
     };
 
     checkFriendshipStatuses();
