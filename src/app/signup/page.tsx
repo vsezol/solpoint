@@ -132,9 +132,18 @@ export default function SignupPage() {
  
 
   const handleLocationPermission = async () => {
+    console.log("[Signup] handleLocationPermission called");
     try {
+      console.log("[Signup] Calling requestGeolocation...");
       const result = await requestGeolocation();
+      console.log("[Signup] requestGeolocation returned:", result);
+      
       if (result) {
+        console.log("[Signup] Setting form data with result:", {
+          country: result.country,
+          country_code: result.country_code,
+          city: result.city,
+        });
         setFormData((prev) => ({
           ...prev,
           country: result.country,
@@ -147,9 +156,13 @@ export default function SignupPage() {
           country_code: result.country_code,
           has_city: !!result.city,
         });
+      } else {
+        console.warn("[Signup] requestGeolocation returned null");
       }
+      console.log("[Signup] Moving to profile step");
       setStep("profile");
     } catch (error) {
+      console.error("[Signup] Error in handleLocationPermission:", error);
       trackEvent("location_error", {
         event_category: "Signup",
         error_type: error instanceof Error ? error.message : "unknown",
