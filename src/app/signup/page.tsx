@@ -22,6 +22,7 @@ export default function SignupPage() {
   const stepFromUrl = searchParams.get("step");
   const inviteCode = searchParams.get("invite");
   const message = searchParams.get("message");
+  const redirectTo = searchParams.get("redirect_to");
   
   const [step, setStep] = useState<Step>(
     (stepFromUrl === "location" ? "location" : 
@@ -52,6 +53,12 @@ export default function SignupPage() {
       // НО только если нет invite кода (чтобы не пропустить обработку invite)
       if (user.country_code && step === "twitter" && !inviteCode) {
         router.push("/profile");
+        return;
+      }
+      
+      // Если есть redirect_to и профиль заполнен, редиректим на него
+      if (redirectTo && user.country_code) {
+        router.push(redirectTo);
         return;
       }
       
@@ -98,14 +105,21 @@ export default function SignupPage() {
       });
       // Редиректим на API route для инициации Twitter OAuth
       // После успешной авторизации вернемся на /signup для продолжения процесса
-      // Передаем invite код через redirect_to, если он есть
-      const redirectTo = inviteCode 
-        ? `/signup?invite=${encodeURIComponent(inviteCode)}`
-        : "/signup";
+      // Передаем invite код и redirect_to через redirect_to, если они есть
+      const signupRedirect = (() => {
+        const params = new URLSearchParams();
+        if (inviteCode) {
+          params.set("invite", inviteCode);
+        }
+        if (redirectTo) {
+          params.set("redirect_to", redirectTo);
+        }
+        const queryString = params.toString();
+        return queryString ? `/signup?${queryString}` : "/signup";
+      })();
       
-      window.location.href = `/api/auth/twitter?redirect_to=${encodeURIComponent(redirectTo)}`;
+      window.location.href = `/api/auth/twitter?redirect_to=${encodeURIComponent(signupRedirect)}`;
     } catch (error) {
-      console.error("Error initiating Twitter signup:", error);
       setIsLoading(false);
       trackEvent("signup_error", {
         event_category: "Authentication",
@@ -136,7 +150,6 @@ export default function SignupPage() {
       }
       setStep("profile");
     } catch (error) {
-      console.error("Error detecting location:", error);
       trackEvent("location_error", {
         event_category: "Signup",
         error_type: error instanceof Error ? error.message : "unknown",
@@ -181,8 +194,14 @@ export default function SignupPage() {
 
       // Переходим к завершающему шагу
       setStep("complete");
+      
+      // Если есть redirect_to, редиректим после небольшой задержки
+      if (redirectTo) {
+        setTimeout(() => {
+          router.push(redirectTo);
+        }, 2000);
+      }
     } catch (error) {
-      console.error("Error saving profile:", error);
       // Можно добавить отображение ошибки пользователю
       alert(error instanceof Error ? error.message : "Failed to save profile");
     } finally {
@@ -510,12 +529,24 @@ export default function SignupPage() {
                 </p>
 
                 <div className="space-y-3">
-                  <Button asChild className="w-full" size="lg">
-                    <Link href="/map">Explore the Map</Link>
-                  </Button>
-                  <Button variant="outline" asChild className="w-full">
-                    <Link href="/profile">View My Profile</Link>
-                  </Button>
+                  {redirectTo ? (
+                    <Button 
+                      onClick={() => router.push(redirectTo)}
+                      className="w-full" 
+                      size="lg"
+                    >
+                      Continue to Activation
+                    </Button>
+                  ) : (
+                    <>
+                      <Button asChild className="w-full" size="lg">
+                        <Link href="/map">Explore the Map</Link>
+                      </Button>
+                      <Button variant="outline" asChild className="w-full">
+                        <Link href="/profile">View My Profile</Link>
+                      </Button>
+                    </>
+                  )}
                 </div>
               </motion.div>
             )}

@@ -1,17 +1,28 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
 export async function GET(request: Request) {
   const supabase = await createClient();
   const { searchParams } = new URL(request.url);
   const redirectTo = searchParams.get("redirect_to") || "/profile";
 
-  // Используем переменную окружения для Ngrok или берем origin из запроса
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL;
+  // Всегда используем origin из запроса для правильного определения localhost
   const requestUrl = new URL(request.url);
-  const origin = baseUrl || requestUrl.origin;
+  const origin = requestUrl.origin;
 
-  const callbackUrl = `${origin}/api/auth/callback?redirect_to=${encodeURIComponent(redirectTo)}`;
+  // Сохраняем redirect_to в cookie, чтобы восстановить его в callback
+  const cookieStore = await cookies();
+  cookieStore.set("oauth_redirect_to", redirectTo, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 600, // 10 минут
+    path: "/",
+  });
+
+  // Используем фиксированный callback URL (как настроено в Supabase)
+  const callbackUrl = `${origin}/api/auth/callback`;
 
   // Инициируем OAuth flow с Twitter через Supabase
   const { data, error } = await supabase.auth.signInWithOAuth({

@@ -68,6 +68,28 @@ export async function POST(request: Request) {
       );
     }
 
+    // Рассчитываем ожидаемую сумму в SOL
+    // Получаем актуальный курс SOL из CoinGecko
+    let solPriceUSD = 100; // Fallback
+    try {
+      const priceResponse = await fetch(
+        "https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd",
+        { next: { revalidate: 60 } }
+      );
+      if (priceResponse.ok) {
+        const priceData = await priceResponse.json();
+        solPriceUSD = priceData.solana?.usd || 100;
+      }
+    } catch (error) {
+      console.warn("Failed to fetch SOL price, using fallback:", error);
+    }
+
+    // Рассчитываем сумму в SOL с буфером 5%
+    const amountInSOL = plan.price / solPriceUSD;
+    const amountWithBuffer = amountInSOL * 1.05;
+    const finalAmount = Math.max(amountWithBuffer, 0.01);
+    const expectedAmountLamports = Math.ceil(finalAmount * 1e9);
+
     // Генерируем уникальный intent_id
     const intentId = randomBytes(16).toString("hex");
 
@@ -84,6 +106,7 @@ export async function POST(request: Request) {
         status: "pending",
         tx_signature: tx_signature,
         provider: "solana",
+        expected_amount_lamports: expectedAmountLamports,
         expires_at: expiresAt.toISOString(),
       })
       .select()

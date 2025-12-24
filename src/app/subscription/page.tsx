@@ -24,6 +24,8 @@ import {
 import { trackEvent } from "@/lib/analytics";
 import type { Plan, Subscription } from "@/types";
 import { SolanaPaymentButton } from "@/components/subscription/solana-payment-button";
+import { useAuth } from "@/hooks/use-auth";
+import { useRouter } from "next/navigation";
 
 const freePlanFeatures = [
   { text: "See users on map by country", included: true },
@@ -97,7 +99,10 @@ const proBenefits = [
 
 export default function SubscriptionPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [currentSubscription, setCurrentSubscription] = useState<Subscription | null>(null);
   const [loadingPlans, setLoadingPlans] = useState(true);
@@ -143,11 +148,14 @@ export default function SubscriptionPage() {
   // Загружаем планы и текущую подписку
   useEffect(() => {
     fetchPlans();
-    fetchCurrentSubscription();
+    // Загружаем подписку только если пользователь авторизован
+    if (isAuthenticated && !authLoading) {
+      fetchCurrentSubscription();
+    }
     trackEvent("subscription_page_view", {
       event_category: "Subscription",
     });
-  }, []);
+  }, [isAuthenticated, authLoading]);
 
   const fetchPlans = async () => {
     try {
@@ -176,6 +184,12 @@ export default function SubscriptionPage() {
   };
 
   const handleUpgrade = async (planId: string) => {
+    // Проверяем авторизацию
+    if (!isAuthenticated) {
+      setAuthModalOpen(true);
+      return;
+    }
+
     const plan = plans.find((p) => p.id === planId);
     if (!plan) {
       alert("Plan not found");
@@ -297,8 +311,6 @@ export default function SubscriptionPage() {
       }
 
       const paymentResponse = await response.json();
-      
-      console.log("Payment data received:", paymentResponse);
 
       // Сохраняем intent_id для проверки статуса
       setCurrentIntentId(intentId);
@@ -346,7 +358,6 @@ export default function SubscriptionPage() {
           clearInterval(checkInterval);
         }, 10 * 60 * 1000);
       } else {
-        console.error("Invalid payment data:", paymentResponse);
         throw new Error("Payment data not received from payment service");
       }
     } catch (error) {
@@ -577,7 +588,7 @@ export default function SubscriptionPage() {
                       }`}
                       variant={plan.highlighted && canUpgrade ? "primary" : "outline"}
                       size="lg"
-                      disabled={(!canUpgrade && !plan.isFree) || isLoading || (plan.isFree && currentSubscription)}
+                      disabled={(!canUpgrade && !plan.isFree) || isLoading || (plan.isFree && !!currentSubscription)}
                       isLoading={isLoading && selectedPlan === plan.id}
                       onClick={
                         canUpgrade && plan.id !== "free"
@@ -747,7 +758,7 @@ export default function SubscriptionPage() {
                   <p className="text-xs text-red-500">{emailError}</p>
                 )}
                 <p className="text-xs text-[var(--color-text-muted)]">
-                  We'll use this email to activate your subscription after payment
+                      We&apos;ll use this email to activate your subscription after payment
                 </p>
               </div>
 
@@ -969,6 +980,47 @@ export default function SubscriptionPage() {
               </Button>
             </div>
           )}
+        </ModalContent>
+      </Modal>
+
+      {/* Auth Modal */}
+      <Modal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        size="md"
+        variant="centered"
+      >
+        <ModalHeader>
+          <ModalTitle>Sign in required</ModalTitle>
+          <ModalDescription>
+            Please sign in or create an account to purchase a subscription
+          </ModalDescription>
+        </ModalHeader>
+        <ModalContent>
+          <div className="space-y-4">
+            <p className="text-sm text-[var(--color-text-secondary)]">
+              You need to be signed in to purchase a subscription. Sign in with your existing account or create a new one.
+            </p>
+            <div className="flex flex-col gap-3">
+              <Button
+                onClick={() => {
+                  router.push("/login");
+                }}
+                className="w-full"
+              >
+                Sign in
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  router.push("/signup");
+                }}
+                className="w-full"
+              >
+                Create account
+              </Button>
+            </div>
+          </div>
         </ModalContent>
       </Modal>
 

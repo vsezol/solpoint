@@ -1,17 +1,28 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { cookies } from "next/headers";
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
-  const redirectTo = searchParams.get("redirect_to") || "/profile";
+  
+  // Пытаемся получить redirect_to из cookie (сохраненный перед OAuth)
+  const cookieStore = await cookies();
+  const redirectToFromCookie = cookieStore.get("oauth_redirect_to")?.value;
+  
+  // Если есть в cookie, используем его, иначе из URL, иначе дефолт
+  const redirectTo = redirectToFromCookie || searchParams.get("redirect_to") || "/profile";
+  
+  // Удаляем cookie после использования
+  if (redirectToFromCookie) {
+    cookieStore.delete("oauth_redirect_to");
+  }
 
-  // Используем переменную окружения для Ngrok или берем origin из запроса
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL;
+  // Всегда используем origin из запроса для правильного определения localhost
   const requestUrl = new URL(request.url);
-  const origin = baseUrl || requestUrl.origin;
+  const origin = requestUrl.origin;
 
   if (code) {
     // Обмениваем код на сессию через Supabase
@@ -141,11 +152,19 @@ export async function GET(request: NextRequest) {
         }
 
         // Редиректим на signup для продолжения регистрации
+        // Извлекаем redirect_to из исходного redirectTo (может быть /signup?redirect_to=...)
+        const originalRedirectUrl = new URL(redirectTo, origin);
+        const originalRedirectTo = originalRedirectUrl.searchParams.get("redirect_to");
+        
         const signupUrl = new URL(`${origin}/signup`);
         signupUrl.searchParams.set("step", "location");
         signupUrl.searchParams.set("auth", "success");
         if (inviteCode) {
           signupUrl.searchParams.set("invite", inviteCode);
+        }
+        // Сохраняем redirect_to из исходного запроса
+        if (originalRedirectTo) {
+          signupUrl.searchParams.set("redirect_to", originalRedirectTo);
         }
         return NextResponse.redirect(signupUrl.toString());
       }
@@ -197,6 +216,9 @@ export async function GET(request: NextRequest) {
           .eq("id", user.id)
           .single();
 
+        // Извлекаем redirect_to из исходного redirectTo
+        const originalRedirectTo = redirectUrl.searchParams.get("redirect_to");
+        
         // Если локация не заполнена, редиректим на шаг location
         if (!currentProfile || !currentProfile.country_code || currentProfile.country === "Unknown") {
           const locationUrl = new URL(`${origin}/signup`);
@@ -205,9 +227,21 @@ export async function GET(request: NextRequest) {
           if (inviteCode) {
             locationUrl.searchParams.set("invite", inviteCode);
           }
+          // Сохраняем redirect_to из исходного запроса
+          if (originalRedirectTo) {
+            locationUrl.searchParams.set("redirect_to", originalRedirectTo);
+          }
           return NextResponse.redirect(locationUrl.toString());
         }
         
+        // Если профиль заполнен и есть вложенный redirect_to, редиректим на него
+        if (originalRedirectTo) {
+          const finalUrl = new URL(originalRedirectTo, origin);
+          finalUrl.searchParams.set("auth", "success");
+          return NextResponse.redirect(finalUrl.toString());
+        }
+        
+        // Если профиль заполнен, но нет вложенного redirect_to, редиректим на шаг profile
         const profileUrl = new URL(`${origin}/signup`);
         profileUrl.searchParams.set("step", "profile");
         profileUrl.searchParams.set("auth", "success");

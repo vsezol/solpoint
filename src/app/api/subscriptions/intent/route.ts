@@ -35,6 +35,7 @@ export async function GET(request: Request) {
         intent_id: intent.intent_id,
         email: intent.email,
         status: intent.status,
+        tx_signature: intent.tx_signature, // Нужно для проверки транзакции
         expires_at: intent.expires_at,
         created_at: intent.created_at,
         plans: intent.plans,

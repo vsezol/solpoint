@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Header, Footer } from "@/components/layout";
-import { Button, Card, Badge, Modal, ModalHeader, ModalTitle, ModalDescription, ModalContent } from "@/components/ui";
-import { Twitter, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
+import { Button, Card, Badge } from "@/components/ui";
+import { Twitter, AlertCircle, CheckCircle2, Loader2, UserPlus } from "lucide-react";
 import Image from "next/image";
 import { trackEvent } from "@/lib/analytics";
 import { useAuth } from "@/hooks/use-auth";
@@ -14,7 +14,22 @@ export default function ActivatePage() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const [code, setCode] = useState<string | null>(null);
-  const [intent, setIntent] = useState<any>(null);
+  const [intent, setIntent] = useState<{
+    id: string;
+    intent_id: string;
+    email: string;
+    status: string;
+    tx_signature?: string;
+    expires_at: string;
+    created_at: string;
+    plans?: {
+      id: string;
+      code: string;
+      price: number;
+      currency: string;
+      interval_days: number;
+    };
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [activating, setActivating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,6 +63,7 @@ export default function ActivatePage() {
     if (isAuthenticated && user && intent && intent.status === "paid" && !success && !activating) {
       activateSubscription();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, user, intent, success, activating]);
 
   const fetchIntent = async (intentId: string) => {
@@ -58,15 +74,51 @@ export default function ActivatePage() {
         throw new Error(errorData.error || "Failed to fetch intent");
       }
       const data = await response.json();
-      setIntent(data.intent);
+      let intent = data.intent;
       
-      if (data.intent.status === "claimed") {
+      // Если статус pending но есть tx_signature - проверяем транзакцию
+      if (intent.status === "pending" && intent.tx_signature) {
+        const checkResponse = await fetch("/api/subscriptions/check-payment", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            intent_id: intentId,
+          }),
+        });
+        
+        if (checkResponse.ok) {
+          const checkData = await checkResponse.json();
+          if (checkData.updated && checkData.status === "paid") {
+            // Обновляем localStorage
+            if (typeof window !== "undefined") {
+              localStorage.setItem("subscription_intent_status", "paid");
+            }
+            // Перезагружаем intent с сервера
+            const refreshResponse = await fetch(`/api/subscriptions/intent?code=${intentId}`);
+            if (refreshResponse.ok) {
+              const refreshData = await refreshResponse.json();
+              intent = refreshData.intent;
+            }
+          }
+        }
+      }
+      
+      setIntent(intent);
+      
+      if (intent.status === "claimed") {
+        // Обновляем localStorage на success
+        if (typeof window !== "undefined") {
+          localStorage.setItem("subscription_intent_status", "success");
+          localStorage.removeItem("subscription_intent_id");
+        }
         setSuccess(true);
         setError("This subscription has already been activated");
-      } else if (data.intent.status === "expired") {
+      } else if (intent.status === "expired") {
         setError("This activation code has expired");
-      } else if (data.intent.status !== "paid") {
-        setError(`This subscription is not ready for activation. Status: ${data.intent.status}`);
+      } else if (intent.status !== "paid") {
+        setError(`This subscription is not ready for activation. Status: ${intent.status}`);
       }
     } catch (error) {
       console.error("Error fetching intent:", error);
@@ -98,10 +150,11 @@ export default function ActivatePage() {
         throw new Error(errorData.error || "Failed to activate subscription");
       }
 
-      const data = await response.json();
+      await response.json();
       
-      // Удаляем intent_id из localStorage
+      // Обновляем localStorage на success и удаляем intent_id
       if (typeof window !== "undefined") {
+        localStorage.setItem("subscription_intent_status", "success");
         localStorage.removeItem("subscription_intent_id");
       }
 
@@ -246,17 +299,32 @@ export default function ActivatePage() {
 
           {!isAuthenticated && intent?.status === "paid" && (
             <>
-              <Button
-                onClick={handleTwitterLogin}
-                className="w-full mb-4 bg-[#1DA1F2] hover:bg-[#1a8cd8] text-white"
-                size="lg"
-              >
-                <Twitter className="w-5 h-5 mr-2" />
-                Continue with Twitter
-              </Button>
+              <div className="space-y-3 mb-4">
+                <Button
+                  onClick={handleTwitterLogin}
+                  className="w-full bg-[#1DA1F2] hover:bg-[#1a8cd8] text-white"
+                  size="lg"
+                >
+                  <Twitter className="w-5 h-5 mr-2" />
+                  Sign In with Twitter
+                </Button>
+
+                <Button
+                  onClick={() => {
+                    const redirectTo = `/activate?code=${code}`;
+                    window.location.href = `/signup?redirect_to=${encodeURIComponent(redirectTo)}`;
+                  }}
+                  variant="outline"
+                  className="w-full"
+                  size="lg"
+                >
+                  <UserPlus className="w-5 h-5 mr-2" />
+                  Create New Account
+                </Button>
+              </div>
 
               <p className="text-xs text-center text-[var(--color-text-muted)] mb-6">
-                Sign in or create an account to activate your subscription
+                Sign in if you already have an account, or create a new one to activate your subscription
               </p>
             </>
           )}

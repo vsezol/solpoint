@@ -5,6 +5,7 @@ import { AuthProvider } from "@/components/providers/auth-provider";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { WalletContextProvider } from "@/components/providers/wallet-provider";
 import { GoogleAnalytics } from "@/components/analytics/google-analytics";
+import { IntentChecker } from "@/components/subscription/intent-checker";
 
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-display",
@@ -67,7 +68,10 @@ export default function RootLayout({
         <GoogleAnalytics />
         <QueryProvider>
           <WalletContextProvider>
-            <AuthProvider>{children}</AuthProvider>
+            <AuthProvider>
+              <IntentChecker />
+              {children}
+            </AuthProvider>
           </WalletContextProvider>
         </QueryProvider>
       </body>

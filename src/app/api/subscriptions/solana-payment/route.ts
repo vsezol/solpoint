@@ -78,7 +78,13 @@ export async function POST(request: Request) {
       );
     }
 
-    const plan = intent.plans as any;
+    const plan = intent.plans as {
+      id: string;
+      code: string;
+      price: number;
+      currency: string;
+      interval_days: number;
+    } | null;
     if (!plan) {
       return NextResponse.json(
         { error: "Plan not found for this intent" },
@@ -201,21 +207,39 @@ export async function POST(request: Request) {
       );
     }
 
-    // Проверка 4: Сумма >= минимальной (0.01 SOL для тестов)
-    // Backend проверяет что платеж был сделан, точную сумму в USD проверяем по плану
-    // Минимум 0.01 SOL (10,000,000 lamports) для любой транзакции
-    const MIN_AMOUNT_LAMPORTS = 10_000_000; // 0.01 SOL
+    // Проверка 4: Сумма соответствует ожидаемой (с допуском ±10%)
+    if (intent.expected_amount_lamports) {
+      const expectedAmount = intent.expected_amount_lamports;
+      const minAmount = Math.floor(expectedAmount * 0.9); // -10% допуск
+      const maxAmount = Math.ceil(expectedAmount * 1.1);  // +10% допуск
 
-    if (totalAmount < MIN_AMOUNT_LAMPORTS) {
-      return NextResponse.json(
-        {
-          error: "Insufficient payment amount",
-          message: `Минимальная сумма платежа: 0.01 SOL. Получено: ${(totalAmount / 1e9).toFixed(4)} SOL`,
-          required: MIN_AMOUNT_LAMPORTS / 1e9,
-          received: totalAmount / 1e9,
-        },
-        { status: 400 }
-      );
+      if (totalAmount < minAmount || totalAmount > maxAmount) {
+        return NextResponse.json(
+          {
+            error: "Payment amount does not match the plan price",
+            message: `Expected amount: ${(expectedAmount / 1e9).toFixed(4)} SOL (±10%). Received: ${(totalAmount / 1e9).toFixed(4)} SOL`,
+            expected: expectedAmount / 1e9,
+            received: totalAmount / 1e9,
+            min: minAmount / 1e9,
+            max: maxAmount / 1e9,
+          },
+          { status: 400 }
+        );
+      }
+    } else {
+      // Fallback: проверяем минимальную сумму если expected_amount не сохранен
+      const MIN_AMOUNT_LAMPORTS = 10_000_000; // 0.01 SOL
+      if (totalAmount < MIN_AMOUNT_LAMPORTS) {
+        return NextResponse.json(
+          {
+            error: "Insufficient payment amount",
+            message: `Minimum payment amount: 0.01 SOL. Received: ${(totalAmount / 1e9).toFixed(4)} SOL`,
+            required: MIN_AMOUNT_LAMPORTS / 1e9,
+            received: totalAmount / 1e9,
+          },
+          { status: 400 }
+        );
+      }
     }
 
     // Проверка 5: Payer соответствует отправителю транзакции

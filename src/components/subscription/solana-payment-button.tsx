@@ -194,9 +194,10 @@ export function SolanaPaymentButton({
       const intentData = await intentResponse.json();
       const intentId = intentData.intent_id;
 
-      // Сохраняем intent_id в localStorage
+      // Сохраняем intent_id и статус в localStorage
       if (typeof window !== "undefined") {
         localStorage.setItem("subscription_intent_id", intentId);
+        localStorage.setItem("subscription_intent_status", "pending");
       }
 
       updateStatus("confirming", "Waiting for transaction confirmation...");
@@ -301,6 +302,11 @@ export function SolanaPaymentButton({
       
       if (data.success) {
         updateStatus("success", "Payment verified successfully!");
+        
+        // Обновляем localStorage на paid
+        if (typeof window !== "undefined") {
+          localStorage.setItem("subscription_intent_status", "paid");
+        }
         
         // Редиректим на страницу активации
         if (data.redirect_url) {
