@@ -26,6 +26,7 @@ import {
   Calendar,
   X,
   ArrowRight,
+  HelpCircle,
 } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
 import type { Plan, Subscription } from "@/types";
@@ -45,14 +46,14 @@ const freePlanFeatures = [
 ];
 
 const proPlanFeatures = [
-  { text: "Everything in Free", included: true },
-  { text: "View full user profiles", included: true },
+  { text: "Everything in Basic", included: true },
+  { text: "Full user profiles & real identities", included: true },
   { text: "Direct messaging", included: true },
   { text: "City & role filters", included: true },
   { text: "Create hubs, projects, events", included: true },
-  { text: "Private events access", included: true },
-  { text: "Badges & gold map marker", included: true },
-  { text: "See all lists of friends and people", included: true },
+  { text: "Access to private events", included: true },
+  { text: "Gold marker + verified badges", included: true },
+  { text: "Priority access to new features", included: true },
 ];
 
 const mainAdvantages = [
@@ -111,6 +112,25 @@ const moreBenefits = [
   },
 ];
 
+const faqItems = [
+  {
+    question: "How does SolPoint help at conferences like Breakpoint?",
+    answer: "Before: Filter by location/role to see who's attending, view profiles, and message to schedule meetings.\n\nDuring: Check who's nearby on the map and approach the right people.\n\nAfter: Keep direct chats open for follow-ups and collaborations.\n\nHundreds of PRO users already networked smarter at Breakpoint Abu Dhabi and Hacker Houses.",
+  },
+  {
+    question: "What if I'm just traveling or local — do I still need PRO?",
+    answer: "Yes — PRO unlocks city-level access (not just country) and role filters.\n\nLand in any city (Dubai, Singapore, Berlin) and instantly see local founders, devs, marketers, and community leads.\n\nMessage them directly and connect the moment you arrive.\n\nFree users only see country clusters; PRO shows real locals ready to meet.",
+  },
+  {
+    question: "What makes SolPoint different from Twitter/Discord searches?",
+    answer: "Twitter: Endless scrolling, no precise location/roles, tons of noise.\n\nDiscord: Fragmented servers, hard to find locals or event attendees.\n\nSolPoint: Interactive map with verified builders, city/role filters, event ties, full profiles, and direct messaging.\n\nCurated by PRO users — zero spam.",
+  },
+  {
+    question: "What user data do you collect and store? How private is it?",
+    answer: "We keep it minimal and under your control.\n\nStored: Only country and city (self-reported for map placement).\n\nIdentity (username, bio, links, badges): 100% optional — shown only if you choose to be public.\n\nNo email/phone/KYC required. Wallet only for payments (never shared).\n\nHide or delete your profile anytime. GDPR-compliant, no data selling.",
+  },
+];
+
 export default function SubscriptionPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -137,6 +157,7 @@ export default function SubscriptionPage() {
   const [selectedPaymentPlan, setSelectedPaymentPlan] = useState<Plan | null>(null);
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState("");
+  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
   const [currentIntentId, setCurrentIntentId] = useState<string | null>(null);
   const [solanaPaymentStatus, setSolanaPaymentStatus] = useState<string>("");
   const [solanaPaymentError, setSolanaPaymentError] = useState<string>("");
@@ -430,7 +451,7 @@ export default function SubscriptionPage() {
       name: "Basic",
       price: 0,
       period: "forever",
-      description: "Basic access to the Solana community map",
+      description: "Explore the ecosystem",
       features: freePlanFeatures,
       cta: "Current Plan", // Will be overridden by button logic
       highlighted: false,
@@ -462,7 +483,7 @@ export default function SubscriptionPage() {
         name: planName,
         price: plan.price,
         period: period,
-        description: "Connect & build",
+        description: "Connect & build smarter",
         features: proPlanFeatures,
         cta: currentSubscription?.plan_id === plan.id ? "Current Plan" : "Upgrade",
         highlighted: true,
@@ -478,42 +499,55 @@ export default function SubscriptionPage() {
       <main className="min-h-screen pt-16 pb-16 animated-bg">
         {/* Hero */}
         <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
-          {/* Background with Solana gradient */}
-          <div className="absolute inset-0 bg-gradient-to-br from-[#9945ff]/20 via-[#0a0f14] to-[#0a0f14]"></div>
+          {/* Background with Solana gradient - transparent */}
+          <div className="absolute inset-0 bg-transparent"></div>
           
           {/* Content overlay */}
           <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
             {/* Main Headline */}
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-10 leading-tight">
+            <h1 className="text-lg sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-10 leading-tight">
               <span className="text-[var(--color-text-primary)]">
-                Stop Wasting Time on{" "}
+                Find Solana Builders Anywhere
               </span>
-              <span className="text-gradient">Random Networking</span>
               <br />
-              <span className="text-[var(--color-text-primary)]">
-                at Solana Events
-              </span>
+              <span className="text-gradient">In Your City or at Any Event</span>
             </h1>
             
             {/* Subheadline */}
             <p className="text-lg sm:text-xl md:text-2xl text-[var(--color-text-secondary)] max-w-4xl mx-auto mb-10 leading-relaxed">
-              SolPoint is the interactive map that shows you every Solana builder, founder, developer, and organizer by city and role. See who&apos;s attending events, message them directly, and build lasting connections — no more guessing games.
+              <span className="block mb-1.5">SolPoint is your daily tool for Solana networking.</span>
+              Whether you&apos;re organizing local meetups, traveling to a new city, or heading to Breakpoint — instantly connect with founders, developers, marketers, and community leads.
             </p>
             
             
             {/* Key Benefits */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-center gap-4 sm:gap-6 mb-10 max-w-5xl mx-auto mt-8">
-              <div className="flex items-start gap-3 text-base sm:text-lg text-[var(--color-text-secondary)]">
-                <Eye className="w-6 h-6 text-[var(--color-primary)] flex-shrink-0 mt-0.5" />
-                <span>See full profiles and roles of everyone in your county and city</span>
+            <div className="grid sm:grid-cols-3 gap-6 mb-10 max-w-5xl mx-auto mt-8 text-left">
+              <div className="flex flex-col gap-3">
+                <MapPin className="w-6 h-6 text-[var(--color-primary)] flex-shrink-0" />
+                <h3 className="font-semibold text-[var(--color-text-primary)] text-base sm:text-lg">
+                  Local networking
+                </h3>
+                <p className="text-sm sm:text-base text-[var(--color-text-secondary)]">
+                  Find people in your city and start meetups anytime
+                </p>
               </div>
-              <div className="flex items-start gap-3 text-base sm:text-lg text-[var(--color-text-secondary)]">
-                <MessageCircle className="w-6 h-6 text-[var(--color-primary)] flex-shrink-0 mt-0.5" />
-                <span>Message builders directly — no more awkward cold approaches</span>
+              <div className="flex flex-col gap-3">
+                <Compass className="w-6 h-6 text-[var(--color-primary)] flex-shrink-0" />
+                <h3 className="font-semibold text-[var(--color-text-primary)] text-base sm:text-lg">
+                  Travel ready
+                </h3>
+                <p className="text-sm sm:text-base text-[var(--color-text-secondary)]">
+                  Plug into the community the moment you land
+                </p>
               </div>
-              <div className="flex items-start gap-3 text-base sm:text-lg text-[var(--color-text-secondary)]">
-                <Calendar className="w-6 h-6 text-[var(--color-primary)] flex-shrink-0 mt-0.5" />
-                <span>Plan meaningful meetings before the event even starts</span>
+              <div className="flex flex-col gap-3">
+                <Calendar className="w-6 h-6 text-[var(--color-primary)] flex-shrink-0" />
+                <h3 className="font-semibold text-[var(--color-text-primary)] text-base sm:text-lg">
+                  Event optimized
+                </h3>
+                <p className="text-sm sm:text-base text-[var(--color-text-secondary)]">
+                  Know who to talk to at conferences and Hacker Houses
+                </p>
               </div>
             </div>
             
@@ -576,35 +610,31 @@ export default function SubscriptionPage() {
               
               <div className="relative z-10 flex flex-col flex-1">
                 <h2 className="text-2xl sm:text-3xl font-bold text-[var(--color-text-primary)] mb-6">
-                  The Current Reality at Solana Events
+                  The Current Reality
                 </h2>
                 
                 <p className="text-[var(--color-text-secondary)] mb-8 leading-relaxed">
-                  6,500+ builders at Breakpoint or Hacker House. Everyone seems important — but you have no idea who is who. No way to prepare. You waste hours on random conversations and leave with few real opportunities.
+                  Whether you&apos;re networking at events, traveling to new cities, or organizing local meetups — connecting with the right people is harder than it should be.
                 </p>
                 
                 {/* Pain points list */}
                 <ul className="space-y-4 mb-8">
                   <li className="flex items-start gap-3">
                     <X className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-                    <span className="text-[var(--color-text-secondary)]">Wasting hours on small talk with no synergy</span>
+                    <span className="text-[var(--color-text-secondary)]">Random talks at events</span>
                   </li>
                   <li className="flex items-start gap-3">
                     <X className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-                    <span className="text-[var(--color-text-secondary)]">Missing the exact people you needed to meet</span>
+                    <span className="text-[var(--color-text-secondary)]">Landing in a new city with no local contacts</span>
                   </li>
                   <li className="flex items-start gap-3">
                     <X className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-                    <span className="text-[var(--color-text-secondary)]">No way to follow up effectively after the event</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <X className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-                    <span className="text-[var(--color-text-secondary)]">Relying purely on luck and energy to make connections</span>
+                    <span className="text-[var(--color-text-secondary)]">Hard to find active members for your hub/meetup</span>
                   </li>
                 </ul>
                 
                 <p className="text-sm text-[var(--color-text-muted)] italic mt-auto">
-                  This is how most attendees experience Solana events today.
+                  This is how most builders experience Solana networking today.
                 </p>
               </div>
             </div>
@@ -620,27 +650,27 @@ export default function SubscriptionPage() {
                 </h2>
                 
                 <p className="text-[var(--color-text-secondary)] mb-8 leading-relaxed">
-                  See every builder on the map — filtered by role and location. Check who&apos;s attending the same event, view full profiles, and message directly.
+                  Connect instantly with the right people — whether you&apos;re organizing, traveling, or attending events.
                 </p>
                 
                 {/* Solution points list */}
                 <ul className="space-y-4 mb-8">
                   <li className="flex items-start gap-3">
                     <CheckCircle2 className="w-5 h-5 text-[var(--color-primary)] flex-shrink-0 mt-0.5" />
-                    <span className="text-[var(--color-text-secondary)]">Know exactly who&apos;s around you and what they do</span>
+                    <span className="text-[var(--color-text-secondary)]">Organize your own local gatherings</span>
                   </li>
                   <li className="flex items-start gap-3">
                     <CheckCircle2 className="w-5 h-5 text-[var(--color-primary)] flex-shrink-0 mt-0.5" />
-                    <span className="text-[var(--color-text-secondary)]">Message builders directly — no awkward cold approaches</span>
+                    <span className="text-[var(--color-text-secondary)]">Connect instantly when traveling</span>
                   </li>
                   <li className="flex items-start gap-3">
                     <CheckCircle2 className="w-5 h-5 text-[var(--color-primary)] flex-shrink-0 mt-0.5" />
-                    <span className="text-[var(--color-text-secondary)]">Turn events into real collaborations and partnerships</span>
+                    <span className="text-[var(--color-text-secondary)]">Message attendees and grow your community</span>
                   </li>
                 </ul>
                 
                 <p className="text-sm text-[var(--color-text-muted)] italic mt-auto">
-                  Plan meetings in advance, connect on-site, and keep relationships alive long-term.
+                  Turn every opportunity into real connections and collaborations.
                 </p>
               </div>
             </div>
@@ -668,8 +698,7 @@ export default function SubscriptionPage() {
           </div>
         </section>
 
-        {/* Main Advantages */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+        {/* <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
           <div className="text-center mb-12">
             <h2 className="text-2xl font-bold text-[var(--color-text-primary)] mb-4">
               Main advantages:
@@ -695,10 +724,207 @@ export default function SubscriptionPage() {
               </Card>
             ))}
           </div>
+        </section> */}
+
+        {/* Core Benefits - Zig-zag Layout */}
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl sm:text-4xl font-bold text-[var(--color-text-primary)] mb-4">
+              Turn Every Solana Event into Real Opportunities
+            </h2>
+            <p className="text-lg text-[var(--color-text-secondary)] max-w-3xl mx-auto">
+              PRO features that transform how you network and build in the Solana ecosystem
+            </p>
+          </div>
+
+          {/* Block 1: Text Left, Visual Right */}
+          <div className="mb-24 last:mb-0">
+            <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+              {/* Text Content */}
+              <div className="space-y-6">
+                <div className="mb-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Compass className="w-6 h-6 text-[var(--color-primary)] flex-shrink-0" />
+                    <MapPin className="w-6 h-6 text-[var(--color-primary)] flex-shrink-0" />
+                  </div>
+                  <h3 className="text-2xl sm:text-3xl font-bold text-[var(--color-text-primary)]">
+                    Discover the Right People — Exactly Where You Are
+                  </h3>
+                </div>
+                
+                <p className="text-lg text-[var(--color-text-secondary)] leading-relaxed">
+                  At home, traveling, or building locally — instantly see every Solana founder, developer, marketer, or community organizer in your current city. Filter by role and activity to find exactly who you need.
+                </p>
+                
+                <div className="space-y-3 pt-2">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-[var(--color-primary)] flex-shrink-0 mt-0.5" />
+                    <span className="text-[var(--color-text-secondary)]">
+                      City-level access + role-based filters
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-[var(--color-primary)] flex-shrink-0 mt-0.5" />
+                    <span className="text-[var(--color-text-secondary)]">
+                      Find the people who match your goals, not just more contacts
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Visual */}
+              <div className="relative">
+                <div className="aspect-video bg-gradient-to-br from-[var(--color-primary)]/20 via-[#0D1316] to-[#0D1316] rounded-lg border border-[var(--color-primary)]/30 p-8 flex items-center justify-center">
+                  <div className="text-center space-y-4">
+                    <MapPin className="w-16 h-16 text-[var(--color-primary)] mx-auto" />
+                    <p className="text-sm text-[var(--color-text-muted)]">
+                      Map view with role filters & city-level access
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="h-px bg-gradient-to-r from-transparent via-[var(--color-surface-border)] to-transparent mb-24"></div>
+
+          {/* Block 2: Visual Left, Text Right */}
+          <div className="mb-24 last:mb-0">
+            <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+              {/* Visual */}
+              <div className="relative order-2 lg:order-1">
+                <div className="aspect-video bg-gradient-to-br from-[var(--color-primary)]/20 via-[#0D1316] to-[#0D1316] rounded-lg border border-[var(--color-primary)]/30 p-8 flex items-center justify-center">
+                  <div className="text-center space-y-4">
+                    <MessageCircle className="w-16 h-16 text-[var(--color-primary)] mx-auto" />
+                    <p className="text-sm text-[var(--color-text-muted)]">
+                      Full profiles & direct messaging interface
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Text Content */}
+              <div className="space-y-6 order-1 lg:order-2">
+                <div className="mb-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <UserPlus className="w-6 h-6 text-[var(--color-primary)] flex-shrink-0" />
+                    <MessageCircle className="w-6 h-6 text-[var(--color-primary)] flex-shrink-0" />
+                  </div>
+                  <h3 className="text-2xl sm:text-3xl font-bold text-[var(--color-text-primary)]">
+                    Connect Directly — No More Awkward Intros
+                  </h3>
+                </div>
+                
+                <p className="text-lg text-[var(--color-text-secondary)] leading-relaxed">
+                  See full profiles and real identities behind hubs, projects, and events.
+                  Message anyone directly on SolPoint.
+                  Whether it&apos;s a quick coffee chat in your city, a 1:1 when traveling, or a follow-up after Breakpoint — message directly and build lasting relationships.
+                </p>
+                
+                <div className="space-y-3 pt-2">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-[var(--color-primary)] flex-shrink-0 mt-0.5" />
+                    <span className="text-[var(--color-text-secondary)]">
+                      Full user profiles + direct messaging
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-[var(--color-primary)] flex-shrink-0 mt-0.5" />
+                    <span className="text-[var(--color-text-secondary)]">
+                      Open full lists: members, event attendees, city residents
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="h-px bg-gradient-to-r from-transparent via-[var(--color-surface-border)] to-transparent mb-24"></div>
+
+          {/* Block 3: Text Left, Visual Right */}
+          <div className="mb-16">
+            <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+              {/* Text Content */}
+              <div className="space-y-6">
+                <div className="mb-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Wrench className="w-6 h-6 text-[var(--color-primary)] flex-shrink-0" />
+                  </div>
+                  <h3 className="text-2xl sm:text-3xl font-bold text-[var(--color-text-primary)]">
+                    Build and Organize — Shape the Ecosystem
+                  </h3>
+                </div>
+                
+                <p className="text-lg text-[var(--color-text-secondary)] leading-relaxed">
+                  Create hubs, projects, local meetups, and private events. Get gold markers and badges to stand out as a community leader — whether you&apos;re running weekly gatherings or organizing Hacker Houses.
+                </p>
+                
+                <div className="space-y-3 pt-2">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-[var(--color-primary)] flex-shrink-0 mt-0.5" />
+                    <span className="text-[var(--color-text-secondary)]">
+                      Create hubs, projects, and events
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-[var(--color-primary)] flex-shrink-0 mt-0.5" />
+                    <span className="text-[var(--color-text-secondary)]">
+                      Stand out with gold markers and verified badges
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Visual */}
+              <div className="relative">
+                <div className="aspect-video bg-gradient-to-br from-[var(--color-warning)]/20 via-[#0D1316] to-[#0D1316] rounded-lg border border-[var(--color-warning)]/30 p-8 flex items-center justify-center">
+                  <div className="text-center space-y-4">
+                    <Wrench className="w-16 h-16 text-[var(--color-warning)] mx-auto" />
+                    <p className="text-sm text-[var(--color-text-muted)]">
+                      Create & organize with gold markers
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* CTA Button */}
+          <div className="flex justify-center mt-16">
+            <Button
+              variant="primary"
+              size="lg"
+              className="bg-[var(--color-warning)] hover:bg-[var(--color-warning)]/90 text-[var(--color-background)] font-semibold px-8 py-6 text-lg"
+              onClick={() => {
+                trackEvent("core_benefits_cta_click", {
+                  event_category: "Subscription",
+                });
+                // Scroll to pricing section
+                const pricingSection = document.getElementById("pricing-section");
+                if (pricingSection) {
+                  pricingSection.scrollIntoView({ behavior: "smooth" });
+                }
+              }}
+            >
+              Upgrade to PRO — Start Building Real Connections
+            </Button>
+          </div>
         </section>
 
         {/* Pricing Cards */}
         <section id="pricing-section" className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-20">
+          {/* Section Header */}
+          <div className="text-center mb-12">
+            <h2 className="text-3xl sm:text-4xl font-bold text-[var(--color-text-primary)] mb-4">
+              Upgrade to PRO — Network Like a Pro
+            </h2>
+            <p className="text-lg text-[var(--color-text-secondary)] max-w-3xl mx-auto">
+              The daily tool for local meetups, travel networking, and maximizing every Solana event.
+            </p>
+          </div>
+
           {loadingPlans ? (
             <div className="flex justify-center items-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-[var(--color-primary)]" />
@@ -719,7 +945,7 @@ export default function SubscriptionPage() {
                   <Card
                     key={plan.id}
                     variant="bordered"
-                    className={`p-8 relative bg-[#0D1316] ${
+                    className={`p-8 relative bg-[#0D1316] flex flex-col ${
                       plan.highlighted
                         ? "border-[var(--color-warning)]"
                         : ""
@@ -731,20 +957,17 @@ export default function SubscriptionPage() {
                       </h3>
                       {plan.isFree ? (
                         <Badge variant="outline" className="bg-[#0D1316]">
-                          Free
+                          Free forever
                         </Badge>
                       ) : plan.highlighted ? (
-                        <div className="text-right">
-                          <Badge variant="warning" className="bg-[var(--color-warning)] text-[var(--color-background)]">
-                            ${plan.price} / month
-                          </Badge>
-                          <p className="text-xs text-[var(--color-text-muted)] mt-1">Early access price</p>
-                        </div>
+                        <Badge variant="outline" className="bg-green-500/20 border-green-500 text-green-400">
+                          ${plan.price} / month
+                        </Badge>
                       ) : null}
                     </div>
                     
                     <p className="text-sm text-[var(--color-text-secondary)] mb-6">
-                      {plan.isFree ? "Explore the ecosystem" : "Connect & build"}
+                      {plan.description}
                     </p>
 
                     <ul className="space-y-3 mb-8">
@@ -772,7 +995,7 @@ export default function SubscriptionPage() {
                     </ul>
 
                     <Button
-                      className={`w-full ${
+                      className={`w-full mt-auto ${
                         plan.highlighted && canUpgrade
                           ? "bg-[var(--color-warning)] hover:bg-[var(--color-warning)]/90 text-[var(--color-background)]"
                           : ""
@@ -791,11 +1014,11 @@ export default function SubscriptionPage() {
                         <Check className="w-5 h-5 mr-2" />
                       )}
                       {isCurrentPlan 
-                        ? "Current plan" 
+                        ? "Current Plan" 
                         : plan.highlighted && canUpgrade 
                           ? "Upgrade to PRO" 
                           : plan.isFree
-                            ? (currentSubscription ? "Basic Plan" : "Current Plan")
+                            ? "Current Plan"
                             : plan.cta}
                     </Button>
                   </Card>
@@ -805,8 +1028,67 @@ export default function SubscriptionPage() {
           )}
         </section>
 
-        {/* More Benefits */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+        {/* FAQ Section */}
+        <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+          <div className="text-center mb-12">
+            <h2 className="text-2xl sm:text-3xl font-bold text-[var(--color-text-primary)] mb-4">
+              Everything You Need to Know Before Upgrading
+            </h2>
+            <p className="text-sm text-[var(--color-text-secondary)]">
+              Common questions from Solana builders attending Breakpoint, Hacker Houses, and local meetups.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            {faqItems.map((item, index) => {
+              const isOpen = openFaqIndex === index;
+              return (
+                <Card
+                  key={index}
+                  variant="bordered"
+                  className="bg-[#0D1316] overflow-hidden transition-all duration-300"
+                >
+                  <button
+                    onClick={() => {
+                      setOpenFaqIndex(isOpen ? null : index);
+                      trackEvent("faq_toggle", {
+                        event_category: "Subscription",
+                        question: item.question,
+                        is_open: !isOpen,
+                      });
+                    }}
+                    className="w-full p-6 flex items-start gap-4 text-left hover:bg-[var(--color-surface-hover)] transition-colors duration-200"
+                  >
+                    <HelpCircle className="w-5 h-5 text-[var(--color-primary)] flex-shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-[var(--color-text-primary)] mb-0 pr-8">
+                        {item.question}
+                      </h3>
+                    </div>
+                    <ChevronDown
+                      className={`w-5 h-5 text-[var(--color-text-secondary)] flex-shrink-0 transition-transform duration-300 ${
+                        isOpen ? "transform rotate-180" : ""
+                      }`}
+                    />
+                  </button>
+                  <div
+                    className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                      isOpen ? "max-h-[1000px] opacity-100" : "max-h-0 opacity-0"
+                    }`}
+                  >
+                    <div className="px-6 pb-6 pl-[3.25rem]">
+                      <div className="text-[var(--color-text-secondary)] leading-relaxed whitespace-pre-line">
+                        {item.answer}
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
           <div className="text-center mb-12">
             <h2 className="text-2xl font-bold text-[var(--color-text-primary)] mb-4">
               Other:
@@ -832,7 +1114,7 @@ export default function SubscriptionPage() {
               </Card>
             ))}
           </div>
-        </section>
+        </section> */}
 
         {/* 
         <section className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pb-16 space-y-6">
