@@ -20,6 +20,7 @@ import {
   Compass,
   UserPlus,
   AlertCircle,
+  Zap,
 } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
 import type { Plan, Subscription } from "@/types";
@@ -49,7 +50,7 @@ const proPlanFeatures = [
   { text: "See all lists of friends and people", included: true },
 ];
 
-const proBenefits = [
+const mainAdvantages = [
   {
     icon: UserPlus,
     title: "Full People Access",
@@ -66,15 +67,23 @@ const proBenefits = [
     description: "Unlock cities and explore who's active in specific locations. Perfect for travel, relocation, and local networking.",
   },
   {
+    icon: Wrench,
+    title: "Create & Organize",
+    description: "Create hubs, communities, projects, workspaces, and events. Keep SolPoint curated and spam-free.",
+  },
+  {
     icon: Eye,
     title: "Show All Everywhere",
     description: "Open full lists instead of previews: members of hubs & communities, people attending events, users in your city. See who exactly is there.",
   },
   {
-    icon: Wrench,
-    title: "Create & Organize",
-    description: "Create hubs, communities, projects, workspaces, and events. Keep SolPoint curated and spam-free.",
+    icon: Compass,
+    title: "Role-Based Discovery",
+    description: "Filter the map by roles: developers, founders, designers, community leads. Find the right people, not just more people.",
   },
+];
+
+const moreBenefits = [
   {
     icon: Lock,
     title: "Private & Closed Events",
@@ -82,13 +91,13 @@ const proBenefits = [
   },
   {
     icon: Star,
-    title: "PRO Map Presence",
+    title: "VIP Map Presence",
     description: "Stand out with a gold marker on the map. Free users appear with a red marker. Visibility matters.",
   },
   {
-    icon: Compass,
-    title: "Role-Based Discovery",
-    description: "Filter the map by roles: developers, founders, designers, community leads. Find the right people, not just more people.",
+    icon: Zap,
+    title: "Priority Access",
+    description: "Get early access to new features and experiments. VIP users see what's coming first.",
   },
   {
     icon: Shield,
@@ -477,28 +486,28 @@ export default function SubscriptionPage() {
           </div>
         </section>
 
-        {/* Benefits */}
+        {/* Main Advantages */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
           <div className="text-center mb-12">
             <h2 className="text-2xl font-bold text-[var(--color-text-primary)] mb-4">
-              PRO benefits
+              Main advantages:
             </h2>
           </div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {proBenefits.map((benefit, index) => (
+            {mainAdvantages.map((benefit, index) => (
               <Card
                 key={index}
                 variant="bordered"
-                className="p-6 bg-[#0D1316]"
+                className="p-6 bg-[#0D1316] flex flex-col items-center justify-center"
               >
                 <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-[var(--color-warning)]/20 to-[var(--color-warning)]/10 flex items-center justify-center mb-4">
                   <benefit.icon className="w-6 h-6 text-[var(--color-warning)]" />
                 </div>
-                <h3 className="font-semibold text-[var(--color-text-primary)] mb-2">
+                <h3 className="font-semibold text-[var(--color-text-primary)] mb-2 text-center">
                   {benefit.title}
                 </h3>
-                <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">
+                <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed text-center">
                   {benefit.description}
                 </p>
               </Card>
@@ -614,7 +623,36 @@ export default function SubscriptionPage() {
           )}
         </section>
 
-        {/* Payment info */}
+        {/* More Benefits */}
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+          <div className="text-center mb-12">
+            <h2 className="text-2xl font-bold text-[var(--color-text-primary)] mb-4">
+              Other:
+            </h2>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {moreBenefits.map((benefit, index) => (
+              <Card
+                key={index}
+                variant="bordered"
+                className="p-6 bg-[#0D1316] flex flex-col items-center justify-center"
+              >
+                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-[var(--color-warning)]/20 to-[var(--color-warning)]/10 flex items-center justify-center mb-4">
+                  <benefit.icon className="w-6 h-6 text-[var(--color-warning)]" />
+                </div>
+                <h3 className="font-semibold text-[var(--color-text-primary)] mb-2 text-center">
+                  {benefit.title}
+                </h3>
+                <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed text-center">
+                  {benefit.description}
+                </p>
+              </Card>
+            ))}
+          </div>
+        </section>
+
+        {/* 
         <section className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pb-16 space-y-6">
           <Card variant="bordered" className="p-8 text-center bg-[#0D1316]">
             <div className="flex items-center justify-center gap-3 mb-4">
@@ -643,7 +681,6 @@ export default function SubscriptionPage() {
             </div>
           </Card>
 
-          {/* Manual check button */}
           <Card variant="bordered" className="p-6 bg-[#0D1316]">
             <div className="text-center">
               <p className="text-sm text-[var(--color-text-secondary)] mb-4">
@@ -661,7 +698,8 @@ export default function SubscriptionPage() {
               </Button>
             </div>
           </Card>
-        </section>
+        </section> 
+        */}
       </main>
       
       {/* Success Modal - показываем когда подписка активирована */}
