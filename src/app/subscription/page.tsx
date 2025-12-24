@@ -21,6 +21,11 @@ import {
   UserPlus,
   AlertCircle,
   Zap,
+  Users,
+  ChevronDown,
+  Calendar,
+  X,
+  ArrowRight,
 } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
 import type { Plan, Subscription } from "@/types";
@@ -472,17 +477,194 @@ export default function SubscriptionPage() {
       <Header />
       <main className="min-h-screen pt-16 pb-16 animated-bg">
         {/* Hero */}
-        <section className="py-16 text-center relative overflow-hidden">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-            <h1 className="text-4xl sm:text-5xl font-bold text-[var(--color-text-primary)] mb-4">
-              Unlock the Full Power of{" "}
-              <span className="text-gradient">SolPoint</span>
+        <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
+          {/* Background with Solana gradient */}
+          <div className="absolute inset-0 bg-gradient-to-br from-[#9945ff]/20 via-[#0a0f14] to-[#0a0f14]"></div>
+          
+          {/* Content overlay */}
+          <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
+            {/* Main Headline */}
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-10 leading-tight">
+              <span className="text-[var(--color-text-primary)]">
+                Stop Wasting Time on{" "}
+              </span>
+              <span className="text-gradient">Random Networking</span>
+              <br />
+              <span className="text-[var(--color-text-primary)]">
+                at Solana Events
+              </span>
             </h1>
-            <p className="text-lg text-[var(--color-text-secondary)] max-w-2xl mx-auto mb-6">
-              Get real connections in the Solana ecosystem with SolPoint PRO
+            
+            {/* Subheadline */}
+            <p className="text-lg sm:text-xl md:text-2xl text-[var(--color-text-secondary)] max-w-4xl mx-auto mb-10 leading-relaxed">
+              SolPoint is the interactive map that shows you every Solana builder, founder, developer, and organizer by city and role. See who&apos;s attending events, message them directly, and build lasting connections — no more guessing games.
             </p>
-            {/* White line divider */}
-            <div className="w-24 h-px bg-white mx-auto"></div>
+            
+            
+            {/* Key Benefits */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-center gap-4 sm:gap-6 mb-10 max-w-5xl mx-auto mt-8">
+              <div className="flex items-start gap-3 text-base sm:text-lg text-[var(--color-text-secondary)]">
+                <Eye className="w-6 h-6 text-[var(--color-primary)] flex-shrink-0 mt-0.5" />
+                <span>See full profiles and roles of everyone in your county and city</span>
+              </div>
+              <div className="flex items-start gap-3 text-base sm:text-lg text-[var(--color-text-secondary)]">
+                <MessageCircle className="w-6 h-6 text-[var(--color-primary)] flex-shrink-0 mt-0.5" />
+                <span>Message builders directly — no more awkward cold approaches</span>
+              </div>
+              <div className="flex items-start gap-3 text-base sm:text-lg text-[var(--color-text-secondary)]">
+                <Calendar className="w-6 h-6 text-[var(--color-primary)] flex-shrink-0 mt-0.5" />
+                <span>Plan meaningful meetings before the event even starts</span>
+              </div>
+            </div>
+            
+            {/* CTA Buttons */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
+              <Button
+                variant="primary"
+                size="lg"
+                className="bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-[var(--color-background)] font-semibold px-8 py-6 text-lg w-full sm:w-auto"
+                onClick={() => {
+                  trackEvent("hero_cta_explore_map", {
+                    event_category: "Subscription",
+                  });
+                  router.push("/map");
+                }}
+              >
+                Explore the Map
+              </Button>
+              <Button
+                variant="outline"
+                size="lg"
+                className="border-2 border-[var(--color-surface-border)] hover:border-[var(--color-primary)] px-8 py-6 text-lg w-full sm:w-auto"
+                onClick={() => {
+                  trackEvent("hero_cta_how_it_works", {
+                    event_category: "Subscription",
+                  });
+                  // Scroll to next section
+                  const nextSection = document.querySelector("section:nth-of-type(2)");
+                  if (nextSection) {
+                    nextSection.scrollIntoView({ behavior: "smooth" });
+                  }
+                }}
+              >
+                See How It Works
+              </Button>
+            </div>
+          </div>
+          
+          {/* Scroll indicator */}
+          <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-10">
+            <ChevronDown className="w-6 h-6 text-[var(--color-text-muted)]" />
+          </div>
+        </section>
+
+        {/* Problem → Solution Section */}
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+          {/* Optional header - можно убрать если не нужен */}
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 text-[var(--color-primary)] font-semibold text-lg">
+              <span>With SolPoint PRO</span>
+              <ArrowRight className="w-5 h-5" />
+            </div>
+          </div>
+
+          <div className="grid lg:grid-cols-2 gap-6 lg:gap-8 items-stretch">
+            {/* Left Column - The Problem */}
+            <div className="bg-[#0D1316] border border-red-500/20 rounded-lg p-8 lg:p-10 relative overflow-hidden flex flex-col h-full">
+              {/* Red tint overlay */}
+              <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-transparent pointer-events-none"></div>
+              
+              <div className="relative z-10 flex flex-col flex-1">
+                <h2 className="text-2xl sm:text-3xl font-bold text-[var(--color-text-primary)] mb-6">
+                  The Current Reality at Solana Events
+                </h2>
+                
+                <p className="text-[var(--color-text-secondary)] mb-8 leading-relaxed">
+                  6,500+ builders at Breakpoint or Hacker House. Everyone seems important — but you have no idea who is who. No way to prepare. You waste hours on random conversations and leave with few real opportunities.
+                </p>
+                
+                {/* Pain points list */}
+                <ul className="space-y-4 mb-8">
+                  <li className="flex items-start gap-3">
+                    <X className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                    <span className="text-[var(--color-text-secondary)]">Wasting hours on small talk with no synergy</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <X className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                    <span className="text-[var(--color-text-secondary)]">Missing the exact people you needed to meet</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <X className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                    <span className="text-[var(--color-text-secondary)]">No way to follow up effectively after the event</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <X className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                    <span className="text-[var(--color-text-secondary)]">Relying purely on luck and energy to make connections</span>
+                  </li>
+                </ul>
+                
+                <p className="text-sm text-[var(--color-text-muted)] italic mt-auto">
+                  This is how most attendees experience Solana events today.
+                </p>
+              </div>
+            </div>
+
+            {/* Right Column - The Solution */}
+            <div className="bg-[#111820] border border-[var(--color-primary)]/30 rounded-lg p-8 lg:p-10 relative overflow-hidden flex flex-col h-full">
+              {/* Green tint overlay */}
+              <div className="absolute inset-0 bg-gradient-to-br from-[var(--color-primary)]/5 to-[var(--color-primary)]/5 pointer-events-none"></div>
+              
+              <div className="relative z-10 flex flex-col flex-1">
+                <h2 className="text-2xl sm:text-3xl font-bold mb-6">
+                  <span className="text-gradient">With SolPoint PRO</span>
+                </h2>
+                
+                <p className="text-[var(--color-text-secondary)] mb-8 leading-relaxed">
+                  See every builder on the map — filtered by role and location. Check who&apos;s attending the same event, view full profiles, and message directly.
+                </p>
+                
+                {/* Solution points list */}
+                <ul className="space-y-4 mb-8">
+                  <li className="flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-[var(--color-primary)] flex-shrink-0 mt-0.5" />
+                    <span className="text-[var(--color-text-secondary)]">Know exactly who&apos;s around you and what they do</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-[var(--color-primary)] flex-shrink-0 mt-0.5" />
+                    <span className="text-[var(--color-text-secondary)]">Message builders directly — no awkward cold approaches</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-[var(--color-primary)] flex-shrink-0 mt-0.5" />
+                    <span className="text-[var(--color-text-secondary)]">Turn events into real collaborations and partnerships</span>
+                  </li>
+                </ul>
+                
+                <p className="text-sm text-[var(--color-text-muted)] italic mt-auto">
+                  Plan meetings in advance, connect on-site, and keep relationships alive long-term.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* CTA Button */}
+          <div className="flex justify-center mt-12">
+            <Button
+              variant="primary"
+              size="lg"
+              className="bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-[var(--color-background)] font-semibold px-8 py-6 text-lg"
+              onClick={() => {
+                trackEvent("problem_solution_cta_click", {
+                  event_category: "Subscription",
+                });
+                // Scroll to pricing section
+                const pricingSection = document.getElementById("pricing-section");
+                if (pricingSection) {
+                  pricingSection.scrollIntoView({ behavior: "smooth" });
+                }
+              }}
+            >
+              Upgrade to PRO — Start Networking Smarter
+            </Button>
           </div>
         </section>
 
@@ -516,7 +698,7 @@ export default function SubscriptionPage() {
         </section>
 
         {/* Pricing Cards */}
-        <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-20">
+        <section id="pricing-section" className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-20">
           {loadingPlans ? (
             <div className="flex justify-center items-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-[var(--color-primary)]" />
