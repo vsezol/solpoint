@@ -521,28 +521,28 @@ export default function SubscriptionPage() {
             
             
             {/* Key Benefits */}
-            <div className="grid sm:grid-cols-3 gap-6 mb-10 max-w-5xl mx-auto mt-8 text-left">
-              <div className="flex flex-col gap-3">
-                <MapPin className="w-6 h-6 text-[var(--color-primary)] flex-shrink-0" />
-                <h3 className="font-semibold text-[var(--color-text-primary)] text-base sm:text-lg">
+            <div className="flex flex-col sm:flex-row gap-6 mb-10 max-w-5xl mx-auto mt-8">
+              <div className="flex flex-col items-center text-center">
+                <MapPin className="w-6 h-6 text-[var(--color-primary)] flex-shrink-0 mb-2" />
+                <h3 className="font-semibold text-[var(--color-text-primary)] text-base sm:text-lg mb-1">
                   Local networking
                 </h3>
                 <p className="text-sm sm:text-base text-[var(--color-text-secondary)]">
                   Find people in your city and start meetups anytime
                 </p>
               </div>
-              <div className="flex flex-col gap-3">
-                <Compass className="w-6 h-6 text-[var(--color-primary)] flex-shrink-0" />
-                <h3 className="font-semibold text-[var(--color-text-primary)] text-base sm:text-lg">
+              <div className="flex flex-col items-center text-center">
+                <Compass className="w-6 h-6 text-[var(--color-primary)] flex-shrink-0 mb-2" />
+                <h3 className="font-semibold text-[var(--color-text-primary)] text-base sm:text-lg mb-1">
                   Travel ready
                 </h3>
                 <p className="text-sm sm:text-base text-[var(--color-text-secondary)]">
                   Plug into the community the moment you land
                 </p>
               </div>
-              <div className="flex flex-col gap-3">
-                <Calendar className="w-6 h-6 text-[var(--color-primary)] flex-shrink-0" />
-                <h3 className="font-semibold text-[var(--color-text-primary)] text-base sm:text-lg">
+              <div className="flex flex-col items-center text-center">
+                <Calendar className="w-6 h-6 text-[var(--color-primary)] flex-shrink-0 mb-2" />
+                <h3 className="font-semibold text-[var(--color-text-primary)] text-base sm:text-lg mb-1">
                   Event optimized
                 </h3>
                 <p className="text-sm sm:text-base text-[var(--color-text-secondary)]">
