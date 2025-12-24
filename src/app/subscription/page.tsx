@@ -125,10 +125,10 @@ const faqItems = [
     question: "What makes SolPoint different from Twitter/Discord searches?",
     answer: "Twitter: Endless scrolling, no precise location/roles, tons of noise.\n\nDiscord: Fragmented servers, hard to find locals or event attendees.\n\nSolPoint: Interactive map with verified builders, city/role filters, event ties, full profiles, and direct messaging.\n\nCurated by PRO users — zero spam.",
   },
-  {
-    question: "What user data do you collect and store? How private is it?",
-    answer: "We keep it minimal and under your control.\n\nStored: Only country and city (self-reported for map placement).\n\nIdentity (username, bio, links, badges): 100% optional — shown only if you choose to be public.\n\nNo email/phone/KYC required. Wallet only for payments (never shared).\n\nHide or delete your profile anytime. GDPR-compliant, no data selling.",
-  },
+  // {
+  //   question: "What user data do you collect and store? How private is it?",
+  //   answer: "We keep it minimal and under your control.\n\nStored: Only country and city (self-reported for map placement).\n\nIdentity (username, bio, links, badges): 100% optional — shown only if you choose to be public.\n\nNo email/phone/KYC required. Wallet only for payments (never shared).\n\nHide or delete your profile anytime. GDPR-compliant, no data selling.",
+  // },
 ];
 
 export default function SubscriptionPage() {

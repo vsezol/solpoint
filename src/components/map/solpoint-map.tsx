@@ -182,6 +182,7 @@ export function SolPointMap({
 }: SolPointMapProps) {
   const [, setSelectedMarker] = useState<MapMarker | null>(null);
   const [worldGeoJson, setWorldGeoJson] = useState<GeoJsonObject | null>(null);
+  const [citiesGeoJson, setCitiesGeoJson] = useState<GeoJsonObject | null>(null);
   const [friendshipStatuses, setFriendshipStatuses] = useState<Record<string, "none" | "following" | "mutual">>({});
   const [currentZoom, setCurrentZoom] = useState(zoom);
 
@@ -299,6 +300,39 @@ export function SolPointMap({
         console.error("Failed to load world GeoJSON:", error);
       });
   }, []);
+
+  // Load GeoJSON data for city boundaries (only at zoom >= 6, load once)
+  useEffect(() => {
+    // Если уже загружено, не загружаем повторно
+    if (citiesGeoJson) {
+      return;
+    }
+
+    if (currentZoom < 6) {
+      return;
+    }
+
+    // Загружаем файл только один раз при первом приближении
+    fetch("/cities.json")
+      .then((response) => {
+        if (!response.ok) throw new Error("Failed to load cities GeoJSON");
+        return response.json();
+      })
+      .then((data) => {
+        // Фильтруем записи с null geometry
+        if (data.features) {
+          data.features = data.features.filter(
+            (feature: any) => feature.geometry !== null
+          );
+        }
+        setCitiesGeoJson(data as GeoJsonObject);
+      })
+      .catch((error) => {
+        console.error("Failed to load cities GeoJSON:", error);
+        // Не устанавливаем null, чтобы не пытаться загрузить повторно при ошибке
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentZoom]); // citiesGeoJson не в зависимостях, чтобы избежать повторных загрузок
 
   const handleMarkerClick = useCallback(
     (marker: MapMarker) => {
@@ -523,6 +557,25 @@ export function SolPointMap({
             }}
           />
         )}
+
+        {/* City boundaries layer - черные границы городов */}
+        {currentZoom >= 6 && citiesGeoJson && (
+          <GeoJSON
+            data={citiesGeoJson}
+            smoothFactor={1.5} // Сглаживание линий для более плавных углов
+            style={() => {
+              return {
+                fillColor: "transparent", // Прозрачная заливка
+                fillOpacity: 0, // Без заливки
+                color: "#000000", // Черные границы
+                weight: 0.8, // Тонкие линии
+                opacity: 0.7, // Немного прозрачные
+              };
+            }}
+            interactive={false} // Не реагируют на клики
+          />
+        )}
+
         <MapController center={center} zoom={zoom} />
         <ZoomTracker onZoomChange={setCurrentZoom} />
 
