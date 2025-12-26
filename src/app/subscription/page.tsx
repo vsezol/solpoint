@@ -115,11 +115,11 @@ const moreBenefits = [
 const faqItems = [
   {
     question: "How does SolPoint help at conferences like Breakpoint?",
-    answer: "Before: Filter by location/role to see who's attending, view profiles, and message to schedule meetings.\n\nDuring: Check who's nearby on the map and approach the right people.\n\nAfter: Keep direct chats open for follow-ups and collaborations.\n\nHundreds of PRO users already networked smarter at Breakpoint Abu Dhabi and Hacker Houses.",
+    answer: "Before:\n\nCheck Event's profile to see who's attending, explore profiles, and message people in advance to schedule meetings.\n\nDuring:\n\nAttend the meetings and connections you planned before the event — no awkward cold approaches, no guessing who's relevant.\n\nAfter:\n\nKeep conversations going with direct chats for follow-ups, collaborations, and long-term connections.\n\nSolPoint PRO helps you turn events into planned, meaningful interactions — not random networking.",
   },
   {
-    question: "What if I'm just traveling or local — do I still need PRO?",
-    answer: "Yes — PRO unlocks city-level access (not just country) and role filters.\n\nLand in any city (Dubai, Singapore, Berlin) and instantly see local founders, devs, marketers, and community leads.\n\nMessage them directly and connect the moment you arrive.\n\nFree users only see country clusters; PRO shows real locals ready to meet.",
+    question: "What if I'm just traveling or staying local — do I still need PRO?",
+    answer: "Yes. PRO unlocks city-level access (not just country clusters) and role-based filters.\n\nArrive in any city and instantly discover relevant local builders, founders, and community leads — not random profiles.\n\nMessage people directly and start conversations before or the moment you arrive.\n\nFree users only see high-level country clusters.\n\nPRO shows real locals you can actually connect with.",
   },
   {
     question: "What makes SolPoint different from Twitter/Discord searches?",
@@ -516,7 +516,7 @@ export default function SubscriptionPage() {
             {/* Subheadline */}
             <p className="text-lg sm:text-xl md:text-2xl text-[var(--color-text-secondary)] max-w-4xl mx-auto mb-10 leading-relaxed">
               <span className="block mb-1.5">SolPoint is your daily tool for Solana networking.</span>
-              Whether you&apos;re organizing local meetups, traveling to a new city, or heading to Breakpoint — instantly connect with founders, developers, marketers, and community leads.
+              Whether you&apos;re organizing local meetups, traveling to a new city, or heading to Breakpoint — instantly connect with founders, developers, marketers, community leads and others.
             </p>
             
             
@@ -528,7 +528,7 @@ export default function SubscriptionPage() {
                   Local networking
                 </h3>
                 <p className="text-sm sm:text-base text-[var(--color-text-secondary)]">
-                  Find people in your city and start meetups anytime
+                Find relevant people in your city and connect anytime
                 </p>
               </div>
               <div className="flex flex-col items-center text-center">
@@ -537,7 +537,7 @@ export default function SubscriptionPage() {
                   Travel ready
                 </h3>
                 <p className="text-sm sm:text-base text-[var(--color-text-secondary)]">
-                  Plug into the community the moment you land
+                Instantly connect with the local Solana community when you arrive
                 </p>
               </div>
               <div className="flex flex-col items-center text-center">
@@ -546,7 +546,7 @@ export default function SubscriptionPage() {
                   Event optimized
                 </h3>
                 <p className="text-sm sm:text-base text-[var(--color-text-secondary)]">
-                  Know who to talk to at conferences and Hacker Houses
+                Know exactly who to meet at conferences and events
                 </p>
               </div>
             </div>
@@ -614,27 +614,27 @@ export default function SubscriptionPage() {
                 </h2>
                 
                 <p className="text-[var(--color-text-secondary)] mb-8 leading-relaxed">
-                  Whether you&apos;re networking at events, traveling to new cities, or organizing local meetups — connecting with the right people is harder than it should be.
+                  Whether you&apos;re attending events, traveling to new cities, or trying to build a local community — finding the right people is still unnecessarily hard.
                 </p>
                 
                 {/* Pain points list */}
                 <ul className="space-y-4 mb-8">
                   <li className="flex items-start gap-3">
                     <X className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-                    <span className="text-[var(--color-text-secondary)]">Random talks at events</span>
+                    <span className="text-[var(--color-text-secondary)]">Random, low-value conversations at events</span>
                   </li>
                   <li className="flex items-start gap-3">
                     <X className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-                    <span className="text-[var(--color-text-secondary)]">Landing in a new city with no local contacts</span>
+                    <span className="text-[var(--color-text-secondary)]">Arriving in a new city with zero relevant contacts</span>
                   </li>
                   <li className="flex items-start gap-3">
                     <X className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-                    <span className="text-[var(--color-text-secondary)]">Hard to find active members for your hub/meetup</span>
+                    <span className="text-[var(--color-text-secondary)]">Difficulty finding active members for meetups or hubs</span>
                   </li>
                 </ul>
                 
                 <p className="text-sm text-[var(--color-text-muted)] italic mt-auto">
-                  This is how most builders experience Solana networking today.
+                  This is how Solana networking works for most builders today.
                 </p>
               </div>
             </div>
@@ -650,27 +650,27 @@ export default function SubscriptionPage() {
                 </h2>
                 
                 <p className="text-[var(--color-text-secondary)] mb-8 leading-relaxed">
-                  Connect instantly with the right people — whether you&apos;re organizing, traveling, or attending events.
+                  Connect with the right people instantly — whether you&apos;re organizing, traveling, or attending events.
                 </p>
                 
                 {/* Solution points list */}
                 <ul className="space-y-4 mb-8">
                   <li className="flex items-start gap-3">
                     <CheckCircle2 className="w-5 h-5 text-[var(--color-primary)] flex-shrink-0 mt-0.5" />
-                    <span className="text-[var(--color-text-secondary)]">Organize your own local gatherings</span>
+                    <span className="text-[var(--color-text-secondary)]">Organize and grow local meetups</span>
                   </li>
                   <li className="flex items-start gap-3">
                     <CheckCircle2 className="w-5 h-5 text-[var(--color-primary)] flex-shrink-0 mt-0.5" />
-                    <span className="text-[var(--color-text-secondary)]">Connect instantly when traveling</span>
+                    <span className="text-[var(--color-text-secondary)]">Instantly connect when you land in a new city</span>
                   </li>
                   <li className="flex items-start gap-3">
                     <CheckCircle2 className="w-5 h-5 text-[var(--color-primary)] flex-shrink-0 mt-0.5" />
-                    <span className="text-[var(--color-text-secondary)]">Message attendees and grow your community</span>
+                    <span className="text-[var(--color-text-secondary)]">Message attendees and build real communities</span>
                   </li>
                 </ul>
                 
                 <p className="text-sm text-[var(--color-text-muted)] italic mt-auto">
-                  Turn every opportunity into real connections and collaborations.
+                  Turn every opportunity into meaningful connections and collaborations.
                 </p>
               </div>
             </div>
@@ -748,12 +748,13 @@ export default function SubscriptionPage() {
                     <MapPin className="w-6 h-6 text-[var(--color-primary)] flex-shrink-0" />
                   </div>
                   <h3 className="text-2xl sm:text-3xl font-bold text-[var(--color-text-primary)]">
-                    Discover the Right People — Exactly Where You Are
+                    Discover the Right People — Right Where You Are
                   </h3>
                 </div>
                 
                 <p className="text-lg text-[var(--color-text-secondary)] leading-relaxed">
-                  At home, traveling, or building locally — instantly see every Solana founder, developer, marketer, or community organizer in your current city. Filter by role and activity to find exactly who you need.
+                  Whether you&apos;re at home, traveling, or preparing for an event — instantly see relevant Solana builders, founders, marketers, and community leaders in your current city.
+                  Filter by role, activity, and intent to connect with people who actually matter.
                 </p>
                 
                 <div className="space-y-3 pt-2">
@@ -812,27 +813,26 @@ export default function SubscriptionPage() {
                     <MessageCircle className="w-6 h-6 text-[var(--color-primary)] flex-shrink-0" />
                   </div>
                   <h3 className="text-2xl sm:text-3xl font-bold text-[var(--color-text-primary)]">
-                    Connect Directly — No More Awkward Intros
+                    Connect Directly. No Awkward Moments.
                   </h3>
                 </div>
                 
                 <p className="text-lg text-[var(--color-text-secondary)] leading-relaxed">
-                  See full profiles and real identities behind hubs, projects, and events.
-                  Message anyone directly on SolPoint.
-                  Whether it&apos;s a quick coffee chat in your city, a 1:1 when traveling, or a follow-up after Breakpoint — message directly and build lasting relationships.
+                  See real profiles behind hubs, projects, and events.
+                  Message anyone directly on SolPoint — whether it&apos;s a quick coffee chat, a 1:1 while traveling, or a follow-up after an event.
                 </p>
                 
                 <div className="space-y-3 pt-2">
                   <div className="flex items-start gap-3">
                     <CheckCircle2 className="w-5 h-5 text-[var(--color-primary)] flex-shrink-0 mt-0.5" />
                     <span className="text-[var(--color-text-secondary)]">
-                      Full user profiles + direct messaging
+                      Full user profiles with direct messaging
                     </span>
                   </div>
                   <div className="flex items-start gap-3">
                     <CheckCircle2 className="w-5 h-5 text-[var(--color-primary)] flex-shrink-0 mt-0.5" />
                     <span className="text-[var(--color-text-secondary)]">
-                      Open full lists: members, event attendees, city residents
+                      Access full lists: members, attendees, city residents
                     </span>
                   </div>
                 </div>
@@ -921,7 +921,7 @@ export default function SubscriptionPage() {
               Upgrade to PRO — Network Like a Pro
             </h2>
             <p className="text-lg text-[var(--color-text-secondary)] max-w-3xl mx-auto">
-              The daily tool for local meetups, travel networking, and maximizing every Solana event.
+           Your daily tool for local meetups, travel networking, and maximizing every Solana event.
             </p>
           </div>
 
