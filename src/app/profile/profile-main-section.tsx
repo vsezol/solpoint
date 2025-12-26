@@ -14,7 +14,8 @@ import {
   Camera,
   UserPlus,
   Check,
-  Copy
+  Copy,
+  Loader2
 } from "lucide-react";
 import { ProfileEditForm } from "./profile-edit-form";
 import { useProfileEdit } from "./profile-edit-provider";
@@ -251,23 +252,35 @@ export function ProfileMainSection({ user, isOwnProfile, friendsCount = 0 }: Pro
             />
             <label
               htmlFor="banner-upload"
-              className={`p-2 rounded-lg bg-black/50 hover:bg-black/70 transition-colors cursor-pointer ${
-                isUploadingBanner ? "opacity-50 cursor-not-allowed" : ""
+              className={`group p-2 rounded-lg bg-black/70 text-white border-white/30 backdrop-blur-md shadow-2xl hover:bg-black/90 hover:border-white/50 hover:scale-105 hover:shadow-[0_12px_40px_rgba(0,0,0,0.6)] active:scale-100 transition-all duration-200 ${
+                isUploadingBanner ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
               }`}
+              style={{
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1)',
+                textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)',
+              }}
             >
-              <Camera className="w-4 h-4 text-white" />
+              {isUploadingBanner ? (
+                <Loader2 className="w-4 h-4 text-white animate-spin" />
+              ) : (
+                <Camera className="w-4 h-4 text-white transition-transform duration-200 group-hover:scale-110 group-hover:rotate-12" />
+              )}
             </label>
             {currentUser.banner_url && (
               <button
                 onClick={handleBannerDelete}
                 disabled={isUploadingBanner}
-                className={`p-2 rounded-lg bg-black/50 hover:bg-black/70 transition-colors ${
+                className={`group p-2 rounded-lg bg-black/70 text-white border-white/30 backdrop-blur-md shadow-2xl hover:bg-black/90 hover:border-white/50 hover:scale-105 hover:shadow-[0_12px_40px_rgba(0,0,0,0.6)] active:scale-100 transition-all duration-200 cursor-pointer ${
                   isUploadingBanner ? "opacity-50 cursor-not-allowed" : ""
                 }`}
+                style={{
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1)',
+                  textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)',
+                }}
                 title="Remove banner"
               >
                 <svg
-                  className="w-4 h-4 text-white"
+                  className="w-4 h-4 text-white transition-transform duration-200 group-hover:scale-110 group-hover:rotate-90"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"

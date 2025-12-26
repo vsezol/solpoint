@@ -12,7 +12,7 @@ const teamMembers = [
     role: "CEO, Founder",
     description:
       "Brings proven founder experience — having successfully scaled a Web3 wallet/token analysis tool from idea to $80k in monthly revenue.",
-    image: "/daniel.jpeg",
+    image: "/danich.jpeg",
   },
   {
     name: "Vsevolod",
@@ -67,7 +67,8 @@ export function TeamSection() {
                     src={member.image}
                     alt={member.name}
                     fill
-                    className="object-cover"
+                    className={`object-cover ${member.name === "Daniel" ? "object-top" : ""}`}
+                    style={member.name === "Daniel" ? { objectPosition: "center 20%" } : undefined}
                     onError={(e) => {
                       // Hide image if it fails to load
                       e.currentTarget.style.display = "none";

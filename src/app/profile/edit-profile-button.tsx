@@ -12,7 +12,11 @@ export function EditProfileButton() {
     <Button
       variant="outline"
       size="sm"
-      className="bg-black/30 text-black border-black/20 hover:bg-black/40 hover:border-black/30"
+      className="group bg-black/70 text-white border-white/30 backdrop-blur-md shadow-2xl hover:bg-black/90 hover:border-white/50 hover:scale-105 hover:shadow-[0_12px_40px_rgba(0,0,0,0.6)] active:scale-100 transition-all duration-200 font-medium cursor-pointer"
+      style={{
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1)',
+        textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)',
+      }}
       onClick={() => {
         const newEditingState = !isEditing;
         if (newEditingState) {
@@ -23,7 +27,7 @@ export function EditProfileButton() {
         setIsEditing(newEditingState);
       }}
     >
-      <Edit className="w-4 h-4 mr-2" />
+      <Edit className="w-4 h-4 mr-2 transition-transform duration-200 group-hover:scale-110 group-hover:rotate-12" />
       {isEditing ? "Cancel Edit" : "Edit Profile"}
     </Button>
   );
