@@ -240,22 +240,27 @@ export function SolPointMap({
         }
       }
 
-      // Обрабатываем города из маркеров (добавляем, если их нет в списке крупных городов)
+      // Обрабатываем города из маркеров
+      // Показываем только города, которые есть в MAJOR_CITIES
       if (cityName && cityName.trim()) {
         const cityKey = `${cityName.trim().toLowerCase()}-${countryCode || ""}`;
-        if (!cityMap.has(cityKey)) {
+        
+        // Проверяем, есть ли этот город в MAJOR_CITIES
+        const majorCity = MAJOR_CITIES.find(
+          (c) => c.name.toLowerCase() === cityName.trim().toLowerCase() && 
+                 c.countryCode === countryCode
+        );
+        
+        // Добавляем только если город есть в MAJOR_CITIES
+        if (majorCity && !cityMap.has(cityKey)) {
           cityMap.set(cityKey, {
-            name: cityName.trim(),
-            lat: marker.latitude,
-            lng: marker.longitude,
-            countryCode,
+            name: majorCity.name,
+            lat: majorCity.lat,
+            lng: majorCity.lng,
+            countryCode: majorCity.countryCode,
           });
-        } else {
-          // Если город уже есть, обновляем координаты (среднее)
-          const existing = cityMap.get(cityKey)!;
-          existing.lat = (existing.lat + marker.latitude) / 2;
-          existing.lng = (existing.lng + marker.longitude) / 2;
         }
+        // Города, которых нет в MAJOR_CITIES, не отображаются на карте
       }
     });
 
