@@ -1,9 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { Card, Button, Avatar } from "@/components/ui";
+import { Modal, ModalHeader, ModalTitle, ModalContent } from "@/components/ui";
 import { UserPlus, Crown, Calendar, Check } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { getAppUrl } from "@/lib/utils";
 import type { User, Event, Invite } from "@/types";
 import { createClient } from "@/lib/supabase/client";
@@ -22,6 +25,9 @@ export function ProfileSidebar({ user, upcomingEvents }: ProfileSidebarProps) {
   const [isCopied, setIsCopied] = useState(false);
   const [currentInvite, setCurrentInvite] = useState<Invite | null>(null);
   const [isLoadingInvite, setIsLoadingInvite] = useState(false);
+  const [isMutualsModalOpen, setIsMutualsModalOpen] = useState(false);
+  const [isCheckingPro, setIsCheckingPro] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     fetchStatistics();
@@ -62,9 +68,60 @@ export function ProfileSidebar({ user, upcomingEvents }: ProfileSidebarProps) {
   };
 
   const fetchMutualFollowers = async () => {
-    // TODO: Implement mutual followers logic when API is ready
-    // For now, return empty array
-    setMutualFollowers([]);
+    try {
+      const response = await fetch("/api/twitter/mutual-followers");
+      
+      if (!response.ok) {
+        // Не показываем ошибку, просто не загружаем данные
+        console.error("Failed to fetch mutual followers:", response.status);
+        setMutualFollowers([]);
+        return;
+      }
+
+      const data = await response.json();
+      setMutualFollowers(data.mutualFollowers || []);
+    } catch (error) {
+      console.error("Error fetching mutual followers:", error);
+      setMutualFollowers([]);
+    }
+  };
+
+  const checkProSubscription = async (): Promise<boolean> => {
+    try {
+      setIsCheckingPro(true);
+      const response = await fetch("/api/subscriptions/current");
+      
+      if (!response.ok) {
+        return false;
+      }
+
+      const data = await response.json();
+      const hasActivePro = data.subscription !== null && data.subscription.status === "active";
+      return hasActivePro;
+    } catch (error) {
+      console.error("Error checking PRO subscription:", error);
+      return false;
+    } finally {
+      setIsCheckingPro(false);
+    }
+  };
+
+  const handleShowMutualsList = async () => {
+    const isPro = await checkProSubscription();
+    
+    if (!isPro) {
+      // Показываем сообщение о необходимости PRO подписки
+      const shouldGoToSubscription = confirm(
+        "Для просмотра полного списка взаимных подписчиков необходима PRO подписка. Хотите перейти на страницу подписки?"
+      );
+      if (shouldGoToSubscription) {
+        router.push("/subscription");
+      }
+      return;
+    }
+
+    // Открываем модальное окно со списком
+    setIsMutualsModalOpen(true);
   };
 
   const fetchUserInvites = async () => {
@@ -236,62 +293,94 @@ export function ProfileSidebar({ user, upcomingEvents }: ProfileSidebarProps) {
           </div>
         </div>
 
-        {/* Your mutuals - заглушка */}
+        {/* Your mutuals */}
         <div className="mb-4 pt-4 border-t border-[var(--color-surface-border)]">
           <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">
             Your mutuals
           </h3>
-          <p className="text-sm text-[var(--color-text-secondary)] mb-3">
-            <span className="text-[var(--color-text-primary)] font-medium">10</span> people you follow on Twitter are on SolPoint
-          </p>
-          <div className="flex items-center gap-3 mb-3">
-            <div className="flex items-center -space-x-2">
-              {/* Заглушки аватаров */}
-              <div className="w-8 h-8 rounded-full bg-[var(--color-surface-hover)] border-2 border-[var(--color-background)] flex items-center justify-center overflow-hidden">
-                <div className="w-full h-full rounded-full bg-yellow-400"></div>
-              </div>
-              <div className="w-8 h-8 rounded-full bg-[var(--color-surface-hover)] border-2 border-[var(--color-background)] flex items-center justify-center overflow-hidden">
-                <div className="w-full h-full rounded-full bg-orange-400"></div>
-              </div>
-              <div className="w-8 h-8 rounded-full bg-[var(--color-surface-hover)] border-2 border-[var(--color-background)] flex items-center justify-center overflow-hidden">
-                <div className="w-full h-full rounded-full bg-purple-400"></div>
-              </div>
-            </div>
-            <Link
-              href="#"
-              className="text-sm text-[var(--color-primary)] hover:underline ml-auto"
-            >
-              Show list
-            </Link>
-          </div>
-        </div>
-
-        <Button
-          onClick={handleCopyInviteLink}
-          variant={isCopied ? "secondary" : "primary"}
-          size="sm"
-          className="w-full"
-          isLoading={isLoadingInvite || isGeneratingInvite}
-          disabled={isLoadingInvite || isGeneratingInvite}
-        >
-          {isCopied ? (
+          {mutualFollowers.length > 0 ? (
             <>
-              <Check className="w-4 h-4 mr-2" />
-              Copied!
+              <p className="text-sm text-[var(--color-text-secondary)] mb-3">
+                <span className="text-[var(--color-text-primary)] font-medium">
+                  {mutualFollowers.length}
+                </span>{" "}
+                {mutualFollowers.length === 1
+                  ? "person you follow on Twitter is"
+                  : "people you follow on Twitter are"}{" "}
+                on SolPoint
+              </p>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="flex items-center -space-x-2">
+                  {mutualFollowers.slice(0, 5).map((follower) => (
+                    <Link
+                      key={follower.id}
+                      href={`/profile/${follower.twitter_handle}`}
+                      className="w-8 h-8 rounded-full bg-[var(--color-surface-hover)] border-2 border-[var(--color-background)] flex items-center justify-center overflow-hidden hover:z-10 transition-transform hover:scale-110"
+                    >
+                      {follower.avatar_url ? (
+                        <Image
+                          src={follower.avatar_url}
+                          alt={follower.twitter_name}
+                          width={32}
+                          height={32}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-xs font-medium">
+                          {follower.twitter_name?.[0]?.toUpperCase() || "?"}
+                        </div>
+                      )}
+                    </Link>
+                  ))}
+                </div>
+                {mutualFollowers.length > 0 && (
+                  <button
+                    onClick={handleShowMutualsList}
+                    className="text-sm text-[var(--color-primary)] hover:underline ml-auto"
+                    disabled={isCheckingPro}
+                  >
+                    Show list
+                  </button>
+                )}
+              </div>
             </>
           ) : (
-            <>
-              <UserPlus className="w-4 h-4 mr-2" />
-              Copy Invite Link
-            </>
+            <p className="text-sm text-[var(--color-text-secondary)] mb-3">
+              <span className="text-[var(--color-text-primary)] font-medium">0</span> Mutuals
+            </p>
           )}
-        </Button>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-sm text-[var(--color-text-secondary)]">
+              Invite friends
+            </span>
+            <Button
+              onClick={handleCopyInviteLink}
+              variant={isCopied ? "secondary" : "primary"}
+              size="sm"
+              className="whitespace-nowrap"
+              isLoading={isLoadingInvite || isGeneratingInvite}
+              disabled={isLoadingInvite || isGeneratingInvite}
+            >
+              {isCopied ? (
+                <>
+                  <Check className="w-4 h-4 mr-2" />
+                  Copied!
+                </>
+              ) : (
+                <>
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Generate Invite Link
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
       </Card>
 
       {/* What's happening */}
       <Card variant="bordered" className="w-full">
         <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
-          What's happening
+          What&apos;s happening
         </h3>
         {upcomingEvents.length > 0 ? (
           <div className="space-y-3">
@@ -347,6 +436,60 @@ export function ProfileSidebar({ user, upcomingEvents }: ProfileSidebarProps) {
           </Button>
         </Card>
       )}
+
+      {/* Modal для списка mutuals */}
+      <Modal
+        isOpen={isMutualsModalOpen}
+        onClose={() => setIsMutualsModalOpen(false)}
+        size="md"
+        ariaLabel="Список взаимных подписчиков"
+      >
+        <ModalHeader>
+          <ModalTitle>Your mutuals</ModalTitle>
+        </ModalHeader>
+        <ModalContent>
+          <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+            {mutualFollowers.length === 0 ? (
+              <p className="text-sm text-[var(--color-text-secondary)] text-center py-4">
+                Нет взаимных подписчиков
+              </p>
+            ) : (
+              mutualFollowers.map((follower) => (
+                <Link
+                  key={follower.id}
+                  href={`/profile/${follower.twitter_handle}`}
+                  onClick={() => setIsMutualsModalOpen(false)}
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-[var(--color-surface-hover)] transition-colors"
+                >
+                  <div className="w-12 h-12 rounded-full bg-[var(--color-surface-hover)] border-2 border-[var(--color-background)] flex items-center justify-center overflow-hidden flex-shrink-0">
+                    {follower.avatar_url ? (
+                      <Image
+                        src={follower.avatar_url}
+                        alt={follower.twitter_name}
+                        width={48}
+                        height={48}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-sm font-medium">
+                        {follower.twitter_name?.[0]?.toUpperCase() || "?"}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-[var(--color-text-primary)] truncate">
+                      {follower.twitter_name}
+                    </p>
+                    <p className="text-xs text-[var(--color-text-secondary)] truncate">
+                      @{follower.twitter_handle}
+                    </p>
+                  </div>
+                </Link>
+              ))
+            )}
+          </div>
+        </ModalContent>
+      </Modal>
     </div>
   );
 }
