@@ -1,16 +1,20 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Button, Card, Input } from "@/components/ui";
 import { Header, Footer } from "@/components/layout";
-import { Twitter, MapPin, Shield, Globe, AlertCircle } from "lucide-react";
+import { Twitter, MapPin, Globe, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
 import { useAuth } from "@/hooks/use-auth";
-import { useGeolocation } from "@/hooks/use-geolocation";
+// import { useGeolocation } from "@/hooks/use-geolocation";
 import { trackEvent } from "@/lib/analytics";
+import { Search, Check } from "lucide-react";
+import { cn } from "@/lib/utils";
+import countries from "../../../supabase/coutries";
+import type { Country } from "@/store/map-store";
 
 type Step = "twitter" | "location" | "profile" | "complete";
 
@@ -18,7 +22,7 @@ export default function SignupPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
-  const { requestGeolocation } = useGeolocation();
+  // const { requestGeolocation } = useGeolocation(); // Закомментировано: временно отключаем автоматическое определение локации
   const stepFromUrl = searchParams.get("step");
   const inviteCode = searchParams.get("invite");
   const message = searchParams.get("message");
@@ -30,6 +34,9 @@ export default function SignupPage() {
      "twitter") as Step
   );
   const [isLoading, setIsLoading] = useState(false);
+  const [countrySearchQuery, setCountrySearchQuery] = useState("");
+  const [isCountryDropdownOpen, setIsCountryDropdownOpen] = useState(false);
+  const countryDropdownRef = useRef<HTMLDivElement>(null);
   const [formData, setFormData] = useState({
     country: "",
     country_code: "" as string | undefined,
@@ -45,6 +52,18 @@ export default function SignupPage() {
       localStorage.setItem("inviteCode", inviteCode);
     }
   }, [inviteCode]);
+
+  // Закрываем dropdown при клике вне его
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (countryDropdownRef.current && !countryDropdownRef.current.contains(event.target as Node)) {
+        setIsCountryDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Загружаем данные профиля при загрузке, если пользователь авторизован
   useEffect(() => {
@@ -63,22 +82,17 @@ export default function SignupPage() {
       }
       
       // Загружаем данные профиля в форму, если они есть
-      // НО не перезаписываем данные, которые уже были установлены через геолокацию
       if (user.country_code || user.city || user.bio || user.role) {
         setFormData((prev) => {
-          // Если в formData уже есть country_code, не перезаписываем
-          // Это означает, что данные были установлены через геолокацию
+          // Сохраняем данные из БД, но не перезаписываем если они уже были введены в форме
           const shouldKeepCountryCode = prev.country_code && prev.country_code !== "";
           const shouldKeepCity = prev.city && prev.city !== "";
           
           return {
             ...prev,
-            // Сохраняем country_code из геолокации, если он уже установлен
             country: prev.country || user.country || "",
             country_code: shouldKeepCountryCode ? prev.country_code : (user.country_code || prev.country_code),
-            // Сохраняем город из геолокации, если он уже установлен
             city: shouldKeepCity ? prev.city : (user.city || prev.city || ""),
-            // Био и роль можно загружать из БД, так как они не устанавливаются через геолокацию
             bio: user.bio || prev.bio || "",
             role: user.role || prev.role || "",
             isOpenToMeet: user.is_open_to_meet !== undefined ? user.is_open_to_meet : prev.isOpenToMeet,
@@ -93,7 +107,7 @@ export default function SignupPage() {
         setStep("location");
       }
     }
-  }, [authLoading, isAuthenticated, user, router, step, inviteCode]);
+  }, [authLoading, isAuthenticated, user, router, step, inviteCode, redirectTo]);
 
   const handleTwitterSignup = async () => {
     try {
@@ -125,50 +139,86 @@ export default function SignupPage() {
         event_category: "Authentication",
         error_type: error instanceof Error ? error.message : "unknown",
       });
-      alert("Не удалось начать регистрацию. Пожалуйста, попробуйте еще раз.");
+      alert("Failed to start registration. Please try again.");
     }
   };
 
  
 
-  const handleLocationPermission = async () => {
-    console.log("[Signup] handleLocationPermission called");
-    try {
-      console.log("[Signup] Calling requestGeolocation...");
-      const result = await requestGeolocation();
-      console.log("[Signup] requestGeolocation returned:", result);
-      
-      if (result) {
-        console.log("[Signup] Setting form data with result:", {
-          country: result.country,
-          country_code: result.country_code,
-          city: result.city,
-        });
-        setFormData((prev) => ({
-          ...prev,
-          country: result.country,
-          country_code: result.country_code,
-          city: result.city,
-        }));
-        trackEvent("location_detected", {
-          event_category: "Signup",
-          country: result.country,
-          country_code: result.country_code,
-          has_city: !!result.city,
-        });
-      } else {
-        console.warn("[Signup] requestGeolocation returned null");
-      }
-      console.log("[Signup] Moving to profile step");
-      setStep("profile");
-    } catch (error) {
-      console.error("[Signup] Error in handleLocationPermission:", error);
-      trackEvent("location_error", {
-        event_category: "Signup",
-        error_type: error instanceof Error ? error.message : "unknown",
-      });
-      // Продолжаем процесс даже если геолокация не удалась
-      setStep("profile");
+  // Закомментировано: временно отключаем автоматическое определение локации через браузер
+  // const handleLocationPermission = async () => {
+  //   console.log("[Signup] handleLocationPermission called");
+  //   try {
+  //     console.log("[Signup] Calling requestGeolocation...");
+  //     const result = await requestGeolocation();
+  //     console.log("[Signup] requestGeolocation returned:", result);
+  //     
+  //     if (result) {
+  //       console.log("[Signup] Setting form data with result:", {
+  //         country: result.country,
+  //         country_code: result.country_code,
+  //         city: result.city,
+  //       });
+  //       setFormData((prev) => ({
+  //         ...prev,
+  //         country: result.country,
+  //         country_code: result.country_code,
+  //         city: result.city,
+  //       }));
+  //       trackEvent("location_detected", {
+  //         event_category: "Signup",
+  //         country: result.country,
+  //         country_code: result.country_code,
+  //         has_city: !!result.city,
+  //       });
+  //     } else {
+  //       console.warn("[Signup] requestGeolocation returned null");
+  //     }
+  //     console.log("[Signup] Moving to profile step");
+  //     setStep("profile");
+  //   } catch (error) {
+  //     console.error("[Signup] Error in handleLocationPermission:", error);
+  //     trackEvent("location_error", {
+  //       event_category: "Signup",
+  //       error_type: error instanceof Error ? error.message : "unknown",
+  //     });
+  //     // Продолжаем процесс даже если геолокация не удалась
+  //     setStep("profile");
+  //   }
+  // };
+
+  const handleLocationSubmit = () => {
+    // Проверяем, что страна выбрана
+    if (!formData.country_code || !formData.country) {
+      alert("Please select a country");
+      return;
+    }
+    trackEvent("location_entered_manually", {
+      event_category: "Signup",
+      country: formData.country,
+      country_code: formData.country_code,
+      has_city: !!formData.city,
+    });
+    setStep("profile");
+  };
+
+  const filteredCountries = countries.filter((c: Country) =>
+    c.name.toLowerCase().includes(countrySearchQuery.toLowerCase())
+  );
+
+  const handleSelectCountry = (country: Country) => {
+    setFormData((prev) => ({
+      ...prev,
+      country: country.name,
+      country_code: country.code,
+    }));
+    setCountrySearchQuery("");
+    setIsCountryDropdownOpen(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && filteredCountries.length > 0) {
+      handleSelectCountry(filteredCountries[0]);
     }
   };
 
@@ -318,7 +368,7 @@ export default function SignupPage() {
               </motion.div>
             )}
 
-            {/* Step 2: Location Permission */}
+            {/* Step 2: Location Entry */}
             {step === "location" && (
               <motion.div
                 key="location"
@@ -333,52 +383,97 @@ export default function SignupPage() {
                 </div>
 
                 <h1 className="text-2xl font-bold text-center text-[var(--color-text-primary)] mb-2">
-                  Enable Location
+                  Enter Your Location
                 </h1>
                 <p className="text-center text-[var(--color-text-secondary)] mb-6">
                   Help others find you on the map
                 </p>
 
-                <div className="bg-[var(--color-surface-hover)] rounded-lg p-4 mb-6">
-                  <div className="flex items-start gap-3 mb-3">
-                    <Shield className="w-5 h-5 text-[var(--color-primary)] mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-[var(--color-text-primary)]">
-                        Your privacy is protected
-                      </p>
-                      <p className="text-xs text-[var(--color-text-muted)]">
-                        We only store country and city — never exact coordinates.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <Globe className="w-5 h-5 text-[var(--color-primary)] mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-[var(--color-text-primary)]">
-                        Country is public, city is VIP-only
-                      </p>
-                      <p className="text-xs text-[var(--color-text-muted)]">
-                        Free users see your country. VIP users can see your city.
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                <div className="space-y-4">
+                  {/* Country Selection */}
+                  <div>
+                    <label className="block text-sm text-[var(--color-text-muted)] mb-2">
+                      Country *
+                    </label>
+                    <div className="relative" ref={countryDropdownRef}>
+                      <Input
+                        placeholder={formData.country || "Select country"}
+                        icon={<Search className="w-4 h-4" />}
+                        value={countrySearchQuery}
+                        onChange={(e) => {
+                          setCountrySearchQuery(e.target.value);
+                          setIsCountryDropdownOpen(true);
+                        }}
+                        onFocus={() => setIsCountryDropdownOpen(true)}
+                        onKeyDown={handleKeyDown}
+                      />
 
-                <div className="space-y-3">
+                      {isCountryDropdownOpen && filteredCountries.length > 0 && (
+                        <div className="absolute z-50 w-full mt-2 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                          {filteredCountries.map((country: Country) => (
+                            <button
+                              key={country.code}
+                              onClick={() => handleSelectCountry(country)}
+                              className={cn(
+                                "w-full px-3 py-2 text-left flex items-center justify-between hover:bg-[var(--color-surface-border)] transition-colors",
+                                formData.country_code === country.code && "bg-[var(--color-primary)]/10"
+                              )}
+                            >
+                              <span
+                                className={cn(
+                                  "text-sm",
+                                  formData.country_code === country.code
+                                    ? "text-[var(--color-primary)] font-medium"
+                                    : "text-[var(--color-text-primary)]"
+                                )}
+                              >
+                                {country.name}
+                              </span>
+                              {formData.country_code === country.code && (
+                                <Check className="w-4 h-4 text-[var(--color-primary)]" />
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* City Input */}
+                  <div>
+                    <label className="block text-sm text-[var(--color-text-muted)] mb-2">
+                      City (optional)
+                    </label>
+                    <Input
+                      value={formData.city || ""}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          city: e.target.value,
+                        }))
+                      }
+                      placeholder="Enter city name"
+                    />
+                  </div>
+
+                  <div className="bg-[var(--color-surface-hover)] rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <Globe className="w-5 h-5 text-[var(--color-primary)] mt-0.5 shrink-0" />
+                      <div>
+                        <p className="text-xs text-[var(--color-text-muted)]">
+                          Country is visible to everyone. City is visible only to VIP users.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
                   <Button
-                    onClick={handleLocationPermission}
+                    onClick={handleLocationSubmit}
                     className="w-full"
                     size="lg"
+                    disabled={!formData.country_code}
                   >
-                    <MapPin className="w-5 h-5 mr-2" />
-                    Allow Location Access
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={handleLocationPermission}
-                    className="w-full"
-                  >
-                    Skip (Use IP-based detection)
+                    Continue
                   </Button>
                 </div>
               </motion.div>
@@ -400,30 +495,6 @@ export default function SignupPage() {
                 </p>
 
                 <div className="space-y-4">
-                  {/* Location fields - автоматически определяются через геолокацию */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-sm text-[var(--color-text-muted)] mb-1">
-                        Country
-                      </label>
-                      <Input
-                        value={formData.country || "Detecting..."}
-                        readOnly
-                        placeholder="Auto-detected from location"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm text-[var(--color-text-muted)] mb-1">
-                        City
-                      </label>
-                      <Input
-                        value={formData.city || "Detecting..."}
-                        readOnly
-                        placeholder="Auto-detected from location"
-                      />
-                    </div>
-                  </div>
-
                   {/* Bio */}
                   <div>
                     <label className="block text-sm text-[var(--color-text-muted)] mb-1">

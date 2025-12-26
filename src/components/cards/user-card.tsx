@@ -18,6 +18,7 @@ interface UserCardProps {
   onAddFriend?: () => void;
   onRemoveFriend?: () => void; // Для отписки/отмены запроса
   onMessage?: () => void;
+  currentUserId?: string; // ID текущего пользователя для проверки, является ли это собственный профиль
 }
 
 export function UserCard({
@@ -32,6 +33,7 @@ export function UserCard({
   onAddFriend,
   onRemoveFriend,
   onMessage,
+  currentUserId,
 }: UserCardProps) {
   const roleLabels: Record<string, string> = {
     developer: "Developer",
@@ -152,8 +154,8 @@ export function UserCard({
 
         </div>
 
-        {/* Actions */}
-        {isUnauthorized ? (
+        {/* Actions - не показываем, если это собственный профиль */}
+        {user.id === currentUserId ? null : isUnauthorized ? (
           <div className="relative">
             <div className="absolute inset-0 flex items-center justify-center z-10">
               <Button variant="secondary" size="sm" asChild>
@@ -351,8 +353,8 @@ export function UserCard({
 
       </div>
 
-      {/* Actions */}
-      {isUnauthorized ? (
+      {/* Actions - не показываем, если это собственный профиль */}
+      {user.id === currentUserId ? null : isUnauthorized ? (
         <div className="relative">
           <div className="absolute inset-0 flex items-center justify-center z-10">
             <Button variant="secondary" asChild>

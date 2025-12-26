@@ -17,7 +17,8 @@ import {
   Copy,
   Calendar,
   Crown,
-  Loader2
+  Loader2,
+  X
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -29,7 +30,6 @@ import { AddFriendButton } from "./add-friend-button";
 import { EditProfileButton } from "./edit-profile-button";
 import { trackEvent } from "@/lib/analytics";
 import { Modal, ModalHeader, ModalTitle, ModalContent } from "@/components/ui";
-import { createClient } from "@/lib/supabase/client";
 import { CreateEntityForm } from "@/components/hubs/create-entity-form";
 import type { EntityType } from "@/types";
 
@@ -75,9 +75,12 @@ export function ProfileContent({
     start_date?: string;
   }>>([]);
   const [isAffiliationsModalOpen, setIsAffiliationsModalOpen] = useState(false);
-  const [isCheckingProAffiliations, setIsCheckingProAffiliations] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [createEntityType, setCreateEntityType] = useState<EntityType>("hub");
+  const [isFriendsModalOpen, setIsFriendsModalOpen] = useState(false);
+  const [isFriendRequestsModalOpen, setIsFriendRequestsModalOpen] = useState(false);
+  const [friendsList, setFriendsList] = useState<User[]>([]);
+  const [friendRequestsList, setFriendRequestsList] = useState<User[]>([]);
   const router = useRouter();
 
   // Обновляем локальное состояние при изменении user prop
@@ -257,60 +260,9 @@ export function ProfileContent({
     setIsMutualsModalOpen(true);
   };
 
-  const handleShowAffiliationsList = async () => {
-    // Проверяем авторизацию через API
-    try {
-      const authResponse = await fetch("/api/auth/me");
-      if (!authResponse.ok) {
-        router.push("/login");
-        return;
-      }
-      const authData = await authResponse.json();
-      if (!authData.user || !authData.profile) {
-        router.push("/login");
-        return;
-      }
-    } catch (error) {
-      console.error("Error checking auth:", error);
-      router.push("/login");
-      return;
-    }
-
-    const isPro = await checkProSubscriptionAffiliations();
-    
-    if (!isPro) {
-      // Показываем сообщение о необходимости PRO подписки
-      const shouldGoToSubscription = confirm(
-        "Для просмотра полного списка affiliations необходима PRO подписка. Хотите перейти на страницу подписки?"
-      );
-      if (shouldGoToSubscription) {
-        router.push("/subscription");
-      }
-      return;
-    }
-
-    // Открываем модальное окно со списком
+  const handleShowAffiliationsList = () => {
+    // Всегда открываем модальное окно, внутри будет проверка Pro статуса
     setIsAffiliationsModalOpen(true);
-  };
-
-  const checkProSubscriptionAffiliations = async (): Promise<boolean> => {
-    try {
-      setIsCheckingProAffiliations(true);
-      const response = await fetch("/api/subscriptions/current");
-      
-      if (!response.ok) {
-        return false;
-      }
-
-      const data = await response.json();
-      const hasActivePro = data.subscription !== null && data.subscription.status === "active";
-      return hasActivePro;
-    } catch (error) {
-      console.error("Error checking PRO subscription:", error);
-      return false;
-    } finally {
-      setIsCheckingProAffiliations(false);
-    }
   };
 
   const handleUpdate = (updatedUser: User) => {
@@ -327,6 +279,78 @@ export function ProfileContent({
     setIsCreateModalOpen(false);
     // Обновляем список affiliations после создания
     fetchAffiliations();
+  };
+
+  const handleShowFriendsList = async () => {
+    try {
+      const response = await fetch(`/api/friends/list?user_id=${user.id}&type=mutual`);
+      if (response.ok) {
+        const data = await response.json();
+        setFriendsList(data.data || []);
+        setIsFriendsModalOpen(true);
+      }
+    } catch (error) {
+      console.error("Error fetching friends list:", error);
+    }
+  };
+
+  const handleShowFriendRequestsList = async () => {
+    try {
+      const response = await fetch("/api/friends/requests");
+      if (response.ok) {
+        const data = await response.json();
+        setFriendRequestsList(data.data || []);
+        setIsFriendRequestsModalOpen(true);
+      }
+    } catch (error) {
+      console.error("Error fetching friend requests:", error);
+    }
+  };
+
+  const handleAcceptFriendRequest = async (friendId: string) => {
+    try {
+      const response = await fetch("/api/friends/requests", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ friend_id: friendId }),
+      });
+
+      if (response.ok) {
+        // Удаляем из списка заявок
+        setFriendRequestsList((prev) => prev.filter((u) => u.id !== friendId));
+        // Обновляем статистику
+        fetchFriendsStats();
+      } else {
+        const error = await response.json();
+        alert(error.error || "Failed to accept friend request");
+      }
+    } catch (error) {
+      console.error("Error accepting friend request:", error);
+      alert("Failed to accept friend request");
+    }
+  };
+
+  const handleDeclineFriendRequest = async (friendId: string) => {
+    try {
+      const response = await fetch(`/api/friends/requests?friend_id=${friendId}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        // Удаляем из списка заявок
+        setFriendRequestsList((prev) => prev.filter((u) => u.id !== friendId));
+        // Обновляем статистику
+        fetchFriendsStats();
+      } else {
+        const error = await response.json();
+        alert(error.error || "Failed to decline friend request");
+      }
+    } catch (error) {
+      console.error("Error declining friend request:", error);
+      alert("Failed to decline friend request");
+    }
   };
 
   const handleToggleOpenToMeet = async () => {
@@ -670,20 +694,101 @@ export function ProfileContent({
 
             {/* Friends count and requests */}
             {isOwnProfile ? (
-              <div className="space-y-1">
-                <p className="text-[var(--color-text-secondary)]">
-                  {friendsStats.friendsCount} {friendsStats.friendsCount === 1 ? "fren" : "frens"}
-                </p>
+              <div className="flex gap-[10px] items-center">
+                <button
+                  onClick={handleShowFriendsList}
+                  className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors cursor-pointer"
+                >
+                  <span className="font-bold">{friendsStats.friendsCount}</span> {friendsStats.friendsCount === 1 ? "fren" : "frens"}
+                </button>
                 {friendsStats.friendRequestsCount > 0 && (
-                  <p className="text-[var(--color-text-secondary)]">
-                    {friendsStats.friendRequestsCount} fren {friendsStats.friendRequestsCount === 1 ? "request" : "requests"}
-                  </p>
+                  <button
+                    onClick={handleShowFriendRequestsList}
+                    className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors cursor-pointer"
+                  >
+                    <span className="font-bold">{friendsStats.friendRequestsCount}</span> fren {friendsStats.friendRequestsCount === 1 ? "request" : "requests"}
+                  </button>
                 )}
               </div>
             ) : (
               <p className="text-[var(--color-text-secondary)]">
                 {friendsCount} {friendsCount === 1 ? "fren" : "frens"}
               </p>
+            )}
+
+            {/* Affiliations */}
+            {isOwnProfile && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg text-[var(--color-text-primary)]">
+                    <span className="font-bold">{affiliations.length}</span> <span className="text-[var(--color-text-secondary)] font-normal">Affiliations</span>
+                  </h3>
+                </div>
+                {affiliations.length > 0 ? (
+                  <>
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center -space-x-2">
+                        {affiliations.slice(0, 3).map((affiliation) => (
+                          <Link
+                            key={affiliation.id}
+                            href={
+                              affiliation.type === "hub"
+                                ? `/hubs/${affiliation.slug || affiliation.id}`
+                                : affiliation.type === "community"
+                                ? `/communities/${affiliation.slug || affiliation.id}`
+                                : affiliation.type === "project"
+                                ? `/projects/${affiliation.slug || affiliation.id}`
+                                : affiliation.type === "event"
+                                ? `/events/${affiliation.slug || affiliation.id}`
+                                : `/profile/${user.twitter_handle}`
+                            }
+                            className="w-8 h-8 rounded-full bg-[var(--color-surface-hover)] border-2 border-[var(--color-background)] flex items-center justify-center overflow-hidden hover:z-10 transition-transform hover:scale-110"
+                          >
+                            {affiliation.image_url ? (
+                              <Image
+                                src={affiliation.image_url}
+                                alt={affiliation.name}
+                                width={32}
+                                height={32}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-xs font-medium">
+                                {affiliation.name?.[0]?.toUpperCase() || "?"}
+                              </div>
+                            )}
+                          </Link>
+                        ))}
+                      </div>
+                      {affiliations.length > 0 && (
+                        <button
+                          onClick={handleShowAffiliationsList}
+                          className="text-sm text-[var(--color-primary)] hover:underline ml-auto cursor-pointer"
+                        >
+                          Show list
+                        </button>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-sm text-[var(--color-text-secondary)]">
+                    No affiliations yet
+                  </p>
+                )}
+                <div className="pt-4 border-t border-[var(--color-surface-border)]">
+                  <p className="text-sm text-[var(--color-text-secondary)] mb-3">
+                    Founder or organizer?
+                  </p>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    className="w-fit"
+                    onClick={handleAddEntityClick}
+                  >
+                    Add your project to the map
+                  </Button>
+                </div>
+              </div>
             )}
           </div>
 
@@ -937,82 +1042,6 @@ export function ProfileContent({
             </div>
           </Card>
 
-          {/* Affiliations */}
-          {isOwnProfile && (
-            <Card variant="bordered" className="w-full">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">
-                  {affiliations.length} Affiliations
-                </h3>
-              </div>
-              {affiliations.length > 0 ? (
-                <>
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="flex items-center -space-x-2">
-                      {affiliations.slice(0, 3).map((affiliation) => (
-                        <Link
-                          key={affiliation.id}
-                          href={
-                            affiliation.type === "hub"
-                              ? `/hubs/${affiliation.slug || affiliation.id}`
-                              : affiliation.type === "community"
-                              ? `/communities/${affiliation.slug || affiliation.id}`
-                              : affiliation.type === "project"
-                              ? `/projects/${affiliation.slug || affiliation.id}`
-                              : affiliation.type === "event"
-                              ? `/events/${affiliation.slug || affiliation.id}`
-                              : `/profile/${user.twitter_handle}`
-                          }
-                          className="w-8 h-8 rounded-full bg-[var(--color-surface-hover)] border-2 border-[var(--color-background)] flex items-center justify-center overflow-hidden hover:z-10 transition-transform hover:scale-110"
-                        >
-                          {affiliation.image_url ? (
-                            <Image
-                              src={affiliation.image_url}
-                              alt={affiliation.name}
-                              width={32}
-                              height={32}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-xs font-medium">
-                              {affiliation.name?.[0]?.toUpperCase() || "?"}
-                            </div>
-                          )}
-                        </Link>
-                      ))}
-                    </div>
-                    {affiliations.length > 3 && (
-                      <button
-                        onClick={handleShowAffiliationsList}
-                        className="text-sm text-[var(--color-primary)] hover:underline ml-auto"
-                        disabled={isCheckingProAffiliations}
-                      >
-                        Show list
-                      </button>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <p className="text-sm text-[var(--color-text-secondary)] mb-3">
-                  No affiliations yet
-                </p>
-              )}
-              <div className="pt-4 border-t border-[var(--color-surface-border)]">
-                <p className="text-sm text-[var(--color-text-secondary)] mb-3">
-                  Founder or organizer?
-                </p>
-                <Button
-                  variant="primary"
-                  size="sm"
-                  className="w-fit"
-                  onClick={handleAddEntityClick}
-                >
-                  Add your project to the map
-                </Button>
-              </div>
-            </Card>
-          )}
-
           {/* What's happening */}
           <Card variant="bordered" className="w-full">
             <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
@@ -1140,60 +1169,78 @@ export function ProfileContent({
           <ModalTitle>Your Affiliations</ModalTitle>
         </ModalHeader>
         <ModalContent>
-          <div className="space-y-3 max-h-[60vh] overflow-y-auto">
-            {affiliations.length === 0 ? (
-              <p className="text-sm text-[var(--color-text-secondary)] text-center py-4">
-                Нет affiliations
-              </p>
-            ) : (
-              affiliations.map((affiliation) => {
-                const href =
-                  affiliation.type === "hub"
-                    ? `/hubs/${affiliation.slug || affiliation.id}`
-                    : affiliation.type === "community"
-                    ? `/communities/${affiliation.slug || affiliation.id}`
-                    : affiliation.type === "project"
-                    ? `/projects/${affiliation.slug || affiliation.id}`
-                    : affiliation.type === "event"
-                    ? `/events/${affiliation.slug || affiliation.id}`
-                    : `/profile/${user.twitter_handle}`;
+          {currentUser.subscription_tier === "pro" ? (
+            <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+              {affiliations.length === 0 ? (
+                <p className="text-sm text-[var(--color-text-secondary)] text-center py-4">
+                  Нет affiliations
+                </p>
+              ) : (
+                affiliations.map((affiliation) => {
+                  const href =
+                    affiliation.type === "hub"
+                      ? `/hubs/${affiliation.slug || affiliation.id}`
+                      : affiliation.type === "community"
+                      ? `/communities/${affiliation.slug || affiliation.id}`
+                      : affiliation.type === "project"
+                      ? `/projects/${affiliation.slug || affiliation.id}`
+                      : affiliation.type === "event"
+                      ? `/events/${affiliation.slug || affiliation.id}`
+                      : `/profile/${user.twitter_handle}`;
 
-                return (
-                  <Link
-                    key={affiliation.id}
-                    href={href}
-                    onClick={() => setIsAffiliationsModalOpen(false)}
-                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-[var(--color-surface-hover)] transition-colors"
-                  >
-                    <div className="w-12 h-12 rounded-full bg-[var(--color-surface-hover)] border-2 border-[var(--color-background)] flex items-center justify-center overflow-hidden flex-shrink-0">
-                      {affiliation.image_url ? (
-                        <Image
-                          src={affiliation.image_url}
-                          alt={affiliation.name}
-                          width={48}
-                          height={48}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-sm font-medium">
-                          {affiliation.name?.[0]?.toUpperCase() || "?"}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-[var(--color-text-primary)] truncate">
-                        {affiliation.name}
-                      </p>
-                      <p className="text-xs text-[var(--color-text-secondary)] truncate capitalize">
-                        {affiliation.type}
-                        {affiliation.city && ` • ${affiliation.city}`}
-                      </p>
-                    </div>
-                  </Link>
-                );
-              })
-            )}
-          </div>
+                  return (
+                    <Link
+                      key={affiliation.id}
+                      href={href}
+                      onClick={() => setIsAffiliationsModalOpen(false)}
+                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-[var(--color-surface-hover)] transition-colors"
+                    >
+                      <div className="w-12 h-12 rounded-full bg-[var(--color-surface-hover)] border-2 border-[var(--color-background)] flex items-center justify-center overflow-hidden flex-shrink-0">
+                        {affiliation.image_url ? (
+                          <Image
+                            src={affiliation.image_url}
+                            alt={affiliation.name}
+                            width={48}
+                            height={48}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-sm font-medium">
+                            {affiliation.name?.[0]?.toUpperCase() || "?"}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-[var(--color-text-primary)] truncate">
+                          {affiliation.name}
+                        </p>
+                        <p className="text-xs text-[var(--color-text-secondary)] truncate capitalize">
+                          {affiliation.type}
+                          {affiliation.city && ` • ${affiliation.city}`}
+                        </p>
+                      </div>
+                    </Link>
+                  );
+                })
+              )}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
+              <p className="text-sm text-[var(--color-text-secondary)] mb-6">
+                A PRO subscription is required to view the full list of affiliations
+              </p>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  setIsAffiliationsModalOpen(false);
+                  router.push("/subscription");
+                }}
+              >
+                Get subscription
+              </Button>
+            </div>
+          )}
         </ModalContent>
       </Modal>
 
@@ -1265,6 +1312,138 @@ export function ProfileContent({
             onSuccess={handleCreateSuccess}
             onCancel={() => setIsCreateModalOpen(false)}
           />
+        </ModalContent>
+      </Modal>
+
+      {/* Modal для списка друзей */}
+      <Modal
+        isOpen={isFriendsModalOpen}
+        onClose={() => setIsFriendsModalOpen(false)}
+        size="md"
+        ariaLabel="Список друзей"
+      >
+        <ModalHeader>
+          <ModalTitle>Your Friends</ModalTitle>
+        </ModalHeader>
+        <ModalContent>
+          <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+            {friendsList.length === 0 ? (
+              <p className="text-sm text-[var(--color-text-secondary)] text-center py-4">
+                Нет друзей
+              </p>
+            ) : (
+              friendsList.map((friend) => (
+                <Link
+                  key={friend.id}
+                  href={`/profile/${friend.twitter_handle}`}
+                  onClick={() => setIsFriendsModalOpen(false)}
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-[var(--color-surface-hover)] transition-colors"
+                >
+                  <div className="w-12 h-12 rounded-full bg-[var(--color-surface-hover)] border-2 border-[var(--color-background)] flex items-center justify-center overflow-hidden flex-shrink-0">
+                    {friend.avatar_url ? (
+                      <Image
+                        src={friend.avatar_url}
+                        alt={friend.twitter_name}
+                        width={48}
+                        height={48}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-sm font-medium">
+                        {friend.twitter_name?.[0]?.toUpperCase() || "?"}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-[var(--color-text-primary)] truncate">
+                      {friend.twitter_name}
+                    </p>
+                    <p className="text-xs text-[var(--color-text-secondary)] truncate">
+                      @{friend.twitter_handle}
+                    </p>
+                  </div>
+                </Link>
+              ))
+            )}
+          </div>
+        </ModalContent>
+      </Modal>
+
+      {/* Modal для списка заявок в друзья */}
+      <Modal
+        isOpen={isFriendRequestsModalOpen}
+        onClose={() => setIsFriendRequestsModalOpen(false)}
+        size="md"
+        ariaLabel="Список заявок в друзья"
+      >
+        <ModalHeader>
+          <ModalTitle>Friend Requests</ModalTitle>
+        </ModalHeader>
+        <ModalContent>
+          <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+            {friendRequestsList.length === 0 ? (
+              <p className="text-sm text-[var(--color-text-secondary)] text-center py-4">
+                Нет заявок в друзья
+              </p>
+            ) : (
+              friendRequestsList.map((request) => (
+                <div
+                  key={request.id}
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-[var(--color-surface-hover)] transition-colors"
+                >
+                  <Link
+                    href={`/profile/${request.twitter_handle}`}
+                    onClick={() => setIsFriendRequestsModalOpen(false)}
+                    className="flex items-center gap-3 flex-1 min-w-0"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-[var(--color-surface-hover)] border-2 border-[var(--color-background)] flex items-center justify-center overflow-hidden flex-shrink-0">
+                      {request.avatar_url ? (
+                        <Image
+                          src={request.avatar_url}
+                          alt={request.twitter_name}
+                          width={48}
+                          height={48}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-sm font-medium">
+                          {request.twitter_name?.[0]?.toUpperCase() || "?"}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-[var(--color-text-primary)] truncate">
+                        {request.twitter_name}
+                      </p>
+                      <p className="text-xs text-[var(--color-text-secondary)] truncate">
+                        @{request.twitter_handle}
+                      </p>
+                    </div>
+                  </Link>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => handleAcceptFriendRequest(request.id)}
+                      className="whitespace-nowrap"
+                    >
+                      <UserPlus className="w-4 h-4 mr-1" />
+                      Accept
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDeclineFriendRequest(request.id)}
+                      className="whitespace-nowrap"
+                    >
+                      <X className="w-4 h-4 mr-1" />
+                      Decline
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </ModalContent>
       </Modal>
     </div>

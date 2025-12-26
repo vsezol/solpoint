@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     const userId = authUser.id;
     const affiliations: any[] = [];
 
-    // 1. Хабы (hub_members)
+    // 1. Хабы (hub_members и creator)
     const { data: hubs, error: hubsError } = await supabase
       .from("hub_members")
       .select(
@@ -54,7 +54,35 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // 2. Комьюнити (community_members)
+    // Также проверяем, является ли пользователь владельцем хаба (если еще не добавлен)
+    const { data: ownedHubs, error: ownedHubsError } = await supabase
+      .from("hubs")
+      .select("id, name, slug, image_url, country, city")
+      .eq("owner_id", userId);
+
+    if (!ownedHubsError && ownedHubs) {
+      const existingHubIds = new Set(
+        affiliations
+          .filter((a) => a.type === "hub")
+          .map((a) => a.id)
+      );
+
+      ownedHubs.forEach((hub: any) => {
+        if (!existingHubIds.has(hub.id)) {
+          affiliations.push({
+            id: hub.id,
+            name: hub.name,
+            slug: hub.slug,
+            image_url: hub.image_url,
+            type: "hub",
+            country: hub.country,
+            city: hub.city,
+          });
+        }
+      });
+    }
+
+    // 2. Комьюнити (community_members и creator)
     const { data: communities, error: communitiesError } = await supabase
       .from("community_members")
       .select(
@@ -91,7 +119,35 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // 3. Проекты (project_members)
+    // Также проверяем, является ли пользователь владельцем комьюнити (если еще не добавлен)
+    const { data: ownedCommunities, error: ownedCommunitiesError } = await supabase
+      .from("communities")
+      .select("id, name, slug, image_url, country, city")
+      .eq("owner_id", userId);
+
+    if (!ownedCommunitiesError && ownedCommunities) {
+      const existingCommunityIds = new Set(
+        affiliations
+          .filter((a) => a.type === "community")
+          .map((a) => a.id)
+      );
+
+      ownedCommunities.forEach((community: any) => {
+        if (!existingCommunityIds.has(community.id)) {
+          affiliations.push({
+            id: community.id,
+            name: community.name,
+            slug: community.slug,
+            image_url: community.image_url,
+            type: "community",
+            country: community.country,
+            city: community.city,
+          });
+        }
+      });
+    }
+
+    // 3. Проекты (project_members и creator)
     const { data: projects, error: projectsError } = await supabase
       .from("project_members")
       .select(
@@ -123,6 +179,34 @@ export async function GET(request: NextRequest) {
             type: "project",
             country: projectData.country,
             city: projectData.city,
+          });
+        }
+      });
+    }
+
+    // Также проверяем, является ли пользователь владельцем проекта (если еще не добавлен)
+    const { data: ownedProjects, error: ownedProjectsError } = await supabase
+      .from("projects")
+      .select("id, name, slug, image_url, country, city")
+      .eq("owner_id", userId);
+
+    if (!ownedProjectsError && ownedProjects) {
+      const existingProjectIds = new Set(
+        affiliations
+          .filter((a) => a.type === "project")
+          .map((a) => a.id)
+      );
+
+      ownedProjects.forEach((project: any) => {
+        if (!existingProjectIds.has(project.id)) {
+          affiliations.push({
+            id: project.id,
+            name: project.name,
+            slug: project.slug,
+            image_url: project.image_url,
+            type: "project",
+            country: project.country,
+            city: project.city,
           });
         }
       });

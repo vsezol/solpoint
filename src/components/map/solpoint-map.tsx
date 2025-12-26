@@ -469,6 +469,7 @@ export function SolPointMap({
             friendshipStatus={cardFriendshipStatus}
             onAddFriend={friendshipStatus === "none" ? () => handleAddFriend(user.id) : undefined}
             onRemoveFriend={friendshipStatus === "following" || friendshipStatus === "mutual" ? () => handleRemoveFriend(user.id) : undefined}
+            currentUserId={currentUserId}
           />
         );
       }
