@@ -24,59 +24,35 @@ if (typeof window !== "undefined") {
 
 // Custom marker icons for users
 const createCustomIcon = (type: MapMarker["type"]) => {
-  const colors = {
-    user: "#ef4444",      // Red
-    vip_user: "#fbbf24",  // Yellow/Gold
-    hub: "#3b82f6",       // Blue (not used, hub has separate icon)
-    event: "#14f195",     // Green (not used, event has separate icon)
-  };
-
-  // Red circular marker for regular users
+  // Free user marker using free-user-pin.svg
   if (type === "user") {
-    const svgMarker = `
-      <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="16" cy="16" r="14" fill="#ef4444" stroke="#ffffff" stroke-width="2"/>
-        <circle cx="16" cy="16" r="10" fill="#ffffff" opacity="0.9"/>
-      </svg>
-    `;
     return L.divIcon({
-      html: svgMarker,
+      html: `<img src="/free-user-pin.svg" alt="User" style="width: 46px; height: 54px;" />`,
       className: "custom-marker user-marker",
-      iconSize: [32, 32],
-      iconAnchor: [16, 16],
-      popupAnchor: [0, -16],
+      iconSize: [46, 54],
+      iconAnchor: [23, 54],
+      popupAnchor: [0, -50],
     });
   }
 
-  // Yellow circular marker for VIP users
-  if (type === "vip_user") {
-    const svgMarker = `
-      <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="16" cy="16" r="14" fill="#fbbf24" stroke="#ffffff" stroke-width="2"/>
-        <circle cx="16" cy="16" r="10" fill="#ffffff" opacity="0.9"/>
-      </svg>
-    `;
+  // Pro user marker using pro-user-pin.svg
+  if (type === "pro_user") {
     return L.divIcon({
-      html: svgMarker,
-      className: "custom-marker vip-user-marker",
-      iconSize: [32, 32],
-      iconAnchor: [16, 16],
-      popupAnchor: [0, -16],
+      html: `<img src="/pro-user-pin.svg" alt="Pro User" style="width: 46px; height: 54px;" />`,
+      className: "custom-marker pro-user-marker",
+      iconSize: [46, 54],
+      iconAnchor: [23, 54],
+      popupAnchor: [0, -50],
     });
   }
 
-  // Fallback
-  const svgMarker = `
-    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="16" cy="16" r="14" fill="${colors[type]}" stroke="#ffffff" stroke-width="2"/>
-    </svg>
-  `;
+  // Fallback (should not happen for user types, but just in case)
   return L.divIcon({
-    html: svgMarker,
-    className: "custom-marker",
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
-    popupAnchor: [0, -16],
+    html: `<img src="/free-user-pin.svg" alt="User" style="width: 46px; height: 54px;" />`,
+    className: "custom-marker user-marker",
+    iconSize: [46, 54],
+    iconAnchor: [23, 54],
+    popupAnchor: [0, -50],
   });
 };
 
@@ -358,7 +334,7 @@ export function SolPointMap({
 
     const checkFriendshipStatuses = async () => {
       const userMarkers = markers.filter(
-        (m) => m.type === "user" || m.type === "vip_user"
+        (m) => m.type === "user" || m.type === "pro_user"
       );
 
       if (userMarkers.length === 0) {
@@ -471,7 +447,7 @@ export function SolPointMap({
   const renderPopupContent = (marker: MapMarker) => {
     switch (marker.type) {
       case "user":
-      case "vip_user": {
+      case "pro_user": {
         const user = marker.data as User;
         const friendshipStatus = friendshipStatuses[user.id] || "none";
         const isFriend = friendshipStatus === "mutual";
@@ -487,7 +463,7 @@ export function SolPointMap({
         return (
           <UserCard
             user={user}
-            isVip={isVip}
+            isVip={user.subscription_tier === "pro"}
             compact
             isFriend={isFriend}
             friendshipStatus={cardFriendshipStatus}
@@ -653,7 +629,7 @@ export function SolPointMap({
           filter: drop-shadow(0 2px 4px rgba(239, 68, 68, 0.4));
         }
         
-        .vip-user-marker {
+        .pro-user-marker {
           filter: drop-shadow(0 2px 4px rgba(251, 191, 36, 0.4));
         }
         

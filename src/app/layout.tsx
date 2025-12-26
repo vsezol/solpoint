@@ -53,6 +53,11 @@ export const metadata: Metadata = {
     description:
       "Connect with Solana enthusiasts, find local hubs, and discover events worldwide.",
   },
+  icons: {
+    icon: "/logo.svg",
+    shortcut: "/logo.svg",
+    apple: "/logo.svg",
+  },
 };
 
 export default function RootLayout({

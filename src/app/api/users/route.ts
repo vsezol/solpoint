@@ -117,6 +117,32 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  return NextResponse.json({ users: users || [] }, { status: 200 });
+  // Получаем активные подписки для вычисления subscription_tier
+  const { data: activeSubscriptions, error: subscriptionsError } = await supabase
+    .from("subscriptions")
+    .select("user_id")
+    .eq("status", "active")
+    .gt("current_period_end", new Date().toISOString());
+
+  if (subscriptionsError) {
+    console.error("Error fetching active subscriptions:", subscriptionsError);
+    // Продолжаем работу, используя subscription_tier из profiles как fallback
+  }
+
+  // Создаем Set с ID пользователей с активными подписками
+  const proUserIds = new Set<string>();
+  if (activeSubscriptions) {
+    activeSubscriptions.forEach((sub) => {
+      proUserIds.add(sub.user_id);
+    });
+  }
+
+  // Обновляем subscription_tier для каждого пользователя на основе активных подписок
+  const usersWithTier = (users || []).map((user: any) => ({
+    ...user,
+    subscription_tier: proUserIds.has(user.id) ? "pro" : "free",
+  }));
+
+  return NextResponse.json({ users: usersWithTier }, { status: 200 });
 }
 

@@ -173,7 +173,7 @@ export function AddFriendButton({ userId, userHandle, initialStatus = "none" }: 
       ) : (
         <UserPlus className="w-4 h-4 mr-2" />
       )}
-      Add Friend
+      Add Fren
     </Button>
   );
 }

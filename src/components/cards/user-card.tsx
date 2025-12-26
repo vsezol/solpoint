@@ -58,7 +58,7 @@ export function UserCard({
                 src={user.avatar_url}
                 alt={user.twitter_name}
                 size="lg"
-                isVip={user.subscription_tier === "vip"}
+                isVip={user.subscription_tier === "pro"}
                 isVerified={user.is_verified}
               />
               <div className="flex flex-col min-w-0">
@@ -76,8 +76,8 @@ export function UserCard({
                       {roleLabels[user.role] || user.role}
                     </Badge>
                   )}
-                  {user.subscription_tier === "vip" && (
-                    <Badge variant="warning">VIP</Badge>
+                  {user.subscription_tier === "pro" && (
+                    <Badge variant="warning">Pro</Badge>
                   )}
                 </div>
               </div>
@@ -164,7 +164,7 @@ export function UserCard({
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" className="flex-1 text-[var(--color-primary)] border-[var(--color-primary)] font-semibold text-sm leading-none tracking-normal" style={{ fontFamily: 'var(--font-inter)' }}>
                   {/* <UserPlus className="w-4 h-4 mr-1" /> */}
-                  Add Friend
+                  Add Fren
                 </Button>
                 <Button variant="outline" size="sm" className="flex-1 font-semibold text-sm leading-none tracking-normal border border-white" style={{ fontFamily: 'var(--font-inter)' }}>
                   {/* <MessageCircle className="w-4 h-4 mr-1" /> */}
@@ -200,7 +200,7 @@ export function UserCard({
                 Cancel Request
               </Button>
             ) : onAddFriend ? (
-              // Показываем Add Friend если нет дружбы
+              // Показываем Add Fren если нет дружбы
               <Button
                 variant="outline"
                 size="sm"
@@ -209,7 +209,7 @@ export function UserCard({
                 style={{ fontFamily: 'var(--font-inter)' }}
               >
                 {/* <UserPlus className="w-4 h-4 mr-1" /> */}
-                Add Friend
+                Add Fren
               </Button>
             ) : null}
             <Button 
@@ -243,7 +243,7 @@ export function UserCard({
               src={user.avatar_url}
               alt={user.twitter_name}
               size="xl"
-              isVip={user.subscription_tier === "vip"}
+              isVip={user.subscription_tier === "pro"}
               isVerified={user.is_verified}
             />
             <div className="flex flex-col">
@@ -262,8 +262,8 @@ export function UserCard({
                     {roleLabels[user.role] || user.role}
                   </Badge>
                 )}
-                {user.subscription_tier === "vip" && (
-                  <Badge variant="warning">VIP</Badge>
+                {user.subscription_tier === "pro" && (
+                  <Badge variant="warning">Pro</Badge>
                 )}
               </div>
             </div>
@@ -367,7 +367,7 @@ export function UserCard({
                 style={{ fontFamily: 'var(--font-inter)' }}
               >
                 {/* <UserPlus className="w-4 h-4 mr-2" /> */}
-                Add Friend
+                Add Fren
               </Button>
               <Button variant="outline" className="flex-1 font-semibold text-sm leading-none tracking-normal border border-white" style={{ fontFamily: 'var(--font-inter)' }}>
                 {/* <MessageCircle className="w-4 h-4 mr-2" /> */}
@@ -401,15 +401,15 @@ export function UserCard({
               Cancel Request
             </Button>
           ) : onAddFriend ? (
-            // Показываем Add Friend если нет дружбы
-            <Button
+            // Показываем Add Fren если нет дружбы
+              <Button
               variant="outline"
               onClick={onAddFriend}
               className="flex-1 text-[var(--color-primary)] border-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 font-semibold text-sm leading-none tracking-normal cursor-pointer"
               style={{ fontFamily: 'var(--font-inter)' }}
             >
               {/* <UserPlus className="w-4 h-4 mr-2" /> */}
-              Add Friend
+              Add Fren
             </Button>
           ) : null}
           <Button 

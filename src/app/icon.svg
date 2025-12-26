@@ -1,0 +1,21 @@
+<svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gradient1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#14f195"/>
+      <stop offset="100%" style="stop-color:#9945ff"/>
+    </linearGradient>
+  </defs>
+  <!-- Globe outline -->
+  <circle cx="20" cy="20" r="16" stroke="url(#gradient1)" stroke-width="2" fill="none"/>
+  <!-- Latitude lines -->
+  <ellipse cx="20" cy="20" rx="16" ry="6" stroke="url(#gradient1)" stroke-width="1.5" fill="none"/>
+  <ellipse cx="20" cy="20" rx="16" ry="12" stroke="url(#gradient1)" stroke-width="1" fill="none" opacity="0.6"/>
+  <!-- Longitude line -->
+  <ellipse cx="20" cy="20" rx="6" ry="16" stroke="url(#gradient1)" stroke-width="1.5" fill="none"/>
+  <!-- Center point -->
+  <circle cx="20" cy="20" r="3" fill="#14f195"/>
+  <!-- Wave lines representing connections -->
+  <path d="M8 14 Q14 10, 20 14 Q26 18, 32 14" stroke="#14f195" stroke-width="1.5" fill="none" opacity="0.8"/>
+  <path d="M8 26 Q14 30, 20 26 Q26 22, 32 26" stroke="#9945ff" stroke-width="1.5" fill="none" opacity="0.8"/>
+</svg>
+

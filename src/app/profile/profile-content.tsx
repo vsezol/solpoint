@@ -167,7 +167,7 @@ export function ProfileContent({
     }
   };
 
-  const handleGenerateInvite = async () => {
+  const handleGenerateInvite = async (): Promise<Invite | null> => {
     setIsGeneratingInvite(true);
     setIsCopied(false);
     
@@ -195,19 +195,30 @@ export function ProfileContent({
       }
 
       setCurrentInvite(data.data);
+      return data.data;
     } catch (error) {
       console.error("Error generating invite:", error);
       alert(error instanceof Error ? error.message : "Failed to generate invite");
+      return null;
     } finally {
       setIsGeneratingInvite(false);
     }
   };
 
   const handleCopyInviteLink = async () => {
-    if (!currentInvite) return;
+    let inviteToCopy = currentInvite;
 
+    // Если invite нет, сначала генерируем его
+    if (!inviteToCopy) {
+      inviteToCopy = await handleGenerateInvite();
+      if (!inviteToCopy) {
+        return; // Ошибка при генерации
+      }
+    }
+
+    // Копируем ссылку
     const appUrl = getAppUrl();
-    const inviteLink = `${appUrl}/signup?invite=${currentInvite.code}`;
+    const inviteLink = `${appUrl}/signup?invite=${inviteToCopy.code}`;
 
     try {
       await navigator.clipboard.writeText(inviteLink);
@@ -608,57 +619,6 @@ export function ProfileContent({
                   </form>
                 </div>
               )}
-
-              {/* Invite section - только для своего профиля */}
-              {isOwnProfile && (
-                <Card variant="bordered">
-                  <h3 className="text-sm font-medium text-[var(--color-text-muted)] mb-3">
-                    Invite Friend
-                  </h3>
-                  {isLoadingInvite ? (
-                    <div className="text-sm text-[var(--color-text-secondary)]">Loading...</div>
-                  ) : currentInvite ? (
-                    <div className="space-y-3">
-                      <div className="bg-[var(--color-surface-hover)] rounded-lg p-3">
-                        <p className="text-xs text-[var(--color-text-muted)] mb-1">Your invite link:</p>
-                        <p className="text-sm font-mono text-[var(--color-text-primary)] break-all">
-                          {`${getAppUrl()}/signup?invite=${currentInvite.code}`}
-                        </p>
-                      </div>
-                      <Button
-                        onClick={handleCopyInviteLink}
-                        variant={isCopied ? "secondary" : "outline"}
-                        size="sm"
-                        className="w-full"
-                      >
-                        {isCopied ? (
-                          <>
-                            <Check className="w-4 h-4 mr-2" />
-                            Copied!
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="w-4 h-4 mr-2" />
-                            Copy Link
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  ) : (
-                    <Button
-                      onClick={handleGenerateInvite}
-                      variant="primary"
-                      size="sm"
-                      className="w-full"
-                      isLoading={isGeneratingInvite}
-                      disabled={isGeneratingInvite}
-                    >
-                      <UserPlus className="w-4 h-4 mr-2" />
-                      Generate Invite Link
-                    </Button>
-                  )}
-                </Card>
-              )}
             </>
           )}
         </div>
@@ -722,51 +682,33 @@ export function ProfileContent({
 
             {/* Invite button - только для своего профиля */}
             {isOwnProfile && (
-              <>
-                {isLoadingInvite ? (
-                  <Button variant="primary" size="sm" className="w-full" disabled>
-                    Loading...
-                  </Button>
-                ) : currentInvite ? (
-                  <Button
-                    onClick={handleCopyInviteLink}
-                    variant={isCopied ? "secondary" : "primary"}
-                    size="sm"
-                    className="w-full"
-                  >
-                    {isCopied ? (
-                      <>
-                        <Check className="w-4 h-4 mr-2" />
-                        Copied!
-                      </>
-                    ) : (
-                      <>
-                        <UserPlus className="w-4 h-4 mr-2" />
-                        Copy Invite Link
-                      </>
-                    )}
-                  </Button>
+              <Button
+                onClick={handleCopyInviteLink}
+                variant={isCopied ? "secondary" : "primary"}
+                size="sm"
+                className="w-full"
+                isLoading={isLoadingInvite || isGeneratingInvite}
+                disabled={isLoadingInvite || isGeneratingInvite}
+              >
+                {isCopied ? (
+                  <>
+                    <Check className="w-4 h-4 mr-2" />
+                    Copied!
+                  </>
                 ) : (
-                  <Button
-                    onClick={handleGenerateInvite}
-                    variant="primary"
-                    size="sm"
-                    className="w-full"
-                    isLoading={isGeneratingInvite}
-                    disabled={isGeneratingInvite}
-                  >
+                  <>
                     <UserPlus className="w-4 h-4 mr-2" />
-                    Generate Invite Link
-                  </Button>
+                    Copy Invite Link
+                  </>
                 )}
-              </>
+              </Button>
             )}
           </Card>
 
           {/* What's happening */}
           <Card variant="bordered" className="w-full">
             <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
-              What's happening
+              What&apos;s happening
             </h3>
             {upcomingEvents.length > 0 ? (
               <div className="space-y-3">

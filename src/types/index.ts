@@ -1,6 +1,6 @@
 // User types
 export type UserRole = "degen" | "developer" | "trader" | "investor" | "designer" | "founder" | "other";
-export type SubscriptionTier = "free" | "vip";
+export type SubscriptionTier = "free" | "pro";
 
 // Country type
 export interface Country {
@@ -228,7 +228,7 @@ export interface Workspace {
 // Map types
 export interface MapMarker {
   id: string;
-  type: "user" | "vip_user" | "event" | "hub" | "community" | "project" | "workspace";
+  type: "user" | "pro_user" | "event" | "hub" | "community" | "project" | "workspace";
   latitude: number;
   longitude: number;
   data: User | Event | Hub | Community | Project | Workspace;

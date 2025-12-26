@@ -104,7 +104,7 @@ export function ProfileSidebar({ user, upcomingEvents }: ProfileSidebarProps) {
     }
   };
 
-  const handleGenerateInvite = async () => {
+  const handleGenerateInvite = async (): Promise<Invite | null> => {
     setIsGeneratingInvite(true);
     setIsCopied(false);
     
@@ -132,19 +132,30 @@ export function ProfileSidebar({ user, upcomingEvents }: ProfileSidebarProps) {
       }
 
       setCurrentInvite(data.data);
+      return data.data;
     } catch (error) {
       console.error("Error generating invite:", error);
       alert(error instanceof Error ? error.message : "Failed to generate invite");
+      return null;
     } finally {
       setIsGeneratingInvite(false);
     }
   };
 
   const handleCopyInviteLink = async () => {
-    if (!currentInvite) return;
+    let inviteToCopy = currentInvite;
 
+    // Если invite нет, сначала генерируем его
+    if (!inviteToCopy) {
+      inviteToCopy = await handleGenerateInvite();
+      if (!inviteToCopy) {
+        return; // Ошибка при генерации
+      }
+    }
+
+    // Копируем ссылку
     const appUrl = getAppUrl();
-    const inviteLink = `${appUrl}/signup?invite=${currentInvite.code}`;
+    const inviteLink = `${appUrl}/signup?invite=${inviteToCopy.code}`;
 
     try {
       await navigator.clipboard.writeText(inviteLink);
@@ -255,42 +266,26 @@ export function ProfileSidebar({ user, upcomingEvents }: ProfileSidebarProps) {
           </div>
         </div>
 
-        {isLoadingInvite ? (
-          <Button variant="primary" size="sm" className="w-full" disabled>
-            Loading...
-          </Button>
-        ) : currentInvite ? (
-          <Button
-            onClick={handleCopyInviteLink}
-            variant={isCopied ? "secondary" : "primary"}
-            size="sm"
-            className="w-full"
-          >
-            {isCopied ? (
-              <>
-                <Check className="w-4 h-4 mr-2" />
-                Copied!
-              </>
-            ) : (
-              <>
-                <UserPlus className="w-4 h-4 mr-2" />
-                Copy Invite Link
-              </>
-            )}
-          </Button>
-        ) : (
-          <Button
-            onClick={handleGenerateInvite}
-            variant="primary"
-            size="sm"
-            className="w-full"
-            isLoading={isGeneratingInvite}
-            disabled={isGeneratingInvite}
-          >
-            <UserPlus className="w-4 h-4 mr-2" />
-            Generate Invite Link
-          </Button>
-        )}
+        <Button
+          onClick={handleCopyInviteLink}
+          variant={isCopied ? "secondary" : "primary"}
+          size="sm"
+          className="w-full"
+          isLoading={isLoadingInvite || isGeneratingInvite}
+          disabled={isLoadingInvite || isGeneratingInvite}
+        >
+          {isCopied ? (
+            <>
+              <Check className="w-4 h-4 mr-2" />
+              Copied!
+            </>
+          ) : (
+            <>
+              <UserPlus className="w-4 h-4 mr-2" />
+              Copy Invite Link
+            </>
+          )}
+        </Button>
       </Card>
 
       {/* What's happening */}

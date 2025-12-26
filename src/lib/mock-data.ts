@@ -289,7 +289,7 @@ export function createMapMarkers(
 
     markers.push({
       id: `user-${user.id}`,
-      type: user.subscription_tier === "vip" ? "vip_user" : "user",
+      type: user.subscription_tier === "pro" ? "pro_user" : "user",
       latitude: coords.lat + latOffset,
       longitude: coords.lng + lngOffset,
       data: user,
