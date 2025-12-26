@@ -13,8 +13,8 @@ export default function EventsError({
     <ErrorFallback
       error={error}
       reset={reset}
-      title="Ошибка загрузки событий"
-      message="Не удалось загрузить список событий. Пожалуйста, попробуйте обновить страницу или вернуться позже."
+      title="Events Loading Error"
+      message="Failed to load the events list. Please try refreshing the page or come back later."
     />
   );
 }

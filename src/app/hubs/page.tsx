@@ -64,7 +64,7 @@ export default function HubsPage() {
       } catch (err) {
         if (isMountedRef.current) {
           console.error("Error fetching entities:", err);
-          setError("Не удалось загрузить данные. Попробуйте позже.");
+          setError("Failed to load data. Please try again later.");
         }
       } finally {
         if (isMountedRef.current) {
@@ -261,7 +261,7 @@ export default function HubsPage() {
                 onClick={() => window.location.reload()}
                 className="px-4 py-2 bg-[var(--color-primary)] text-[var(--color-background)] rounded-lg hover:opacity-90 transition-opacity"
               >
-                Попробовать снова
+                Try again
               </button>
             </div>
           ) : filteredAndSortedEntities.length > 0 ? (

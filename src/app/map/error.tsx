@@ -13,8 +13,8 @@ export default function MapError({
     <ErrorFallback
       error={error}
       reset={reset}
-      title="Ошибка загрузки карты"
-      message="Не удалось загрузить карту. Возможно, проблема с подключением к интернету или сервером. Пожалуйста, попробуйте обновить страницу."
+      title="Map Loading Error"
+      message="Failed to load the map. There may be a problem with your internet connection or the server. Please try refreshing the page."
     />
   );
 }

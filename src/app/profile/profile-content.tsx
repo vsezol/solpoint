@@ -248,7 +248,7 @@ export function ProfileContent({
     if (!isPro) {
       // Показываем сообщение о необходимости PRO подписки
       const shouldGoToSubscription = confirm(
-        "Для просмотра полного списка взаимных подписчиков необходима PRO подписка. Хотите перейти на страницу подписки?"
+        "A PRO subscription is required to view the full list of mutual followers. Would you like to go to the subscription page?"
       );
       if (shouldGoToSubscription) {
         router.push("/subscription");
@@ -1109,7 +1109,7 @@ export function ProfileContent({
         isOpen={isMutualsModalOpen}
         onClose={() => setIsMutualsModalOpen(false)}
         size="md"
-        ariaLabel="Список взаимных подписчиков"
+        ariaLabel="Mutual followers list"
       >
         <ModalHeader>
           <ModalTitle>Your mutuals</ModalTitle>
@@ -1118,7 +1118,7 @@ export function ProfileContent({
           <div className="space-y-3 max-h-[60vh] overflow-y-auto">
             {mutualFollowers.length === 0 ? (
               <p className="text-sm text-[var(--color-text-secondary)] text-center py-4">
-                Нет взаимных подписчиков
+                No mutual followers
               </p>
             ) : (
               mutualFollowers.map((follower) => (
@@ -1163,7 +1163,7 @@ export function ProfileContent({
         isOpen={isAffiliationsModalOpen}
         onClose={() => setIsAffiliationsModalOpen(false)}
         size="md"
-        ariaLabel="Список affiliations"
+        ariaLabel="Affiliations list"
       >
         <ModalHeader>
           <ModalTitle>Your Affiliations</ModalTitle>
@@ -1173,7 +1173,7 @@ export function ProfileContent({
             <div className="space-y-3 max-h-[60vh] overflow-y-auto">
               {affiliations.length === 0 ? (
                 <p className="text-sm text-[var(--color-text-secondary)] text-center py-4">
-                  Нет affiliations
+                  No affiliations
                 </p>
               ) : (
                 affiliations.map((affiliation) => {
@@ -1320,7 +1320,7 @@ export function ProfileContent({
         isOpen={isFriendsModalOpen}
         onClose={() => setIsFriendsModalOpen(false)}
         size="md"
-        ariaLabel="Список друзей"
+        ariaLabel="Friends list"
       >
         <ModalHeader>
           <ModalTitle>Your Friends</ModalTitle>
@@ -1329,7 +1329,7 @@ export function ProfileContent({
           <div className="space-y-3 max-h-[60vh] overflow-y-auto">
             {friendsList.length === 0 ? (
               <p className="text-sm text-[var(--color-text-secondary)] text-center py-4">
-                Нет друзей
+                No friends
               </p>
             ) : (
               friendsList.map((friend) => (
@@ -1374,7 +1374,7 @@ export function ProfileContent({
         isOpen={isFriendRequestsModalOpen}
         onClose={() => setIsFriendRequestsModalOpen(false)}
         size="md"
-        ariaLabel="Список заявок в друзья"
+        ariaLabel="Friend requests list"
       >
         <ModalHeader>
           <ModalTitle>Friend Requests</ModalTitle>
@@ -1383,7 +1383,7 @@ export function ProfileContent({
           <div className="space-y-3 max-h-[60vh] overflow-y-auto">
             {friendRequestsList.length === 0 ? (
               <p className="text-sm text-[var(--color-text-secondary)] text-center py-4">
-                Нет заявок в друзья
+                No friend requests
               </p>
             ) : (
               friendRequestsList.map((request) => (

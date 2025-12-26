@@ -25,8 +25,8 @@ export default function Error({
     <ErrorFallback
       error={error}
       reset={reset}
-      title="Произошла ошибка"
-      message="Что-то пошло не так при загрузке страницы. Пожалуйста, попробуйте обновить страницу или вернуться на главную."
+      title="An Error Occurred"
+      message="Something went wrong while loading the page. Please try refreshing the page or return to the home page."
     />
   );
 }

@@ -13,8 +13,8 @@ export default function HubsError({
     <ErrorFallback
       error={error}
       reset={reset}
-      title="Ошибка загрузки хабов"
-      message="Не удалось загрузить список хабов. Пожалуйста, попробуйте обновить страницу или вернуться позже."
+      title="Hubs Loading Error"
+      message="Failed to load the hubs list. Please try refreshing the page or come back later."
     />
   );
 }

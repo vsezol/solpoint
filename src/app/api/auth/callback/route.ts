@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
         // Если пользователь пришел с /login, редиректим на /signup с сообщением
         if (redirectTo === "/profile" || redirectTo.startsWith("/login")) {
           return NextResponse.redirect(
-            `${origin}/signup?message=${encodeURIComponent("Пожалуйста, завершите регистрацию. Ваш аккаунт Twitter авторизован, но профиль еще не создан.")}`
+            `${origin}/signup?message=${encodeURIComponent("Please complete your registration. Your Twitter account is authorized, but your profile has not been created yet.")}`
           );
         }
         
@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
         if (insertError) {
           // Если не удалось создать профиль, все равно редиректим на signup
           return NextResponse.redirect(
-            `${origin}/signup?message=${encodeURIComponent("Ошибка при создании профиля. Пожалуйста, попробуйте еще раз.")}`
+            `${origin}/signup?message=${encodeURIComponent("Error creating profile. Please try again.")}`
           );
         }
 
@@ -174,7 +174,7 @@ export async function GET(request: NextRequest) {
         // Если пользователь пришел с /login, редиректим на /signup
         if (redirectTo === "/profile" || redirectTo.startsWith("/login")) {
           return NextResponse.redirect(
-            `${origin}/signup?message=${encodeURIComponent("Пожалуйста, завершите регистрацию. Заполните информацию о вашем местоположении.")}&step=location&auth=success`
+            `${origin}/signup?message=${encodeURIComponent("Please complete your registration. Fill in your location information.")}&step=location&auth=success`
           );
         }
       }

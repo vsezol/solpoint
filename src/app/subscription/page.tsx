@@ -1148,7 +1148,7 @@ export default function SubscriptionPage() {
           <Card variant="bordered" className="p-6 bg-[#0D1316]">
             <div className="text-center">
               <p className="text-sm text-[var(--color-text-secondary)] mb-4">
-                Если вы уже оплатили, но подписка не активировалась автоматически
+                If you have already paid but the subscription has not been activated automatically
               </p>
               <Button
                 variant="outline"
@@ -1158,7 +1158,7 @@ export default function SubscriptionPage() {
                 className="w-full sm:w-auto"
               >
                 <CheckCircle2 className="w-4 h-4 mr-2" />
-                Проверить платежи и активировать подписку
+                Check payments and activate subscription
               </Button>
             </div>
           </Card>
@@ -1377,9 +1377,9 @@ export default function SubscriptionPage() {
         variant="centered"
       >
         <ModalHeader>
-          <ModalTitle>Оплата подписки</ModalTitle>
+          <ModalTitle>Subscription Payment</ModalTitle>
           <ModalDescription>
-            Отправьте {paymentData?.pay_amount} {paymentData?.pay_currency} на указанный адрес
+            Send {paymentData?.pay_amount} {paymentData?.pay_currency} to the specified address
           </ModalDescription>
         </ModalHeader>
         <ModalContent>
@@ -1399,7 +1399,7 @@ export default function SubscriptionPage() {
               {/* Amount */}
               <div className="text-center">
                 <p className="text-sm text-[var(--color-text-secondary)] mb-1">
-                  Сумма к оплате
+                  Amount to pay
                 </p>
                 <p className="text-2xl font-bold text-[var(--color-text-primary)]">
                   {paymentData.pay_amount} {paymentData.pay_currency}
@@ -1412,7 +1412,7 @@ export default function SubscriptionPage() {
               {/* Address */}
               <div>
                 <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-2 block">
-                  Адрес для оплаты:
+                  Payment address:
                 </label>
                 <div className="flex items-center gap-2">
                   <input
@@ -1454,13 +1454,13 @@ export default function SubscriptionPage() {
               {/* Instructions */}
               <div className="bg-[var(--color-surface)] rounded-lg p-4 space-y-2">
                 <p className="text-sm text-[var(--color-text-secondary)]">
-                  <strong className="text-[var(--color-text-primary)]">Инструкция:</strong>
+                  <strong className="text-[var(--color-text-primary)]">Instructions:</strong>
                 </p>
                 <ol className="text-sm text-[var(--color-text-secondary)] space-y-1 list-decimal list-inside">
-                  <li>Скопируйте адрес выше</li>
-                  <li>Откройте ваш кошелек (MetaMask, Trust Wallet и т.д.)</li>
-                  <li>Отправьте {paymentData.pay_amount} {paymentData.pay_currency} на этот адрес</li>
-                  <li>Подписка активируется автоматически после подтверждения в блокчейне</li>
+                  <li>Copy the address above</li>
+                  <li>Open your wallet (MetaMask, Trust Wallet, etc.)</li>
+                  <li>Send {paymentData.pay_amount} {paymentData.pay_currency} to this address</li>
+                  <li>Subscription will be activated automatically after blockchain confirmation</li>
                 </ol>
               </div>
 
@@ -1468,8 +1468,8 @@ export default function SubscriptionPage() {
               <div className="flex items-start gap-2 text-sm text-[var(--color-text-muted)]">
                 <Shield className="w-4 h-4 mt-0.5 flex-shrink-0" />
                 <p>
-                  Это безопасный адрес, созданный специально для вашего платежа. 
-                  После оплаты подписка будет активирована автоматически.
+                  This is a secure address created specifically for your payment. 
+                  After payment, the subscription will be activated automatically.
                 </p>
               </div>
 
@@ -1478,7 +1478,7 @@ export default function SubscriptionPage() {
                 className="w-full"
                 onClick={() => setPaymentModalOpen(false)}
               >
-                Закрыть (проверка статуса продолжается автоматически)
+                Close (status check continues automatically)
               </Button>
             </div>
           )}

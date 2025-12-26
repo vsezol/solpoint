@@ -13,13 +13,13 @@ interface ErrorFallbackProps {
 export function ErrorFallback({
   error,
   reset,
-  title = "Что-то пошло не так",
+  title = "Something went wrong",
   message,
 }: ErrorFallbackProps) {
   const displayMessage =
     message ||
     error.message ||
-    "Произошла непредвиденная ошибка. Пожалуйста, попробуйте обновить страницу.";
+    "An unexpected error occurred. Please try refreshing the page.";
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[var(--color-background)] px-4">
@@ -45,7 +45,7 @@ export function ErrorFallback({
         {process.env.NODE_ENV === "development" && error.message && (
           <div className="mb-6 p-4 bg-[var(--color-surface)] rounded-lg border border-[var(--color-surface-border)] text-left">
             <p className="text-xs font-mono text-[var(--color-text-muted)] mb-2">
-              Детали ошибки:
+              Error details:
             </p>
             <p className="text-xs font-mono text-[var(--color-error)] break-all">
               {error.message}
@@ -75,7 +75,7 @@ export function ErrorFallback({
             className="bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white"
           >
             <RefreshCw className="w-4 h-4 mr-2" />
-            Попробовать снова
+            Try again
           </Button>
           <Button
             onClick={() => (window.location.href = "/")}
@@ -83,7 +83,7 @@ export function ErrorFallback({
             className="border-[var(--color-surface-border)] text-[var(--color-text-primary)] hover:bg-[var(--color-surface-hover)]"
           >
             <Home className="w-4 h-4 mr-2" />
-            На главную
+            Go to home
           </Button>
         </div>
       </div>

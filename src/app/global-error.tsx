@@ -31,8 +31,8 @@ export default function GlobalError({
         <ErrorFallback
           error={error}
           reset={reset}
-          title="Критическая ошибка"
-          message="Произошла критическая ошибка в приложении. Пожалуйста, обновите страницу или вернитесь на главную."
+          title="Critical Error"
+          message="A critical error occurred in the application. Please refresh the page or return to the home page."
         />
       </body>
     </html>

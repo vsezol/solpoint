@@ -29,7 +29,7 @@ export default function LoginPage() {
         event_category: "Authentication",
         error_type: error instanceof Error ? error.message : "unknown",
       });
-      alert("Не удалось начать вход. Пожалуйста, попробуйте еще раз.");
+      alert("Failed to start login. Please try again.");
     }
   };
 
@@ -74,18 +74,18 @@ export default function LoginPage() {
                   })()}
                   <p className="text-sm font-medium mb-1">
                     {error === "twitter_not_enabled"
-                      ? "Twitter OAuth не настроен"
+                      ? "Twitter OAuth is not configured"
                       : error === "oauth_failed"
-                      ? "Ошибка подключения к Twitter"
-                      : "Ошибка авторизации"}
+                      ? "Failed to connect to Twitter"
+                      : "Authorization error"}
                   </p>
                   {error === "twitter_not_enabled" && (
                     <div className="text-xs text-red-400 mt-2 space-y-1">
-                      <p>Необходимо включить Twitter OAuth в Supabase:</p>
+                      <p>You need to enable Twitter OAuth in Supabase:</p>
                       <ol className="list-decimal list-inside space-y-1 ml-2">
-                        <li>Откройте Supabase Dashboard</li>
-                        <li>Перейдите в Authentication → Providers</li>
-                        <li>Включите Twitter и введите API Key и Secret</li>
+                        <li>Open Supabase Dashboard</li>
+                        <li>Go to Authentication → Providers</li>
+                        <li>Enable Twitter and enter API Key and Secret</li>
                       </ol>
                       <p className="mt-2">
                         Подробная инструкция: <code className="text-xs bg-red-500/20 px-1 rounded">/notes/twitter-oauth-setup.md</code>

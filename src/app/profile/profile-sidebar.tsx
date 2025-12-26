@@ -112,7 +112,7 @@ export function ProfileSidebar({ user, upcomingEvents }: ProfileSidebarProps) {
     if (!isPro) {
       // Показываем сообщение о необходимости PRO подписки
       const shouldGoToSubscription = confirm(
-        "Для просмотра полного списка взаимных подписчиков необходима PRO подписка. Хотите перейти на страницу подписки?"
+        "A PRO subscription is required to view the full list of mutual followers. Would you like to go to the subscription page?"
       );
       if (shouldGoToSubscription) {
         router.push("/subscription");
@@ -442,7 +442,7 @@ export function ProfileSidebar({ user, upcomingEvents }: ProfileSidebarProps) {
         isOpen={isMutualsModalOpen}
         onClose={() => setIsMutualsModalOpen(false)}
         size="md"
-        ariaLabel="Список взаимных подписчиков"
+        ariaLabel="Mutual followers list"
       >
         <ModalHeader>
           <ModalTitle>Your mutuals</ModalTitle>
@@ -451,7 +451,7 @@ export function ProfileSidebar({ user, upcomingEvents }: ProfileSidebarProps) {
           <div className="space-y-3 max-h-[60vh] overflow-y-auto">
             {mutualFollowers.length === 0 ? (
               <p className="text-sm text-[var(--color-text-secondary)] text-center py-4">
-                Нет взаимных подписчиков
+                No mutual followers
               </p>
             ) : (
               mutualFollowers.map((follower) => (

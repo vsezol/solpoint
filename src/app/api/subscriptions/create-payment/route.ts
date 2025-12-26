@@ -272,12 +272,12 @@ export async function POST(request: Request) {
       }
       
       // Обрабатываем разные типы ошибок
-      let errorMessage = "Не удалось создать платеж";
+      let errorMessage = "Failed to create payment";
       
       if (nowPaymentsResponse.status === 502 || nowPaymentsResponse.status === 503) {
-        errorMessage = "Сервис платежей временно недоступен. Пожалуйста, попробуйте позже.";
+        errorMessage = "Payment service is temporarily unavailable. Please try again later.";
       } else if (nowPaymentsResponse.status === 401 || nowPaymentsResponse.status === 403) {
-        errorMessage = "Ошибка аутентификации в платежном сервисе. Проверьте настройки API ключа.";
+        errorMessage = "Authentication error in payment service. Check your API key settings.";
       } else if (errorData.message) {
         errorMessage = errorData.message;
       }

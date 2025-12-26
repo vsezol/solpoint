@@ -146,7 +146,7 @@ export function Modal({
               <button
                 onClick={onClose}
                 className="absolute top-4 right-4 z-10 p-1.5 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface-hover)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface)]"
-                aria-label="Закрыть модальное окно"
+                aria-label="Close modal"
               >
                 <X className="w-5 h-5" />
               </button>
