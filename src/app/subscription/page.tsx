@@ -1264,27 +1264,6 @@ export default function SubscriptionPage() {
                 </p>
               </div>
 
-              {/* NowPayments Option */}
-              <Card variant="bordered" className="p-4 cursor-pointer hover:border-[var(--color-primary)] transition-colors">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-semibold text-[var(--color-text-primary)] mb-1">
-                      Cryptocurrencies (NowPayments)
-                    </h3>
-                    <p className="text-sm text-[var(--color-text-secondary)]">
-                      TRX, USDC, MATIC, BNB and others
-                    </p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    onClick={handleNowPaymentsPayment}
-                    disabled={!email || !!emailError}
-                  >
-                    Select
-                  </Button>
-                </div>
-              </Card>
-
               {/* Solana Option */}
               <Card variant="bordered" className="p-4 border-[var(--color-primary)]">
                 <div className="flex items-center justify-between mb-4">
@@ -1363,6 +1342,27 @@ export default function SubscriptionPage() {
                     </div>
                   </div>
                 )}
+              </Card>
+
+              {/* NowPayments Option */}
+              <Card variant="bordered" className="p-4 cursor-pointer hover:border-[var(--color-primary)] transition-colors">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold text-[var(--color-text-primary)] mb-1">
+                      Cryptocurrencies (NowPayments)
+                    </h3>
+                    <p className="text-sm text-[var(--color-text-secondary)]">
+                      TRX, USDC, MATIC, BNB and others
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={handleNowPaymentsPayment}
+                    disabled={!email || !!emailError}
+                  >
+                    Select
+                  </Button>
+                </div>
               </Card>
             </div>
           )}

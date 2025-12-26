@@ -262,7 +262,7 @@ export async function POST(request: Request) {
           return NextResponse.json(
             {
               error: "Amount too small",
-              message: `Сумма платежа ($${plan.price}) слишком мала для всех доступных валют в NowPayments. Минимальная сумма обычно составляет $3-5 USD. Пожалуйста, выберите план с большей стоимостью или увеличьте цену текущего плана.`,
+              message: `Payment amount ($${plan.price}) is too small for all available currencies in NowPayments. The minimum amount is usually $3-5 USD. Please select a plan with a higher price or increase the price of the current plan.`,
               code: errorData.code || "AMOUNT_TOO_SMALL",
               details: errorData,
             },
