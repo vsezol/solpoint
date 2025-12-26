@@ -369,7 +369,7 @@ export function ProfileMainSection({ user, isOwnProfile, friendsCount = 0 }: Pro
       ) : (
         <>
           {/* Wallet */}
-          {isOwnProfile && (
+          {/* {isOwnProfile && (
             <div className="w-fit">
               <div className="flex items-center justify-between gap-4">
                 <h3 className="text-sm font-medium text-[var(--color-text-muted)]">
@@ -387,7 +387,7 @@ export function ProfileMainSection({ user, isOwnProfile, friendsCount = 0 }: Pro
                 )}
               </div>
             </div>
-          )}
+          )} */}
 
           {/* Socials */}
           <div className="w-fit">

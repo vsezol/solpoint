@@ -484,8 +484,7 @@ export function ProfileContent({
             />
           ) : (
             <>
-              {/* Wallet - только для своего профиля */}
-              {isOwnProfile && (
+              {/* {isOwnProfile && (
                 <div className="w-fit">
                   <div className="flex items-center justify-between gap-4">
                     <h3 className="text-sm font-medium text-[var(--color-text-muted)]">
@@ -503,7 +502,7 @@ export function ProfileContent({
                     )}
                   </div>
                 </div>
-              )}
+              )} */}
 
               {/* Socials */}
               <div className="w-fit">

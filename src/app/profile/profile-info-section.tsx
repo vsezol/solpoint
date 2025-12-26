@@ -195,7 +195,7 @@ export function ProfileInfoSection({ user, isOwnProfile, friends = [] }: Profile
       </Card>
 
       {/* Wallet - только для своего профиля */}
-      {isOwnProfile && (
+      {/* {isOwnProfile && (
         <Card variant="bordered">
           <h3 className="text-sm font-medium text-[var(--color-text-muted)] mb-3">
             Wallet
@@ -205,13 +205,15 @@ export function ProfileInfoSection({ user, isOwnProfile, friends = [] }: Profile
               {currentUser.wallet_address}
             </p>
           ) : (
-            <Button variant="outline" size="sm" className="w-full">
-              <Wallet className="w-4 h-4 mr-2" />
-              Connect Wallet
-            </Button>
+            // TODO: Реализовать подключение кошелька
+            // <Button variant="outline" size="sm" className="w-full">
+            //   <Wallet className="w-4 h-4 mr-2" />
+            //   Connect Wallet
+            // </Button>
+            null
           )}
         </Card>
-      )}
+      )} */}
 
       {/* Invite section - только для своего профиля */}
       {isOwnProfile && (
