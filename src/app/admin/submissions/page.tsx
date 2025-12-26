@@ -469,7 +469,7 @@ export default function AdminSubmissionsPage() {
                                       </span>
                                       <span className="text-[var(--color-text-primary)] font-medium capitalize">
                                         {entityData.visibility === "vip_only"
-                                          ? "Только для VIP"
+                                          ? "Только для PRO"
                                           : "Публичное"}
                                       </span>
                                     </div>

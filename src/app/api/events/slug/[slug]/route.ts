@@ -94,7 +94,7 @@ export async function GET(
   // Проверяем доступ к VIP ивенту
   if (event.visibility === "vip_only" && !isVip) {
     return NextResponse.json(
-      { error: "This event is VIP only" },
+      { error: "This event is PRO only" },
       { status: 403 }
     );
   }

@@ -461,7 +461,7 @@ export default function SignupPage() {
                       <Globe className="w-5 h-5 text-[var(--color-primary)] mt-0.5 shrink-0" />
                       <div>
                         <p className="text-xs text-[var(--color-text-muted)]">
-                          Country is visible to everyone. City is visible only to VIP users.
+                          Country is visible to everyone. City is visible only to PRO users.
                         </p>
                       </div>
                     </div>

@@ -272,7 +272,7 @@ export function ProfileEditForm({ user, onCancel, onUpdate }: ProfileEditFormPro
             <p className="mt-2 text-xs text-[var(--color-text-muted)] flex items-start gap-1">
               <MapPin className="w-3 h-3 mt-0.5 shrink-0" />
               <span>
-                Country is visible to everyone. City is visible only to VIP users.
+                Country is visible to everyone. City is visible only to PRO users.
               </span>
             </p>
           </div>

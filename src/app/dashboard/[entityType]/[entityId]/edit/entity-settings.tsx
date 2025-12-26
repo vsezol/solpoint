@@ -18,7 +18,7 @@ interface EntitySettingsProps {
 
 // Заглушки для типов сообществ
 const COMMUNITY_TYPES = ["Meme", "NFT", "DAO", "DeFi", "Gaming", "Other"];
-const VISIBILITY_OPTIONS = ["Public", "Private", "VIP Only", "Invite Only"];
+const VISIBILITY_OPTIONS = ["Public", "Private", "PRO Only", "Invite Only"];
 const EVENT_VISIBILITY_OPTIONS = ["public", "vip_only"];
 const WHO_CAN_INVITE_OPTIONS = ["Everyone", "Moderators only"];
 

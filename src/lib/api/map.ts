@@ -79,7 +79,7 @@ export async function getMapMarkers(
               
               markers.push({
                 id: `user-${user.id}`,
-                type: user.subscription_tier === "pro" ? "pro_user" : "user",
+                type: user.subscription_tier === "vip" ? "pro_user" : "user",
                 latitude: coords.lat,
                 longitude: coords.lng,
                 data: user,

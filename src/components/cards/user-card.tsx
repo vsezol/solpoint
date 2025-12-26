@@ -3,7 +3,7 @@
 import { Avatar, Badge, Button } from "@/components/ui";
 import type { User } from "@/types";
 import { Twitter, Instagram, Facebook, Check, X } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, getSubscriptionDisplayName } from "@/lib/utils";
 import Link from "next/link";
 
 interface UserCardProps {
@@ -60,7 +60,7 @@ export function UserCard({
                 src={user.avatar_url}
                 alt={user.twitter_name}
                 size="lg"
-                isVip={user.subscription_tier === "pro"}
+                isVip={user.subscription_tier === "vip"}
                 isVerified={user.is_verified}
               />
               <div className="flex flex-col min-w-0">
@@ -78,7 +78,7 @@ export function UserCard({
                       {roleLabels[user.role] || user.role}
                     </Badge>
                   )}
-                  {user.subscription_tier === "pro" && (
+                  {user.subscription_tier === "vip" && (
                     <Badge variant="warning">Pro</Badge>
                   )}
                 </div>
@@ -245,7 +245,7 @@ export function UserCard({
               src={user.avatar_url}
               alt={user.twitter_name}
               size="xl"
-              isVip={user.subscription_tier === "pro"}
+              isVip={user.subscription_tier === "vip"}
               isVerified={user.is_verified}
             />
             <div className="flex flex-col">
@@ -264,8 +264,8 @@ export function UserCard({
                     {roleLabels[user.role] || user.role}
                   </Badge>
                 )}
-                {user.subscription_tier === "pro" && (
-                  <Badge variant="warning">Pro</Badge>
+                {user.subscription_tier === "vip" && (
+                  <Badge variant="warning">{getSubscriptionDisplayName(user.subscription_tier)}</Badge>
                 )}
               </div>
             </div>

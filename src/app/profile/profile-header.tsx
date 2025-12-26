@@ -6,6 +6,7 @@ import { ProfileActions } from "./profile-actions";
 import { AddFriendButton } from "./add-friend-button";
 import { useProfileEdit } from "./profile-edit-provider";
 import type { User } from "@/types";
+import { getSubscriptionDisplayName } from "@/lib/utils";
 
 interface ProfileHeaderProps {
   user: User;
@@ -39,7 +40,7 @@ export function ProfileHeader({ user, isOwnProfile, friendshipStatus = "none" }:
             {user.subscription_tier === "vip" && (
               <Badge variant="warning" size="sm">
                 <Crown className="w-3 h-3 mr-1" />
-                VIP
+                {getSubscriptionDisplayName(user.subscription_tier)}
               </Badge>
             )}
             {/* Отладка: показываем статус is_admin */}
@@ -90,7 +91,7 @@ export function ProfileHeader({ user, isOwnProfile, friendshipStatus = "none" }:
             {user.subscription_tier === "vip" && (
               <Badge variant="warning" size="sm">
                 <Crown className="w-3 h-3 mr-1" />
-                VIP
+                {getSubscriptionDisplayName(user.subscription_tier)}
               </Badge>
             )}
           {/* Отладка: показываем статус is_admin */}
@@ -135,7 +136,7 @@ function ProfileHeaderWithContext({ user }: { user: User }) {
             {user.subscription_tier === "vip" && (
               <Badge variant="warning" size="sm">
                 <Crown className="w-3 h-3 mr-1" />
-                VIP
+                {getSubscriptionDisplayName(user.subscription_tier)}
               </Badge>
             )}
           {/* Отладка: показываем статус is_admin */}

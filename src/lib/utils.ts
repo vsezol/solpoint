@@ -43,3 +43,21 @@ export function getAppUrl(): string {
   return process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
 }
 
+/**
+ * Получает отображаемое название подписки
+ * На бэкенде используется "vip", но пользователю показываем "PRO"
+ */
+export function getSubscriptionDisplayName(tier: string): string {
+  if (tier === "vip") return "PRO";
+  if (tier === "free") return "Free";
+  return tier; // fallback
+}
+
+/**
+ * Проверяет, является ли пользователь PRO (VIP на бэкенде)
+ * Использует subscription_tier из профиля, который приходит из /api/auth/me
+ */
+export function isProUser(tier: string | undefined): boolean {
+  return tier === "vip";
+}
+

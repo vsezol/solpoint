@@ -1,6 +1,6 @@
 // User types
 export type UserRole = "degen" | "developer" | "trader" | "investor" | "designer" | "founder" | "other";
-export type SubscriptionTier = "free" | "pro";
+export type SubscriptionTier = "free" | "vip";
 
 // Country type
 export interface Country {

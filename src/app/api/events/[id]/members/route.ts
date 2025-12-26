@@ -45,7 +45,7 @@ export async function GET(
       .single();
     if (profile?.subscription_tier !== "vip") {
       return NextResponse.json(
-        { error: "This event is VIP only" },
+        { error: "This event is PRO only" },
         { status: 403 }
       );
     }
@@ -142,7 +142,7 @@ export async function POST(
         .single();
       if (profile?.subscription_tier !== "vip") {
         return NextResponse.json(
-          { error: "This event is VIP only" },
+          { error: "This event is PRO only" },
           { status: 403 }
         );
       }

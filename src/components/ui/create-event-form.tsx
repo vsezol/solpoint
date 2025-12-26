@@ -810,7 +810,7 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
               required
             >
               <option value="public">Public</option>
-              <option value="vip_only">VIP Only</option>
+              <option value="vip_only">PRO Only</option>
             </select>
           </div>
         </div>

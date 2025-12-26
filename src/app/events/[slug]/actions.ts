@@ -36,7 +36,7 @@ export async function attendEvent(eventId: string) {
         .eq("id", authUser.id)
         .single();
       if (profile?.subscription_tier !== "vip") {
-        return { error: "This event is VIP only", success: false };
+        return { error: "This event is PRO only", success: false };
       }
     }
 

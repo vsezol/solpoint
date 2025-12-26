@@ -463,7 +463,7 @@ export function SolPointMap({
         return (
           <UserCard
             user={user}
-            isVip={user.subscription_tier === "pro"}
+            isVip={user.subscription_tier === "vip"}
             compact
             isFriend={isFriend}
             friendshipStatus={cardFriendshipStatus}

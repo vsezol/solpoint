@@ -97,13 +97,13 @@ const moreBenefits = [
   },
   {
     icon: Star,
-    title: "VIP Map Presence",
+    title: "PRO Map Presence",
     description: "Stand out with a gold marker on the map. Free users appear with a red marker. Visibility matters.",
   },
   {
     icon: Zap,
     title: "Priority Access",
-    description: "Get early access to new features and experiments. VIP users see what's coming first.",
+    description: "Get early access to new features and experiments. PRO users see what's coming first.",
   },
   {
     icon: Shield,

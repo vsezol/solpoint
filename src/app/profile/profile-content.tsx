@@ -1084,11 +1084,11 @@ export function ProfileContent({
             )}
           </Card>
 
-          {/* Upgrade to VIP */}
+          {/* Upgrade to PRO */}
           {user.subscription_tier === "free" && (
             <Card variant="bordered" className="w-full bg-gradient-to-r from-[var(--color-primary)]/10 to-[var(--color-secondary)]/10">
               <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">
-                Upgrade to VIP
+                Upgrade to PRO
               </h3>
               <p className="text-sm text-[var(--color-text-secondary)] mb-4">
                 See cities, profiles, send messages, and more
@@ -1169,7 +1169,7 @@ export function ProfileContent({
           <ModalTitle>Your Affiliations</ModalTitle>
         </ModalHeader>
         <ModalContent>
-          {currentUser.subscription_tier === "pro" ? (
+          {currentUser.subscription_tier === "vip" ? (
             <div className="space-y-3 max-h-[60vh] overflow-y-auto">
               {affiliations.length === 0 ? (
                 <p className="text-sm text-[var(--color-text-secondary)] text-center py-4">
