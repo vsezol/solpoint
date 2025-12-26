@@ -15,6 +15,7 @@ import { Search, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import countries from "../../../supabase/coutries";
 import type { Country } from "@/store/map-store";
+import { MAJOR_CITIES } from "@/lib/countries";
 
 type Step = "twitter" | "location" | "profile" | "complete";
 
@@ -37,6 +38,9 @@ export default function SignupPage() {
   const [countrySearchQuery, setCountrySearchQuery] = useState("");
   const [isCountryDropdownOpen, setIsCountryDropdownOpen] = useState(false);
   const countryDropdownRef = useRef<HTMLDivElement>(null);
+  const [citySearchQuery, setCitySearchQuery] = useState("");
+  const [isCityDropdownOpen, setIsCityDropdownOpen] = useState(false);
+  const cityDropdownRef = useRef<HTMLDivElement>(null);
   const [formData, setFormData] = useState({
     country: "",
     country_code: "" as string | undefined,
@@ -58,6 +62,9 @@ export default function SignupPage() {
     const handleClickOutside = (event: MouseEvent) => {
       if (countryDropdownRef.current && !countryDropdownRef.current.contains(event.target as Node)) {
         setIsCountryDropdownOpen(false);
+      }
+      if (cityDropdownRef.current && !cityDropdownRef.current.contains(event.target as Node)) {
+        setIsCityDropdownOpen(false);
       }
     };
 
@@ -87,12 +94,18 @@ export default function SignupPage() {
           // Сохраняем данные из БД, но не перезаписываем если они уже были введены в форме
           const shouldKeepCountryCode = prev.country_code && prev.country_code !== "";
           const shouldKeepCity = prev.city && prev.city !== "";
+          const newCity = shouldKeepCity ? prev.city : (user.city || prev.city || "");
+          
+          // Синхронизируем citySearchQuery с загруженным городом
+          if (newCity && !shouldKeepCity) {
+            setCitySearchQuery(newCity);
+          }
           
           return {
             ...prev,
             country: prev.country || user.country || "",
             country_code: shouldKeepCountryCode ? prev.country_code : (user.country_code || prev.country_code),
-            city: shouldKeepCity ? prev.city : (user.city || prev.city || ""),
+            city: newCity,
             bio: user.bio || prev.bio || "",
             role: user.role || prev.role || "",
             isOpenToMeet: user.is_open_to_meet !== undefined ? user.is_open_to_meet : prev.isOpenToMeet,
@@ -206,19 +219,45 @@ export default function SignupPage() {
     c.name.toLowerCase().includes(countrySearchQuery.toLowerCase())
   );
 
+  const filteredCities = formData.country_code
+    ? MAJOR_CITIES.filter((city) => {
+        const matchesCountry = city.countryCode === formData.country_code;
+        const matchesQuery = city.name.toLowerCase().includes(citySearchQuery.toLowerCase());
+        return matchesCountry && matchesQuery;
+      })
+    : [];
+
   const handleSelectCountry = (country: Country) => {
     setFormData((prev) => ({
       ...prev,
       country: country.name,
       country_code: country.code,
+      city: "", // Сбрасываем город при смене страны
     }));
     setCountrySearchQuery("");
     setIsCountryDropdownOpen(false);
+    setCitySearchQuery("");
+    setIsCityDropdownOpen(false);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleSelectCity = (cityName: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      city: cityName,
+    }));
+    setCitySearchQuery(cityName);
+    setIsCityDropdownOpen(false);
+  };
+
+  const handleCountryKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && filteredCountries.length > 0) {
       handleSelectCountry(filteredCountries[0]);
+    }
+  };
+
+  const handleCityKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && filteredCities.length > 0) {
+      handleSelectCity(filteredCities[0].name);
     }
   };
 
@@ -405,7 +444,7 @@ export default function SignupPage() {
                           setIsCountryDropdownOpen(true);
                         }}
                         onFocus={() => setIsCountryDropdownOpen(true)}
-                        onKeyDown={handleKeyDown}
+                        onKeyDown={handleCountryKeyDown}
                       />
 
                       {isCountryDropdownOpen && filteredCountries.length > 0 && (
@@ -444,16 +483,57 @@ export default function SignupPage() {
                     <label className="block text-sm text-[var(--color-text-muted)] mb-2">
                       City (optional)
                     </label>
-                    <Input
-                      value={formData.city || ""}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          city: e.target.value,
-                        }))
-                      }
-                      placeholder="Enter city name"
-                    />
+                    <div className="relative" ref={cityDropdownRef}>
+                      <Input
+                        placeholder="Enter city name"
+                        icon={<Search className="w-4 h-4" />}
+                        value={citySearchQuery}
+                        onChange={(e) => {
+                          setCitySearchQuery(e.target.value);
+                          setIsCityDropdownOpen(true);
+                          setFormData((prev) => ({
+                            ...prev,
+                            city: e.target.value,
+                          }));
+                        }}
+                        onFocus={() => {
+                          if (formData.country_code) {
+                            setIsCityDropdownOpen(true);
+                          }
+                        }}
+                        onKeyDown={handleCityKeyDown}
+                        disabled={!formData.country_code}
+                      />
+
+                      {isCityDropdownOpen && filteredCities.length > 0 && formData.country_code && (
+                        <div className="absolute z-50 w-full mt-2 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                          {filteredCities.map((city) => (
+                            <button
+                              key={`${city.name}-${city.countryCode}`}
+                              onClick={() => handleSelectCity(city.name)}
+                              className={cn(
+                                "w-full px-3 py-2 text-left flex items-center justify-between hover:bg-[var(--color-surface-border)] transition-colors",
+                                formData.city === city.name && "bg-[var(--color-primary)]/10"
+                              )}
+                            >
+                              <span
+                                className={cn(
+                                  "text-sm",
+                                  formData.city === city.name
+                                    ? "text-[var(--color-primary)] font-medium"
+                                    : "text-[var(--color-text-primary)]"
+                                )}
+                              >
+                                {city.name}
+                              </span>
+                              {formData.city === city.name && (
+                                <Check className="w-4 h-4 text-[var(--color-primary)]" />
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div className="bg-[var(--color-surface-hover)] rounded-lg p-4">
