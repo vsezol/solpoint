@@ -1,4 +1,5 @@
 import type { MapMarker, MapFilters, User, Event, Hub, Community, Workspace } from "@/types";
+import { MAJOR_CITIES, COUNTRY_CENTERS } from "@/lib/countries";
 
 export interface GetMapMarkersResponse {
   markers: MapMarker[];
@@ -9,6 +10,7 @@ export interface GetMapMarkersResponse {
  * Получить маркеры для карты с применением фильтров
  * @param filters - Фильтры для карты
  * @param currentUserId - ID текущего пользователя (для фильтрации mutual friends)
+ * @param viewerIsPro - Является ли просматривающий пользователь PRO (VIP)
  */
 export async function getMapMarkers(
   filters: MapFilters = {
@@ -17,7 +19,8 @@ export async function getMapMarkers(
     showHubs: true,
     showWorkspaces: true,
   },
-  currentUserId?: string
+  currentUserId?: string,
+  viewerIsPro: boolean = false
 ): Promise<MapMarker[]> {
   const markers: MapMarker[] = [];
 
@@ -65,7 +68,7 @@ export async function getMapMarkers(
             users.forEach((user: User) => {
               // Для пользователей без координат используем координаты по умолчанию
               // В будущем можно добавить геокодинг или хранить координаты в профиле
-              const coords = getUserCoordinates(user);
+              const coords = getUserCoordinates(user, viewerIsPro);
               
               // Пропускаем пользователей с невалидными координатами (0, 0)
               if (coords.lat === 0 && coords.lng === 0) {
@@ -303,10 +306,50 @@ export async function getMapMarkers(
 
 /**
  * Получить координаты пользователя на основе его страны/города
- * Временное решение до добавления координат в профиль
+ * @param user - Пользователь
+ * @param viewerIsPro - Является ли просматривающий пользователь PRO (VIP)
+ * - Если viewerIsPro = true: использует точные координаты городов из MAJOR_CITIES
+ * - Если viewerIsPro = false: использует центры стран из COUNTRY_CENTERS
  */
-function getUserCoordinates(user: User): { lat: number; lng: number } {
-  // Базовые координаты для некоторых стран
+function getUserCoordinates(user: User, viewerIsPro: boolean = false): { lat: number; lng: number } {
+  // Если просматривающий имеет PRO, показываем точные координаты городов
+  if (viewerIsPro) {
+    // Сначала проверяем, есть ли город в MAJOR_CITIES
+    if (user.city && user.city.trim() && user.country_code) {
+      const cityName = user.city.trim();
+      const cityMatch = MAJOR_CITIES.find(
+        (c) =>
+          c.name.toLowerCase() === cityName.toLowerCase() &&
+          c.countryCode === user.country_code
+      );
+      
+      if (cityMatch) {
+        // Используем точные координаты города из MAJOR_CITIES
+        // Добавляем небольшой случайный сдвиг для разных пользователей в одном городе
+        const latOffset = (Math.random() - 0.5) * 0.1; // ±0.05 градуса (~5.5 км)
+        const lngOffset = (Math.random() - 0.5) * 0.1;
+        return {
+          lat: cityMatch.lat + latOffset,
+          lng: cityMatch.lng + lngOffset,
+        };
+      }
+    }
+  }
+  
+  // Если просматривающий НЕ имеет PRO, или город не найден в MAJOR_CITIES,
+  // используем центры стран из COUNTRY_CENTERS
+  if (user.country_code && COUNTRY_CENTERS[user.country_code]) {
+    const center = COUNTRY_CENTERS[user.country_code];
+    // Добавляем случайный сдвиг для разных пользователей в одной стране
+    const latOffset = (Math.random() - 0.5) * 2; // ±1 градус (~111 км)
+    const lngOffset = (Math.random() - 0.5) * 2;
+    return {
+      lat: center[0] + latOffset,
+      lng: center[1] + lngOffset,
+    };
+  }
+
+  // Fallback: если COUNTRY_CENTERS не содержит нужную страну, используем старый список
   const countryCoordinates: Record<string, { lat: number; lng: number }> = {
     AR: { lat: -34.6037, lng: -58.3816 }, // Argentina
     KZ: { lat: 43.2566, lng: 76.9286 }, // Kazakhstan

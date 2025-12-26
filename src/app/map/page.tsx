@@ -56,7 +56,7 @@ export default function MapPage() {
       try {
         setLoading(true);
         setError(null);
-        const allMarkers = await getMapMarkers(filters, user?.id);
+        const allMarkers = await getMapMarkers(filters, user?.id, isVip);
         setMarkers(allMarkers);
       } catch (err) {
         console.error("Error loading map markers:", err);
@@ -67,7 +67,7 @@ export default function MapPage() {
     }
 
     loadMarkers();
-  }, [filters, user?.id]);
+  }, [filters, user?.id, isVip]);
 
   return (
     <>
