@@ -29,6 +29,9 @@ import { AddFriendButton } from "./add-friend-button";
 import { EditProfileButton } from "./edit-profile-button";
 import { trackEvent } from "@/lib/analytics";
 import { Modal, ModalHeader, ModalTitle, ModalContent } from "@/components/ui";
+import { createClient } from "@/lib/supabase/client";
+import { CreateEntityForm } from "@/components/hubs/create-entity-form";
+import type { EntityType } from "@/types";
 
 interface ProfileContentProps {
   user: User;
@@ -60,6 +63,21 @@ export function ProfileContent({
   const [mutualFollowers, setMutualFollowers] = useState<User[]>([]);
   const [isMutualsModalOpen, setIsMutualsModalOpen] = useState(false);
   const [isCheckingPro, setIsCheckingPro] = useState(false);
+  const [friendsStats, setFriendsStats] = useState({ friendsCount: 0, friendRequestsCount: 0 });
+  const [affiliations, setAffiliations] = useState<Array<{
+    id: string;
+    name: string;
+    slug: string | null;
+    image_url: string | null;
+    type: "hub" | "community" | "project" | "workspace" | "event";
+    country?: string | null;
+    city?: string | null;
+    start_date?: string;
+  }>>([]);
+  const [isAffiliationsModalOpen, setIsAffiliationsModalOpen] = useState(false);
+  const [isCheckingProAffiliations, setIsCheckingProAffiliations] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [createEntityType, setCreateEntityType] = useState<EntityType>("hub");
   const router = useRouter();
 
   // Обновляем локальное состояние при изменении user prop
@@ -74,6 +92,8 @@ export function ProfileContent({
     if (isOwnProfile) {
       fetchUserInvites();
       fetchMutualFollowers();
+      fetchFriendsStats();
+      fetchAffiliations();
     }
   }, [user, isOwnProfile]);
 
@@ -162,6 +182,43 @@ export function ProfileContent({
     }
   };
 
+  const fetchFriendsStats = async () => {
+    try {
+      const response = await fetch("/api/friends/stats");
+      
+      if (!response.ok) {
+        console.error("Failed to fetch friends stats:", response.status);
+        return;
+      }
+
+      const data = await response.json();
+      setFriendsStats({
+        friendsCount: data.friendsCount || 0,
+        friendRequestsCount: data.friendRequestsCount || 0,
+      });
+    } catch (error) {
+      console.error("Error fetching friends stats:", error);
+    }
+  };
+
+  const fetchAffiliations = async () => {
+    try {
+      const response = await fetch("/api/profile/affiliations");
+      
+      if (!response.ok) {
+        console.error("Failed to fetch affiliations:", response.status);
+        setAffiliations([]);
+        return;
+      }
+
+      const data = await response.json();
+      setAffiliations(data.affiliations || []);
+    } catch (error) {
+      console.error("Error fetching affiliations:", error);
+      setAffiliations([]);
+    }
+  };
+
   const checkProSubscription = async (): Promise<boolean> => {
     try {
       setIsCheckingPro(true);
@@ -200,9 +257,76 @@ export function ProfileContent({
     setIsMutualsModalOpen(true);
   };
 
+  const handleShowAffiliationsList = async () => {
+    // Проверяем авторизацию через API
+    try {
+      const authResponse = await fetch("/api/auth/me");
+      if (!authResponse.ok) {
+        router.push("/login");
+        return;
+      }
+      const authData = await authResponse.json();
+      if (!authData.user || !authData.profile) {
+        router.push("/login");
+        return;
+      }
+    } catch (error) {
+      console.error("Error checking auth:", error);
+      router.push("/login");
+      return;
+    }
+
+    const isPro = await checkProSubscriptionAffiliations();
+    
+    if (!isPro) {
+      // Показываем сообщение о необходимости PRO подписки
+      const shouldGoToSubscription = confirm(
+        "Для просмотра полного списка affiliations необходима PRO подписка. Хотите перейти на страницу подписки?"
+      );
+      if (shouldGoToSubscription) {
+        router.push("/subscription");
+      }
+      return;
+    }
+
+    // Открываем модальное окно со списком
+    setIsAffiliationsModalOpen(true);
+  };
+
+  const checkProSubscriptionAffiliations = async (): Promise<boolean> => {
+    try {
+      setIsCheckingProAffiliations(true);
+      const response = await fetch("/api/subscriptions/current");
+      
+      if (!response.ok) {
+        return false;
+      }
+
+      const data = await response.json();
+      const hasActivePro = data.subscription !== null && data.subscription.status === "active";
+      return hasActivePro;
+    } catch (error) {
+      console.error("Error checking PRO subscription:", error);
+      return false;
+    } finally {
+      setIsCheckingProAffiliations(false);
+    }
+  };
+
   const handleUpdate = (updatedUser: User) => {
     setCurrentUser(updatedUser);
     setIsOpenToMeet(updatedUser.is_open_to_meet);
+  };
+
+  const handleAddEntityClick = () => {
+    setCreateEntityType("hub");
+    setIsCreateModalOpen(true);
+  };
+
+  const handleCreateSuccess = (entity: { id: string; slug: string; type: EntityType }) => {
+    setIsCreateModalOpen(false);
+    // Обновляем список affiliations после создания
+    fetchAffiliations();
   };
 
   const handleToggleOpenToMeet = async () => {
@@ -544,10 +668,23 @@ export function ProfileContent({
               </p>
             )}
 
-            {/* Friends count */}
-            <p className="text-[var(--color-text-secondary)]">
-              {friendsCount} {friendsCount === 1 ? "fren" : "frens"}
-            </p>
+            {/* Friends count and requests */}
+            {isOwnProfile ? (
+              <div className="space-y-1">
+                <p className="text-[var(--color-text-secondary)]">
+                  {friendsStats.friendsCount} {friendsStats.friendsCount === 1 ? "fren" : "frens"}
+                </p>
+                {friendsStats.friendRequestsCount > 0 && (
+                  <p className="text-[var(--color-text-secondary)]">
+                    {friendsStats.friendRequestsCount} fren {friendsStats.friendRequestsCount === 1 ? "request" : "requests"}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="text-[var(--color-text-secondary)]">
+                {friendsCount} {friendsCount === 1 ? "fren" : "frens"}
+              </p>
+            )}
           </div>
 
           {/* Edit Form or View */}
@@ -732,7 +869,7 @@ export function ProfileContent({
                   </p>
                   <div className="flex items-center gap-3 mb-3">
                     <div className="flex items-center -space-x-2">
-                      {mutualFollowers.slice(0, 5).map((follower) => (
+                      {mutualFollowers.slice(0, 3).map((follower) => (
                         <Link
                           key={follower.id}
                           href={`/profile/${follower.twitter_handle}`}
@@ -754,7 +891,7 @@ export function ProfileContent({
                         </Link>
                       ))}
                     </div>
-                    {mutualFollowers.length > 0 && (
+                    {mutualFollowers.length > 3 && (
                       <button
                         onClick={handleShowMutualsList}
                         className="text-sm text-[var(--color-primary)] hover:underline ml-auto"
@@ -799,6 +936,82 @@ export function ProfileContent({
               )}
             </div>
           </Card>
+
+          {/* Affiliations */}
+          {isOwnProfile && (
+            <Card variant="bordered" className="w-full">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">
+                  {affiliations.length} Affiliations
+                </h3>
+              </div>
+              {affiliations.length > 0 ? (
+                <>
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="flex items-center -space-x-2">
+                      {affiliations.slice(0, 3).map((affiliation) => (
+                        <Link
+                          key={affiliation.id}
+                          href={
+                            affiliation.type === "hub"
+                              ? `/hubs/${affiliation.slug || affiliation.id}`
+                              : affiliation.type === "community"
+                              ? `/communities/${affiliation.slug || affiliation.id}`
+                              : affiliation.type === "project"
+                              ? `/projects/${affiliation.slug || affiliation.id}`
+                              : affiliation.type === "event"
+                              ? `/events/${affiliation.slug || affiliation.id}`
+                              : `/profile/${user.twitter_handle}`
+                          }
+                          className="w-8 h-8 rounded-full bg-[var(--color-surface-hover)] border-2 border-[var(--color-background)] flex items-center justify-center overflow-hidden hover:z-10 transition-transform hover:scale-110"
+                        >
+                          {affiliation.image_url ? (
+                            <Image
+                              src={affiliation.image_url}
+                              alt={affiliation.name}
+                              width={32}
+                              height={32}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-xs font-medium">
+                              {affiliation.name?.[0]?.toUpperCase() || "?"}
+                            </div>
+                          )}
+                        </Link>
+                      ))}
+                    </div>
+                    {affiliations.length > 3 && (
+                      <button
+                        onClick={handleShowAffiliationsList}
+                        className="text-sm text-[var(--color-primary)] hover:underline ml-auto"
+                        disabled={isCheckingProAffiliations}
+                      >
+                        Show list
+                      </button>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-[var(--color-text-secondary)] mb-3">
+                  No affiliations yet
+                </p>
+              )}
+              <div className="pt-4 border-t border-[var(--color-surface-border)]">
+                <p className="text-sm text-[var(--color-text-secondary)] mb-3">
+                  Founder or organizer?
+                </p>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  className="w-fit"
+                  onClick={handleAddEntityClick}
+                >
+                  Add your project to the map
+                </Button>
+              </div>
+            </Card>
+          )}
 
           {/* What's happening */}
           <Card variant="bordered" className="w-full">
@@ -913,6 +1126,145 @@ export function ProfileContent({
               ))
             )}
           </div>
+        </ModalContent>
+      </Modal>
+
+      {/* Modal для списка affiliations */}
+      <Modal
+        isOpen={isAffiliationsModalOpen}
+        onClose={() => setIsAffiliationsModalOpen(false)}
+        size="md"
+        ariaLabel="Список affiliations"
+      >
+        <ModalHeader>
+          <ModalTitle>Your Affiliations</ModalTitle>
+        </ModalHeader>
+        <ModalContent>
+          <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+            {affiliations.length === 0 ? (
+              <p className="text-sm text-[var(--color-text-secondary)] text-center py-4">
+                Нет affiliations
+              </p>
+            ) : (
+              affiliations.map((affiliation) => {
+                const href =
+                  affiliation.type === "hub"
+                    ? `/hubs/${affiliation.slug || affiliation.id}`
+                    : affiliation.type === "community"
+                    ? `/communities/${affiliation.slug || affiliation.id}`
+                    : affiliation.type === "project"
+                    ? `/projects/${affiliation.slug || affiliation.id}`
+                    : affiliation.type === "event"
+                    ? `/events/${affiliation.slug || affiliation.id}`
+                    : `/profile/${user.twitter_handle}`;
+
+                return (
+                  <Link
+                    key={affiliation.id}
+                    href={href}
+                    onClick={() => setIsAffiliationsModalOpen(false)}
+                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-[var(--color-surface-hover)] transition-colors"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-[var(--color-surface-hover)] border-2 border-[var(--color-background)] flex items-center justify-center overflow-hidden flex-shrink-0">
+                      {affiliation.image_url ? (
+                        <Image
+                          src={affiliation.image_url}
+                          alt={affiliation.name}
+                          width={48}
+                          height={48}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-sm font-medium">
+                          {affiliation.name?.[0]?.toUpperCase() || "?"}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-[var(--color-text-primary)] truncate">
+                        {affiliation.name}
+                      </p>
+                      <p className="text-xs text-[var(--color-text-secondary)] truncate capitalize">
+                        {affiliation.type}
+                        {affiliation.city && ` • ${affiliation.city}`}
+                      </p>
+                    </div>
+                  </Link>
+                );
+              })
+            )}
+          </div>
+        </ModalContent>
+      </Modal>
+
+      {/* Create Entity Modal */}
+      <Modal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        size="xl"
+        variant="centered"
+      >
+        <ModalHeader>
+          <ModalTitle>Create Hub, Community, Project, or Workspace</ModalTitle>
+        </ModalHeader>
+        <ModalContent>
+          {/* Entity Type Selection */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
+              Select Type <span className="text-[var(--color-error)]">*</span>
+            </label>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <button
+                type="button"
+                onClick={() => setCreateEntityType("hub")}
+                className={`px-4 py-3 rounded-lg border transition-colors ${
+                  createEntityType === "hub"
+                    ? "bg-[var(--color-primary)] text-[var(--color-background)] border-[var(--color-primary)]"
+                    : "bg-[var(--color-surface)] text-[var(--color-text-secondary)] border-[var(--color-surface-border)] hover:bg-[var(--color-surface-hover)]"
+                }`}
+              >
+                Hub
+              </button>
+              <button
+                type="button"
+                onClick={() => setCreateEntityType("community")}
+                className={`px-4 py-3 rounded-lg border transition-colors ${
+                  createEntityType === "community"
+                    ? "bg-[var(--color-primary)] text-[var(--color-background)] border-[var(--color-primary)]"
+                    : "bg-[var(--color-surface)] text-[var(--color-text-secondary)] border-[var(--color-surface-border)] hover:bg-[var(--color-surface-hover)]"
+                }`}
+              >
+                Community
+              </button>
+              <button
+                type="button"
+                onClick={() => setCreateEntityType("project")}
+                className={`px-4 py-3 rounded-lg border transition-colors ${
+                  createEntityType === "project"
+                    ? "bg-[var(--color-primary)] text-[var(--color-background)] border-[var(--color-primary)]"
+                    : "bg-[var(--color-surface)] text-[var(--color-text-secondary)] border-[var(--color-surface-border)] hover:bg-[var(--color-surface-hover)]"
+                }`}
+              >
+                Project
+              </button>
+              <button
+                type="button"
+                onClick={() => setCreateEntityType("workspace")}
+                className={`px-4 py-3 rounded-lg border transition-colors ${
+                  createEntityType === "workspace"
+                    ? "bg-[var(--color-primary)] text-[var(--color-background)] border-[var(--color-primary)]"
+                    : "bg-[var(--color-surface)] text-[var(--color-text-secondary)] border-[var(--color-surface-border)] hover:bg-[var(--color-surface-hover)]"
+                }`}
+              >
+                Workspace
+              </button>
+            </div>
+          </div>
+          <CreateEntityForm
+            entityType={createEntityType}
+            onSuccess={handleCreateSuccess}
+            onCancel={() => setIsCreateModalOpen(false)}
+          />
         </ModalContent>
       </Modal>
     </div>

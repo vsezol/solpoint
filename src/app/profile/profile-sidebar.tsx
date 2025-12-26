@@ -311,7 +311,7 @@ export function ProfileSidebar({ user, upcomingEvents }: ProfileSidebarProps) {
               </p>
               <div className="flex items-center gap-3 mb-3">
                 <div className="flex items-center -space-x-2">
-                  {mutualFollowers.slice(0, 5).map((follower) => (
+                  {mutualFollowers.slice(0, 3).map((follower) => (
                     <Link
                       key={follower.id}
                       href={`/profile/${follower.twitter_handle}`}
@@ -333,7 +333,7 @@ export function ProfileSidebar({ user, upcomingEvents }: ProfileSidebarProps) {
                     </Link>
                   ))}
                 </div>
-                {mutualFollowers.length > 0 && (
+                {mutualFollowers.length > 3 && (
                   <button
                     onClick={handleShowMutualsList}
                     className="text-sm text-[var(--color-primary)] hover:underline ml-auto"

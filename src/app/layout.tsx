@@ -54,9 +54,9 @@ export const metadata: Metadata = {
       "Connect with Solana enthusiasts, find local hubs, and discover events worldwide.",
   },
   icons: {
-    icon: "/logo.svg",
-    shortcut: "/logo.svg",
-    apple: "/logo.svg",
+    icon: "/logo_solpoint.svg",
+    shortcut: "/logo_solpoint.svg",
+    apple: "/logo_solpoint.svg",
   },
 };
 
