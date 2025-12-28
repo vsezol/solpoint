@@ -145,6 +145,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!community) {
+      return NextResponse.json(
+        { error: "Failed to create community" },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json({ community }, { status: 201 });
   } catch (error) {
     console.error("Error parsing request:", error);

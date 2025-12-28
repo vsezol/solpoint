@@ -79,7 +79,11 @@ export async function isEntityOwner(
 ): Promise<boolean> {
   const supabase = await createClient();
   
-  const tableName = entityType === "hub" ? "hubs" : entityType === "workspace" ? "workspaces" : `${entityType}s`;
+  const tableName = 
+    entityType === "hub" ? "hubs" :
+    entityType === "workspace" ? "workspaces" :
+    entityType === "community" ? "communities" :
+    `${entityType}s`;
   
   const { data: entity, error } = await supabase
     .from(tableName)
@@ -87,7 +91,12 @@ export async function isEntityOwner(
     .eq("id", entityId)
     .single();
 
-  if (error || !entity) {
+  if (error) {
+    console.error(`Error checking ${entityType} ownership:`, error);
+    return false;
+  }
+
+  if (!entity) {
     return false;
   }
 
