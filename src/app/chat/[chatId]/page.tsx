@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Header, Footer } from "@/components/layout";
 import { Button } from "@/components/ui/button";
@@ -8,23 +8,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/use-auth";
 import { getOrCreateChat } from "@/lib/api/chats";
-
-interface Message {
-  id: string;
-  chat_id: string;
-  sender_id: string;
-  content: string;
-  is_read: boolean;
-  created_at: string;
-  updated_at: string;
-  sender: {
-    id: string;
-    twitter_handle: string;
-    twitter_name: string;
-    avatar_url: string | null;
-    is_verified: boolean;
-  };
-}
+import { useChatWebSocket, type Message } from "@/hooks/use-chat-websocket";
 
 interface ChatData {
   id: string;
@@ -53,6 +37,52 @@ export default function ChatPage() {
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+
+  // Handle new messages from WebSocket
+  const handleNewMessage = useCallback(
+    (message: Message) => {
+      setChat((prev) => {
+        if (!prev) return prev;
+        
+        // Check if message already exists (avoid duplicates)
+        if (prev.messages.some((m) => m.id === message.id)) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          messages: [...prev.messages, message],
+          last_message_at: message.created_at,
+        };
+      });
+
+      // Mark messages as read if it's from the other user
+      if (message.sender_id !== user?.id) {
+        fetch(`/api/chats/${chatId}/read`, {
+          method: "PATCH",
+        }).catch((err) => {
+          console.error("Error marking messages as read:", err);
+        });
+      }
+    },
+    [chatId, user?.id]
+  );
+
+  // Handle WebSocket errors
+  const handleWebSocketError = useCallback((error: Error) => {
+    console.error("WebSocket error:", error);
+    // Don't show error to user for connection issues, just log it
+    // The hook will handle reconnection automatically
+  }, []);
+
+  // Setup WebSocket connection
+  const { isConnected, connectionError } = useChatWebSocket({
+    chatId,
+    userId: user?.id || "",
+    onMessage: handleNewMessage,
+    onError: handleWebSocketError,
+    enabled: !!chatId && !!user?.id && !!chat,
+  });
 
   // Fetch chat data
   useEffect(() => {
@@ -149,9 +179,16 @@ export default function ChatPage() {
       const result = await response.json();
       const newMessage = result.data;
 
-      // Update chat with new message
+      // Update chat with new message (optimistic update)
+      // WebSocket will also receive this message, but we update immediately for better UX
       setChat((prev) => {
         if (!prev) return prev;
+        
+        // Check if message already exists (from WebSocket)
+        if (prev.messages.some((m) => m.id === newMessage.id)) {
+          return prev;
+        }
+
         return {
           ...prev,
           messages: [...prev.messages, newMessage],
@@ -240,6 +277,21 @@ export default function ChatPage() {
                   />
                 </svg>
               )}
+              {/* Connection status indicator */}
+              <div
+                className={`w-2 h-2 rounded-full ${
+                  isConnected
+                    ? "bg-green-500"
+                    : "bg-yellow-500 animate-pulse"
+                }`}
+                title={
+                  isConnected
+                    ? "Connected"
+                    : connectionError
+                      ? `Connecting... (${connectionError.message})`
+                      : "Connecting..."
+                }
+              />
             </div>
             <p className="text-sm text-[var(--color-text-secondary)]">
               @{chat.otherUser.twitter_handle}
