@@ -5,7 +5,9 @@ import dynamic from "next/dynamic";
 import { Header, Footer } from "@/components/layout";
 import { MapFiltersPanel } from "@/components/map";
 import type { MapFilters, MapMarker } from "@/types";
-import { getMockMarkers } from "@/lib/mock-data";
+import { getMapMarkers } from "@/lib/api/map";
+import { useAuth } from "@/hooks/use-auth";
+import { trackEvent } from "@/lib/analytics";
 
 // Dynamic import for map component to avoid SSR issues with Leaflet
 const SolPointMap = dynamic(
@@ -25,32 +27,47 @@ const SolPointMap = dynamic(
 
 export default function MapPage() {
   const [markers, setMarkers] = useState<MapMarker[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<MapFilters>({
     showUsers: true,
     showEvents: true,
     showHubs: true,
+    showCommunities: true,
+    showWorkspaces: true,
+    contentType: "all",
   });
-  const [isVip] = useState(false); // TODO: Get from auth context
+  const { user } = useAuth();
+  const isVip = user?.subscription_tier === "vip";
+  const isAuthenticated = !!user;
 
+  // Отслеживаем просмотр карты
   useEffect(() => {
-    // Load mock data
-    const allMarkers = getMockMarkers();
-    setMarkers(allMarkers);
-  }, []);
+    trackEvent("map_view", {
+      event_category: "Map",
+      is_vip: isVip,
+      is_authenticated: isAuthenticated,
+    });
+  }, [isVip, isAuthenticated]);
 
-  // Filter markers based on filters
-  const filteredMarkers = markers.filter((marker) => {
-    if (marker.type === "user" || marker.type === "vip_user") {
-      if (!filters.showUsers) return false;
+  // Загружаем маркеры при изменении фильтров
+  useEffect(() => {
+    async function loadMarkers() {
+      try {
+        setLoading(true);
+        setError(null);
+        const allMarkers = await getMapMarkers(filters, user?.id, isVip);
+        setMarkers(allMarkers);
+      } catch (err) {
+        console.error("Error loading map markers:", err);
+        setError("Failed to load map data. Please try again.");
+      } finally {
+        setLoading(false);
+      }
     }
-    if (marker.type === "event") {
-      if (!filters.showEvents) return false;
-    }
-    if (marker.type === "hub") {
-      if (!filters.showHubs) return false;
-    }
-    return true;
-  });
+
+    loadMarkers();
+  }, [filters, user?.id, isVip]);
 
   return (
     <>
@@ -87,20 +104,20 @@ export default function MapPage() {
               </defs>
             </svg>
           </div>
-
-          <h1 className="text-4xl sm:text-5xl font-bold text-gradient mb-4">
-            SolPoint Map
-          </h1>
+          <h1 className="text-4xl sm:text-5xl font-bold mb-4 inline-block bg-gradient-to-r from-[#00F58D] to-[#A73EFF] bg-clip-text text-transparent">
+  Solana Map
+</h1>
+         
           <p className="text-lg text-[var(--color-text-secondary)] max-w-2xl mx-auto">
             Discover Solana Users, Hubs, and Events Around the World.
           </p>
         </section>
 
         {/* Map section */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
-          <div className="grid lg:grid-cols-[300px,1fr] gap-6">
+        <section className="max-w-[90rem] mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+          <div className="flex flex-col lg:flex-row gap-6">
             {/* Filters sidebar */}
-            <aside className="order-2 lg:order-1">
+            <aside className="w-full lg:w-[320px] lg:flex-shrink-0">
               <MapFiltersPanel
                 filters={filters}
                 onFiltersChange={setFilters}
@@ -109,14 +126,37 @@ export default function MapPage() {
             </aside>
 
             {/* Map */}
-            <div className="order-1 lg:order-2">
-              <div className="h-[500px] lg:h-[600px] rounded-xl overflow-hidden border border-[var(--color-surface-border)]">
-                <SolPointMap
-                  markers={filteredMarkers}
-                  center={[35, 55]}
-                  zoom={4}
-                  isVip={isVip}
-                />
+            <div className="flex-1">
+              <div className="h-[500px] lg:h-[720px] rounded-xl overflow-hidden border border-[var(--color-surface-border)]">
+                {loading ? (
+                  <div className="w-full h-full flex items-center justify-center bg-[var(--color-surface)]">
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="w-12 h-12 border-4 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
+                      <p className="text-[var(--color-text-secondary)]">Loading map data...</p>
+                    </div>
+                  </div>
+                ) : error ? (
+                  <div className="w-full h-full flex items-center justify-center bg-[var(--color-surface)]">
+                    <div className="text-center">
+                      <p className="text-[var(--color-text-secondary)] mb-4">{error}</p>
+                      <button
+                        onClick={() => window.location.reload()}
+                        className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary-hover)] transition-colors"
+                      >
+                        Retry
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <SolPointMap
+                    markers={markers}
+                    center={[35, 55]}
+                    zoom={4}
+                    isVip={isVip}
+                    isAuthenticated={isAuthenticated}
+                    currentUserId={user?.id}
+                  />
+                )}
               </div>
             </div>
           </div>

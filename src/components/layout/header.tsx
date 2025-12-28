@@ -8,6 +8,8 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { useAuth } from "@/hooks/use-auth";
+import { trackEvent } from "@/lib/analytics";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -18,17 +20,30 @@ const navLinks = [
   { href: "/about", label: "About us" },
 ];
 
-interface HeaderProps {
-  isAuthenticated?: boolean;
-  user?: {
-    avatar_url?: string;
-    twitter_handle: string;
-  };
-}
-
-export function Header({ isAuthenticated = false, user }: HeaderProps) {
+export function Header() {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { user, isAuthenticated, isLoading } = useAuth();
+
+  // Формируем динамический список ссылок навигации
+  const dynamicNavLinks = [...navLinks];
+  
+  // Собираем дополнительные ссылки (Dashboard и Admin)
+  const additionalLinks = [];
+  if (user?.enable_dashboard) {
+    additionalLinks.push({ href: "/dashboard", label: "Dashboard" });
+  }
+  if (user?.is_admin) {
+    additionalLinks.push({ href: "/admin", label: "Admin" });
+  }
+  
+  // Вставляем дополнительные ссылки перед "About us"
+  if (additionalLinks.length > 0) {
+    const aboutIndex = dynamicNavLinks.findIndex(link => link.href === "/about");
+    if (aboutIndex !== -1) {
+      dynamicNavLinks.splice(aboutIndex, 0, ...additionalLinks);
+    }
+  }
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 glass">
@@ -50,49 +65,65 @@ export function Header({ isAuthenticated = false, user }: HeaderProps) {
             </span>
           </Link>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center gap-1">
-            {navLinks.map((link) => {
-              const isActive = pathname === link.href;
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={cn(
-                    "px-4 py-2 text-sm font-medium rounded-lg transition-colors",
-                    isActive
-                      ? "text-[var(--color-text-primary)]"
-                      : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
-                  )}
-                >
-                  {link.label}
-                  {isActive && (
-                    <span className="block h-0.5 mt-0.5 bg-[var(--color-primary)] rounded-full" />
-                  )}
-                </Link>
-              );
-            })}
-          </nav>
+          {/* Desktop Navigation and Auth Buttons - Right Side */}
+          <div className="hidden lg:flex items-center gap-1">
+            {/* Desktop Navigation */}
+            <nav className="flex items-center gap-1">
+              {dynamicNavLinks.map((link) => {
+                const isActive = pathname === link.href;
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={() => {
+                      trackEvent("navigation_click", {
+                        event_category: "Navigation",
+                        event_label: link.label,
+                        destination: link.href,
+                      });
+                    }}
+                    className={cn(
+                      "px-4 py-2 text-sm font-medium rounded-lg transition-colors",
+                      isActive
+                        ? "text-[var(--color-text-primary)]"
+                        : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+                    )}
+                  >
+                    {link.label}
+                    {isActive && (
+                      <span className="block h-0.5 mt-0.5 bg-[var(--color-primary)] rounded-full" />
+                    )}
+                  </Link>
+                );
+              })}
+            </nav>
 
-          {/* Auth Buttons */}
-          <div className="hidden lg:flex items-center gap-3">
-            {isAuthenticated && user ? (
-              <Link href="/profile" className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full overflow-hidden bg-[var(--color-surface-border)]">
-                  {user.avatar_url && (
-                    <Image
-                      src={user.avatar_url}
-                      alt={user.twitter_handle}
-                      width={32}
-                      height={32}
-                      className="object-cover"
-                    />
-                  )}
-                </div>
-                <span className="text-sm text-[var(--color-text-secondary)]">
-                  @{user.twitter_handle}
-                </span>
-              </Link>
+            {/* Auth Buttons */}
+            <div className="flex items-center gap-3 ml-3">
+            {isLoading ? (
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-[var(--color-surface-border)] animate-pulse" />
+                <div className="w-20 h-4 bg-[var(--color-surface-border)] rounded animate-pulse" />
+              </div>
+            ) : isAuthenticated && user ? (
+              <Button variant="ghost" size="sm" asChild>
+                <Link href={`/profile/${user.twitter_handle}`} className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full overflow-hidden bg-[var(--color-surface-border)]">
+                    {user.avatar_url && (
+                      <Image
+                        src={user.avatar_url}
+                        alt={user.twitter_handle}
+                        width={32}
+                        height={32}
+                        className="object-cover"
+                      />
+                    )}
+                  </div>
+                  <span className="text-sm text-[var(--color-text-secondary)]">
+                    @{user.twitter_handle}
+                  </span>
+                </Link>
+              </Button>
             ) : (
               <>
                 <Button variant="ghost" size="sm" asChild>
@@ -103,6 +134,7 @@ export function Header({ isAuthenticated = false, user }: HeaderProps) {
                 </Button>
               </>
             )}
+            </div>
           </div>
 
           {/* Mobile Menu Button */}
@@ -130,13 +162,21 @@ export function Header({ isAuthenticated = false, user }: HeaderProps) {
             className="lg:hidden border-t border-[var(--color-surface-border)] bg-[var(--color-surface)]"
           >
             <nav className="px-4 py-4 space-y-1">
-              {navLinks.map((link) => {
+              {dynamicNavLinks.map((link) => {
                 const isActive = pathname === link.href;
                 return (
                   <Link
                     key={link.href}
                     href={link.href}
-                    onClick={() => setIsMobileMenuOpen(false)}
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      trackEvent("navigation_click", {
+                        event_category: "Navigation",
+                        event_label: link.label,
+                        destination: link.href,
+                        is_mobile: true,
+                      });
+                    }}
                     className={cn(
                       "block px-4 py-2 rounded-lg text-sm font-medium transition-colors",
                       isActive
@@ -149,9 +189,13 @@ export function Header({ isAuthenticated = false, user }: HeaderProps) {
                 );
               })}
               <div className="pt-4 space-y-2">
-                {isAuthenticated ? (
+                {isLoading ? (
+                  <div className="px-4 py-2">
+                    <div className="h-4 bg-[var(--color-surface-border)] rounded animate-pulse" />
+                  </div>
+                ) : isAuthenticated && user ? (
                   <Link
-                    href="/profile"
+                    href={`/profile/${user.twitter_handle}`}
                     onClick={() => setIsMobileMenuOpen(false)}
                     className="block px-4 py-2 rounded-lg text-sm font-medium text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]"
                   >

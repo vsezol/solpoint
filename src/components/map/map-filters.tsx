@@ -1,10 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { Button, Input, Badge } from "@/components/ui";
-import type { MapFilters, UserRole } from "@/types";
-import { Search, X, ChevronDown, ChevronUp } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Input } from "@/components/ui";
+import { AuthRequiredModal, ProSubscriptionModal } from "@/components/ui";
+import type { MapFilters, UserRole, EventType, ContentTypeFilter } from "@/types";
 import { cn } from "@/lib/utils";
+import CountrySelect from "@/app/map/country-select";
+import { useMapStore } from "@/store/map-store";
+import { trackEvent } from "@/lib/analytics";
+import { useAuth } from "@/hooks/use-auth";
 
 const userRoles: { value: UserRole; label: string; description?: string }[] = [
   { value: "developer", label: "Developer" },
@@ -16,18 +20,11 @@ const userRoles: { value: UserRole; label: string; description?: string }[] = [
   { value: "other", label: "Other" },
 ];
 
-const domainTypes = [
-  { value: ".com", label: ".com", description: "Web2 Classic" },
-  { value: "popular", label: "Popular", description: "Trending Now" },
-  { value: "dns", label: "DNS", description: "Standard Domains" },
-  { value: "web3", label: "Web3", description: "On-chain Names" },
-];
-
-const vibeTags = [
-  "crypto", "nft", "wallet", "defi", "ai",
-  "dao", "eth", "bitcoin", "polygon",
-  "layer2", "zk", "gaming", "builder",
-  "unstoppable", "meme", "retardio",
+const eventTypes: { value: EventType; label: string }[] = [
+  { value: "official", label: "Official" },
+  { value: "community", label: "Community" },
+  { value: "meetup", label: "Meetup" },
+  { value: "private", label: "Private" },
 ];
 
 interface MapFiltersProps {
@@ -41,42 +38,117 @@ export function MapFiltersPanel({
   onFiltersChange,
   isVip = false,
 }: MapFiltersProps) {
-  const [isExpanded, setIsExpanded] = useState(true);
-  const [selectedDomainType, setSelectedDomainType] = useState<string>("web3");
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
+  const { country, setCountry } = useMapStore();
+  const { isAuthenticated, user } = useAuth();
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showProModal, setShowProModal] = useState(false);
+
+  const handleFilterAction = (action: () => void) => {
+    if (!isAuthenticated) {
+      setShowAuthModal(true);
+      return;
+    }
+    action();
+  };
+
+  // Синхронизируем выбранную страну из store с фильтрами
+  useEffect(() => {
+    if (country) {
+      onFiltersChange({
+        ...filters,
+        country: country.name,
+        countryCode: country.code,
+      });
+    } else {
+      onFiltersChange({
+        ...filters,
+        country: undefined,
+        countryCode: undefined,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [country]);
 
   const handleReset = () => {
+    setCountry(null);
+    trackEvent("map_filter_reset", {
+      event_category: "Map",
+    });
     onFiltersChange({
       showUsers: true,
       showEvents: true,
       showHubs: true,
+      showCommunities: true,
+      showWorkspaces: true,
+      contentType: "all",
       userRoles: undefined,
+      eventType: undefined,
       openToMeet: undefined,
       activeOnly: undefined,
       country: undefined,
+      countryCode: undefined,
       city: undefined,
     });
-    setSelectedDomainType("web3");
-    setSelectedTags([]);
-    setSearchQuery("");
+  };
+
+  const handleContentTypeChange = (contentType: ContentTypeFilter) => {
+    handleFilterAction(() => {
+      trackEvent("map_filter_change", {
+        event_category: "Map",
+        filter_type: "content_type",
+        filter_value: contentType,
+      });
+      onFiltersChange({
+        ...filters,
+        contentType,
+        // Автоматически обновляем showUsers, showEvents, showHubs, showCommunities и showWorkspaces в зависимости от выбора
+        showUsers: contentType === "all" || contentType === "users",
+        showEvents: contentType === "all" || contentType === "events",
+        showHubs: contentType === "all" || contentType === "hubs" || contentType === "workspaces",
+        showCommunities: contentType === "all" || contentType === "hubs" || contentType === "workspaces",
+        showWorkspaces: contentType === "all" || contentType === "hubs" || contentType === "workspaces",
+      });
+    });
   };
 
   const toggleRole = (role: UserRole) => {
+    if (!isAuthenticated) {
+      setShowAuthModal(true);
+      return;
+    }
+    if (isAuthenticated && !isVip) {
+      setShowProModal(true);
+      return;
+    }
     const currentRoles = filters.userRoles || [];
     const newRoles = currentRoles.includes(role)
       ? currentRoles.filter((r) => r !== role)
       : [...currentRoles, role];
+    trackEvent("map_filter_change", {
+      event_category: "Map",
+      filter_type: "user_role",
+      filter_value: role,
+      is_added: !currentRoles.includes(role),
+    });
     onFiltersChange({
       ...filters,
       userRoles: newRoles.length > 0 ? newRoles : undefined,
     });
   };
 
-  const toggleTag = (tag: string) => {
-    setSelectedTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
-    );
+  const toggleEventType = (eventType: EventType) => {
+    handleFilterAction(() => {
+      const isRemoving = filters.eventType === eventType;
+      trackEvent("map_filter_change", {
+        event_category: "Map",
+        filter_type: "event_type",
+        filter_value: isRemoving ? "none" : eventType,
+      });
+      onFiltersChange({
+        ...filters,
+        eventType: isRemoving ? undefined : eventType,
+      });
+    });
   };
 
   return (
@@ -96,186 +168,211 @@ export function MapFiltersPanel({
 
       {/* Content */}
       <div className="p-4 space-y-6">
-        {/* Country filter */}
+        {/* Content Type Filter */}
         <div>
           <label className="block text-sm text-[var(--color-text-muted)] mb-2">
-            Country:
+            Show
+          </label>
+          <div className="flex gap-1.5 mb-2">
+            {[
+              { value: "all" as ContentTypeFilter, label: "All" },
+              { value: "users" as ContentTypeFilter, label: "Users" },
+              { value: "events" as ContentTypeFilter, label: "Events" },
+            ].map((option) => {
+              const isSelected = filters.contentType === option.value;
+              return (
+                <button
+                  key={option.value}
+                  onClick={() => handleContentTypeChange(option.value)}
+                  className={cn(
+                    "flex-1 px-2 py-1 text-xs rounded-md border transition-colors",
+                    isSelected
+                      ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)] font-medium"
+                      : "border-[var(--color-surface-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-text-muted)]"
+                  )}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+          {/* Hubs/Communities/Workspaces Button */}
+          <button
+            onClick={() => handleContentTypeChange("hubs")}
+            className={cn(
+              "w-full px-2 py-1 text-xs rounded-md border transition-colors",
+              filters.contentType === "hubs"
+                ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)] font-medium"
+                : "border-[var(--color-surface-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-text-muted)]"
+            )}
+          >
+            Hubs/Communities/Workspaces
+          </button>
+        </div>
+
+        {/* Country Select */}
+        <div>
+          <label className="block text-sm text-[var(--color-text-muted)] mb-2">
+            Country
+          </label>
+          <CountrySelect />
+        </div>
+    
+
+        {/* City filter */}
+        <div>
+          <label className="block text-sm text-[var(--color-text-muted)] mb-2">
+            City
           </label>
           <Input
-            placeholder="Enter country..."
-            value={filters.country || ""}
-            onChange={(e) =>
-              onFiltersChange({ ...filters, country: e.target.value || undefined })
-            }
+            placeholder="Enter city..."
+            value={filters.city || ""}
+            onChange={(e) => {
+              if (!isAuthenticated) {
+                setShowAuthModal(true);
+                return;
+              }
+              if (isAuthenticated && !isVip) {
+                setShowProModal(true);
+                return;
+              }
+              onFiltersChange({ ...filters, city: e.target.value || undefined });
+            }}
+            onFocus={() => {
+              if (!isAuthenticated) {
+                setShowAuthModal(true);
+                return;
+              }
+              if (isAuthenticated && !isVip) {
+                setShowProModal(true);
+              }
+            }}
           />
         </div>
 
-        {/* City filter (VIP only) */}
-        {isVip && (
-          <div>
-            <label className="block text-sm text-[var(--color-text-muted)] mb-2">
-              City:
-            </label>
-            <Input
-              placeholder="Enter city..."
-              value={filters.city || ""}
-              onChange={(e) =>
-                onFiltersChange({ ...filters, city: e.target.value || undefined })
-              }
-            />
-          </div>
-        )}
-
-        {/* Domain Type */}
+        {/* Event Type */}
         <div>
           <label className="block text-sm text-[var(--color-text-muted)] mb-3">
-            Domain Type
+            Events by category
           </label>
-          <div className="space-y-2">
-            {domainTypes.map((type) => (
-              <label
-                key={type.value}
-                className="flex items-center justify-between cursor-pointer group"
-              >
-                <div className="flex items-center gap-3">
-                  <div
-                    className={cn(
-                      "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors",
-                      selectedDomainType === type.value
-                        ? "border-[var(--color-primary)] bg-[var(--color-primary)]"
-                        : "border-[var(--color-surface-border)] group-hover:border-[var(--color-text-muted)]"
-                    )}
-                  >
-                    {selectedDomainType === type.value && (
-                      <div className="w-2 h-2 rounded-full bg-[var(--color-background)]" />
-                    )}
-                  </div>
-                  <span
-                    className={cn(
-                      "font-medium transition-colors",
-                      selectedDomainType === type.value
-                        ? "text-[var(--color-primary)]"
-                        : "text-[var(--color-text-primary)]"
-                    )}
-                  >
-                    {type.label}
-                  </span>
-                </div>
-                <span className="text-sm text-[var(--color-text-muted)]">
-                  {type.description}
-                </span>
-              </label>
-            ))}
+          <div className="flex flex-wrap gap-2">
+            {eventTypes.map((type) => {
+              const isSelected = filters.eventType === type.value;
+              return (
+                <button
+                  key={type.value}
+                  onClick={() => toggleEventType(type.value)}
+                  className={cn(
+                    "px-3 py-1.5 text-sm rounded-full border transition-colors",
+                    isSelected
+                      ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
+                      : "border-[var(--color-surface-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-text-muted)]"
+                  )}
+                >
+                  {type.label}
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        {/* Search */}
+        {/* User roles */}
         <div>
-          <Input
-            placeholder="Search"
-            icon={<Search className="w-4 h-4" />}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-
-        {/* Browse by Vibe */}
-        <div>
-          <div className="mb-2">
-            <h4 className="font-semibold text-[var(--color-text-primary)]">
-              Browse by Vibe
-            </h4>
-            <p className="text-sm text-[var(--color-text-muted)]">
-              Tap a few tags to match your domain with your niche.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2 p-3 border border-[var(--color-surface-border)] rounded-lg">
-            {vibeTags.map((tag) => (
-              <button
-                key={tag}
-                onClick={() => toggleTag(tag)}
-                className={cn(
-                  "px-3 py-1.5 text-sm rounded-full border transition-colors",
-                  selectedTags.includes(tag)
-                    ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
-                    : "border-[var(--color-surface-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-text-muted)]"
-                )}
-              >
-                {tag}
-              </button>
-            ))}
+          <label className="block text-sm text-[var(--color-text-muted)] mb-3">
+            User Types
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {userRoles.map((role) => {
+              const isSelected = filters.userRoles?.includes(role.value);
+              return (
+                <button
+                  key={role.value}
+                  onClick={() => toggleRole(role.value)}
+                  className={cn(
+                    "px-3 py-1.5 text-sm rounded-full border transition-colors",
+                    isSelected
+                      ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
+                      : "border-[var(--color-surface-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-text-muted)]"
+                  )}
+                >
+                  {role.label}
+                </button>
+              );
+            })}
           </div>
         </div>
-
-        {/* User roles (VIP only) */}
-        {isVip && (
-          <div>
-            <label className="block text-sm text-[var(--color-text-muted)] mb-3">
-              User Roles
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {userRoles.map((role) => {
-                const isSelected = filters.userRoles?.includes(role.value);
-                return (
-                  <button
-                    key={role.value}
-                    onClick={() => toggleRole(role.value)}
-                    className={cn(
-                      "px-3 py-1.5 text-sm rounded-full border transition-colors",
-                      isSelected
-                        ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
-                        : "border-[var(--color-surface-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-text-muted)]"
-                    )}
-                  >
-                    {role.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
 
         {/* Toggle switches */}
-        {isVip && (
-          <div className="space-y-3">
-            <label className="flex items-center justify-between cursor-pointer">
-              <span className="text-sm text-[var(--color-text-secondary)]">
-                Open to meet
-              </span>
-              <button
-                onClick={() =>
-                  onFiltersChange({
-                    ...filters,
-                    openToMeet: !filters.openToMeet,
-                  })
-                }
+        <div className="space-y-3">
+          <label className="flex items-center justify-between cursor-pointer">
+            <span className="text-sm text-[var(--color-text-secondary)]">
+              Find frens
+            </span>
+            <button
+              onClick={() => {
+                handleFilterAction(() => {
+                  const newOpenToMeet = !filters.openToMeet;
+                  if (newOpenToMeet) {
+                    // При включении "Find frens" сбрасываем все остальные фильтры
+                    setCountry(null);
+                    onFiltersChange({
+                      showUsers: true,
+                      showEvents: false,
+                      showHubs: false,
+                      showCommunities: false,
+                      showWorkspaces: false,
+                      contentType: "users",
+                      userRoles: undefined,
+                      eventType: undefined,
+                      openToMeet: true,
+                      activeOnly: undefined,
+                      country: undefined,
+                      countryCode: undefined,
+                      city: undefined,
+                    });
+                  } else {
+                    // При выключении просто убираем фильтр openToMeet
+                    onFiltersChange({
+                      ...filters,
+                      openToMeet: false,
+                    });
+                  }
+                });
+              }}
+              className={cn(
+                "w-11 h-6 rounded-full transition-colors relative",
+                filters.openToMeet
+                  ? "bg-[var(--color-primary)]"
+                  : "bg-[var(--color-surface-border)]"
+              )}
+            >
+              <span
                 className={cn(
-                  "w-11 h-6 rounded-full transition-colors relative",
-                  filters.openToMeet
-                    ? "bg-[var(--color-primary)]"
-                    : "bg-[var(--color-surface-border)]"
+                  "absolute top-1 w-4 h-4 rounded-full bg-white transition-transform",
+                  filters.openToMeet ? "left-6" : "left-1"
                 )}
-              >
-                <span
-                  className={cn(
-                    "absolute top-1 w-4 h-4 rounded-full bg-white transition-transform",
-                    filters.openToMeet ? "left-6" : "left-1"
-                  )}
-                />
-              </button>
-            </label>
+              />
+            </button>
+          </label>
 
+          {isVip && (
             <label className="flex items-center justify-between cursor-pointer">
               <span className="text-sm text-[var(--color-text-secondary)]">
                 Active users only
               </span>
               <button
-                onClick={() =>
+                onClick={() => {
+                  const newActiveOnly = !filters.activeOnly;
+                  trackEvent("map_filter_change", {
+                    event_category: "Map",
+                    filter_type: "active_only",
+                    filter_value: newActiveOnly ? "true" : "false",
+                  });
                   onFiltersChange({
                     ...filters,
-                    activeOnly: !filters.activeOnly,
-                  })
-                }
+                    activeOnly: newActiveOnly,
+                  });
+                }}
                 className={cn(
                   "w-11 h-6 rounded-full transition-colors relative",
                   filters.activeOnly
@@ -291,9 +388,97 @@ export function MapFiltersPanel({
                 />
               </button>
             </label>
-          </div>
-        )}
+          )}
+        </div>
       </div>
+
+      {/* Active Filter Indicator Labels */}
+      {(filters.contentType && filters.contentType !== "all") || filters.country || filters.city || filters.userRoles?.length || filters.eventType ? (
+        <div className="p-4 border-t border-[var(--color-surface-border)]">
+          <label className="block text-sm text-[var(--color-text-muted)] mb-2">
+            Active Filter Indicator Labels:
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {filters.contentType && filters.contentType !== "all" && (
+              <span className="px-3 py-1.5 text-sm rounded-full bg-[var(--color-surface-border)] text-[var(--color-text-primary)] flex items-center gap-2">
+                {filters.contentType === "users" ? "Users" : filters.contentType === "events" ? "Events" : filters.contentType === "workspaces" ? "Workspaces" : "Hubs/Communities/Workspaces"}
+                <button
+                  onClick={() => handleContentTypeChange("all")}
+                  className="hover:text-[var(--color-primary)] transition-colors"
+                >
+                  ×
+                </button>
+              </span>
+            )}
+            {filters.country && (
+              <span className="px-3 py-1.5 text-sm rounded-full bg-[var(--color-surface-border)] text-[var(--color-text-primary)] flex items-center gap-2">
+                {filters.country}
+                <button
+                  onClick={() => {
+                    setCountry(null);
+                    onFiltersChange({ ...filters, country: undefined, countryCode: undefined });
+                  }}
+                  className="hover:text-[var(--color-primary)] transition-colors"
+                >
+                  ×
+                </button>
+              </span>
+            )}
+            {filters.city && (
+              <span className="px-3 py-1.5 text-sm rounded-full bg-[var(--color-surface-border)] text-[var(--color-text-primary)] flex items-center gap-2">
+                {filters.city}
+                <button
+                  onClick={() => onFiltersChange({ ...filters, city: undefined })}
+                  className="hover:text-[var(--color-primary)] transition-colors"
+                >
+                  ×
+                </button>
+              </span>
+            )}
+            {filters.userRoles?.map((role) => {
+              const roleLabel = userRoles.find((r) => r.value === role)?.label || role;
+              return (
+                <span
+                  key={role}
+                  className="px-3 py-1.5 text-sm rounded-full bg-[var(--color-surface-border)] text-[var(--color-text-primary)] flex items-center gap-2"
+                >
+                  {roleLabel}
+                  <button
+                    onClick={() => toggleRole(role)}
+                    className="hover:text-[var(--color-primary)] transition-colors"
+                  >
+                    ×
+                  </button>
+                </span>
+              );
+            })}
+            {filters.eventType && (
+              <span className="px-3 py-1.5 text-sm rounded-full bg-[var(--color-surface-border)] text-[var(--color-text-primary)] flex items-center gap-2">
+                {eventTypes.find((t) => t.value === filters.eventType)?.label || filters.eventType}
+                <button
+                  onClick={() => onFiltersChange({ ...filters, eventType: undefined })}
+                  className="hover:text-[var(--color-primary)] transition-colors"
+                >
+                  ×
+                </button>
+              </span>
+            )}
+          </div>
+        </div>
+      ) : null}
+
+      <AuthRequiredModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        title="Sign up or log in to use filters"
+        description="Please sign up or log in to use map filters and search."
+      />
+      <ProSubscriptionModal
+        isOpen={showProModal}
+        onClose={() => setShowProModal(false)}
+        title="This feature is available only with PRO subscription"
+        description="City and user type filters are available only with PRO subscription. Upgrade to PRO to unlock these features."
+      />
     </div>
   );
 }

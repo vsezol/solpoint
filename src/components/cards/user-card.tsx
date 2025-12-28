@@ -2,8 +2,8 @@
 
 import { Avatar, Badge, Button } from "@/components/ui";
 import type { User } from "@/types";
-import { Twitter, Instagram, Facebook, MessageCircle, UserPlus, MapPin, Briefcase, Check } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Twitter, Instagram, Facebook, Check, X } from "lucide-react";
+import { cn, getSubscriptionDisplayName } from "@/lib/utils";
 import Link from "next/link";
 
 interface UserCardProps {
@@ -11,8 +11,15 @@ interface UserCardProps {
   isVip?: boolean;
   compact?: boolean;
   isBlurred?: boolean;
+  isHost?: boolean;
+  isUnauthorized?: boolean;
+  isFriend?: boolean; // Является ли пользователь другом (взаимная подписка)
+  friendshipStatus?: "none" | "pending_sent" | "pending_received" | "accepted" | "blocked"; // Детальный статус дружбы
   onAddFriend?: () => void;
+  onRemoveFriend?: () => void; // Для отписки/отмены запроса
   onMessage?: () => void;
+  currentUserId?: string; // ID текущего пользователя для проверки, является ли это собственный профиль
+  onProfileClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void; // Обработчик клика на профиль
 }
 
 export function UserCard({
@@ -20,8 +27,15 @@ export function UserCard({
   isVip = false,
   compact = false,
   isBlurred = false,
+  isHost = false,
+  isUnauthorized = false,
+  isFriend = false,
+  friendshipStatus,
   onAddFriend,
+  onRemoveFriend,
   onMessage,
+  currentUserId,
+  onProfileClick,
 }: UserCardProps) {
   const roleLabels: Record<string, string> = {
     developer: "Developer",
@@ -35,39 +49,56 @@ export function UserCard({
 
   if (compact) {
     return (
-      <div className="p-4 min-w-[280px]">
-        {/* Header */}
-        <div className="flex items-start gap-3 mb-3">
-          <Avatar
-            src={user.avatar_url}
-            alt={user.twitter_name}
-            size="lg"
-            isVip={user.subscription_tier === "vip"}
-            isVerified={user.is_verified}
-          />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-[var(--color-text-primary)] truncate">
-                {user.twitter_name}
-              </h3>
-              {user.is_verified && (
-                <Check className="w-4 h-4 text-[var(--color-primary)]" />
-              )}
-            </div>
-            {user.role && (
-              <p className="text-sm text-[var(--color-text-muted)]">
-                <span className="text-[var(--color-primary)]">Who:</span>{" "}
-                {roleLabels[user.role] || user.role}
-              </p>
+      <div className="p-4 min-w-[280px] w-fit">
+        {/* Content with blur if unauthorized */}
+        <div className={cn(isUnauthorized && "blur-sm")}>
+          {/* Header */}
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <Link 
+              href={`/profile/${user.twitter_handle}`}
+              className="flex items-start gap-3 hover:opacity-80 transition-opacity"
+              onClick={onProfileClick}
+            >
+              <Avatar
+                src={user.avatar_url}
+                alt={user.twitter_name}
+                size="lg"
+                isVip={user.subscription_tier === "vip"}
+                isVerified={user.is_verified}
+              />
+              <div className="flex flex-col min-w-0">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-semibold text-[var(--color-text-primary)] truncate">
+                    {user.twitter_name}
+                  </h3>
+                  {user.is_verified && (
+                    <Check className="w-4 h-4 text-[var(--color-primary)]" />
+                  )}
+                </div>
+                <div className="flex items-center gap-2 mt-1">
+                  {user.role && (
+                    <Badge variant="primary" className="w-fit">
+                      {roleLabels[user.role] || user.role}
+                    </Badge>
+                  )}
+                  {user.subscription_tier === "vip" && (
+                    <Badge variant="warning">Pro</Badge>
+                  )}
+                </div>
+              </div>
+            </Link>
+            {isHost && (
+              <Badge variant="outline" className="bg-[var(--color-surface)] text-[var(--color-text-primary)]">
+                Host
+              </Badge>
             )}
           </div>
-        </div>
 
         {/* Location */}
         <div className={cn("space-y-1 text-sm mb-3", isBlurred && !isVip && "blur-sm select-none")}>
           <p className="text-[var(--color-text-secondary)]">
             <span className="text-[var(--color-primary)]">Country:</span>{" "}
-            {user.country}
+            {(user as User & { countries?: { name: string } }).countries?.name || user.country || user.country_code || "Not specified"}
           </p>
           {isVip && user.city && (
             <p className="text-[var(--color-text-secondary)]">
@@ -91,9 +122,9 @@ export function UserCard({
         {isVip && (
           <div className="flex items-center gap-2 mb-4">
             <span className="text-xs text-[var(--color-text-muted)]">Socials:</span>
-            {user.socials?.twitter && (
+            {(user.socials?.twitter || user.twitter_handle) && (
               <a
-                href={`https://twitter.com/${user.twitter_handle}`}
+                href={user.socials?.twitter || `https://twitter.com/${user.twitter_handle}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="p-1.5 rounded-full bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
@@ -124,40 +155,78 @@ export function UserCard({
           </div>
         )}
 
-        {/* Actions */}
-        {isVip ? (
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onAddFriend}
-              className="flex-1 text-[var(--color-primary)] border-[var(--color-primary)]"
-            >
-              <UserPlus className="w-4 h-4 mr-1" />
-              Add fren
-            </Button>
-            <Button variant="outline" size="sm" onClick={onMessage} className="flex-1">
-              <MessageCircle className="w-4 h-4 mr-1" />
-              Send Message
-            </Button>
-          </div>
-        ) : (
+        </div>
+
+        {/* Actions - не показываем, если это собственный профиль */}
+        {user.id === currentUserId ? null : isUnauthorized ? (
           <div className="relative">
-            <div className="absolute inset-0 flex items-center justify-center">
+            <div className="absolute inset-0 flex items-center justify-center z-10">
               <Button variant="secondary" size="sm" asChild>
                 <Link href="/signup">Sign up / Log in</Link>
               </Button>
             </div>
-            <div className="blur-sm pointer-events-none opacity-50">
+            <div className={cn("pointer-events-none opacity-50", isUnauthorized && "blur-sm")}>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="flex-1">
-                  Add fren
+                <Button variant="outline" size="sm" className="flex-1 text-[var(--color-primary)] border-[var(--color-primary)] font-semibold text-sm leading-none tracking-normal" style={{ fontFamily: 'var(--font-inter)' }}>
+                  {/* <UserPlus className="w-4 h-4 mr-1" /> */}
+                  Add Fren
                 </Button>
-                <Button variant="outline" size="sm" className="flex-1">
+                <Button variant="outline" size="sm" className="flex-1 font-semibold text-sm leading-none tracking-normal border border-white" style={{ fontFamily: 'var(--font-inter)' }}>
+                  {/* <MessageCircle className="w-4 h-4 mr-1" /> */}
                   Send Message
                 </Button>
               </div>
             </div>
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            {/* Показываем статус Friends если пользователи друзья */}
+            {(isFriend || friendshipStatus === "accepted") ? (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled
+                className="flex-1 text-[var(--color-text-secondary)] border-[var(--color-surface-border)] font-semibold text-sm leading-none tracking-normal cursor-default"
+                style={{ fontFamily: 'var(--font-inter)' }}
+              >
+                <Check className="w-4 h-4 mr-1" />
+                Friends
+              </Button>
+            ) : friendshipStatus === "pending_sent" && onRemoveFriend ? (
+              // Показываем Cancel Request если запрос отправлен
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onRemoveFriend}
+                className="flex-1 text-[var(--color-text-secondary)] border-[var(--color-surface-border)] font-semibold text-sm leading-none tracking-normal cursor-pointer"
+                style={{ fontFamily: 'var(--font-inter)' }}
+              >
+                <X className="w-4 h-4 mr-1" />
+                Cancel Request
+              </Button>
+            ) : onAddFriend ? (
+              // Показываем Add Fren если нет дружбы
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onAddFriend}
+                className="flex-1 text-[var(--color-primary)] border-[var(--color-primary)] font-semibold text-sm leading-none tracking-normal cursor-pointer"
+                style={{ fontFamily: 'var(--font-inter)' }}
+              >
+                {/* <UserPlus className="w-4 h-4 mr-1" /> */}
+                Add Fren
+              </Button>
+            ) : null}
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={onMessage} 
+              className="flex-1 font-semibold text-sm leading-none tracking-normal border border-white cursor-pointer" 
+              style={{ fontFamily: 'var(--font-inter)' }}
+            >
+              {/* <MessageCircle className="w-4 h-4 mr-1" /> */}
+              Send Message
+            </Button>
           </div>
         )}
       </div>
@@ -166,115 +235,199 @@ export function UserCard({
 
   // Full card view
   return (
-    <div className="bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-xl p-5">
-      {/* Header */}
-      <div className="flex items-start gap-4 mb-4">
-        <Avatar
-          src={user.avatar_url}
-          alt={user.twitter_name}
-          size="xl"
-          isVip={user.subscription_tier === "vip"}
-          isVerified={user.is_verified}
-        />
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <h3 className="text-xl font-semibold text-[var(--color-text-primary)]">
-              {user.twitter_name}
-            </h3>
-            {user.is_verified && (
-              <Check className="w-5 h-5 text-[var(--color-primary)]" />
-            )}
-          </div>
-          <p className="text-[var(--color-text-muted)]">@{user.twitter_handle}</p>
-          {user.role && (
-            <Badge variant="primary" className="mt-2">
-              {roleLabels[user.role] || user.role}
+    <div className="bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-xl p-5 w-fit">
+      {/* Content with blur if unauthorized */}
+      <div className={cn(isUnauthorized && "blur-sm")}>
+        {/* Header */}
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <Link 
+            href={`/profile/${user.twitter_handle}`}
+            className="flex items-start gap-4 hover:opacity-80 transition-opacity"
+          >
+            <Avatar
+              src={user.avatar_url}
+              alt={user.twitter_name}
+              size="xl"
+              isVip={user.subscription_tier === "vip"}
+              isVerified={user.is_verified}
+            />
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="text-xl font-semibold text-[var(--color-text-primary)]">
+                  {user.twitter_name}
+                </h3>
+                {user.is_verified && (
+                  <Check className="w-5 h-5 text-[var(--color-primary)]" />
+                )}
+              </div>
+              <p className="text-[var(--color-text-muted)]">@{user.twitter_handle}</p>
+              <div className="flex items-center gap-2 mt-2">
+                {user.role && (
+                  <Badge variant="primary" className="w-fit">
+                    {roleLabels[user.role] || user.role}
+                  </Badge>
+                )}
+                {user.subscription_tier === "vip" && (
+                  <Badge variant="warning">{getSubscriptionDisplayName(user.subscription_tier)}</Badge>
+                )}
+              </div>
+            </div>
+          </Link>
+          {isHost && (
+            <Badge variant="outline" className="bg-[var(--color-surface)] text-[var(--color-text-primary)]">
+              Host
             </Badge>
           )}
         </div>
-      </div>
 
       {/* Info */}
       <div className="space-y-2 mb-4">
-        <div className="flex items-center gap-2 text-[var(--color-text-secondary)]">
-          <MapPin className="w-4 h-4" />
-          <span>
-            {user.country}
-            {isVip && user.city && `, ${user.city}`}
-          </span>
-        </div>
         {user.role && (
-          <div className="flex items-center gap-2 text-[var(--color-text-secondary)]">
-            <Briefcase className="w-4 h-4" />
+          <div className="text-[var(--color-text-secondary)]">
+            <span className="text-[var(--color-text-muted)]">Who:</span>{" "}
             <span>{roleLabels[user.role] || user.role}</span>
+          </div>
+        )}
+        <div className="text-[var(--color-text-secondary)]">
+          <span className="text-[var(--color-text-muted)]">Country:</span>{" "}
+          <span>{(user as User & { countries?: { name: string } }).countries?.name || user.country || user.country_code || "Not specified"}</span>
+        </div>
+        {user.city && (
+          <div className="text-[var(--color-text-secondary)]">
+            <span className="text-[var(--color-text-muted)]">City:</span>{" "}
+            <span>{user.city}</span>
           </div>
         )}
       </div>
 
       {/* Bio */}
       {user.bio && (
-        <p className="text-[var(--color-text-secondary)] mb-4 line-clamp-3">
-          {user.bio}
-        </p>
+        <div className="mb-4">
+          <p className="text-xs text-[var(--color-text-muted)] mb-1">BIO:</p>
+          <p className="text-[var(--color-text-secondary)] line-clamp-3">
+            {user.bio}
+          </p>
+        </div>
       )}
 
       {/* Tags */}
-      <div className="flex flex-wrap gap-2 mb-4">
-        {user.is_open_to_meet && (
+      {user.is_open_to_meet && !isHost && (
+        <div className="flex flex-wrap gap-2 mb-4">
           <Badge variant="success">Open to meet</Badge>
-        )}
-        {user.subscription_tier === "vip" && (
-          <Badge variant="warning">VIP</Badge>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Socials */}
-      <div className="flex items-center gap-3 mb-4">
-        <a
-          href={`https://twitter.com/${user.twitter_handle}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="p-2 rounded-full bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
-        >
-          <Twitter className="w-5 h-5" />
-        </a>
-        {user.socials?.instagram && (
-          <a
-            href={user.socials.instagram}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="p-2 rounded-full bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
-          >
-            <Instagram className="w-5 h-5" />
-          </a>
-        )}
-        {user.socials?.facebook && (
-          <a
-            href={user.socials.facebook}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="p-2 rounded-full bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
-          >
-            <Facebook className="w-5 h-5" />
-          </a>
-        )}
+      <div className="mb-4">
+        <p className="text-xs text-[var(--color-text-muted)] mb-2">Socials:</p>
+        <div className="flex items-center gap-2">
+          {(user.socials?.twitter || user.twitter_handle) && (
+            <a
+              href={user.socials?.twitter || `https://twitter.com/${user.twitter_handle}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-2 rounded-full bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+            >
+              <Twitter className="w-4 h-4" />
+            </a>
+          )}
+          {user.socials?.instagram && (
+            <a
+              href={user.socials.instagram}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-2 rounded-full bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+            >
+              <Instagram className="w-4 h-4" />
+            </a>
+          )}
+          {user.socials?.facebook && (
+            <a
+              href={user.socials.facebook}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-2 rounded-full bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+            >
+              <Facebook className="w-4 h-4" />
+            </a>
+          )}
+        </div>
       </div>
 
-      {/* Actions */}
-      <div className="flex gap-3">
-        <Button
-          variant="outline"
-          onClick={onAddFriend}
-          className="flex-1 text-[var(--color-primary)] border-[var(--color-primary)] hover:bg-[var(--color-primary)]/10"
-        >
-          <UserPlus className="w-4 h-4 mr-2" />
-          Add fren
-        </Button>
-        <Button variant="outline" onClick={onMessage} className="flex-1">
-          <MessageCircle className="w-4 h-4 mr-2" />
-          Send Message
-        </Button>
       </div>
+
+      {/* Actions - не показываем, если это собственный профиль */}
+      {user.id === currentUserId ? null : isUnauthorized ? (
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center justify-center z-10">
+            <Button variant="secondary" asChild>
+              <Link href="/signup">Sign up / Log in</Link>
+            </Button>
+          </div>
+          <div className={cn("pointer-events-none opacity-50", isUnauthorized && "blur-sm")}>
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1 text-[var(--color-primary)] border-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 font-semibold text-sm leading-none tracking-normal"
+                style={{ fontFamily: 'var(--font-inter)' }}
+              >
+                {/* <UserPlus className="w-4 h-4 mr-2" /> */}
+                Add Fren
+              </Button>
+              <Button variant="outline" className="flex-1 font-semibold text-sm leading-none tracking-normal border border-white" style={{ fontFamily: 'var(--font-inter)' }}>
+                {/* <MessageCircle className="w-4 h-4 mr-2" /> */}
+                Send Message
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="flex gap-3">
+          {/* Показываем статус Friends если пользователи друзья */}
+          {(isFriend || friendshipStatus === "accepted") ? (
+            <Button
+              variant="outline"
+              disabled
+              className="flex-1 text-[var(--color-text-secondary)] border-[var(--color-surface-border)] font-semibold text-sm leading-none tracking-normal cursor-default"
+              style={{ fontFamily: 'var(--font-inter)' }}
+            >
+              <Check className="w-4 h-4 mr-2" />
+              Friends
+            </Button>
+          ) : friendshipStatus === "pending_sent" && onRemoveFriend ? (
+            // Показываем Cancel Request если запрос отправлен
+            <Button
+              variant="outline"
+              onClick={onRemoveFriend}
+              className="flex-1 text-[var(--color-text-secondary)] border-[var(--color-surface-border)] hover:bg-[var(--color-surface-hover)] font-semibold text-sm leading-none tracking-normal cursor-pointer"
+              style={{ fontFamily: 'var(--font-inter)' }}
+            >
+              <X className="w-4 h-4 mr-2" />
+              Cancel Request
+            </Button>
+          ) : onAddFriend ? (
+            // Показываем Add Fren если нет дружбы
+              <Button
+              variant="outline"
+              onClick={onAddFriend}
+              className="flex-1 text-[var(--color-primary)] border-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 font-semibold text-sm leading-none tracking-normal cursor-pointer"
+              style={{ fontFamily: 'var(--font-inter)' }}
+            >
+              {/* <UserPlus className="w-4 h-4 mr-2" /> */}
+              Add Fren
+            </Button>
+          ) : null}
+          <Button 
+            variant="outline" 
+            onClick={onMessage} 
+            className="flex-1 font-semibold text-sm leading-none tracking-normal border border-white cursor-pointer" 
+            style={{ fontFamily: 'var(--font-inter)' }}
+          >
+            {/* <MessageCircle className="w-4 h-4 mr-2" /> */}
+            Send Message
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

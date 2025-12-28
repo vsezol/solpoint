@@ -2,14 +2,14 @@
 
 import { motion } from "motion/react";
 import { useInView } from "motion/react";
+import Image from "next/image";
 import { useRef } from "react";
-
 export function AboutSection() {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, amount: 0.3 });
 
   return (
-    <section id="about" className="py-24 bg-[var(--color-surface)]" ref={ref}>
+    <section id="about" className="pt-24 relative z-10" ref={ref}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section header */}
         <motion.div
@@ -36,45 +36,23 @@ export function AboutSection() {
             className="space-y-6"
           >
             <div>
-              <p className="text-sm font-medium text-[var(--color-primary)] mb-2 underline">
-                Our story
-              </p>
+              <h4 className="text-xl font-medium text-[var(--color-primary)] mb-2">
+                Our Story
+              </h4>
               <h3 className="text-2xl sm:text-3xl font-bold text-[var(--color-text-primary)]">
                 Why We Started
               </h3>
             </div>
 
             {/* Decorative 3D shape */}
-            <div className="relative w-48 h-64">
-              <svg viewBox="0 0 200 300" className="w-full h-full">
-                <defs>
-                  <linearGradient id="shapeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#9945ff" />
-                    <stop offset="100%" stopColor="#14f195" />
-                  </linearGradient>
-                </defs>
-                <path
-                  d="M100 20 C140 40 160 80 160 120 C160 160 140 200 100 220 C60 200 40 160 40 120 C40 80 60 40 100 20 Z"
-                  fill="none"
-                  stroke="url(#shapeGrad)"
-                  strokeWidth="4"
-                  className="animate-pulse"
-                />
-                <path
-                  d="M100 60 C120 70 140 100 140 130 C140 160 120 190 100 200 C80 190 60 160 60 130 C60 100 80 70 100 60 Z"
-                  fill="none"
-                  stroke="url(#shapeGrad)"
-                  strokeWidth="3"
-                  opacity="0.7"
-                />
-                <path
-                  d="M100 100 C110 105 120 120 120 140 C120 160 110 175 100 180 C90 175 80 160 80 140 C80 120 90 105 100 100 Z"
-                  fill="none"
-                  stroke="url(#shapeGrad)"
-                  strokeWidth="2"
-                  opacity="0.5"
-                />
-              </svg>
+            <div className="relative w-fit mt-5">
+              <Image 
+                src="/sol-crendel.webp" 
+                alt="Solana Crendel"
+                width={450}
+                height={445}
+                className="object-contain"
+              />
             </div>
           </motion.div>
 
@@ -166,7 +144,7 @@ export function AboutSection() {
             transition={{ duration: 0.6, delay: 0.4 }}
             className="space-y-4"
           >
-            <h4 className="text-sm font-medium text-[var(--color-primary)] underline">
+            <h4 className="text-xl font-medium text-[var(--color-primary)]">
               Our Mission
             </h4>
             <p className="text-[var(--color-text-secondary)]">
@@ -188,7 +166,7 @@ export function AboutSection() {
             transition={{ duration: 0.6, delay: 0.5 }}
             className="space-y-4"
           >
-            <h4 className="text-sm font-medium text-[var(--color-primary)] underline">
+            <h4 className="text-xl font-medium text-[var(--color-primary)]">
               Our Vision
             </h4>
             <p className="text-[var(--color-text-secondary)]">

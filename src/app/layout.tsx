@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
-import { Space_Grotesk, JetBrains_Mono } from "next/font/google";
+import { Space_Grotesk, JetBrains_Mono, Inter } from "next/font/google";
 import "./globals.css";
+import { AuthProvider } from "@/components/providers/auth-provider";
+import { QueryProvider } from "@/components/providers/query-provider";
+import { WalletContextProvider } from "@/components/providers/wallet-provider";
+import { GoogleAnalytics } from "@/components/analytics/google-analytics";
+import { IntentChecker } from "@/components/subscription/intent-checker";
 
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-display",
@@ -10,6 +15,12 @@ const spaceGrotesk = Space_Grotesk({
 
 const jetbrainsMono = JetBrains_Mono({
   variable: "--font-mono",
+  subsets: ["latin"],
+  display: "swap",
+});
+
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
   display: "swap",
 });
@@ -42,6 +53,11 @@ export const metadata: Metadata = {
     description:
       "Connect with Solana enthusiasts, find local hubs, and discover events worldwide.",
   },
+  icons: {
+    icon: "/logo_solpoint.svg",
+    shortcut: "/logo_solpoint.svg",
+    apple: "/logo_solpoint.svg",
+  },
 };
 
 export default function RootLayout({
@@ -52,9 +68,17 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body
-        className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} antialiased`}
+        className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} ${inter.variable} antialiased`}
       >
-        {children}
+        <GoogleAnalytics />
+        <QueryProvider>
+          <WalletContextProvider>
+            <AuthProvider>
+              <IntentChecker />
+              {children}
+            </AuthProvider>
+          </WalletContextProvider>
+        </QueryProvider>
       </body>
     </html>
   );

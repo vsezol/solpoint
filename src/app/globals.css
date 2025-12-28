@@ -18,6 +18,10 @@
   --color-surface-border: #243040;
   --color-surface-elevated: #182028;
   
+  /* Filter tag colors */
+  --color-filter-border: #00F68B;
+  --color-filter-bg: #072721;
+  
   /* Text */
   --color-text-primary: #ffffff;
   --color-text-secondary: #9ca3af;
@@ -36,8 +40,8 @@
   --color-marker-event: #14f195;
   
   /* Gradients */
-  --gradient-primary: linear-gradient(135deg, #14f195 0%, #9945ff 100%);
-  --gradient-glow: radial-gradient(circle at center, rgba(20, 241, 149, 0.15) 0%, transparent 70%);
+  --gradient-primary: linear-gradient(to right, #00F58D 0%, #00F58D 50%, #A73EFF 100%);
+  --gradient-glow: radial-gradient(circle at center, rgba(0, 245, 141, 0.15) 0%, transparent 70%);
   
   /* Font families */
   --font-display: "Space Grotesk", var(--font-sans);
@@ -93,6 +97,14 @@ body {
   color: var(--color-text-primary);
 }
 
+/* Input selection - same as focus color (bright green) */
+input[type="text"]::selection,
+input[type="search"]::selection,
+input::selection {
+  background: #14f195 !important;
+  color: #ffffff !important;
+}
+
 /* Focus styles */
 :focus-visible {
   outline: 2px solid var(--color-primary);
@@ -103,6 +115,34 @@ body {
 .leaflet-container {
   background: var(--color-surface) !important;
   font-family: var(--font-sans) !important;
+}
+
+/* Custom map style with exact colors from Figma */
+/* #452D9F - материки (continents/landmasses) - фиолетовый */
+/* #18E3C5 - вода (water) - бирюзовый */
+/* #A4E3B4 - границы стран (country borders) - светло-зеленый */
+
+.solpoint-map-container {
+  background: #18E3C5 !important; /* Бирюзовый цвет для воды */
+}
+
+.solpoint-map-container .leaflet-container {
+  background: #18E3C5 !important; /* Бирюзовый цвет для воды */
+}
+
+/* Убеждаемся, что все панели Leaflet имеют прозрачный фон, чтобы был виден цвет воды */
+.solpoint-map-container .leaflet-tile-pane,
+.solpoint-map-container .leaflet-overlay-pane,
+.solpoint-map-container .leaflet-shadow-pane,
+.solpoint-map-container .leaflet-marker-pane,
+.solpoint-map-container .leaflet-tooltip-pane,
+.solpoint-map-container .leaflet-popup-pane {
+  background: transparent !important;
+}
+
+/* Убеждаемся, что тайлы не перекрывают фон воды */
+.solpoint-map-container .leaflet-tile-container {
+  background: transparent !important;
 }
 
 .leaflet-popup-content-wrapper {
@@ -146,6 +186,42 @@ body {
     radial-gradient(ellipse at 20% 30%, rgba(153, 69, 255, 0.1) 0%, transparent 50%),
     radial-gradient(ellipse at 80% 70%, rgba(20, 241, 149, 0.08) 0%, transparent 50%),
     var(--color-background);
+}
+
+/* Grid pattern background */
+.grid-pattern-bg {
+  position: relative;
+  background: var(--color-background);
+}
+
+.grid-pattern-bg::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.15) 1px, transparent 0);
+  background-size: 50px 50px, 50px 50px, 50px 50px;
+  background-position: 0 0, 0 0, 0 0;
+  pointer-events: none;
+  opacity: 0.4;
+}
+
+.grid-pattern-bg::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(ellipse at 20% 30%, rgba(153, 69, 255, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 70%, rgba(20, 241, 149, 0.1) 0%, transparent 50%);
+  pointer-events: none;
 }
 
 /* Glass effect */
@@ -198,3 +274,4 @@ body {
   background-size: 200% 200%;
   animation: gradient-shift 8s ease infinite;
 }
+

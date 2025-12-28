@@ -1,78 +1,314 @@
 "use client";
 
-import { useState } from "react";
-import { Button, Card, Input, Badge } from "@/components/ui";
+import { useState, useEffect, useRef } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { Button, Card, Input } from "@/components/ui";
 import { Header, Footer } from "@/components/layout";
-import { Twitter, MapPin, Shield, Globe } from "lucide-react";
+import { Twitter, MapPin, Globe, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
+import { useAuth } from "@/hooks/use-auth";
+// import { useGeolocation } from "@/hooks/use-geolocation";
+import { trackEvent } from "@/lib/analytics";
+import { Search, Check } from "lucide-react";
+import { cn } from "@/lib/utils";
+import countries from "../../../supabase/coutries";
+import type { Country } from "@/store/map-store";
+import { MAJOR_CITIES } from "@/lib/countries";
 
 type Step = "twitter" | "location" | "profile" | "complete";
 
 export default function SignupPage() {
-  const [step, setStep] = useState<Step>("twitter");
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  // const { requestGeolocation } = useGeolocation(); // Закомментировано: временно отключаем автоматическое определение локации
+  const stepFromUrl = searchParams.get("step");
+  const inviteCode = searchParams.get("invite");
+  const message = searchParams.get("message");
+  const redirectTo = searchParams.get("redirect_to");
+  
+  const [step, setStep] = useState<Step>(
+    (stepFromUrl === "location" ? "location" : 
+     stepFromUrl === "profile" ? "profile" : 
+     "twitter") as Step
+  );
   const [isLoading, setIsLoading] = useState(false);
-  const [locationPermission, setLocationPermission] = useState<boolean | null>(null);
+  const [countrySearchQuery, setCountrySearchQuery] = useState("");
+  const [isCountryDropdownOpen, setIsCountryDropdownOpen] = useState(false);
+  const countryDropdownRef = useRef<HTMLDivElement>(null);
+  const [citySearchQuery, setCitySearchQuery] = useState("");
+  const [isCityDropdownOpen, setIsCityDropdownOpen] = useState(false);
+  const cityDropdownRef = useRef<HTMLDivElement>(null);
   const [formData, setFormData] = useState({
     country: "",
-    city: "",
+    country_code: "" as string | undefined,
+    city: "" as string | null,
     bio: "",
     role: "",
     isOpenToMeet: false,
   });
 
+  // Сохраняем invite код в localStorage для использования после регистрации
+  useEffect(() => {
+    if (inviteCode) {
+      localStorage.setItem("inviteCode", inviteCode);
+    }
+  }, [inviteCode]);
+
+  // Закрываем dropdown при клике вне его
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (countryDropdownRef.current && !countryDropdownRef.current.contains(event.target as Node)) {
+        setIsCountryDropdownOpen(false);
+      }
+      if (cityDropdownRef.current && !cityDropdownRef.current.contains(event.target as Node)) {
+        setIsCityDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Загружаем данные профиля при загрузке, если пользователь авторизован
+  useEffect(() => {
+    if (!authLoading && isAuthenticated && user) {
+      // Если пользователь уже авторизован и профиль заполнен, редиректим на профиль
+      // НО только если нет invite кода (чтобы не пропустить обработку invite)
+      if (user.country_code && step === "twitter" && !inviteCode) {
+        router.push("/profile");
+        return;
+      }
+      
+      // Если есть redirect_to и профиль заполнен, редиректим на него
+      if (redirectTo && user.country_code) {
+        router.push(redirectTo);
+        return;
+      }
+      
+      // Загружаем данные профиля в форму, если они есть
+      if (user.country_code || user.city || user.bio || user.role) {
+        setFormData((prev) => {
+          // Сохраняем данные из БД, но не перезаписываем если они уже были введены в форме
+          const shouldKeepCountryCode = prev.country_code && prev.country_code !== "";
+          const shouldKeepCity = prev.city && prev.city !== "";
+          const newCity = shouldKeepCity ? prev.city : (user.city || prev.city || "");
+          
+          // Синхронизируем citySearchQuery с загруженным городом
+          if (newCity && !shouldKeepCity) {
+            setCitySearchQuery(newCity);
+          }
+          
+          return {
+            ...prev,
+            country: prev.country || user.country || "",
+            country_code: shouldKeepCountryCode ? prev.country_code : (user.country_code || prev.country_code),
+            city: newCity,
+            bio: user.bio || prev.bio || "",
+            role: user.role || prev.role || "",
+            isOpenToMeet: user.is_open_to_meet !== undefined ? user.is_open_to_meet : prev.isOpenToMeet,
+          };
+        });
+      }
+      
+      // Если авторизован, но на шаге twitter, переходим к шагу location
+      // НО только если нет invite кода в URL (чтобы не пропустить шаг Twitter при регистрации по invite)
+      // Если есть invite код, пользователь должен видеть шаг Twitter, чтобы понять что он зарегистрировался
+      if (step === "twitter" && !user.country_code && !inviteCode) {
+        setStep("location");
+      }
+    }
+  }, [authLoading, isAuthenticated, user, router, step, inviteCode, redirectTo]);
+
   const handleTwitterSignup = async () => {
-    setIsLoading(true);
-    // TODO: Implement Twitter OAuth
-    // Simulate success for now
-    setTimeout(() => {
+    try {
+      setIsLoading(true);
+      trackEvent("signup_start", {
+        event_category: "Authentication",
+        method: "twitter",
+        has_invite: !!inviteCode,
+      });
+      // Редиректим на API route для инициации Twitter OAuth
+      // После успешной авторизации вернемся на /signup для продолжения процесса
+      // Передаем invite код и redirect_to через redirect_to, если они есть
+      const signupRedirect = (() => {
+        const params = new URLSearchParams();
+        if (inviteCode) {
+          params.set("invite", inviteCode);
+        }
+        if (redirectTo) {
+          params.set("redirect_to", redirectTo);
+        }
+        const queryString = params.toString();
+        return queryString ? `/signup?${queryString}` : "/signup";
+      })();
+      
+      window.location.href = `/api/auth/twitter?redirect_to=${encodeURIComponent(signupRedirect)}`;
+    } catch (error) {
       setIsLoading(false);
-      setStep("location");
-    }, 1500);
+      trackEvent("signup_error", {
+        event_category: "Authentication",
+        error_type: error instanceof Error ? error.message : "unknown",
+      });
+      alert("Failed to start registration. Please try again.");
+    }
   };
 
-  const handleLocationPermission = async (allow: boolean) => {
-    setLocationPermission(allow);
-    if (allow) {
-      // Request geolocation
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          async (position) => {
-            // Use IP-based API as fallback or for city/country
-            // For demo, use placeholder
-            setFormData((prev) => ({
-              ...prev,
-              country: "Kazakhstan",
-              city: "Almaty",
-            }));
-            setStep("profile");
-          },
-          () => {
-            // Geolocation denied, use IP-based
-            setFormData((prev) => ({
-              ...prev,
-              country: "Kazakhstan",
-              city: "Almaty",
-            }));
-            setStep("profile");
-          }
-        );
-      } else {
-        setStep("profile");
-      }
-    } else {
-      setStep("profile");
+ 
+
+  // Закомментировано: временно отключаем автоматическое определение локации через браузер
+  // const handleLocationPermission = async () => {
+  //   console.log("[Signup] handleLocationPermission called");
+  //   try {
+  //     console.log("[Signup] Calling requestGeolocation...");
+  //     const result = await requestGeolocation();
+  //     console.log("[Signup] requestGeolocation returned:", result);
+  //     
+  //     if (result) {
+  //       console.log("[Signup] Setting form data with result:", {
+  //         country: result.country,
+  //         country_code: result.country_code,
+  //         city: result.city,
+  //       });
+  //       setFormData((prev) => ({
+  //         ...prev,
+  //         country: result.country,
+  //         country_code: result.country_code,
+  //         city: result.city,
+  //       }));
+  //       trackEvent("location_detected", {
+  //         event_category: "Signup",
+  //         country: result.country,
+  //         country_code: result.country_code,
+  //         has_city: !!result.city,
+  //       });
+  //     } else {
+  //       console.warn("[Signup] requestGeolocation returned null");
+  //     }
+  //     console.log("[Signup] Moving to profile step");
+  //     setStep("profile");
+  //   } catch (error) {
+  //     console.error("[Signup] Error in handleLocationPermission:", error);
+  //     trackEvent("location_error", {
+  //       event_category: "Signup",
+  //       error_type: error instanceof Error ? error.message : "unknown",
+  //     });
+  //     // Продолжаем процесс даже если геолокация не удалась
+  //     setStep("profile");
+  //   }
+  // };
+
+  const handleLocationSubmit = () => {
+    // Проверяем, что страна выбрана
+    if (!formData.country_code || !formData.country) {
+      alert("Please select a country");
+      return;
+    }
+    trackEvent("location_entered_manually", {
+      event_category: "Signup",
+      country: formData.country,
+      country_code: formData.country_code,
+      has_city: !!formData.city,
+    });
+    setStep("profile");
+  };
+
+  const filteredCountries = countries.filter((c: Country) =>
+    c.name.toLowerCase().includes(countrySearchQuery.toLowerCase())
+  );
+
+  const filteredCities = formData.country_code
+    ? MAJOR_CITIES.filter((city) => {
+        const matchesCountry = city.countryCode === formData.country_code;
+        const matchesQuery = city.name.toLowerCase().includes(citySearchQuery.toLowerCase());
+        return matchesCountry && matchesQuery;
+      })
+    : [];
+
+  const handleSelectCountry = (country: Country) => {
+    setFormData((prev) => ({
+      ...prev,
+      country: country.name,
+      country_code: country.code,
+      city: "", // Сбрасываем город при смене страны
+    }));
+    setCountrySearchQuery("");
+    setIsCountryDropdownOpen(false);
+    setCitySearchQuery("");
+    setIsCityDropdownOpen(false);
+  };
+
+  const handleSelectCity = (cityName: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      city: cityName,
+    }));
+    setCitySearchQuery(cityName);
+    setIsCityDropdownOpen(false);
+  };
+
+  const handleCountryKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && filteredCountries.length > 0) {
+      handleSelectCountry(filteredCountries[0]);
+    }
+  };
+
+  const handleCityKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && filteredCities.length > 0) {
+      handleSelectCity(filteredCities[0].name);
     }
   };
 
   const handleProfileSubmit = async () => {
     setIsLoading(true);
-    // TODO: Save profile to Supabase
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      // Сохраняем профиль в Supabase
+      const response = await fetch("/api/profile/update", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          country: formData.country || null,
+          country_code: formData.country_code || null,
+          city: formData.city || null,
+          bio: formData.bio.trim() || null,
+          role: formData.role || null,
+          is_open_to_meet: formData.isOpenToMeet,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to save profile");
+      }
+
+      trackEvent("signup_success", {
+        event_category: "Authentication",
+        has_bio: !!formData.bio,
+        has_role: !!formData.role,
+        is_open_to_meet: formData.isOpenToMeet,
+        has_invite: !!inviteCode,
+      });
+
+      // Переходим к завершающему шагу
       setStep("complete");
-    }, 1000);
+      
+      // Если есть redirect_to, редиректим после небольшой задержки
+      if (redirectTo) {
+        setTimeout(() => {
+          router.push(redirectTo);
+        }, 2000);
+      }
+    } catch (error) {
+      // Можно добавить отображение ошибки пользователю
+      alert(error instanceof Error ? error.message : "Failed to save profile");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const roles = [
@@ -118,6 +354,16 @@ export default function SignupPage() {
             ))}
           </div>
 
+          {/* Message from callback */}
+          {message && (
+            <div className="mb-4 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+              <div className="flex items-start gap-2 text-blue-500">
+                <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                <p className="text-sm font-medium">{decodeURIComponent(message)}</p>
+              </div>
+            </div>
+          )}
+
           <AnimatePresence mode="wait">
             {/* Step 1: Twitter Auth */}
             {step === "twitter" && (
@@ -161,7 +407,7 @@ export default function SignupPage() {
               </motion.div>
             )}
 
-            {/* Step 2: Location Permission */}
+            {/* Step 2: Location Entry */}
             {step === "location" && (
               <motion.div
                 key="location"
@@ -176,52 +422,138 @@ export default function SignupPage() {
                 </div>
 
                 <h1 className="text-2xl font-bold text-center text-[var(--color-text-primary)] mb-2">
-                  Enable Location
+                  Enter Your Location
                 </h1>
                 <p className="text-center text-[var(--color-text-secondary)] mb-6">
                   Help others find you on the map
                 </p>
 
-                <div className="bg-[var(--color-surface-hover)] rounded-lg p-4 mb-6">
-                  <div className="flex items-start gap-3 mb-3">
-                    <Shield className="w-5 h-5 text-[var(--color-primary)] mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-[var(--color-text-primary)]">
-                        Your privacy is protected
-                      </p>
-                      <p className="text-xs text-[var(--color-text-muted)]">
-                        We only store country and city — never exact coordinates.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <Globe className="w-5 h-5 text-[var(--color-primary)] mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-[var(--color-text-primary)]">
-                        Country is public, city is VIP-only
-                      </p>
-                      <p className="text-xs text-[var(--color-text-muted)]">
-                        Free users see your country. VIP users can see your city.
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                <div className="space-y-4">
+                  {/* Country Selection */}
+                  <div>
+                    <label className="block text-sm text-[var(--color-text-muted)] mb-2">
+                      Country *
+                    </label>
+                    <div className="relative" ref={countryDropdownRef}>
+                      <Input
+                        placeholder={formData.country || "Select country"}
+                        icon={<Search className="w-4 h-4" />}
+                        value={countrySearchQuery}
+                        onChange={(e) => {
+                          setCountrySearchQuery(e.target.value);
+                          setIsCountryDropdownOpen(true);
+                        }}
+                        onFocus={() => setIsCountryDropdownOpen(true)}
+                        onKeyDown={handleCountryKeyDown}
+                      />
 
-                <div className="space-y-3">
+                      {isCountryDropdownOpen && filteredCountries.length > 0 && (
+                        <div className="absolute z-50 w-full mt-2 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                          {filteredCountries.map((country: Country) => (
+                            <button
+                              key={country.code}
+                              onClick={() => handleSelectCountry(country)}
+                              className={cn(
+                                "w-full px-3 py-2 text-left flex items-center justify-between hover:bg-[var(--color-surface-border)] transition-colors",
+                                formData.country_code === country.code && "bg-[var(--color-primary)]/10"
+                              )}
+                            >
+                              <span
+                                className={cn(
+                                  "text-sm",
+                                  formData.country_code === country.code
+                                    ? "text-[var(--color-primary)] font-medium"
+                                    : "text-[var(--color-text-primary)]"
+                                )}
+                              >
+                                {country.name}
+                              </span>
+                              {formData.country_code === country.code && (
+                                <Check className="w-4 h-4 text-[var(--color-primary)]" />
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* City Input */}
+                  <div>
+                    <label className="block text-sm text-[var(--color-text-muted)] mb-2">
+                      City (optional)
+                    </label>
+                    <div className="relative" ref={cityDropdownRef}>
+                      <Input
+                        placeholder="Enter city name"
+                        icon={<Search className="w-4 h-4" />}
+                        value={citySearchQuery}
+                        onChange={(e) => {
+                          setCitySearchQuery(e.target.value);
+                          setIsCityDropdownOpen(true);
+                          setFormData((prev) => ({
+                            ...prev,
+                            city: e.target.value,
+                          }));
+                        }}
+                        onFocus={() => {
+                          if (formData.country_code) {
+                            setIsCityDropdownOpen(true);
+                          }
+                        }}
+                        onKeyDown={handleCityKeyDown}
+                        disabled={!formData.country_code}
+                      />
+
+                      {isCityDropdownOpen && filteredCities.length > 0 && formData.country_code && (
+                        <div className="absolute z-50 w-full mt-2 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                          {filteredCities.map((city) => (
+                            <button
+                              key={`${city.name}-${city.countryCode}`}
+                              onClick={() => handleSelectCity(city.name)}
+                              className={cn(
+                                "w-full px-3 py-2 text-left flex items-center justify-between hover:bg-[var(--color-surface-border)] transition-colors",
+                                formData.city === city.name && "bg-[var(--color-primary)]/10"
+                              )}
+                            >
+                              <span
+                                className={cn(
+                                  "text-sm",
+                                  formData.city === city.name
+                                    ? "text-[var(--color-primary)] font-medium"
+                                    : "text-[var(--color-text-primary)]"
+                                )}
+                              >
+                                {city.name}
+                              </span>
+                              {formData.city === city.name && (
+                                <Check className="w-4 h-4 text-[var(--color-primary)]" />
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="bg-[var(--color-surface-hover)] rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <Globe className="w-5 h-5 text-[var(--color-primary)] mt-0.5 shrink-0" />
+                      <div>
+                        <p className="text-xs text-[var(--color-text-muted)]">
+                          Country is visible to everyone. City is visible only to PRO users.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
                   <Button
-                    onClick={() => handleLocationPermission(true)}
+                    onClick={handleLocationSubmit}
                     className="w-full"
                     size="lg"
+                    disabled={!formData.country_code}
                   >
-                    <MapPin className="w-5 h-5 mr-2" />
-                    Allow Location Access
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={() => handleLocationPermission(false)}
-                    className="w-full"
-                  >
-                    Skip for now
+                    Continue
                   </Button>
                 </div>
               </motion.div>
@@ -243,34 +575,6 @@ export default function SignupPage() {
                 </p>
 
                 <div className="space-y-4">
-                  {/* Location fields */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-sm text-[var(--color-text-muted)] mb-1">
-                        Country
-                      </label>
-                      <Input
-                        value={formData.country}
-                        onChange={(e) =>
-                          setFormData((prev) => ({ ...prev, country: e.target.value }))
-                        }
-                        placeholder="Your country"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm text-[var(--color-text-muted)] mb-1">
-                        City
-                      </label>
-                      <Input
-                        value={formData.city}
-                        onChange={(e) =>
-                          setFormData((prev) => ({ ...prev, city: e.target.value }))
-                        }
-                        placeholder="Your city"
-                      />
-                    </div>
-                  </div>
-
                   {/* Bio */}
                   <div>
                     <label className="block text-sm text-[var(--color-text-muted)] mb-1">
@@ -389,12 +693,24 @@ export default function SignupPage() {
                 </p>
 
                 <div className="space-y-3">
-                  <Button asChild className="w-full" size="lg">
-                    <Link href="/map">Explore the Map</Link>
-                  </Button>
-                  <Button variant="outline" asChild className="w-full">
-                    <Link href="/profile">View My Profile</Link>
-                  </Button>
+                  {redirectTo ? (
+                    <Button 
+                      onClick={() => router.push(redirectTo)}
+                      className="w-full" 
+                      size="lg"
+                    >
+                      Continue to Activation
+                    </Button>
+                  ) : (
+                    <>
+                      <Button asChild className="w-full" size="lg">
+                        <Link href="/map">Explore the Map</Link>
+                      </Button>
+                      <Button variant="outline" asChild className="w-full">
+                        <Link href="/profile">View My Profile</Link>
+                      </Button>
+                    </>
+                  )}
                 </div>
               </motion.div>
             )}
