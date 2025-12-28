@@ -59,6 +59,12 @@ export const ENTITY_CONFIGS: Record<EntityType, EntityTypeConfig> = {
     rolesEndpoint: (id, userId) => `/api/hubs/${id}/members/${userId}/role`,
     fields: [
       {
+        key: "image_url",
+        label: "Image",
+        type: "image-upload",
+        editable: true,
+      },
+      {
         key: "description",
         label: "Description",
         type: "textarea",
@@ -114,6 +120,12 @@ export const ENTITY_CONFIGS: Record<EntityType, EntityTypeConfig> = {
     rolesEndpoint: (id, userId) => `/api/communities/${id}/members/${userId}/role`,
     fields: [
       {
+        key: "image_url",
+        label: "Image",
+        type: "image-upload",
+        editable: true,
+      },
+      {
         key: "description",
         label: "Description",
         type: "textarea",
@@ -161,6 +173,12 @@ export const ENTITY_CONFIGS: Record<EntityType, EntityTypeConfig> = {
     membersEndpoint: (id, userId) => `/api/projects/${id}/members/${userId}`,
     rolesEndpoint: (id, userId) => `/api/projects/${id}/members/${userId}/role`,
     fields: [
+      {
+        key: "image_url",
+        label: "Image",
+        type: "image-upload",
+        editable: true,
+      },
       {
         key: "description",
         label: "Description",
@@ -217,6 +235,12 @@ export const ENTITY_CONFIGS: Record<EntityType, EntityTypeConfig> = {
     rolesEndpoint: (id, userId) => `/api/workspaces/${id}/members/${userId}/role`,
     fields: [
       {
+        key: "image_url",
+        label: "Image",
+        type: "image-upload",
+        editable: true,
+      },
+      {
         key: "description",
         label: "Description",
         type: "textarea",
@@ -261,6 +285,12 @@ export const ENTITY_CONFIGS: Record<EntityType, EntityTypeConfig> = {
     membersEndpoint: (id, userId) => `/api/events/${id}/members/${userId}`,
     rolesEndpoint: (id, userId) => `/api/events/${id}/members/${userId}/role`,
     fields: [
+      {
+        key: "image_url",
+        label: "Image",
+        type: "image-upload",
+        editable: true,
+      },
       {
         key: "description",
         label: "Description",
