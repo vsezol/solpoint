@@ -43,7 +43,6 @@ export async function GET(
         chat_id,
         sender_id,
         content,
-        reply_to_id,
         is_read,
         created_at,
         updated_at,
@@ -53,17 +52,6 @@ export async function GET(
           twitter_name,
           avatar_url,
           is_verified
-        ),
-        reply_to:messages!messages_reply_to_id_fkey (
-          id,
-          content,
-          sender_id,
-          sender:profiles!messages_sender_id_fkey (
-            id,
-            twitter_handle,
-            twitter_name,
-            avatar_url
-          )
         )
       `
       )
@@ -102,7 +90,7 @@ export async function POST(
 
     const { chatId } = await params;
     const body = await request.json();
-    const { content, reply_to_id } = body;
+    const { content } = body;
 
     if (!content || typeof content !== "string" || content.trim().length === 0) {
       return NextResponse.json(
@@ -134,29 +122,6 @@ export async function POST(
       );
     }
 
-    // If reply_to_id is provided, verify it exists and belongs to this chat
-    if (reply_to_id) {
-      const { data: replyMessage, error: replyError } = await supabase
-        .from("messages")
-        .select("id, chat_id")
-        .eq("id", reply_to_id)
-        .single();
-
-      if (replyError || !replyMessage) {
-        return NextResponse.json(
-          { error: "Reply message not found" },
-          { status: 404 }
-        );
-      }
-
-      if (replyMessage.chat_id !== chatId) {
-        return NextResponse.json(
-          { error: "Reply message does not belong to this chat" },
-          { status: 400 }
-        );
-      }
-    }
-
     // Create message
     const { data: message, error: messageError } = await supabase
       .from("messages")
@@ -164,7 +129,6 @@ export async function POST(
         chat_id: chatId,
         sender_id: authUser.id,
         content: content.trim(),
-        reply_to_id: reply_to_id || null,
       })
       .select(
         `
@@ -172,7 +136,6 @@ export async function POST(
         chat_id,
         sender_id,
         content,
-        reply_to_id,
         is_read,
         created_at,
         updated_at,
@@ -182,17 +145,6 @@ export async function POST(
           twitter_name,
           avatar_url,
           is_verified
-        ),
-        reply_to:messages!messages_reply_to_id_fkey (
-          id,
-          content,
-          sender_id,
-          sender:profiles!messages_sender_id_fkey (
-            id,
-            twitter_handle,
-            twitter_name,
-            avatar_url
-          )
         )
       `
       )

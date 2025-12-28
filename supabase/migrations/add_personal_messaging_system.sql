@@ -34,16 +34,10 @@ CREATE TABLE public.messages (
   chat_id UUID NOT NULL REFERENCES public.chats(id) ON DELETE CASCADE,
   sender_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   content TEXT NOT NULL CHECK (char_length(content) <= 5000),
-  reply_to_id UUID, -- Reference to another message for replies
   is_read BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
-
--- Add explicit foreign key constraint with name for reply_to_id
-ALTER TABLE public.messages
-ADD CONSTRAINT messages_reply_to_id_fkey
-FOREIGN KEY (reply_to_id) REFERENCES public.messages(id) ON DELETE SET NULL;
 
 -- Step 4: Create indexes for performance
 CREATE INDEX idx_chats_user1_id ON public.chats(user1_id);
@@ -53,7 +47,6 @@ CREATE INDEX idx_chats_user_pair ON public.chats(user1_id, user2_id);
 
 CREATE INDEX idx_messages_chat_id ON public.messages(chat_id);
 CREATE INDEX idx_messages_sender_id ON public.messages(sender_id);
-CREATE INDEX idx_messages_reply_to_id ON public.messages(reply_to_id) WHERE reply_to_id IS NOT NULL;
 CREATE INDEX idx_messages_created_at ON public.messages(created_at DESC);
 CREATE INDEX idx_messages_chat_created ON public.messages(chat_id, created_at DESC);
 CREATE INDEX idx_messages_is_read ON public.messages(is_read) WHERE is_read = false;
@@ -262,11 +255,10 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Step 14: Add comments for documentation
 COMMENT ON TABLE public.chats IS 'Chats between two users (personal messages)';
-COMMENT ON TABLE public.messages IS 'Messages in chats with reply support';
+COMMENT ON TABLE public.messages IS 'Messages in chats';
 COMMENT ON COLUMN public.chats.user1_id IS 'First user ID (always smaller than user2_id)';
 COMMENT ON COLUMN public.chats.user2_id IS 'Second user ID (always larger than user1_id)';
 COMMENT ON COLUMN public.chats.last_message_at IS 'Timestamp of the last message in the chat';
-COMMENT ON COLUMN public.messages.reply_to_id IS 'Reference to another message for replies';
 COMMENT ON FUNCTION public.get_or_create_chat IS 'Get existing chat or create new one between two users';
 COMMENT ON FUNCTION public.mark_messages_as_read IS 'Mark all unread messages in a chat as read for a user';
 COMMENT ON FUNCTION public.get_unread_messages_count IS 'Get total count of unread messages for a user';

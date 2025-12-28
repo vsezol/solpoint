@@ -14,7 +14,6 @@ interface Message {
   chat_id: string;
   sender_id: string;
   content: string;
-  reply_to_id: string | null;
   is_read: boolean;
   created_at: string;
   updated_at: string;
@@ -25,17 +24,6 @@ interface Message {
     avatar_url: string | null;
     is_verified: boolean;
   };
-  reply_to?: {
-    id: string;
-    content: string;
-    sender_id: string;
-    sender: {
-      id: string;
-      twitter_handle: string;
-      twitter_name: string;
-      avatar_url: string | null;
-    };
-  } | null;
 }
 
 interface ChatData {
@@ -62,7 +50,6 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [messageContent, setMessageContent] = useState("");
-  const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -152,7 +139,6 @@ export default function ChatPage() {
         },
         body: JSON.stringify({
           content,
-          reply_to_id: replyTo?.id || null,
         }),
       });
 
@@ -173,8 +159,6 @@ export default function ChatPage() {
         };
       });
 
-      setReplyTo(null);
-
       // Mark messages as read
       await fetch(`/api/chats/${chatId}/read`, {
         method: "PATCH",
@@ -187,14 +171,6 @@ export default function ChatPage() {
     }
   };
 
-  const handleReply = (message: Message) => {
-    setReplyTo(message);
-    // Scroll to input
-    messagesContainerRef.current?.scrollTo({
-      top: messagesContainerRef.current.scrollHeight,
-      behavior: "smooth",
-    });
-  };
 
   if (loading) {
     return (
@@ -230,7 +206,7 @@ export default function ChatPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      <main className="flex-1 flex flex-col max-w-4xl w-full mx-auto px-4 py-6">
+      <main className="flex-1 flex flex-col max-w-4xl w-full mx-auto px-4 py-6 mt-[50px]">
         {/* Chat Header */}
         <div className="flex items-center gap-3 pb-4 border-b border-[var(--color-surface-border)] mb-4">
           <Button
@@ -299,22 +275,6 @@ export default function ChatPage() {
                       isOwnMessage ? "items-end" : "items-start"
                     }`}
                   >
-                    {message.reply_to && (
-                      <div
-                        className={`mb-1 p-2 text-xs rounded border-l-2 ${
-                          isOwnMessage
-                            ? "bg-[var(--color-surface-hover)] border-[var(--color-primary)]"
-                            : "bg-[var(--color-surface)] border-[var(--color-surface-border)]"
-                        }`}
-                      >
-                        <div className="font-medium text-[var(--color-text-secondary)]">
-                          {message.reply_to.sender.twitter_name}
-                        </div>
-                        <div className="text-[var(--color-text-muted)] truncate">
-                          {message.reply_to.content}
-                        </div>
-                      </div>
-                    )}
                     <div
                       className={`px-4 py-2 rounded-lg ${
                         isOwnMessage
@@ -333,16 +293,6 @@ export default function ChatPage() {
                           minute: "2-digit",
                         })}
                       </span>
-                      {!isOwnMessage && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 px-2 text-xs"
-                          onClick={() => handleReply(message)}
-                        >
-                          Reply
-                        </Button>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -351,28 +301,6 @@ export default function ChatPage() {
           )}
           <div ref={messagesEndRef} />
         </div>
-
-        {/* Reply Preview */}
-        {replyTo && (
-          <div className="mb-2 p-2 bg-[var(--color-surface)] rounded-lg border border-[var(--color-surface-border)] flex items-center justify-between">
-            <div className="flex-1">
-              <div className="text-xs text-[var(--color-text-secondary)] mb-1">
-                Replying to {replyTo.sender.twitter_name}
-              </div>
-              <div className="text-sm text-[var(--color-text-muted)] truncate">
-                {replyTo.content}
-              </div>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setReplyTo(null)}
-              className="ml-2"
-            >
-              ×
-            </Button>
-          </div>
-        )}
 
         {/* Message Input */}
         <form onSubmit={handleSendMessage} className="flex gap-2">

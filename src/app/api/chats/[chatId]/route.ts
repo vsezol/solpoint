@@ -67,7 +67,6 @@ export async function GET(
         chat_id,
         sender_id,
         content,
-        reply_to_id,
         is_read,
         created_at,
         updated_at,
@@ -77,17 +76,6 @@ export async function GET(
           twitter_name,
           avatar_url,
           is_verified
-        ),
-        reply_to:messages!messages_reply_to_id_fkey (
-          id,
-          content,
-          sender_id,
-          sender:profiles!messages_sender_id_fkey (
-            id,
-            twitter_handle,
-            twitter_name,
-            avatar_url
-          )
         )
       `
       )
