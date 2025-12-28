@@ -74,6 +74,7 @@ export function ProfileContent({
     city?: string | null;
     start_date?: string;
   }>>([]);
+  const [isLoadingAffiliations, setIsLoadingAffiliations] = useState(true);
   const [isAffiliationsModalOpen, setIsAffiliationsModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [createEntityType, setCreateEntityType] = useState<EntityType>("hub");
@@ -205,6 +206,7 @@ export function ProfileContent({
   };
 
   const fetchAffiliations = async () => {
+    setIsLoadingAffiliations(true);
     try {
       const response = await fetch("/api/profile/affiliations");
       
@@ -219,6 +221,8 @@ export function ProfileContent({
     } catch (error) {
       console.error("Error fetching affiliations:", error);
       setAffiliations([]);
+    } finally {
+      setIsLoadingAffiliations(false);
     }
   };
 
@@ -719,75 +723,100 @@ export function ProfileContent({
             {/* Affiliations */}
             {isOwnProfile && (
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg text-[var(--color-text-primary)]">
-                    <span className="font-bold">{affiliations.length}</span> <span className="text-[var(--color-text-secondary)] font-normal">Affiliations</span>
-                  </h3>
-                </div>
-                {affiliations.length > 0 ? (
+                {isLoadingAffiliations ? (
                   <>
+                    <div className="flex items-center justify-between">
+                      <div className="h-6 bg-[var(--color-surface-hover)] rounded w-32 animate-pulse"></div>
+                    </div>
                     <div className="flex items-center gap-3">
                       <div className="flex items-center -space-x-2">
-                        {affiliations.slice(0, 3).map((affiliation) => (
-                          <Link
-                            key={affiliation.id}
-                            href={
-                              affiliation.type === "hub"
-                                ? `/hubs/${affiliation.slug || affiliation.id}`
-                                : affiliation.type === "community"
-                                ? `/communities/${affiliation.slug || affiliation.id}`
-                                : affiliation.type === "project"
-                                ? `/projects/${affiliation.slug || affiliation.id}`
-                                : affiliation.type === "event"
-                                ? `/events/${affiliation.slug || affiliation.id}`
-                                : `/profile/${user.twitter_handle}`
-                            }
-                            className="w-8 h-8 rounded-full bg-[var(--color-surface-hover)] border-2 border-[var(--color-background)] flex items-center justify-center overflow-hidden hover:z-10 transition-transform hover:scale-110"
-                          >
-                            {affiliation.image_url ? (
-                              <Image
-                                src={affiliation.image_url}
-                                alt={affiliation.name}
-                                width={32}
-                                height={32}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-xs font-medium">
-                                {affiliation.name?.[0]?.toUpperCase() || "?"}
-                              </div>
-                            )}
-                          </Link>
+                        {[1, 2, 3].map((i) => (
+                          <div
+                            key={i}
+                            className="w-8 h-8 rounded-full bg-[var(--color-surface-hover)] border-2 border-[var(--color-background)] animate-pulse"
+                          />
                         ))}
                       </div>
-                      {affiliations.length > 0 && (
-                        <button
-                          onClick={handleShowAffiliationsList}
-                          className="text-sm text-[var(--color-primary)] hover:underline ml-auto cursor-pointer"
-                        >
-                          Show list
-                        </button>
-                      )}
+                      <div className="h-4 bg-[var(--color-surface-hover)] rounded w-16 ml-auto animate-pulse"></div>
+                    </div>
+                    <div className="pt-4 border-t border-[var(--color-surface-border)]">
+                      <div className="h-4 bg-[var(--color-surface-hover)] rounded w-40 mb-3 animate-pulse"></div>
+                      <div className="h-9 bg-[var(--color-surface-hover)] rounded w-48 animate-pulse"></div>
                     </div>
                   </>
                 ) : (
-                  <p className="text-sm text-[var(--color-text-secondary)]">
-                    No affiliations yet
-                  </p>
+                  <>
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg text-[var(--color-text-primary)]">
+                        <span className="font-bold">{affiliations.length}</span> <span className="text-[var(--color-text-secondary)] font-normal">Affiliations</span>
+                      </h3>
+                    </div>
+                    {affiliations.length > 0 ? (
+                      <>
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center -space-x-2">
+                            {affiliations.slice(0, 3).map((affiliation) => (
+                              <Link
+                                key={affiliation.id}
+                                href={
+                                  affiliation.type === "hub"
+                                    ? `/hubs/${affiliation.slug || affiliation.id}`
+                                    : affiliation.type === "community"
+                                    ? `/communities/${affiliation.slug || affiliation.id}`
+                                    : affiliation.type === "project"
+                                    ? `/projects/${affiliation.slug || affiliation.id}`
+                                    : affiliation.type === "event"
+                                    ? `/events/${affiliation.slug || affiliation.id}`
+                                    : `/profile/${user.twitter_handle}`
+                                }
+                                className="w-8 h-8 rounded-full bg-[var(--color-surface-hover)] border-2 border-[var(--color-background)] flex items-center justify-center overflow-hidden hover:z-10 transition-transform hover:scale-110"
+                              >
+                                {affiliation.image_url ? (
+                                  <Image
+                                    src={affiliation.image_url}
+                                    alt={affiliation.name}
+                                    width={32}
+                                    height={32}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-xs font-medium">
+                                    {affiliation.name?.[0]?.toUpperCase() || "?"}
+                                  </div>
+                                )}
+                              </Link>
+                            ))}
+                          </div>
+                          {affiliations.length > 0 && (
+                            <button
+                              onClick={handleShowAffiliationsList}
+                              className="text-sm text-[var(--color-primary)] hover:underline ml-auto cursor-pointer"
+                            >
+                              Show list
+                            </button>
+                          )}
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-sm text-[var(--color-text-secondary)]">
+                        No affiliations yet
+                      </p>
+                    )}
+                    <div className="pt-4 border-t border-[var(--color-surface-border)]">
+                      <p className="text-sm text-[var(--color-text-secondary)] mb-3">
+                        Founder or organizer?
+                      </p>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        className="w-fit"
+                        onClick={handleAddEntityClick}
+                      >
+                        Add your project to the map
+                      </Button>
+                    </div>
+                  </>
                 )}
-                <div className="pt-4 border-t border-[var(--color-surface-border)]">
-                  <p className="text-sm text-[var(--color-text-secondary)] mb-3">
-                    Founder or organizer?
-                  </p>
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    className="w-fit"
-                    onClick={handleAddEntityClick}
-                  >
-                    Add your project to the map
-                  </Button>
-                </div>
               </div>
             )}
           </div>
@@ -1052,7 +1081,7 @@ export function ProfileContent({
                 {upcomingEvents.slice(0, 3).map((event) => (
                   <Link
                     key={event.id}
-                    href={`/events/${(event as Event & { slug?: string }).slug || event.id}`}
+                    href={`/events/${event.slug || event.id}`}
                     className="flex items-center gap-3 p-2 rounded-lg hover:bg-[var(--color-surface-hover)] transition-colors"
                   >
                     <div className="w-10 h-10 rounded-full bg-[var(--color-primary)]/20 flex items-center justify-center flex-shrink-0">
