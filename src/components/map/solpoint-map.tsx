@@ -479,13 +479,13 @@ export function SolPointMap({
         );
       }
       case "event":
-        return <EventCard event={marker.data as Event} isVip={isVip} isAuthenticated={isAuthenticated} compact />;
+        return <EventCard event={marker.data as Event} isVip={isVip} isAuthenticated={isAuthenticated} compact isBlurred={!isAuthenticated} />;
       case "hub":
-        return <HubCard hub={marker.data as Hub} compact entityType="hub" />;
+        return <HubCard hub={marker.data as Hub} compact entityType="hub" isBlurred={!isAuthenticated} />;
       case "workspace":
-        return <HubCard hub={marker.data as Workspace} compact entityType="workspace" />;
+        return <HubCard hub={marker.data as Workspace} compact entityType="workspace" isBlurred={!isAuthenticated} />;
       case "community":
-        return <HubCard hub={marker.data as Community} compact entityType="community" />;
+        return <HubCard hub={marker.data as Community} compact entityType="community" isBlurred={!isAuthenticated} />;
       default:
         return null;
     }

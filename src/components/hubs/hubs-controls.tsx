@@ -2,14 +2,26 @@
 
 import { useState } from "react";
 import { Input, FilterTag } from "@/components/ui";
+import { AuthRequiredModal } from "@/components/ui/auth-required-modal";
 import { Search, ArrowUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useHubsStore } from "@/store/hubs-store";
 import type { EntityTypeFilter, SortOption } from "@/store/hubs-store";
+import { useAuth } from "@/hooks/use-auth";
 
 export function HubsControls() {
   const [isSortOpen, setIsSortOpen] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const { isAuthenticated } = useAuth();
   const { searchQuery, setSearchQuery, sortBy, setSortBy, entityTypeFilter, setEntityTypeFilter } = useHubsStore();
+
+  const handleFilterAction = (action: () => void) => {
+    if (!isAuthenticated) {
+      setShowAuthModal(true);
+      return;
+    }
+    action();
+  };
 
   const entityTypeButtons: { value: EntityTypeFilter; label: string }[] = [
     { value: "all", label: "All" },
@@ -36,7 +48,18 @@ export function HubsControls() {
             placeholder="Search by name, city, or country..."
             icon={<Search className="w-4 h-4" />}
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              if (!isAuthenticated) {
+                setShowAuthModal(true);
+                return;
+              }
+              setSearchQuery(e.target.value);
+            }}
+            onFocus={() => {
+              if (!isAuthenticated) {
+                setShowAuthModal(true);
+              }
+            }}
           />
         </div>
 
@@ -46,7 +69,7 @@ export function HubsControls() {
             <FilterTag
               key={button.value}
               isActive={entityTypeFilter === button.value}
-              onClick={() => setEntityTypeFilter(button.value)}
+              onClick={() => handleFilterAction(() => setEntityTypeFilter(button.value))}
             >
               {button.label}
             </FilterTag>
@@ -60,7 +83,7 @@ export function HubsControls() {
         <span className="text-sm text-[var(--color-text-secondary)]">Sort by:</span>
         <div className="relative">
           <button
-            onClick={() => setIsSortOpen(!isSortOpen)}
+            onClick={() => handleFilterAction(() => setIsSortOpen(!isSortOpen))}
             className={cn(
               "px-3 py-1.5 rounded-lg text-sm font-medium transition-colors",
               "border border-[var(--color-filter-border)] bg-[var(--color-filter-bg)] text-[var(--color-text-primary)]",
@@ -100,6 +123,13 @@ export function HubsControls() {
           )}
         </div>
       </div>
+
+      <AuthRequiredModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        title="This feature is available only for logged-in users"
+        description="Please sign up or log in to use filters, search, and sorting."
+      />
     </div>
   );
 }

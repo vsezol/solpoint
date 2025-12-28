@@ -11,9 +11,10 @@ interface HubCardProps {
   hub: Hub | Community | Workspace | Project;
   compact?: boolean;
   entityType?: "hub" | "community" | "workspace" | "project";
+  isBlurred?: boolean;
 }
 
-export function HubCard({ hub, compact = false, entityType }: HubCardProps) {
+export function HubCard({ hub, compact = false, entityType, isBlurred = false }: HubCardProps) {
 
   // Определяем тип сущности и путь
   const getEntityPath = (slug: string): string => {
@@ -143,52 +144,72 @@ export function HubCard({ hub, compact = false, entityType }: HubCardProps) {
         </div>
 
         {/* Actions */}
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex-1 text-[var(--color-primary)] border-[var(--color-primary)] cursor-pointer"
-            onClick={(e) => {
-              e.stopPropagation();
-              trackEvent("hub_share_click", {
-                event_category: "Hubs",
-                event_label: hub.slug || hub.id,
-                hub_id: hub.id,
-                hub_slug: hub.slug,
-                hub_name: hub.name,
-                source: "hub_card_compact",
-              });
-              // TODO: Implement share functionality
-            }}
-          >
-            <Share2 className="w-4 h-4 mr-1" />
-            Share
-          </Button>
-          {hub.slug && (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="flex-1 cursor-pointer"
+        {!isBlurred ? (
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1 text-[var(--color-primary)] border-[var(--color-primary)] cursor-pointer"
               onClick={(e) => {
                 e.stopPropagation();
-                trackEvent("hub_card_click", {
+                trackEvent("hub_share_click", {
                   event_category: "Hubs",
                   event_label: hub.slug || hub.id,
                   hub_id: hub.id,
                   hub_slug: hub.slug,
                   hub_name: hub.name,
-                  source: "hub_card_compact_details_button",
+                  source: "hub_card_compact",
                 });
+                // TODO: Implement share functionality
               }}
-              asChild
             >
-              <Link href={getEntityPath(hub.slug)}>
-                <ExternalLink className="w-4 h-4 mr-1" />
-                Details
-              </Link>
+              <Share2 className="w-4 h-4 mr-1" />
+              Share
             </Button>
-          )}
-        </div>
+            {hub.slug && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="flex-1 cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  trackEvent("hub_card_click", {
+                    event_category: "Hubs",
+                    event_label: hub.slug || hub.id,
+                    hub_id: hub.id,
+                    hub_slug: hub.slug,
+                    hub_name: hub.name,
+                    source: "hub_card_compact_details_button",
+                  });
+                }}
+                asChild
+              >
+                <Link href={getEntityPath(hub.slug)}>
+                  <ExternalLink className="w-4 h-4 mr-1" />
+                  Details
+                </Link>
+              </Button>
+            )}
+          </div>
+        ) : (
+          <div className="relative" onClick={(e) => e.stopPropagation()}>
+            <div className="absolute inset-0 flex items-center justify-center z-10">
+              <Button variant="secondary" size="sm" asChild>
+                <Link href="/signup" onClick={(e) => e.stopPropagation()}>Sign up / Log in</Link>
+              </Button>
+            </div>
+            <div className="blur-sm pointer-events-none opacity-50">
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" className="flex-1">
+                  Share
+                </Button>
+                <Button variant="outline" size="sm" className="flex-1">
+                  Details
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
       );
     }

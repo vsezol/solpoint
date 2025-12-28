@@ -39,3 +39,5 @@ export type { FilterRadioGroupProps, FilterRadioOption } from "./filter-radio-gr
 export { CheckBox } from "./checkbox";
 export type { CheckBoxProps } from "./checkbox";
 
+export { AuthRequiredModal } from "./auth-required-modal";
+

@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Input } from "@/components/ui";
+import { AuthRequiredModal } from "@/components/ui/auth-required-modal";
 import type { MapFilters, UserRole, EventType, ContentTypeFilter } from "@/types";
 import { cn } from "@/lib/utils";
 import CountrySelect from "@/app/map/country-select";
 import { useMapStore } from "@/store/map-store";
 import { trackEvent } from "@/lib/analytics";
+import { useAuth } from "@/hooks/use-auth";
 
 const userRoles: { value: UserRole; label: string; description?: string }[] = [
   { value: "developer", label: "Developer" },
@@ -37,6 +39,16 @@ export function MapFiltersPanel({
   isVip = false,
 }: MapFiltersProps) {
   const { country, setCountry } = useMapStore();
+  const { isAuthenticated } = useAuth();
+  const [showAuthModal, setShowAuthModal] = useState(false);
+
+  const handleFilterAction = (action: () => void) => {
+    if (!isAuthenticated) {
+      setShowAuthModal(true);
+      return;
+    }
+    action();
+  };
 
   // Синхронизируем выбранную страну из store с фильтрами
   useEffect(() => {
@@ -79,50 +91,56 @@ export function MapFiltersPanel({
   };
 
   const handleContentTypeChange = (contentType: ContentTypeFilter) => {
-    trackEvent("map_filter_change", {
-      event_category: "Map",
-      filter_type: "content_type",
-      filter_value: contentType,
-    });
-    onFiltersChange({
-      ...filters,
-      contentType,
-      // Автоматически обновляем showUsers, showEvents, showHubs, showCommunities и showWorkspaces в зависимости от выбора
-      showUsers: contentType === "all" || contentType === "users",
-      showEvents: contentType === "all" || contentType === "events",
-      showHubs: contentType === "all" || contentType === "hubs" || contentType === "workspaces",
-      showCommunities: contentType === "all" || contentType === "hubs" || contentType === "workspaces",
-      showWorkspaces: contentType === "all" || contentType === "hubs" || contentType === "workspaces",
+    handleFilterAction(() => {
+      trackEvent("map_filter_change", {
+        event_category: "Map",
+        filter_type: "content_type",
+        filter_value: contentType,
+      });
+      onFiltersChange({
+        ...filters,
+        contentType,
+        // Автоматически обновляем showUsers, showEvents, showHubs, showCommunities и showWorkspaces в зависимости от выбора
+        showUsers: contentType === "all" || contentType === "users",
+        showEvents: contentType === "all" || contentType === "events",
+        showHubs: contentType === "all" || contentType === "hubs" || contentType === "workspaces",
+        showCommunities: contentType === "all" || contentType === "hubs" || contentType === "workspaces",
+        showWorkspaces: contentType === "all" || contentType === "hubs" || contentType === "workspaces",
+      });
     });
   };
 
   const toggleRole = (role: UserRole) => {
-    const currentRoles = filters.userRoles || [];
-    const newRoles = currentRoles.includes(role)
-      ? currentRoles.filter((r) => r !== role)
-      : [...currentRoles, role];
-    trackEvent("map_filter_change", {
-      event_category: "Map",
-      filter_type: "user_role",
-      filter_value: role,
-      is_added: !currentRoles.includes(role),
-    });
-    onFiltersChange({
-      ...filters,
-      userRoles: newRoles.length > 0 ? newRoles : undefined,
+    handleFilterAction(() => {
+      const currentRoles = filters.userRoles || [];
+      const newRoles = currentRoles.includes(role)
+        ? currentRoles.filter((r) => r !== role)
+        : [...currentRoles, role];
+      trackEvent("map_filter_change", {
+        event_category: "Map",
+        filter_type: "user_role",
+        filter_value: role,
+        is_added: !currentRoles.includes(role),
+      });
+      onFiltersChange({
+        ...filters,
+        userRoles: newRoles.length > 0 ? newRoles : undefined,
+      });
     });
   };
 
   const toggleEventType = (eventType: EventType) => {
-    const isRemoving = filters.eventType === eventType;
-    trackEvent("map_filter_change", {
-      event_category: "Map",
-      filter_type: "event_type",
-      filter_value: isRemoving ? "none" : eventType,
-    });
-    onFiltersChange({
-      ...filters,
-      eventType: isRemoving ? undefined : eventType,
+    handleFilterAction(() => {
+      const isRemoving = filters.eventType === eventType;
+      trackEvent("map_filter_change", {
+        event_category: "Map",
+        filter_type: "event_type",
+        filter_value: isRemoving ? "none" : eventType,
+      });
+      onFiltersChange({
+        ...filters,
+        eventType: isRemoving ? undefined : eventType,
+      });
     });
   };
 
@@ -202,9 +220,18 @@ export function MapFiltersPanel({
           <Input
             placeholder="Enter city..."
             value={filters.city || ""}
-            onChange={(e) =>
-              onFiltersChange({ ...filters, city: e.target.value || undefined })
-            }
+            onChange={(e) => {
+              if (!isAuthenticated) {
+                setShowAuthModal(true);
+                return;
+              }
+              onFiltersChange({ ...filters, city: e.target.value || undefined });
+            }}
+            onFocus={() => {
+              if (!isAuthenticated) {
+                setShowAuthModal(true);
+              }
+            }}
           />
         </div>
 
@@ -268,32 +295,34 @@ export function MapFiltersPanel({
             </span>
             <button
               onClick={() => {
-                const newOpenToMeet = !filters.openToMeet;
-                if (newOpenToMeet) {
-                  // При включении "Find frens" сбрасываем все остальные фильтры
-                  setCountry(null);
-                  onFiltersChange({
-                    showUsers: true,
-                    showEvents: false,
-                    showHubs: false,
-                    showCommunities: false,
-                    showWorkspaces: false,
-                    contentType: "users",
-                    userRoles: undefined,
-                    eventType: undefined,
-                    openToMeet: true,
-                    activeOnly: undefined,
-                    country: undefined,
-                    countryCode: undefined,
-                    city: undefined,
-                  });
-                } else {
-                  // При выключении просто убираем фильтр openToMeet
-                  onFiltersChange({
-                    ...filters,
-                    openToMeet: false,
-                  });
-                }
+                handleFilterAction(() => {
+                  const newOpenToMeet = !filters.openToMeet;
+                  if (newOpenToMeet) {
+                    // При включении "Find frens" сбрасываем все остальные фильтры
+                    setCountry(null);
+                    onFiltersChange({
+                      showUsers: true,
+                      showEvents: false,
+                      showHubs: false,
+                      showCommunities: false,
+                      showWorkspaces: false,
+                      contentType: "users",
+                      userRoles: undefined,
+                      eventType: undefined,
+                      openToMeet: true,
+                      activeOnly: undefined,
+                      country: undefined,
+                      countryCode: undefined,
+                      city: undefined,
+                    });
+                  } else {
+                    // При выключении просто убираем фильтр openToMeet
+                    onFiltersChange({
+                      ...filters,
+                      openToMeet: false,
+                    });
+                  }
+                });
               }}
               className={cn(
                 "w-11 h-6 rounded-full transition-colors relative",
@@ -422,6 +451,13 @@ export function MapFiltersPanel({
           </div>
         </div>
       ) : null}
+
+      <AuthRequiredModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        title="Sign up or log in to use filters"
+        description="Please sign up or log in to use map filters and search."
+      />
     </div>
   );
 }

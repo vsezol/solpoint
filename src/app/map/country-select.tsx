@@ -4,15 +4,19 @@ import { Country, useMapStore } from "@/store/map-store";
 import { useState, useRef, useEffect } from "react";
 import countries from "../../../supabase/coutries";
 import { Input } from "@/components/ui";
+import { AuthRequiredModal } from "@/components/ui/auth-required-modal";
 import { Search, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { trackEvent } from "@/lib/analytics";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function CountrySelect() {
   const { country, setCountry } = useMapStore();
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const { isAuthenticated } = useAuth();
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   const filtered = countries.filter((c) =>
     c.name.toLowerCase().includes(query.toLowerCase())
@@ -31,6 +35,11 @@ export default function CountrySelect() {
   }, []);
 
   const handleSelectCountry = (c: Country) => {
+    if (!isAuthenticated) {
+      setShowAuthModal(true);
+      setIsOpen(false);
+      return;
+    }
     trackEvent("map_filter_change", {
       event_category: "Map",
       filter_type: "country",
@@ -55,10 +64,20 @@ export default function CountrySelect() {
         icon={<Search className="w-4 h-4" />}
         value={query}
         onChange={(e) => {
+          if (!isAuthenticated) {
+            setShowAuthModal(true);
+            return;
+          }
           setQuery(e.target.value);
           setIsOpen(true);
         }}
-        onFocus={() => setIsOpen(true)}
+        onFocus={() => {
+          if (!isAuthenticated) {
+            setShowAuthModal(true);
+            return;
+          }
+          setIsOpen(true);
+        }}
         onKeyDown={handleKeyDown}
       />
 
@@ -90,6 +109,13 @@ export default function CountrySelect() {
           ))}
         </div>
       )}
+
+      <AuthRequiredModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        title="Sign up or log in to use filters"
+        description="Please sign up or log in to use map filters and search."
+      />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { HubCard } from "@/components/cards/hub-card";
 import { HubsControls } from "@/components/hubs/hubs-controls";
 import { CreateEntityForm } from "@/components/hubs/create-entity-form";
 import { Modal, ModalHeader, ModalTitle, ModalContent } from "@/components/ui";
+import { AuthRequiredModal } from "@/components/ui/auth-required-modal";
 import { Users, Globe, Home } from "lucide-react";
 import { getHubs } from "@/lib/api/hubs";
 import { getCommunities } from "@/lib/api/communities";
@@ -15,6 +16,7 @@ import type { Hub, Community, Project, Workspace, EntityType } from "@/types";
 import { useHubsStore } from "@/store/hubs-store";
 import { trackEvent } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function HubsPage() {
   const [hubs, setHubs] = useState<Hub[]>([]);
@@ -25,10 +27,15 @@ export default function HubsPage() {
   const [error, setError] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [createEntityType, setCreateEntityType] = useState<EntityType>("hub");
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showProModal, setShowProModal] = useState(false);
   const analyticsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isMountedRef = useRef(true);
   
+  const { user, isAuthenticated } = useAuth();
+  const isVip = user?.subscription_tier === "vip";
+  const isAdmin = user?.is_admin || false;
   const { searchQuery, entityTypeFilter, sortBy } = useHubsStore();
 
   // Fetch entities from API
@@ -155,6 +162,14 @@ export default function HubsPage() {
   }, [hubs, communities, projects, workspaces]);
 
   const handleAddClick = () => {
+    if (!isAuthenticated) {
+      setShowAuthModal(true);
+      return;
+    }
+    if (!isVip && !isAdmin) {
+      setShowProModal(true);
+      return;
+    }
     // По умолчанию создаем хаб, но можно расширить для выбора типа
     setCreateEntityType("hub");
     setIsCreateModalOpen(true);
@@ -383,6 +398,21 @@ export default function HubsPage() {
           />
         </ModalContent>
       </Modal>
+
+      <AuthRequiredModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        title="This feature is available only for logged-in users"
+        description="Please sign up or log in to use this feature."
+      />
+
+      <AuthRequiredModal
+        isOpen={showProModal}
+        onClose={() => setShowProModal(false)}
+        requirePro={true}
+        title="This feature is available only for Pro subscription"
+        description="Please upgrade to Pro subscription to add your hub, community, or project."
+      />
     </>
   );
 }

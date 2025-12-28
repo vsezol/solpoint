@@ -4,12 +4,14 @@ import { useState, useEffect, useRef } from "react";
 import { Header, Footer } from "@/components/layout";
 import { EventCard, EventCardSkeleton } from "@/components/cards";
 import { Button, Input, Modal, ModalHeader, ModalTitle, ModalDescription, ModalContent, FilterTag } from "@/components/ui";
+import { AuthRequiredModal } from "@/components/ui/auth-required-modal";
 import { CreateEventForm } from "@/components/ui/create-event-form";
 import { Search, Calendar } from "lucide-react";
 import { getEvents, filterEventsBySearch } from "@/lib/api/events";
 import type { Event } from "@/types";
 import { trackEvent } from "@/lib/analytics";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function EventsPage() {
   const router = useRouter();
@@ -18,8 +20,11 @@ export default function EventsPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedType, setSelectedType] = useState<string | null>(null);
-  const [isVip] = useState(false); // TODO: Get from auth context
+  const { user, isAuthenticated } = useAuth();
+  const isVip = user?.subscription_tier === "vip";
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showProModal, setShowProModal] = useState(false);
   const analyticsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const eventTypes = [
@@ -117,7 +122,16 @@ export default function EventsPage() {
                 icon={<Search className="w-4 h-4" />}
                 value={searchQuery}
                 onChange={(e) => {
+                  if (!isAuthenticated) {
+                    setShowAuthModal(true);
+                    return;
+                  }
                   setSearchQuery(e.target.value);
+                }}
+                onFocus={() => {
+                  if (!isAuthenticated) {
+                    setShowAuthModal(true);
+                  }
                 }}
               />
             </div>
@@ -125,6 +139,10 @@ export default function EventsPage() {
               <FilterTag
                 isActive={!selectedType}
                 onClick={() => {
+                  if (!isAuthenticated) {
+                    setShowAuthModal(true);
+                    return;
+                  }
                   setSelectedType(null);
                   trackEvent("event_filter_change", {
                     event_category: "Events",
@@ -140,6 +158,10 @@ export default function EventsPage() {
                   key={type.value}
                   isActive={selectedType === type.value}
                   onClick={() => {
+                    if (!isAuthenticated) {
+                      setShowAuthModal(true);
+                      return;
+                    }
                     setSelectedType(type.value);
                     trackEvent("event_filter_change", {
                       event_category: "Events",
@@ -157,6 +179,14 @@ export default function EventsPage() {
                 variant="primary"
                 className="whitespace-nowrap"
                 onClick={() => {
+                  if (!isAuthenticated) {
+                    setShowAuthModal(true);
+                    return;
+                  }
+                  if (!isVip) {
+                    setShowProModal(true);
+                    return;
+                  }
                   setIsCreateModalOpen(true);
                   trackEvent("event_create_modal_open", {
                     event_category: "Events",
@@ -267,6 +297,21 @@ export default function EventsPage() {
           />
         </ModalContent>
       </Modal>
+
+      <AuthRequiredModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        title="This feature is available only for logged-in users"
+        description="Please sign up or log in to use this feature."
+      />
+
+      <AuthRequiredModal
+        isOpen={showProModal}
+        onClose={() => setShowProModal(false)}
+        requirePro={true}
+        title="This feature is available only for Pro users"
+        description="Please upgrade to Pro subscription to host events."
+      />
     </>
   );
 }
