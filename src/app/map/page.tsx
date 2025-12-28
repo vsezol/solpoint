@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Header, Footer } from "@/components/layout";
 import { MapFiltersPanel } from "@/components/map";
@@ -26,6 +27,7 @@ const SolPointMap = dynamic(
 );
 
 export default function MapPage() {
+  const router = useRouter();
   const [markers, setMarkers] = useState<MapMarker[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -140,7 +142,7 @@ export default function MapPage() {
                     <div className="text-center">
                       <p className="text-[var(--color-text-secondary)] mb-4">{error}</p>
                       <button
-                        onClick={() => window.location.reload()}
+                        onClick={() => router.refresh()}
                         className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary-hover)] transition-colors"
                       >
                         Retry

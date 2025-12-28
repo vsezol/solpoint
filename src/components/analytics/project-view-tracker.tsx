@@ -17,7 +17,7 @@ export function ProjectViewTracker({ project }: ProjectViewTrackerProps) {
       project_slug: project.slug,
       project_name: project.name,
       members_count: project.members_count,
-      country: project.country,
+      country: project.country || "",
     });
   }, [project]);
 

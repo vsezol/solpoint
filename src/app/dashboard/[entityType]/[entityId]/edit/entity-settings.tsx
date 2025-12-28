@@ -99,12 +99,14 @@ export function EntitySettings({
     return base;
   };
   
-  const [formData, setFormData] = useState(getInitialFormData());
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [formData, setFormData] = useState<Record<string, any>>(getInitialFormData());
 
   const handleSave = async () => {
     setIsSaving(true);
     try {
       let endpoint = "";
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let body: any = {};
       
       if (entityType === "hub") {

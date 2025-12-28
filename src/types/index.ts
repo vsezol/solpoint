@@ -232,6 +232,10 @@ export interface MapMarker {
   latitude: number;
   longitude: number;
   data: User | Event | Hub | Community | Project | Workspace;
+  country?: string;
+  city?: string;
+  name?: string;
+  title?: string;
 }
 
 export interface CountryStats {

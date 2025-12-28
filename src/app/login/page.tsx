@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import { Loader2 } from "lucide-react";
 import { Button, Card, Badge } from "@/components/ui";
 import { Header, Footer } from "@/components/layout";
 import { Twitter, AlertCircle } from "lucide-react";
@@ -9,7 +10,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { trackEvent } from "@/lib/analytics";
 
-export default function LoginPage() {
+function LoginPageContent() {
   const [isLoading, setIsLoading] = useState(false);
   const searchParams = useSearchParams();
   const error = searchParams.get("error");
@@ -139,6 +140,24 @@ export default function LoginPage() {
       </main>
       <Footer />
     </>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <>
+        <Header />
+        <main className="min-h-screen pt-16 flex items-center justify-center animated-bg px-4">
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="w-8 h-8 animate-spin text-[var(--color-primary)]" />
+          </div>
+        </main>
+        <Footer />
+      </>
+    }>
+      <LoginPageContent />
+    </Suspense>
   );
 }
 

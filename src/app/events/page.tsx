@@ -183,7 +183,7 @@ export default function EventsPage() {
                     setShowAuthModal(true);
                     return;
                   }
-                  if (!isVip && !isAdmin) {
+                  if (!isVip) {
                     setShowProModal(true);
                     return;
                   }

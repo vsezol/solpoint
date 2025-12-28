@@ -67,7 +67,7 @@ export default async function DashboardPage() {
   let entityOwnedEvents: any[] = [];
 
   // Получаем события, принадлежащие сущностям пользователя (параллельно)
-  const entityEventsPromises: Promise<any>[] = [];
+  const entityEventsPromises: PromiseLike<any>[] = [];
 
   if (hubs.length > 0) {
     entityEventsPromises.push(

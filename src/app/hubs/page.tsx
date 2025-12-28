@@ -146,7 +146,7 @@ export default function HubsPage() {
     } else if (sortBy === "members") {
       entities.sort((a, b) => b.members_count - a.members_count);
     } else if (sortBy === "country") {
-      entities.sort((a, b) => a.country.localeCompare(b.country));
+      entities.sort((a, b) => a?.country?.localeCompare(b?.country || "") || 0);
     }
     // "recommended" - оставляем как есть (уже отсортировано по members_count)
 

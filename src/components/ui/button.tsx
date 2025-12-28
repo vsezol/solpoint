@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { cn } from "@/lib/utils";
@@ -49,10 +50,11 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     const buttonClassName = cn(baseStyles, variants[variant], sizes[size], className);
 
     if (asChild && isValidElement(children)) {
-      return cloneElement(children as ReactElement, {
-        className: cn(buttonClassName, (children as ReactElement).props?.className),
-        disabled: disabled || isLoading,
+      // eslint-disable-next-line react-hooks/refs
+      return cloneElement(children as ReactElement<any>, {
         ...props,
+        className: cn(buttonClassName, (children as ReactElement<any>).props.className),
+        disabled: disabled || isLoading,
         ref,
       });
     }

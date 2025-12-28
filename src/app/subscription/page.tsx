@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Header, Footer } from "@/components/layout";
 import { Button, Card, Badge, Modal, ModalHeader, ModalTitle, ModalDescription, ModalContent } from "@/components/ui";
@@ -131,7 +131,7 @@ const faqItems = [
   // },
 ];
 
-export default function SubscriptionPage() {
+function SubscriptionPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
@@ -1528,6 +1528,24 @@ export default function SubscriptionPage() {
 
       <Footer />
     </>
+  );
+}
+
+export default function SubscriptionPage() {
+  return (
+    <Suspense fallback={
+      <>
+        <Header />
+        <main className="min-h-screen pt-16 flex items-center justify-center animated-bg px-4">
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="w-8 h-8 animate-spin text-[var(--color-primary)]" />
+          </div>
+        </main>
+        <Footer />
+      </>
+    }>
+      <SubscriptionPageContent />
+    </Suspense>
   );
 }
 
