@@ -242,6 +242,7 @@ export const useFormsStore = create<FormsStore>((set) => ({
     setSocialsInstagram: (socialsInstagram) => set((state) => ({ eventForm: { ...state.eventForm, socialsInstagram } })),
     setSocialsFacebook: (socialsFacebook) => set((state) => ({ eventForm: { ...state.eventForm, socialsFacebook } })),
     setSocialsWebsite: (socialsWebsite) => set((state) => ({ eventForm: { ...state.eventForm, socialsWebsite } })),
+    setLumaLink: (lumaLink: string) => set((state) => ({ eventForm: { ...state.eventForm, lumaLink } })),
     setContactEmail: (contactEmail) => set((state) => ({ eventForm: { ...state.eventForm, contactEmail } })),
     setContactTelegram: (contactTelegram) => set((state) => ({ eventForm: { ...state.eventForm, contactTelegram } })),
     setMapCenterLat: (mapCenterLat) => set((state) => ({ eventForm: { ...state.eventForm, mapCenterLat } })),

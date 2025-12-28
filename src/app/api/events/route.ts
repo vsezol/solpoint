@@ -159,6 +159,7 @@ export async function POST(request: Request) {
       registration_deadline,
       is_online,
       socials,
+      luma_link,
       contacts,
       hub_id,
       community_id,
@@ -305,6 +306,7 @@ export async function POST(request: Request) {
         : null,
       is_online: is_online || false,
       socials: socials || {},
+      luma_link: luma_link || null,
       contacts: contacts || {},
       // Унифицированные поля
       owner_type: ownerType,

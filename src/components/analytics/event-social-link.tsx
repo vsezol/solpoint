@@ -6,7 +6,7 @@ import { Twitter, Instagram, Facebook, ExternalLink } from "lucide-react";
 
 interface EventSocialLinkProps {
   event: Event;
-  platform: "twitter" | "instagram" | "facebook" | "website";
+  platform: "twitter" | "instagram" | "facebook" | "website" | "luma";
   href: string;
 }
 
@@ -15,6 +15,7 @@ const icons = {
   instagram: Instagram,
   facebook: Facebook,
   website: ExternalLink,
+  luma: ExternalLink,
 };
 
 export function EventSocialLink({ event, platform, href }: EventSocialLinkProps) {

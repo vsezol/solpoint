@@ -76,6 +76,7 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
     socialsInstagram,
     socialsFacebook,
     socialsWebsite,
+    lumaLink,
     contactEmail,
     contactTelegram,
     mapCenterLat,
@@ -100,6 +101,7 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
     setSocialsInstagram,
     setSocialsFacebook,
     setSocialsWebsite,
+    setLumaLink,
     setContactEmail,
     setContactTelegram,
     setMapCenterLat,
@@ -491,6 +493,7 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
         max_attendees: maxAttendees ? parseInt(maxAttendees, 10) : undefined,
         is_online: isOnline,
         socials: Object.keys(socials).length > 0 ? socials : undefined,
+        luma_link: lumaLink.trim() || undefined,
         contacts: {
           email: contactEmail.trim() || undefined,
           telegram: contactTelegram.trim() || undefined,
@@ -663,6 +666,22 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
               previewClassName="w-full h-48 rounded-lg overflow-hidden border border-[var(--color-surface-border)] bg-[var(--color-surface)]"
             />
           </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
+            Luma Link
+          </label>
+          <Input
+            type="url"
+            value={lumaLink}
+            onChange={(e) => setLumaLink(e.target.value)}
+            placeholder="https://lu.ma/event/..."
+            icon={<LinkIcon className="w-4 h-4" />}
+          />
+          <p className="text-xs text-[var(--color-text-muted)] mt-1">
+            Link to the event page on Luma platform
+          </p>
         </div>
       </div>
 

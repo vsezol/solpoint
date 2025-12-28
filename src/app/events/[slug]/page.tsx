@@ -468,12 +468,19 @@ export default async function EventPage({ params }: EventPageProps) {
            
 
               {/* Social Links */}
-              {(event.socials?.twitter || event.socials?.instagram || event.socials?.facebook || event.socials?.website) && (
+              {(event.socials?.twitter || event.socials?.instagram || event.socials?.facebook || event.socials?.website || event.luma_link) && (
                 <Card variant="bordered">
                   <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">
-                    Social Links
+                    Links
                   </h2>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    {event.luma_link && (
+                      <EventSocialLink
+                        event={event}
+                        platform="luma"
+                        href={event.luma_link}
+                      />
+                    )}
                     {event.socials?.twitter && (
                       <EventSocialLink
                         event={event}
