@@ -1,18 +1,19 @@
 import { notFound } from "next/navigation";
 import { Header, Footer } from "@/components/layout";
-import { Button, Card } from "@/components/ui";
-import { MapPin, Globe, Users } from "lucide-react";
+import { Card } from "@/components/ui";
+import { MapPin, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import type { Hub, User } from "@/types";
 import Image from "next/image";
-import Link from "next/link";
-import { HubMembersCard } from "./hub-members-card";
 import type { Metadata } from "next";
 import { getAppUrl } from "@/lib/utils";
 import { HubViewTracker } from "@/components/analytics/hub-view-tracker";
 import { HubShareButton } from "@/components/analytics/hub-share-button";
 import { HubSocialLink } from "@/components/analytics/hub-social-link";
-import { HubJoinButton } from "@/components/analytics/hub-join-button";
+import { TeamSection } from "@/components/entities/team-section";
+import { MembersSidebar } from "@/components/entities/members-sidebar";
+import { ActivitySection } from "@/components/entities/activity-section";
+import { HowToGetInvolved } from "@/components/entities/how-to-get-involved";
 
 interface HubPageProps {
   params: Promise<{ slug: string }>;
@@ -112,26 +113,29 @@ export default async function HubPage({ params }: HubPageProps) {
 
   const hub = hubData as Hub;
 
-  // Получаем участников хаба (только если авторизован)
+  // Получаем команду (owners и moderators) и участников хаба (только если авторизован)
+  let teamMembers: (User & { role?: "owner" | "moderator" | "member" })[] = [];
   let members: (User & { joined_at?: string })[] = [];
+  let friends: User[] = [];
   let isUserMember = false;
 
   if (authUser) {
     // Проверяем, является ли пользователь участником хаба
     const { data: userMember } = await supabase
       .from("hub_members")
-      .select("id, joined_at")
+      .select("id, joined_at, role")
       .eq("hub_id", hub.id)
       .eq("user_id", authUser.id)
       .single();
 
     isUserMember = !!userMember;
 
-    // Получаем участников хаба
+    // Получаем всех участников хаба с ролями
     const { data: membersData } = await supabase
       .from("hub_members")
       .select(`
         joined_at,
+        role,
         user:profiles!hub_members_user_id_fkey(
           id,
           twitter_id,
@@ -157,16 +161,75 @@ export default async function HubPage({ params }: HubPageProps) {
         )
       `)
       .eq("hub_id", hub.id)
-      .order("joined_at", { ascending: false })
-      .limit(20);
+      .order("joined_at", { ascending: false });
 
-    members = (membersData || []).map((m: any) => {
+    const allMembers = (membersData || []).map((m: any) => {
       const user = Array.isArray(m.user) ? m.user[0] : m.user;
       return {
         ...user,
         joined_at: m.joined_at,
+        role: m.role || "member",
       };
-    }).filter((m): m is User & { joined_at?: string } => m !== null && m !== undefined);
+    }).filter((m): m is User & { joined_at?: string; role?: "owner" | "moderator" | "member" } => m !== null && m !== undefined);
+
+    // Разделяем на команду и обычных участников
+    teamMembers = allMembers.filter((m) => m.role === "owner" || m.role === "moderator");
+    members = allMembers.filter((m) => m.role === "member" || !m.role).slice(0, 20);
+
+    // Получаем взаимных друзей авторизованного пользователя
+    const { data: mutualFriendsData } = await supabase
+      .from("mutual_friends")
+      .select("user_id, friend_id")
+      .or(`user_id.eq.${authUser.id},friend_id.eq.${authUser.id}`);
+
+    // Получаем ID всех друзей
+    const friendIds: string[] = [];
+    if (mutualFriendsData) {
+      for (const mf of mutualFriendsData) {
+        if (mf.user_id === authUser.id) {
+          friendIds.push(mf.friend_id);
+        } else if (mf.friend_id === authUser.id) {
+          friendIds.push(mf.user_id);
+        }
+      }
+    }
+
+    // Находим друзей, которые являются участниками хаба
+    if (friendIds.length > 0) {
+      const memberUserIds = new Set(allMembers.map(m => m.id));
+      const friendMemberIds = friendIds.filter(id => memberUserIds.has(id));
+
+      if (friendMemberIds.length > 0) {
+        const { data: friendsProfiles } = await supabase
+          .from("profiles")
+          .select(`
+            id,
+            twitter_id,
+            twitter_handle,
+            twitter_name,
+            avatar_url,
+            bio,
+            country,
+            country_code,
+            city,
+            role,
+            is_open_to_meet,
+            subscription_tier,
+            is_verified,
+            wallet_address,
+            socials,
+            last_active_at,
+            created_at,
+            updated_at,
+            countries!fk_profiles_country_code (
+              name
+            )
+          `)
+          .in("id", friendMemberIds);
+
+        friends = (friendsProfiles || []) as User[];
+      }
+    }
   }
 
   return (
@@ -209,53 +272,36 @@ export default async function HubPage({ params }: HubPageProps) {
                 <HubShareButton hub={hub} />
               </div>
 
-              {/* Details Card */}
+              {/* Hub Description */}
+              {hub.description && (
+                <Card variant="bordered">
+                  <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">
+                    Hub description
+                  </h2>
+                  <p className="text-[var(--color-text-secondary)] leading-relaxed">
+                    {hub.description}
+                  </p>
+                </Card>
+              )}
+
+              {/* Location */}
               <Card variant="bordered">
-                <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">
-                  Hub Details
-                </h2>
-                <div className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <MapPin className="w-5 h-5 text-[var(--color-primary)] mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm text-[var(--color-text-muted)] mb-1">Location</p>
-                      <p className="text-[var(--color-text-primary)]">
-                        {hub.city ? `${hub.city}, ` : ""}{hub.country}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <Users className="w-5 h-5 text-[var(--color-primary)] mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm text-[var(--color-text-muted)] mb-1">Members</p>
-                      <p className="text-[var(--color-text-primary)]">
-                        {hub.members_count} {hub.members_count === 1 ? "member" : "members"}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <Globe className="w-5 h-5 text-[var(--color-primary)] mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm text-[var(--color-text-muted)] mb-1">Created</p>
-                      <p className="text-[var(--color-text-primary)]">
-                        {new Date(hub.created_at).toLocaleDateString("en-US", {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        })}
-                      </p>
-                    </div>
-                  </div>
+                <div className="flex items-start gap-3">
+                  <MapPin className="w-5 h-5 text-[var(--color-primary)] mt-0.5 flex-shrink-0" />
+                  <p className="text-[var(--color-text-primary)]">
+                    {hub.city ? `${hub.city}, ` : ""}{hub.country}
+                  </p>
                 </div>
               </Card>
+
+              {/* Activity */}
+              <ActivitySection />
 
               {/* Social Links */}
               {(hub.socials?.twitter || hub.socials?.instagram || hub.socials?.facebook || hub.socials?.website) && (
                 <Card variant="bordered">
                   <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">
-                    Social Links
+                    Socials
                   </h2>
                   <div className="flex items-center gap-3">
                     {hub.socials?.twitter && (
@@ -289,49 +335,32 @@ export default async function HubPage({ params }: HubPageProps) {
                   </div>
                 </Card>
               )}
+
+              {/* How to get involved */}
+              <HowToGetInvolved entityType="hub" />
+
+              {/* Team Section */}
+              <TeamSection
+                teamMembers={teamMembers}
+                isVip={isVip}
+                currentUserId={authUser?.id}
+                entityType="hub"
+                title="Team"
+              />
             </div>
 
             {/* Sidebar */}
             <div className="space-y-6">
-              {/* Join Card */}
-              {/* TODO: Temporarily commented out - join/attend functionality */}
-              {/* <Card variant="bordered">
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">
-                      Join the Hub
-                    </h3>
-                    <p className="text-sm text-[var(--color-text-secondary)]">
-                      Become a member of this hub and connect with the community.
-                    </p>
-                  </div>
-                  {authUser ? (
-                    <HubJoinButton 
-                      hub={hub}
-                      isMember={isUserMember}
-                    />
-                  ) : (
-                    <Button variant="primary" className="w-full" size="lg" asChild>
-                      <Link href="/login">
-                        Join Hub
-                      </Link>
-                    </Button>
-                  )}
-                  <HubShareButton 
-                    hub={hub} 
-                    variant="outline" 
-                    size="lg"
-                    className="w-full"
-                  />
-                </div>
-              </Card> */}
-
-              {/* Members Card */}
-              <HubMembersCard
+              {/* Members Sidebar */}
+              <MembersSidebar
                 members={members}
+                friends={friends}
                 isVip={isVip}
                 authUser={authUser}
-                hubSlug={hub.slug}
+                entitySlug={hub.slug}
+                entityType="hub"
+                membersCount={hub.members_count}
+                friendsCount={friends.length}
               />
             </div>
           </div>

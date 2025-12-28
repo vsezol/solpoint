@@ -1,18 +1,19 @@
 import { notFound } from "next/navigation";
 import { Header, Footer } from "@/components/layout";
-import { Button, Card } from "@/components/ui";
-import { MapPin, Globe, Users } from "lucide-react";
+import { Card } from "@/components/ui";
+import { MapPin, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import type { Project, User } from "@/types";
 import Image from "next/image";
-import Link from "next/link";
-import { EntityMembersCard } from "@/components/entities/entity-members-card";
 import type { Metadata } from "next";
 import { getAppUrl } from "@/lib/utils";
 import { ProjectViewTracker } from "@/components/analytics/project-view-tracker";
 import { ProjectShareButton } from "@/components/analytics/project-share-button";
 import { ProjectSocialLink } from "@/components/analytics/project-social-link";
-import { ProjectJoinButton } from "@/components/analytics/project-join-button";
+import { TeamSection } from "@/components/entities/team-section";
+import { MembersSidebar } from "@/components/entities/members-sidebar";
+import { ActivitySection } from "@/components/entities/activity-section";
+import { HowToGetInvolved } from "@/components/entities/how-to-get-involved";
 
 interface ProjectPageProps {
   params: Promise<{ slug: string }>;
@@ -108,13 +109,16 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
 
   const project = projectData as Project;
 
+  // Получаем команду (owners и moderators) и участников проекта (только если авторизован)
+  let teamMembers: (User & { role?: "owner" | "moderator" | "member" })[] = [];
   let members: (User & { joined_at?: string })[] = [];
+  let friends: User[] = [];
   let isUserMember = false;
 
   if (authUser) {
     const { data: userMember } = await supabase
       .from("project_members")
-      .select("id, joined_at")
+      .select("id, joined_at, role")
       .eq("project_id", project.id)
       .eq("user_id", authUser.id)
       .single();
@@ -125,6 +129,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
       .from("project_members")
       .select(`
         joined_at,
+        role,
         user:profiles(
           id,
           twitter_id,
@@ -150,16 +155,73 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
         )
       `)
       .eq("project_id", project.id)
-      .order("joined_at", { ascending: false })
-      .limit(20);
+      .order("joined_at", { ascending: false });
 
-    members = (membersData || []).map((m: any) => {
+    const allMembers = (membersData || []).map((m: any) => {
       const user = Array.isArray(m.user) ? m.user[0] : m.user;
       return {
         ...user,
         joined_at: m.joined_at,
+        role: m.role || "member",
       };
-    }).filter((m): m is User & { joined_at?: string } => m !== null && m !== undefined);
+    }).filter((m): m is User & { joined_at?: string; role?: "owner" | "moderator" | "member" } => m !== null && m !== undefined);
+
+    // Разделяем на команду и обычных участников
+    teamMembers = allMembers.filter((m) => m.role === "owner" || m.role === "moderator");
+    members = allMembers.filter((m) => m.role === "member" || !m.role).slice(0, 20);
+
+    // Получаем взаимных друзей авторизованного пользователя
+    const { data: mutualFriendsData } = await supabase
+      .from("mutual_friends")
+      .select("user_id, friend_id")
+      .or(`user_id.eq.${authUser.id},friend_id.eq.${authUser.id}`);
+
+    const friendIds: string[] = [];
+    if (mutualFriendsData) {
+      for (const mf of mutualFriendsData) {
+        if (mf.user_id === authUser.id) {
+          friendIds.push(mf.friend_id);
+        } else if (mf.friend_id === authUser.id) {
+          friendIds.push(mf.user_id);
+        }
+      }
+    }
+
+    if (friendIds.length > 0) {
+      const memberUserIds = new Set(allMembers.map(m => m.id));
+      const friendMemberIds = friendIds.filter(id => memberUserIds.has(id));
+
+      if (friendMemberIds.length > 0) {
+        const { data: friendsProfiles } = await supabase
+          .from("profiles")
+          .select(`
+            id,
+            twitter_id,
+            twitter_handle,
+            twitter_name,
+            avatar_url,
+            bio,
+            country,
+            country_code,
+            city,
+            role,
+            is_open_to_meet,
+            subscription_tier,
+            is_verified,
+            wallet_address,
+            socials,
+            last_active_at,
+            created_at,
+            updated_at,
+            countries!fk_profiles_country_code (
+              name
+            )
+          `)
+          .in("id", friendMemberIds);
+
+        friends = (friendsProfiles || []) as User[];
+      }
+    }
   }
 
   return (
@@ -199,53 +261,38 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
                 <ProjectShareButton project={project} />
               </div>
 
-              <Card variant="bordered">
-                <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">
-                  Project Details
-                </h2>
-                <div className="space-y-4">
-                  {project.country && (
-                    <div className="flex items-start gap-3">
-                      <MapPin className="w-5 h-5 text-[var(--color-primary)] mt-0.5 flex-shrink-0" />
-                      <div>
-                        <p className="text-sm text-[var(--color-text-muted)] mb-1">Location</p>
-                        <p className="text-[var(--color-text-primary)]">
-                          {project.city ? `${project.city}, ` : ""}{project.country}
-                        </p>
-                      </div>
-                    </div>
-                  )}
+              {/* Project Description */}
+              {project.description && (
+                <Card variant="bordered">
+                  <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">
+                    Project description
+                  </h2>
+                  <p className="text-[var(--color-text-secondary)] leading-relaxed">
+                    {project.description}
+                  </p>
+                </Card>
+              )}
 
+              {/* Location */}
+              {project.country && (
+                <Card variant="bordered">
                   <div className="flex items-start gap-3">
-                    <Users className="w-5 h-5 text-[var(--color-primary)] mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm text-[var(--color-text-muted)] mb-1">Members</p>
-                      <p className="text-[var(--color-text-primary)]">
-                        {project.members_count} {project.members_count === 1 ? "member" : "members"}
-                      </p>
-                    </div>
+                    <MapPin className="w-5 h-5 text-[var(--color-primary)] mt-0.5 flex-shrink-0" />
+                    <p className="text-[var(--color-text-primary)]">
+                      {project.city ? `${project.city}, ` : ""}{project.country}
+                    </p>
                   </div>
+                </Card>
+              )}
 
-                  <div className="flex items-start gap-3">
-                    <Globe className="w-5 h-5 text-[var(--color-primary)] mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm text-[var(--color-text-muted)] mb-1">Created</p>
-                      <p className="text-[var(--color-text-primary)]">
-                        {new Date(project.created_at).toLocaleDateString("en-US", {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        })}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </Card>
+              {/* Activity */}
+              <ActivitySection />
 
+              {/* Social Links */}
               {(project.socials?.twitter || project.socials?.instagram || project.socials?.facebook || project.socials?.website) && (
                 <Card variant="bordered">
                   <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">
-                    Social Links
+                    Socials
                   </h2>
                   <div className="flex items-center gap-3">
                     {project.socials?.twitter && (
@@ -279,48 +326,31 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
                   </div>
                 </Card>
               )}
+
+              {/* How to get involved */}
+              <HowToGetInvolved entityType="project" />
+
+              {/* Team Section */}
+              <TeamSection
+                teamMembers={teamMembers}
+                isVip={isVip}
+                currentUserId={authUser?.id}
+                entityType="project"
+                title="Team"
+              />
             </div>
 
             <div className="space-y-6">
-              {/* TODO: Temporarily commented out - join/attend functionality */}
-              {/* <Card variant="bordered">
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">
-                      Join the Project
-                    </h3>
-                    <p className="text-sm text-[var(--color-text-secondary)]">
-                      Become a member of this project and connect with others.
-                    </p>
-                  </div>
-                  {authUser ? (
-                    <ProjectJoinButton 
-                      project={project}
-                      isMember={isUserMember}
-                    />
-                  ) : (
-                    <Button variant="primary" className="w-full" size="lg" asChild>
-                      <Link href="/login">
-                        Join Project
-                      </Link>
-                    </Button>
-                  )}
-                  <ProjectShareButton 
-                    project={project} 
-                    variant="outline" 
-                    size="lg"
-                    className="w-full"
-                  />
-                </div>
-              </Card> */}
-
-              <EntityMembersCard
+              {/* Members Sidebar */}
+              <MembersSidebar
                 members={members}
+                friends={friends}
                 isVip={isVip}
                 authUser={authUser}
                 entitySlug={project.slug}
                 entityType="project"
-                entityName={project.name}
+                membersCount={project.members_count}
+                friendsCount={friends.length}
               />
             </div>
           </div>

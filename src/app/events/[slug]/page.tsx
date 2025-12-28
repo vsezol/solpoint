@@ -1,18 +1,17 @@
 import { notFound } from "next/navigation";
 import { Header, Footer } from "@/components/layout";
-import { Button, EventBadges, Card, AttendeesList } from "@/components/ui";
-import { Calendar, MapPin, Globe, Ticket } from "lucide-react";
+import { EventBadges, Card } from "@/components/ui";
+import { Calendar, MapPin } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import type { Event, User, EventMember } from "@/types";
 import Image from "next/image";
-import Link from "next/link";
-import { EventHostCard } from "./event-host-card";
-import { AttendButton } from "./attend-button";
 import type { Metadata } from "next";
 import { getAppUrl } from "@/lib/utils";
 import { EventViewTracker } from "@/components/analytics/event-view-tracker";
 import { EventShareButton } from "@/components/analytics/event-share-button";
 import { EventSocialLink } from "@/components/analytics/event-social-link";
+import { TeamSection } from "@/components/entities/team-section";
+import { MembersSidebar } from "@/components/entities/members-sidebar";
 
 interface EventPageProps {
   params: Promise<{ slug: string }>;
@@ -152,55 +151,58 @@ export default async function EventPage({ params }: EventPageProps) {
     notFound();
   }
 
-  // Опционально получаем organizer только если owner_type = 'user'
-  let organizer: User | undefined;
-  if (eventData.owner_type === "user" && eventData.owner_id) {
-    const { data: ownerProfile } = await supabase
-      .from("profiles")
-      .select(`
-        id,
-        twitter_id,
-        twitter_handle,
-        twitter_name,
-        avatar_url,
-        bio,
-        country,
-        country_code,
-        city,
-        role,
-        is_open_to_meet,
-        subscription_tier,
-        is_verified,
-        wallet_address,
-        socials,
-        last_active_at,
-        created_at,
-        updated_at,
-        countries!fk_profiles_country_code (
-          name
-        )
-      `)
-      .eq("id", eventData.owner_id)
-      .single();
-
-    if (ownerProfile) {
-      const countryName = Array.isArray(ownerProfile.countries) 
-        ? ownerProfile.countries[0]?.name 
-        : (ownerProfile.countries as { name: string } | null | undefined)?.name;
-      
-      organizer = {
-        ...ownerProfile,
-        country: countryName || ownerProfile.country,
-      } as User;
-    }
-  }
-
   const event = eventData as Event;
 
-  // Получаем участников события (только если авторизован)
-  let members: (EventMember & { user?: User })[] = [];
+  // Получаем hosts (owners и moderators) из event_roles
+  let hosts: (User & { role?: "owner" | "moderator" })[] = [];
+  if (authUser) {
+    const { data: eventRolesData } = await supabase
+      .from("event_roles")
+      .select(`
+        role,
+        user:profiles!event_roles_user_id_fkey(
+          id,
+          twitter_id,
+          twitter_handle,
+          twitter_name,
+          avatar_url,
+          bio,
+          country,
+          country_code,
+          city,
+          role,
+          is_open_to_meet,
+          subscription_tier,
+          is_verified,
+          wallet_address,
+          socials,
+          last_active_at,
+          created_at,
+          updated_at,
+          countries!fk_profiles_country_code (
+            name
+          )
+        )
+      `)
+      .eq("event_id", event.id)
+      .in("role", ["owner", "moderator"]);
+
+    hosts = (eventRolesData || []).map((er: any) => {
+      const user = Array.isArray(er.user) ? er.user[0] : er.user;
+      const countryName = Array.isArray(user?.countries) 
+        ? user.countries[0]?.name 
+        : (user?.countries as { name: string } | null | undefined)?.name;
+      return {
+        ...user,
+        country: countryName || user?.country,
+        role: er.role,
+      };
+    }).filter((h): h is User & { role?: "owner" | "moderator" } => h !== null && h !== undefined);
+  }
+
+  // Получаем участников события (attendees) (только если авторизован)
+  let attendees: User[] = [];
   let friends: User[] = [];
-  let userFriendsGoing: User[] = [];
   let isUserRegistered = false;
 
   if (authUser) {
@@ -248,10 +250,22 @@ export default async function EventPage({ params }: EventPageProps) {
       .order("registered_at", { ascending: false })
       .limit(20);
 
-    members = (membersData || []) as (EventMember & { user?: User })[];
+    // Преобразуем EventMember в User[]
+    attendees = (membersData || [])
+      .map((m: any) => {
+        const user = Array.isArray(m.user) ? m.user[0] : m.user;
+        if (!user) return null;
+        const countryName = Array.isArray(user.countries) 
+          ? user.countries[0]?.name 
+          : (user.countries as { name: string } | null | undefined)?.name;
+        return {
+          ...user,
+          country: countryName || user.country,
+        };
+      })
+      .filter((u): u is User => u !== null);
 
     // Получаем взаимных друзей авторизованного пользователя
-    // mutual_friends view содержит записи где user_id < friend_id, поэтому нужно проверять обе стороны
     const { data: mutualFriendsData } = await supabase
       .from("mutual_friends")
       .select("user_id, friend_id")
@@ -269,41 +283,50 @@ export default async function EventPage({ params }: EventPageProps) {
       }
     }
 
-    // Загружаем профили друзей
-    if (friendIds.length > 0) {
-      const { data: friendsProfiles } = await supabase
-        .from("profiles")
-        .select(`
-          id,
-          twitter_id,
-          twitter_handle,
-          twitter_name,
-          avatar_url,
-          bio,
-          country,
-          country_code,
-          city,
-          role,
-          is_open_to_meet,
-          subscription_tier,
-          is_verified,
-          wallet_address,
-          socials,
-          last_active_at,
-          created_at,
-          updated_at,
-          countries!fk_profiles_country_code (
-            name
-          )
-        `)
-        .in("id", friendIds);
-
-      friends = (friendsProfiles || []) as User[];
-    }
-
     // Находим друзей, которые идут на событие
-    const memberUserIds = new Set(members.map(m => m.user?.id).filter(Boolean));
-    userFriendsGoing = friends.filter(f => memberUserIds.has(f.id));
+    if (friendIds.length > 0) {
+      const attendeeUserIds = new Set(attendees.map(a => a.id));
+      const friendAttendeeIds = friendIds.filter(id => attendeeUserIds.has(id));
+
+      if (friendAttendeeIds.length > 0) {
+        const { data: friendsProfiles } = await supabase
+          .from("profiles")
+          .select(`
+            id,
+            twitter_id,
+            twitter_handle,
+            twitter_name,
+            avatar_url,
+            bio,
+            country,
+            country_code,
+            city,
+            role,
+            is_open_to_meet,
+            subscription_tier,
+            is_verified,
+            wallet_address,
+            socials,
+            last_active_at,
+            created_at,
+            updated_at,
+            countries!fk_profiles_country_code (
+              name
+            )
+          `)
+          .in("id", friendAttendeeIds);
+
+        friends = (friendsProfiles || []).map((f: any) => {
+          const countryName = Array.isArray(f.countries) 
+            ? f.countries[0]?.name 
+            : (f.countries as { name: string } | null | undefined)?.name;
+          return {
+            ...f,
+            country: countryName || f.country,
+          };
+        }) as User[];
+      }
+    }
   }
 
   const formatDate = (startDate: string, endDate?: string) => {
@@ -387,91 +410,45 @@ export default async function EventPage({ params }: EventPageProps) {
                 <EventShareButton event={event} />
               </div>
 
-                 {/* Details Card */}
-                 <Card variant="bordered">
-                <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">
-                  Event Details
-                </h2>
-                <div className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <Calendar className="w-5 h-5 text-[var(--color-primary)] mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm text-[var(--color-text-muted)] mb-1">Date & Time</p>
-                      <p className="text-[var(--color-text-primary)]">
-                        {formatDate(event.start_date, event.end_date)}
-                      </p>
-                    </div>
-                  </div>
+              {/* Event Description */}
+              {event.description && (
+                <Card variant="bordered">
+                  <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">
+                    Event description
+                  </h2>
+                  <p className="text-[var(--color-text-secondary)] leading-relaxed">
+                    {event.description}
+                  </p>
+                </Card>
+              )}
 
-                  {event.is_paid !== undefined && (
-                    <div className="flex items-start gap-3">
-                      <Ticket className="w-5 h-5 text-[var(--color-primary)] mt-0.5 flex-shrink-0" />
-                      <div>
-                        <p className="text-sm text-[var(--color-text-muted)] mb-1">Tickets</p>
-                        <p className="text-[var(--color-text-primary)]">
-                          {event.is_paid ? `${event.price_sol || 0} SOL` : "Free"}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex items-start gap-3">
-                    <Globe className="w-5 h-5 text-[var(--color-primary)] mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm text-[var(--color-text-muted)] mb-1">Visibility</p>
-                      <p className="text-[var(--color-text-primary)] capitalize">
-                        {event.visibility}
+              {/* Location */}
+              <Card variant="bordered">
+                <div className="flex items-start gap-3">
+                  <MapPin className="w-5 h-5 text-[var(--color-primary)] mt-0.5 flex-shrink-0" />
+                  <div>
+                    {event.venue_name && (
+                      <p className="text-[var(--color-text-primary)] font-semibold mb-1">
+                        {event.venue_name}
                       </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <MapPin className="w-5 h-5 text-[var(--color-primary)] mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm text-[var(--color-text-muted)] mb-1">Location</p>
-                      <p className="text-[var(--color-text-primary)]">
-                        {event.venue_name && (
-                          <>
-                            <span className="font-semibold">{event.venue_name}</span>
-                            <br />
-                          </>
-                        )}
-                        {event.address && (
-                          <>
-                            {event.address}
-                            <br />
-                          </>
-                        )}
-                        {event.city}, {event.country}
+                    )}
+                    {event.address && (
+                      <p className="text-[var(--color-text-primary)] mb-1">
+                        {event.address}
                       </p>
-                    </div>
+                    )}
+                    <p className="text-[var(--color-text-primary)]">
+                      {event.city}, {event.country}
+                    </p>
                   </div>
                 </div>
               </Card>
-
-              {/* Host Card */}
-              {organizer && (
-                <div>
-                  <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">
-                    Hosts
-                  </h2>
-                  <div className="w-fit max-w-md">
-                    <EventHostCard
-                      user={organizer}
-                      isVip={isVip}
-                      currentUserId={authUser?.id}
-                    />
-                  </div>
-                </div>
-              )}
-
-           
 
               {/* Social Links */}
               {(event.socials?.twitter || event.socials?.instagram || event.socials?.facebook || event.socials?.website) && (
                 <Card variant="bordered">
                   <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">
-                    Social Links
+                    Socials
                   </h2>
                   <div className="flex items-center gap-3">
                     {event.socials?.twitter && (
@@ -505,98 +482,30 @@ export default async function EventPage({ params }: EventPageProps) {
                   </div>
                 </Card>
               )}
+
+              {/* Hosts Section */}
+              <TeamSection
+                teamMembers={hosts}
+                isVip={isVip}
+                currentUserId={authUser?.id}
+                entityType="event"
+                title="Hosts"
+              />
             </div>
 
             {/* Sidebar */}
             <div className="space-y-6">
-              {/* Register Card */}
-              {/* TODO: Temporarily commented out - join/attend functionality */}
-              {/* <Card variant="bordered">
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">
-                      Join the Event
-                    </h3>
-                    <p className="text-sm text-[var(--color-text-secondary)]">
-                      Register to attend this event and connect with other participants.
-                    </p>
-                  </div>
-                  {authUser ? (
-                    <AttendButton
-                      eventId={event.id}
-                      eventSlug={event.slug}
-                      eventName={event.name}
-                      eventType={event.event_type}
-                      isRegistered={isUserRegistered}
-                      isPaid={event.is_paid}
-                      priceSol={event.price_sol}
-                    />
-                  ) : (
-                    <Button variant="primary" className="w-full" size="lg" asChild>
-                      <Link href="/login">
-                        {event.is_paid ? `Buy Tickets - ${event.price_sol} SOL` : "Register Now"}
-                      </Link>
-                    </Button>
-                  )}
-                  <EventShareButton 
-                    event={event} 
-                    variant="outline" 
-                    size="lg"
-                    className="w-full"
-                  />
-                </div>
-              </Card> */}
-
-              {/* Attendees Card */}
-              <Card variant="bordered">
-                <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
-                  Attendees
-                </h3>
-                <div className="space-y-6">
-                  {/* All Attendees */}
-                  <AttendeesList
-                    title={`${event.attendees_count} ${event.attendees_count === 1 ? "person" : "people"} going`}
-                    items={members
-                      .filter((m) => m.user)
-                      .map((m) => ({
-                        id: m.user!.id,
-                        avatar_url: m.user!.avatar_url,
-                        name: m.user!.twitter_name,
-                        twitter_handle: m.user!.twitter_handle,
-                        isVip: m.user!.subscription_tier === "vip",
-                        isVerified: m.user!.is_verified,
-                      }))}
-                    showAllText="Show all attendees"
-                    showAllHref={`/events/${event.slug}?tab=attendees`}
-                    capacityInfo={
-                      event.max_attendees
-                        ? `${event.max_attendees - (event.attendees_count || 0)} spots left`
-                        : "Unlimited spots left"
-                    }
-                    emptyText="No attendees yet"
-                  />
-
-                  {/* Friends Going */}
-                  {authUser && (
-                    <AttendeesList
-                      title={`${userFriendsGoing.length} ${userFriendsGoing.length === 1 ? "friend" : "friends"} going`}
-                      items={userFriendsGoing.map((friend) => ({
-                        id: friend.id,
-                        avatar_url: friend.avatar_url,
-                        name: friend.twitter_name,
-                        twitter_handle: friend.twitter_handle,
-                        isVip: friend.subscription_tier === "vip",
-                        isVerified: friend.is_verified,
-                      }))}
-                      showAllText="Show all friends"
-                      showAllHref={`/events/${event.slug}?tab=attendees`}
-                      ctaButtonText="Invite friends to this event"
-                      ctaButtonHref={`/events/${event.slug}?action=invite`}
-                      emptyText="No friends going yet"
-                    />
-                  )}
-                </div>
-              </Card>
+              {/* Attendees Sidebar */}
+              <MembersSidebar
+                members={attendees}
+                friends={friends}
+                isVip={isVip}
+                authUser={authUser}
+                entitySlug={event.slug}
+                entityType="event"
+                membersCount={event.attendees_count}
+                friendsCount={friends.length}
+              />
             </div>
           </div>
         </div>

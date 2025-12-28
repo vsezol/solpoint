@@ -1,18 +1,19 @@
 import { notFound } from "next/navigation";
 import { Header, Footer } from "@/components/layout";
-import { Button, Card } from "@/components/ui";
-import { MapPin, Globe, Users, Building2 } from "lucide-react";
+import { Card } from "@/components/ui";
+import { MapPin, Users, Building2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import type { Workspace, User } from "@/types";
 import Image from "next/image";
-import Link from "next/link";
-import { EntityMembersCard } from "@/components/entities/entity-members-card";
 import type { Metadata } from "next";
 import { getAppUrl } from "@/lib/utils";
 import { WorkspaceViewTracker } from "@/components/analytics/workspace-view-tracker";
 import { WorkspaceShareButton } from "@/components/analytics/workspace-share-button";
 import { WorkspaceSocialLink } from "@/components/analytics/workspace-social-link";
-import { WorkspaceJoinButton } from "@/components/analytics/workspace-join-button";
+import { TeamSection } from "@/components/entities/team-section";
+import { MembersSidebar } from "@/components/entities/members-sidebar";
+import { ActivitySection } from "@/components/entities/activity-section";
+import { HowToGetInvolved } from "@/components/entities/how-to-get-involved";
 
 interface WorkspacePageProps {
   params: Promise<{ slug: string }>;
@@ -108,13 +109,16 @@ export default async function WorkspacePage({ params }: WorkspacePageProps) {
 
   const workspace = workspaceData as Workspace;
 
+  // Получаем команду (owners и moderators) и участников воркспейса (только если авторизован)
+  let teamMembers: (User & { role?: "owner" | "moderator" | "member" })[] = [];
   let members: (User & { joined_at?: string })[] = [];
+  let friends: User[] = [];
   let isUserMember = false;
 
   if (authUser) {
     const { data: userMember } = await supabase
       .from("workspace_members")
-      .select("id, joined_at")
+      .select("id, joined_at, role")
       .eq("workspace_id", workspace.id)
       .eq("user_id", authUser.id)
       .single();
@@ -125,6 +129,7 @@ export default async function WorkspacePage({ params }: WorkspacePageProps) {
       .from("workspace_members")
       .select(`
         joined_at,
+        role,
         user:profiles(
           id,
           twitter_id,
@@ -150,16 +155,73 @@ export default async function WorkspacePage({ params }: WorkspacePageProps) {
         )
       `)
       .eq("workspace_id", workspace.id)
-      .order("joined_at", { ascending: false })
-      .limit(20);
+      .order("joined_at", { ascending: false });
 
-    members = (membersData || []).map((m: any) => {
+    const allMembers = (membersData || []).map((m: any) => {
       const user = Array.isArray(m.user) ? m.user[0] : m.user;
       return {
         ...user,
         joined_at: m.joined_at,
+        role: m.role || "member",
       };
-    }).filter((m): m is User & { joined_at?: string } => m !== null && m !== undefined);
+    }).filter((m): m is User & { joined_at?: string; role?: "owner" | "moderator" | "member" } => m !== null && m !== undefined);
+
+    // Разделяем на команду и обычных участников
+    teamMembers = allMembers.filter((m) => m.role === "owner" || m.role === "moderator");
+    members = allMembers.filter((m) => m.role === "member" || !m.role).slice(0, 20);
+
+    // Получаем взаимных друзей авторизованного пользователя
+    const { data: mutualFriendsData } = await supabase
+      .from("mutual_friends")
+      .select("user_id, friend_id")
+      .or(`user_id.eq.${authUser.id},friend_id.eq.${authUser.id}`);
+
+    const friendIds: string[] = [];
+    if (mutualFriendsData) {
+      for (const mf of mutualFriendsData) {
+        if (mf.user_id === authUser.id) {
+          friendIds.push(mf.friend_id);
+        } else if (mf.friend_id === authUser.id) {
+          friendIds.push(mf.user_id);
+        }
+      }
+    }
+
+    if (friendIds.length > 0) {
+      const memberUserIds = new Set(allMembers.map(m => m.id));
+      const friendMemberIds = friendIds.filter(id => memberUserIds.has(id));
+
+      if (friendMemberIds.length > 0) {
+        const { data: friendsProfiles } = await supabase
+          .from("profiles")
+          .select(`
+            id,
+            twitter_id,
+            twitter_handle,
+            twitter_name,
+            avatar_url,
+            bio,
+            country,
+            country_code,
+            city,
+            role,
+            is_open_to_meet,
+            subscription_tier,
+            is_verified,
+            wallet_address,
+            socials,
+            last_active_at,
+            created_at,
+            updated_at,
+            countries!fk_profiles_country_code (
+              name
+            )
+          `)
+          .in("id", friendMemberIds);
+
+        friends = (friendsProfiles || []) as User[];
+      }
+    }
   }
 
   return (
@@ -199,61 +261,43 @@ export default async function WorkspacePage({ params }: WorkspacePageProps) {
                 <WorkspaceShareButton workspace={workspace} />
               </div>
 
+              {/* Workspace Description */}
+              {workspace.description && (
+                <Card variant="bordered">
+                  <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">
+                    Workspace description
+                  </h2>
+                  <p className="text-[var(--color-text-secondary)] leading-relaxed">
+                    {workspace.description}
+                  </p>
+                </Card>
+              )}
+
+              {/* Location */}
               <Card variant="bordered">
-                <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">
-                  Workspace Details
-                </h2>
-                <div className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <Building2 className="w-5 h-5 text-[var(--color-primary)] mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm text-[var(--color-text-muted)] mb-1">Address</p>
-                      <p className="text-[var(--color-text-primary)]">
+                <div className="flex items-start gap-3">
+                  <MapPin className="w-5 h-5 text-[var(--color-primary)] mt-0.5 flex-shrink-0" />
+                  <div>
+                    {workspace.address && (
+                      <p className="text-[var(--color-text-primary)] mb-1">
                         {workspace.address}
                       </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <MapPin className="w-5 h-5 text-[var(--color-primary)] mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm text-[var(--color-text-muted)] mb-1">Location</p>
-                      <p className="text-[var(--color-text-primary)]">
-                        {workspace.city ? `${workspace.city}, ` : ""}{workspace.country}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <Users className="w-5 h-5 text-[var(--color-primary)] mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm text-[var(--color-text-muted)] mb-1">Members</p>
-                      <p className="text-[var(--color-text-primary)]">
-                        {workspace.members_count} {workspace.members_count === 1 ? "member" : "members"}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <Globe className="w-5 h-5 text-[var(--color-primary)] mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm text-[var(--color-text-muted)] mb-1">Created</p>
-                      <p className="text-[var(--color-text-primary)]">
-                        {new Date(workspace.created_at).toLocaleDateString("en-US", {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        })}
-                      </p>
-                    </div>
+                    )}
+                    <p className="text-[var(--color-text-primary)]">
+                      {workspace.city ? `${workspace.city}, ` : ""}{workspace.country}
+                    </p>
                   </div>
                 </div>
               </Card>
 
+              {/* Activity */}
+              <ActivitySection />
+
+              {/* Social Links */}
               {(workspace.socials?.twitter || workspace.socials?.instagram || workspace.socials?.facebook || workspace.socials?.website) && (
                 <Card variant="bordered">
                   <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">
-                    Social Links
+                    Socials
                   </h2>
                   <div className="flex items-center gap-3">
                     {workspace.socials?.twitter && (
@@ -287,48 +331,31 @@ export default async function WorkspacePage({ params }: WorkspacePageProps) {
                   </div>
                 </Card>
               )}
+
+              {/* How to get involved */}
+              <HowToGetInvolved entityType="workspace" />
+
+              {/* Team Section */}
+              <TeamSection
+                teamMembers={teamMembers}
+                isVip={isVip}
+                currentUserId={authUser?.id}
+                entityType="workspace"
+                title="Team"
+              />
             </div>
 
             <div className="space-y-6">
-              {/* TODO: Temporarily commented out - join/attend functionality */}
-              {/* <Card variant="bordered">
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">
-                      Join the Workspace
-                    </h3>
-                    <p className="text-sm text-[var(--color-text-secondary)]">
-                      Become a member of this workspace and connect with others.
-                    </p>
-                  </div>
-                  {authUser ? (
-                    <WorkspaceJoinButton 
-                      workspace={workspace}
-                      isMember={isUserMember}
-                    />
-                  ) : (
-                    <Button variant="primary" className="w-full" size="lg" asChild>
-                      <Link href="/login">
-                        Join Workspace
-                      </Link>
-                    </Button>
-                  )}
-                  <WorkspaceShareButton 
-                    workspace={workspace} 
-                    variant="outline" 
-                    size="lg"
-                    className="w-full"
-                  />
-                </div>
-              </Card> */}
-
-              <EntityMembersCard
+              {/* Members Sidebar */}
+              <MembersSidebar
                 members={members}
+                friends={friends}
                 isVip={isVip}
                 authUser={authUser}
                 entitySlug={workspace.slug}
                 entityType="workspace"
-                entityName={workspace.name}
+                membersCount={workspace.members_count}
+                friendsCount={friends.length}
               />
             </div>
           </div>
