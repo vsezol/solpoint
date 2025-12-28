@@ -1,4 +1,19 @@
 /**
+ * Генерация slug из строки (общая функция)
+ * Преобразует в нижний регистр, заменяет пробелы на дефисы, удаляет спецсимволы
+ */
+export function generateSlug(text: string, maxLength: number = 50): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '') // Удаляем спецсимволы
+    .replace(/\s+/g, '-') // Заменяем пробелы на дефисы
+    .replace(/-+/g, '-') // Убираем множественные дефисы
+    .replace(/^-+|-+$/g, '') // Убираем дефисы в начале и конце
+    .substring(0, maxLength);
+}
+
+/**
  * Генерация slug для события
  * Формат: event-name-city-year-month
  */
@@ -11,19 +26,8 @@ export function generateEventSlug(
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
 
-  // Транслитерация и очистка названия
-  const slugName = name
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, "") // Удаляем спецсимволы
-    .replace(/\s+/g, "-") // Пробелы в дефисы
-    .replace(/-+/g, "-") // Множественные дефисы в один
-    .substring(0, 50); // Ограничение длины
-
-  const slugCity = city
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .substring(0, 30);
+  const slugName = generateSlug(name, 50);
+  const slugCity = generateSlug(city, 30);
 
   return `${slugName}-${slugCity}-${year}-${month}`;
 }
@@ -33,7 +37,7 @@ export function generateEventSlug(
  * @param baseSlug - базовый slug
  * @param checkUnique - функция проверки уникальности (возвращает true если slug уже существует)
  */
-export async function getUniqueEventSlug(
+export async function getUniqueSlug(
   baseSlug: string,
   checkUnique: (slug: string) => Promise<boolean>
 ): Promise<string> {
@@ -50,5 +54,15 @@ export async function getUniqueEventSlug(
   }
 
   return slug;
+}
+
+/**
+ * @deprecated Используйте getUniqueSlug
+ */
+export async function getUniqueEventSlug(
+  baseSlug: string,
+  checkUnique: (slug: string) => Promise<boolean>
+): Promise<string> {
+  return getUniqueSlug(baseSlug, checkUnique);
 }
 

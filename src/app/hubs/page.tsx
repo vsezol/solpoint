@@ -269,9 +269,28 @@ export default function HubsPage() {
               {filteredAndSortedEntities.map((entity) => {
                 // Проверяем тип сущности и рендерим соответствующую карточку
                 if ("slug" in entity && "members_count" in entity) {
-                  // Это может быть Hub, Community, Project или Workspace
+                  // Определяем тип сущности для правильного пути
+                  let entityType: "hub" | "community" | "workspace" | undefined = undefined;
+                  
+                  if (entityTypeFilter === "community") {
+                    entityType = "community";
+                  } else if (entityTypeFilter === "workspaces") {
+                    entityType = "workspace";
+                  } else if (entityTypeFilter === "hubs") {
+                    entityType = "hub";
+                  } else if (entityTypeFilter === "all") {
+                    // Определяем по ID, в каком массиве находится сущность
+                    if (communities.some(c => c.id === entity.id)) {
+                      entityType = "community";
+                    } else if (workspaces.some(w => w.id === entity.id)) {
+                      entityType = "workspace";
+                    } else if (hubs.some(h => h.id === entity.id)) {
+                      entityType = "hub";
+                    }
+                  }
+                  
                   // HubCard поддерживает все эти типы
-                  return <HubCard key={entity.id} hub={entity as Hub | Workspace} />;
+                  return <HubCard key={entity.id} hub={entity as Hub | Community | Workspace} entityType={entityType} />;
                 }
                 return null;
               })}

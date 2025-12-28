@@ -481,11 +481,11 @@ export function SolPointMap({
       case "event":
         return <EventCard event={marker.data as Event} isVip={isVip} isAuthenticated={isAuthenticated} compact />;
       case "hub":
-        return <HubCard hub={marker.data as Hub} compact />;
+        return <HubCard hub={marker.data as Hub} compact entityType="hub" />;
       case "workspace":
-        return <HubCard hub={marker.data as Workspace} compact />;
+        return <HubCard hub={marker.data as Workspace} compact entityType="workspace" />;
       case "community":
-        return <HubCard hub={marker.data as Community} compact />;
+        return <HubCard hub={marker.data as Community} compact entityType="community" />;
       default:
         return null;
     }

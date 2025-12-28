@@ -268,7 +268,8 @@ export async function POST(request: Request) {
     const baseSlug = generateEventSlug(name, city || "global", start_date);
     
     // Проверяем уникальность slug
-    const slug = await getUniqueEventSlug(baseSlug, async (slug) => {
+    const { getUniqueSlug } = await import("@/lib/utils/event-slug");
+    const slug = await getUniqueSlug(baseSlug, async (slug) => {
       const { data } = await supabase
         .from("events")
         .select("id")

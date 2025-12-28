@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { generateSlug, getUniqueSlug } from "@/lib/utils/event-slug";
 
 /**
  * GET /api/workspaces
@@ -103,13 +104,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Генерируем slug из name, если slug не указан
+    let finalSlug = slug;
+    if (!finalSlug || finalSlug.trim() === "") {
+      const baseSlug = generateSlug(name);
+      finalSlug = await getUniqueSlug(baseSlug, async (checkSlug) => {
+        const { data } = await supabase
+          .from("workspaces")
+          .select("id")
+          .eq("slug", checkSlug)
+          .maybeSingle();
+        return !!data;
+      });
+    }
+
     const { data: workspace, error } = await supabase
       .from("workspaces")
       .insert({
         name,
         description,
         image_url,
-        slug,
+        slug: finalSlug,
         country: hasLocation ? country : null,
         country_code: hasLocation && country_code ? country_code.toUpperCase() : null,
         city: hasLocation ? (city || null) : null,

@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { generateSlug, getUniqueSlug } from "@/lib/utils/event-slug";
 
 /**
  * GET /api/projects
@@ -125,6 +126,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Генерируем slug из name, если slug не указан
+    let finalSlug = slug;
+    if (!finalSlug || finalSlug.trim() === "") {
+      const baseSlug = generateSlug(name);
+      finalSlug = await getUniqueSlug(baseSlug, async (checkSlug) => {
+        const { data } = await supabase
+          .from("projects")
+          .select("id")
+          .eq("slug", checkSlug)
+          .maybeSingle();
+        return !!data;
+      });
+    }
+
     // Создаем проект
     const { data: project, error } = await supabase
       .from("projects")
@@ -132,7 +147,7 @@ export async function POST(request: NextRequest) {
         name,
         description,
         image_url,
-        slug,
+        slug: finalSlug,
         country: hasLocation ? country : null,
         country_code: hasLocation ? (country_code || null) : null,
         city: hasLocation ? city : null,

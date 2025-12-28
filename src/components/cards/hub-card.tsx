@@ -11,35 +11,28 @@ import { trackEvent } from "@/lib/analytics";
 interface HubCardProps {
   hub: Hub | Community | Workspace;
   compact?: boolean;
+  entityType?: "hub" | "community" | "workspace";
 }
 
-export function HubCard({ hub, compact = false }: HubCardProps) {
+export function HubCard({ hub, compact = false, entityType }: HubCardProps) {
   const router = useRouter();
 
-  const handleCompactCardClick = (e: React.MouseEvent) => {
-    const target = e.target as HTMLElement;
-    if (target.closest('button') || target.closest('a')) {
-      return;
+  // Определяем тип сущности и путь
+  const getEntityPath = (slug: string): string => {
+    if (entityType === "community") {
+      return `/communities/${slug}`;
     }
-    if (hub.slug) {
-      trackEvent("hub_card_click", {
-        event_category: "Hubs",
-        event_label: hub.slug || hub.id,
-        hub_id: hub.id,
-        hub_slug: hub.slug,
-        hub_name: hub.name,
-        source: "hub_card_compact",
-      });
-      router.push(`/hubs/${hub.slug}`);
+    if (entityType === "workspace") {
+      return `/workspaces/${slug}`;
     }
+    return `/hubs/${slug}`;
   };
 
   if (compact) {
-    return (
-      <div 
-        onClick={handleCompactCardClick}
-        className="p-4 min-w-[280px] cursor-pointer transition-all duration-300 hover:scale-105"
-      >
+    if (!hub.slug) {
+      // Если нет slug, возвращаем карточку без ссылки
+      return (
+        <div className="p-4 min-w-[280px] transition-all duration-300">
         {/* Image */}
         <div className="relative w-20 h-20 mx-auto mb-3 rounded-full overflow-hidden bg-[var(--color-surface-hover)]">
           {hub.image_url ? (
@@ -188,7 +181,7 @@ export function HubCard({ hub, compact = false }: HubCardProps) {
               }}
               asChild
             >
-              <Link href={`/hubs/${hub.slug}`}>
+              <Link href={getEntityPath(hub.slug)}>
                 <ExternalLink className="w-4 h-4 mr-1" />
                 Details
               </Link>
@@ -196,6 +189,182 @@ export function HubCard({ hub, compact = false }: HubCardProps) {
           )}
         </div>
       </div>
+      );
+    }
+
+    // Если есть slug, оборачиваем в Link
+    const path = getEntityPath(hub.slug);
+    return (
+      <Link 
+        href={path}
+        onClick={() => {
+          trackEvent("hub_card_click", {
+            event_category: "Hubs",
+            event_label: hub.slug || hub.id,
+            hub_id: hub.id,
+            hub_slug: hub.slug,
+            hub_name: hub.name,
+            source: "hub_card_compact",
+          });
+        }}
+        className="block p-4 min-w-[280px] cursor-pointer transition-all duration-300 hover:scale-105"
+      >
+        {/* Image */}
+        <div className="relative w-20 h-20 mx-auto mb-3 rounded-full overflow-hidden bg-[var(--color-surface-hover)]">
+          {hub.image_url ? (
+            <Image
+              src={hub.image_url}
+              alt={hub.name}
+              fill
+              className="object-cover"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[var(--color-info)]/30 to-[var(--color-secondary)]/30">
+              <Users className="w-10 h-10 text-[var(--color-info)]" />
+            </div>
+          )}
+        </div>
+
+        {/* Name */}
+        <h3 className="font-semibold text-[var(--color-text-primary)] text-center mb-1">
+          {hub.name}
+        </h3>
+
+        {/* Location */}
+        <div className="space-y-1 text-sm mb-3">
+          <p className="text-[var(--color-text-secondary)]">
+            <span className="text-[var(--color-primary)]">
+              {"address" in hub && hub.address ? "Address:" : "Country:"}
+            </span>{" "}
+            {"address" in hub && hub.address ? hub.address : hub.country}
+            {hub.city && `, ${hub.city}`}
+          </p>
+          {hub.description && (
+            <div className="mt-2">
+              <p className="text-xs text-[var(--color-primary)] mb-1">About:</p>
+              <p className="text-sm text-[var(--color-text-secondary)] line-clamp-3">
+                {hub.description}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Socials */}
+        <div className="flex items-center gap-2 mb-4 justify-center" onClick={(e) => e.stopPropagation()}>
+          <span className="text-xs text-[var(--color-text-muted)]">Socials:</span>
+          {hub.socials?.twitter && (
+            <a
+              href={hub.socials.twitter}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => {
+                e.stopPropagation();
+                trackEvent("hub_social_link_click", {
+                  event_category: "Hubs",
+                  event_label: hub.slug || hub.id,
+                  hub_id: hub.id,
+                  hub_slug: hub.slug,
+                  social_platform: "twitter",
+                  source: "hub_card_compact",
+                });
+              }}
+              className="p-1.5 rounded-full bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+            >
+              <Twitter className="w-4 h-4" />
+            </a>
+          )}
+          {hub.socials?.instagram && (
+            <a
+              href={hub.socials.instagram}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => {
+                e.stopPropagation();
+                trackEvent("hub_social_link_click", {
+                  event_category: "Hubs",
+                  event_label: hub.slug || hub.id,
+                  hub_id: hub.id,
+                  hub_slug: hub.slug,
+                  social_platform: "instagram",
+                  source: "hub_card_compact",
+                });
+              }}
+              className="p-1.5 rounded-full bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+            >
+              <Instagram className="w-4 h-4" />
+            </a>
+          )}
+          {hub.socials?.facebook && (
+            <a
+              href={hub.socials.facebook}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => {
+                e.stopPropagation();
+                trackEvent("hub_social_link_click", {
+                  event_category: "Hubs",
+                  event_label: hub.slug || hub.id,
+                  hub_id: hub.id,
+                  hub_slug: hub.slug,
+                  social_platform: "facebook",
+                  source: "hub_card_compact",
+                });
+              }}
+              className="p-1.5 rounded-full bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+            >
+              <Facebook className="w-4 h-4" />
+            </a>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1 text-[var(--color-primary)] border-[var(--color-primary)] cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              trackEvent("hub_share_click", {
+                event_category: "Hubs",
+                event_label: hub.slug || hub.id,
+                hub_id: hub.id,
+                hub_slug: hub.slug,
+                hub_name: hub.name,
+                source: "hub_card_compact",
+              });
+              // TODO: Implement share functionality
+            }}
+          >
+            <Share2 className="w-4 h-4 mr-1" />
+            Share
+          </Button>
+          {hub.slug && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="flex-1 cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                trackEvent("hub_card_click", {
+                  event_category: "Hubs",
+                  event_label: hub.slug || hub.id,
+                  hub_id: hub.id,
+                  hub_slug: hub.slug,
+                  hub_name: hub.name,
+                  source: "hub_card_compact_details_button",
+                });
+              }}
+              asChild
+            >
+              <Link href={getEntityPath(hub.slug)}>
+                <ExternalLink className="w-4 h-4 mr-1" />
+                Details
+              </Link>
+            </Button>
+          )}
+        </div>
+      </Link>
     );
   }
 
@@ -206,9 +375,19 @@ export function HubCard({ hub, compact = false }: HubCardProps) {
     if (target.closest('button') || target.closest('a')) {
       return;
     }
-    if (hub.slug) {
-      router.push(`/hubs/${hub.slug}`);
+    if (!hub.slug) {
+      return;
     }
+    const path = getEntityPath(hub.slug);
+    trackEvent("hub_card_click", {
+      event_category: "Hubs",
+      event_label: hub.slug || hub.id,
+      hub_id: hub.id,
+      hub_slug: hub.slug,
+      hub_name: hub.name,
+      source: "hub_card_full",
+    });
+    router.push(path);
   };
 
   return (
@@ -342,7 +521,7 @@ export function HubCard({ hub, compact = false }: HubCardProps) {
             }}
             asChild
           >
-            <Link href={`/hubs/${hub.slug}`}>
+            <Link href={getEntityPath(hub.slug)}>
               <ExternalLink className="w-4 h-4 mr-2" />
               Details
             </Link>
