@@ -10,7 +10,8 @@ export type FieldType =
   | "number" 
   | "location"
   | "location-global"
-  | "coordinates";
+  | "coordinates"
+  | "image-upload";
 
 export interface FieldConfig {
   key: string;

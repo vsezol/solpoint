@@ -45,6 +45,17 @@ VALUES (
 )
 ON CONFLICT (id) DO NOTHING;
 
+-- 5. Create Storage bucket for workspace images
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'workspace-images',
+  'workspace-images',
+  true,
+  5242880,
+  ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+)
+ON CONFLICT (id) DO NOTHING;
+
 -- RLS policies for event-images
 -- Users can upload images for events they own
 DROP POLICY IF EXISTS "Users can upload event images" ON storage.objects;
@@ -197,4 +208,42 @@ ON storage.objects
 FOR SELECT
 TO public
 USING (bucket_id = 'project-images');
+
+-- RLS policies for workspace-images
+DROP POLICY IF EXISTS "Users can upload workspace images" ON storage.objects;
+CREATE POLICY "Users can upload workspace images"
+ON storage.objects
+FOR INSERT
+TO authenticated
+WITH CHECK (
+  bucket_id = 'workspace-images' AND
+  (storage.foldername(name))[1] = auth.uid()::text
+);
+
+DROP POLICY IF EXISTS "Users can update workspace images" ON storage.objects;
+CREATE POLICY "Users can update workspace images"
+ON storage.objects
+FOR UPDATE
+TO authenticated
+USING (
+  bucket_id = 'workspace-images' AND
+  (storage.foldername(name))[1] = auth.uid()::text
+);
+
+DROP POLICY IF EXISTS "Users can delete workspace images" ON storage.objects;
+CREATE POLICY "Users can delete workspace images"
+ON storage.objects
+FOR DELETE
+TO authenticated
+USING (
+  bucket_id = 'workspace-images' AND
+  (storage.foldername(name))[1] = auth.uid()::text
+);
+
+DROP POLICY IF EXISTS "Anyone can view workspace images" ON storage.objects;
+CREATE POLICY "Anyone can view workspace images"
+ON storage.objects
+FOR SELECT
+TO public
+USING (bucket_id = 'workspace-images');
 

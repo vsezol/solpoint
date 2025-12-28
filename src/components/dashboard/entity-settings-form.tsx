@@ -349,10 +349,14 @@ export function EntitySettingsForm({
                   uploadEndpoint = `/api/events/${entityId}/image`;
                 } else if (entityType === "hub") {
                   uploadEndpoint = `/api/hubs/${entityId}/image`;
+                } else if (entityType === "community") {
+                  uploadEndpoint = `/api/communities/${entityId}/image`;
+                } else if (entityType === "project") {
+                  uploadEndpoint = `/api/projects/${entityId}/image`;
+                } else if (entityType === "workspace") {
+                  uploadEndpoint = `/api/workspaces/${entityId}/image`;
                 } else {
-                  // Для других типов пока просто возвращаем blob URL
-                  // TODO: создать API endpoints для communities, projects, workspaces
-                  return URL.createObjectURL(file);
+                  throw new Error("Unsupported entity type for image upload");
                 }
                 
                 const response = await fetch(uploadEndpoint, {
@@ -374,8 +378,14 @@ export function EntitySettingsForm({
                   deleteEndpoint = `/api/events/${entityId}/image`;
                 } else if (entityType === "hub") {
                   deleteEndpoint = `/api/hubs/${entityId}/image`;
+                } else if (entityType === "community") {
+                  deleteEndpoint = `/api/communities/${entityId}/image`;
+                } else if (entityType === "project") {
+                  deleteEndpoint = `/api/projects/${entityId}/image`;
+                } else if (entityType === "workspace") {
+                  deleteEndpoint = `/api/workspaces/${entityId}/image`;
                 } else {
-                  throw new Error("Delete not supported for this entity type yet");
+                  throw new Error("Unsupported entity type for image delete");
                 }
                 
                 const response = await fetch(deleteEndpoint, {
