@@ -183,15 +183,49 @@ CREATE TABLE public.entity_submissions (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Messages table
+-- Chats table (personal messages between two users)
+CREATE TABLE public.chats (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user1_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  user2_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  last_message_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  CHECK (user1_id < user2_id),
+  UNIQUE(user1_id, user2_id)
+);
+
+-- Messages table (messages in chats with reply support)
 CREATE TABLE public.messages (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  chat_id UUID NOT NULL REFERENCES public.chats(id) ON DELETE CASCADE,
   sender_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  receiver_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  content TEXT NOT NULL CHECK (char_length(content) <= 1000),
+  content TEXT NOT NULL CHECK (char_length(content) <= 5000),
+  reply_to_id UUID REFERENCES public.messages(id) ON DELETE SET NULL,
   is_read BOOLEAN DEFAULT false,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Function to validate sender is part of chat (used in trigger)
+CREATE OR REPLACE FUNCTION validate_message_sender()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Verify sender is one of the chat participants
+  IF NOT EXISTS (
+    SELECT 1 FROM public.chats
+    WHERE id = NEW.chat_id
+    AND (user1_id = NEW.sender_id OR user2_id = NEW.sender_id)
+  ) THEN
+    RAISE EXCEPTION 'Sender must be a participant in the chat';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER validate_message_sender_trigger
+BEFORE INSERT ON public.messages
+FOR EACH ROW EXECUTE FUNCTION validate_message_sender();
 
 -- Friends / Mutual follows table
 CREATE TABLE public.friends (
@@ -265,9 +299,17 @@ CREATE INDEX idx_events_hub_id ON public.events(hub_id);
 CREATE INDEX idx_events_community_id ON public.events(community_id);
 CREATE INDEX idx_events_project_id ON public.events(project_id);
 
-CREATE INDEX idx_messages_sender ON public.messages(sender_id);
-CREATE INDEX idx_messages_receiver ON public.messages(receiver_id);
-CREATE INDEX idx_messages_created ON public.messages(created_at);
+CREATE INDEX idx_chats_user1_id ON public.chats(user1_id);
+CREATE INDEX idx_chats_user2_id ON public.chats(user2_id);
+CREATE INDEX idx_chats_last_message_at ON public.chats(last_message_at DESC NULLS LAST);
+CREATE INDEX idx_chats_user_pair ON public.chats(user1_id, user2_id);
+
+CREATE INDEX idx_messages_chat_id ON public.messages(chat_id);
+CREATE INDEX idx_messages_sender_id ON public.messages(sender_id);
+CREATE INDEX idx_messages_reply_to_id ON public.messages(reply_to_id) WHERE reply_to_id IS NOT NULL;
+CREATE INDEX idx_messages_created_at ON public.messages(created_at DESC);
+CREATE INDEX idx_messages_chat_created ON public.messages(chat_id, created_at DESC);
+CREATE INDEX idx_messages_is_read ON public.messages(is_read) WHERE is_read = false;
 
 -- Row Level Security (RLS)
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
@@ -275,6 +317,7 @@ ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.hubs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.communities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.projects ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.chats ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.friends ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
@@ -334,19 +377,67 @@ CREATE POLICY "Authenticated users can create hubs"
   ON public.hubs FOR INSERT
   WITH CHECK (auth.uid() IS NOT NULL);
 
--- Messages policies (VIP only)
-CREATE POLICY "Users can view their own messages"
-  ON public.messages FOR SELECT
-  USING (auth.uid() = sender_id OR auth.uid() = receiver_id);
+-- Chats policies
+CREATE POLICY "Users can view their own chats"
+  ON public.chats FOR SELECT
+  USING (auth.uid() = user1_id OR auth.uid() = user2_id);
 
-CREATE POLICY "VIP users can send messages"
+CREATE POLICY "Users can create chats"
+  ON public.chats FOR INSERT
+  WITH CHECK (auth.uid() = user1_id OR auth.uid() = user2_id);
+
+CREATE POLICY "Users can update their own chats"
+  ON public.chats FOR UPDATE
+  USING (auth.uid() = user1_id OR auth.uid() = user2_id)
+  WITH CHECK (auth.uid() = user1_id OR auth.uid() = user2_id);
+
+-- Messages policies
+CREATE POLICY "Users can view messages in their chats"
+  ON public.messages FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.chats
+      WHERE id = messages.chat_id
+      AND (user1_id = auth.uid() OR user2_id = auth.uid())
+    )
+  );
+
+CREATE POLICY "Users can send messages in their chats"
   ON public.messages FOR INSERT
   WITH CHECK (
     auth.uid() = sender_id
     AND EXISTS (
-      SELECT 1 FROM public.profiles 
-      WHERE id = auth.uid() 
-      AND subscription_tier = 'vip'
+      SELECT 1 FROM public.chats
+      WHERE id = chat_id
+      AND (user1_id = auth.uid() OR user2_id = auth.uid())
+    )
+  );
+
+CREATE POLICY "Users can update messages in their chats"
+  ON public.messages FOR UPDATE
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.chats
+      WHERE id = messages.chat_id
+      AND (user1_id = auth.uid() OR user2_id = auth.uid())
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.chats
+      WHERE id = messages.chat_id
+      AND (user1_id = auth.uid() OR user2_id = auth.uid())
+    )
+  );
+
+CREATE POLICY "Users can delete their own messages"
+  ON public.messages FOR DELETE
+  USING (
+    sender_id = auth.uid()
+    OR EXISTS (
+      SELECT 1 FROM public.chats
+      WHERE id = messages.chat_id
+      AND (user1_id = auth.uid() OR user2_id = auth.uid())
     )
   );
 
@@ -607,4 +698,28 @@ FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE TRIGGER entity_submissions_updated_at
 BEFORE UPDATE ON public.entity_submissions
 FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+CREATE TRIGGER chats_updated_at
+BEFORE UPDATE ON public.chats
+FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+CREATE TRIGGER messages_updated_at
+BEFORE UPDATE ON public.messages
+FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- Trigger to update last_message_at in chats when message is created
+CREATE OR REPLACE FUNCTION update_chat_last_message_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  UPDATE public.chats
+  SET last_message_at = NEW.created_at,
+      updated_at = NOW()
+  WHERE id = NEW.chat_id;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER update_chat_last_message_trigger
+AFTER INSERT ON public.messages
+FOR EACH ROW EXECUTE FUNCTION update_chat_last_message_at();
 
