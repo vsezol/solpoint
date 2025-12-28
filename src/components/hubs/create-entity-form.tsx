@@ -17,6 +17,7 @@ const LocationPicker = dynamic(
   }
 );
 import { CountrySelect } from "@/components/ui/country-select";
+import { ImageUpload } from "@/components/ui/image-upload";
 import { createHub } from "@/lib/api/hubs";
 import { createCommunity } from "@/lib/api/communities";
 import { createProject } from "@/lib/api/projects";
@@ -59,6 +60,7 @@ export function CreateEntityForm({
   const [error, setError] = useState<string | null>(null);
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   
   // Refs for scrolling to errors
   const formRef = useRef<HTMLFormElement>(null);
@@ -439,7 +441,12 @@ export function CreateEntityForm({
       const entityData = {
         name: name.trim(),
         description: description.trim() || undefined,
-        image_url: imageUrl.trim() || undefined,
+        // Не передаем image_url если выбран файл (загрузим после создания) или если это blob URL
+        image_url: (entityType === "hub" && selectedImageFile) 
+          ? undefined 
+          : (imageUrl.trim() && !imageUrl.startsWith("blob:")) 
+            ? imageUrl.trim() 
+            : undefined,
         ...locationData,
         socials: Object.keys(socials).length > 0 ? socials : undefined,
       };
@@ -484,6 +491,34 @@ export function CreateEntityForm({
         }
 
         if (createdEntity) {
+          // Если был выбран файл для загрузки, загружаем его
+          if (selectedImageFile && entityType === "hub") {
+            try {
+              const formData = new FormData();
+              formData.append("file", selectedImageFile);
+              
+              const uploadResponse = await fetch(`/api/hubs/${createdEntity.id}/image`, {
+                method: "POST",
+                body: formData,
+              });
+
+              if (!uploadResponse.ok) {
+                const errorData = await uploadResponse.json().catch(() => ({}));
+                throw new Error(errorData.error || "Failed to upload image");
+              }
+              
+              const uploadData = await uploadResponse.json();
+              // Обновляем imageUrl с реальным URL после загрузки
+              if (uploadData.image_url) {
+                setImageUrl(uploadData.image_url);
+                setSelectedImageFile(null); // Очищаем файл после успешной загрузки
+              }
+            } catch (uploadError) {
+              console.error("Error uploading image:", uploadError);
+              alert(uploadError instanceof Error ? uploadError.message : "Failed to upload image. The hub was created but the image was not uploaded.");
+            }
+          }
+
           trackEvent(`${entityType}_created`, {
             event_category: "Entities",
             entity_id: createdEntity.id,
@@ -491,6 +526,7 @@ export function CreateEntityForm({
           });
 
           resetEntityForm();
+          setSelectedImageFile(null);
 
           if (onSuccess && createdEntity.slug) {
             onSuccess({
@@ -608,14 +644,39 @@ export function CreateEntityForm({
 
         <div>
           <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
-            Image URL
+            Image
           </label>
-          <Input
-            type="url"
-            value={imageUrl}
-            onChange={(e) => setImageUrl(e.target.value)}
-            placeholder="https://example.com/image.jpg"
-          />
+          {entityType === "hub" ? (
+            <ImageUpload
+              value={imageUrl && !imageUrl.startsWith("blob:") ? imageUrl : undefined}
+              onChange={(url) => {
+                // Не устанавливаем blob URL в imageUrl, только реальный URL после загрузки
+                if (url && !url.startsWith("blob:")) {
+                  setImageUrl(url);
+                  setSelectedImageFile(null); // Очищаем только когда получили реальный URL
+                } else if (!url) {
+                  setImageUrl("");
+                  setSelectedImageFile(null);
+                }
+                // Не очищаем selectedImageFile если это blob URL (будет очищен после загрузки)
+              }}
+              onUpload={async (file) => {
+                setSelectedImageFile(file);
+                // Возвращаем blob URL только для preview
+                return URL.createObjectURL(file);
+              }}
+              disabled={isSubmitting}
+              label=""
+              previewClassName="w-full h-48 rounded-lg overflow-hidden border border-[var(--color-surface-border)] bg-[var(--color-surface)]"
+            />
+          ) : (
+            <Input
+              type="url"
+              value={imageUrl}
+              onChange={(e) => setImageUrl(e.target.value)}
+              placeholder="https://example.com/image.jpg"
+            />
+          )}
         </div>
       </div>
 

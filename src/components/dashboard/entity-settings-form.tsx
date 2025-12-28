@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Card, Button, Input, CheckBox } from "@/components/ui";
 import { CountrySelect } from "@/components/ui/country-select";
+import { ImageUpload } from "@/components/ui/image-upload";
 import { Settings, Edit, Save, X, UserPlus, Globe, MapPin } from "lucide-react";
 import { getEntityConfig, type EntityType, type FieldConfig } from "@/lib/entity-config";
 import type { Hub, Community, Project, Event, Workspace, User } from "@/types";
@@ -327,6 +328,70 @@ export function EntitySettingsForm({
               onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
               placeholder={field.placeholder}
               className="w-full"
+            />
+          </div>
+        );
+
+      case "image-upload":
+        return (
+          <div key={field.key}>
+            <ImageUpload
+              value={value || undefined}
+              onChange={async (url) => {
+                setFormData({ ...formData, [field.key]: url || "" });
+              }}
+              onUpload={async (file) => {
+                const formData = new FormData();
+                formData.append("file", file);
+                
+                let uploadEndpoint = "";
+                if (entityType === "event") {
+                  uploadEndpoint = `/api/events/${entityId}/image`;
+                } else if (entityType === "hub") {
+                  uploadEndpoint = `/api/hubs/${entityId}/image`;
+                } else {
+                  // Для других типов пока просто возвращаем blob URL
+                  // TODO: создать API endpoints для communities, projects, workspaces
+                  return URL.createObjectURL(file);
+                }
+                
+                const response = await fetch(uploadEndpoint, {
+                  method: "POST",
+                  body: formData,
+                });
+                
+                if (!response.ok) {
+                  const errorData = await response.json().catch(() => ({}));
+                  throw new Error(errorData.error || "Failed to upload image");
+                }
+                
+                const data = await response.json();
+                return data.image_url;
+              }}
+              onDelete={async () => {
+                let deleteEndpoint = "";
+                if (entityType === "event") {
+                  deleteEndpoint = `/api/events/${entityId}/image`;
+                } else if (entityType === "hub") {
+                  deleteEndpoint = `/api/hubs/${entityId}/image`;
+                } else {
+                  throw new Error("Delete not supported for this entity type yet");
+                }
+                
+                const response = await fetch(deleteEndpoint, {
+                  method: "DELETE",
+                });
+                
+                if (!response.ok) {
+                  const errorData = await response.json().catch(() => ({}));
+                  throw new Error(errorData.error || "Failed to delete image");
+                }
+                
+                setFormData({ ...formData, [field.key]: "" });
+              }}
+              disabled={!isEditing || isSaving}
+              label={field.label}
+              previewClassName="w-full h-48 rounded-lg overflow-hidden border border-[var(--color-surface-border)] bg-[var(--color-surface)]"
             />
           </div>
         );

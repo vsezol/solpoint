@@ -26,6 +26,7 @@ import type { EventType, EventVisibility } from "@/types";
 import { trackEvent } from "@/lib/analytics";
 import { useFormsStore } from "@/store/forms-store";
 import { cn } from "@/lib/utils";
+import { ImageUpload } from "./image-upload";
 
 interface CreateEventFormProps {
   onSuccess?: (event: { id: string; slug: string }) => void;
@@ -38,6 +39,7 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isGeocoding, setIsGeocoding] = useState(false);
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   
   // Refs for scrolling to errors
   const formRef = useRef<HTMLFormElement>(null);
@@ -472,7 +474,12 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
       const eventData = {
         name: name.trim(),
         description: description.trim() || undefined,
-        image_url: imageUrl.trim() || undefined,
+        // Не передаем image_url если выбран файл (загрузим после создания) или если это blob URL
+        image_url: selectedImageFile 
+          ? undefined 
+          : (imageUrl.trim() && !imageUrl.startsWith("blob:")) 
+            ? imageUrl.trim() 
+            : undefined,
         ...locationData,
         start_date: new Date(startDate).toISOString(),
         end_date: endDate ? new Date(endDate).toISOString() : undefined,
@@ -494,6 +501,35 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
         const createdEvent = await createEvent(eventData);
 
         if (createdEvent) {
+          // Если был выбран файл для загрузки, загружаем его
+          if (selectedImageFile) {
+            try {
+              const formData = new FormData();
+              formData.append("file", selectedImageFile);
+              
+              const uploadResponse = await fetch(`/api/events/${createdEvent.id}/image`, {
+                method: "POST",
+                body: formData,
+              });
+
+              if (!uploadResponse.ok) {
+                const errorData = await uploadResponse.json().catch(() => ({}));
+                throw new Error(errorData.error || "Failed to upload image");
+              }
+              
+              const uploadData = await uploadResponse.json();
+              // Обновляем imageUrl с реальным URL после загрузки (для будущего использования)
+              if (uploadData.image_url) {
+                setImageUrl(uploadData.image_url);
+                setSelectedImageFile(null); // Очищаем файл после успешной загрузки
+              }
+            } catch (uploadError) {
+              console.error("Error uploading image:", uploadError);
+              alert(uploadError instanceof Error ? uploadError.message : "Failed to upload image. The event was created but the image was not uploaded.");
+              // Не очищаем selectedImageFile при ошибке, чтобы пользователь мог попробовать снова
+            }
+          }
+
           trackEvent("event_created", {
             event_category: "Events",
             event_id: createdEvent.id,
@@ -502,6 +538,7 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
 
           // Reset form
           resetEventForm();
+          setSelectedImageFile(null);
 
           if (onSuccess && createdEvent.slug) {
             onSuccess({ id: createdEvent.id, slug: createdEvent.slug });
@@ -592,14 +629,32 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
 
         <div>
           <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
-            Image URL
+            Image
           </label>
-          <Input
-            type="url"
-            value={imageUrl}
-            onChange={(e) => setImageUrl(e.target.value)}
-            placeholder="https://example.com/image.jpg"
-          />
+          <div className="space-y-2">
+            <ImageUpload
+              value={imageUrl && !imageUrl.startsWith("blob:") ? imageUrl : undefined}
+              onChange={(url) => {
+                // Не устанавливаем blob URL в imageUrl, только реальный URL после загрузки
+                if (url && !url.startsWith("blob:")) {
+                  setImageUrl(url);
+                  setSelectedImageFile(null); // Очищаем файл только когда получили реальный URL
+                } else if (!url) {
+                  setImageUrl("");
+                  setSelectedImageFile(null);
+                }
+                // Не очищаем selectedImageFile если это blob URL (будет очищен после загрузки)
+              }}
+              onUpload={async (file) => {
+                setSelectedImageFile(file);
+                // Возвращаем blob URL только для preview
+                return URL.createObjectURL(file);
+              }}
+              disabled={isSubmitting}
+              label=""
+              previewClassName="w-full h-48 rounded-lg overflow-hidden border border-[var(--color-surface-border)] bg-[var(--color-surface)]"
+            />
+          </div>
         </div>
       </div>
 

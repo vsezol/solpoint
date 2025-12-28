@@ -320,13 +320,7 @@ export async function POST(request: Request) {
     const { data: event, error: createError } = await supabase
       .from("events")
       .insert(eventData)
-      .select(`
-        *,
-        organizer:profiles!events_organizer_id_fkey(id, twitter_handle, twitter_name, avatar_url),
-        hub:hubs(id, name, image_url),
-        community:communities(id, name, image_url),
-        project:projects(id, name, image_url)
-      `)
+      .select("*")
       .single();
 
     if (createError) {
