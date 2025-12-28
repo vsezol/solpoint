@@ -17,7 +17,7 @@ export function CommunityViewTracker({ community }: CommunityViewTrackerProps) {
       community_slug: community.slug,
       community_name: community.name,
       members_count: community.members_count,
-      country: community.country,
+      country: community.country || "",
     });
   }, [community]);
 

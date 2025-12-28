@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+interface ExtendedNextRequest extends NextRequest {
+  ip?: string;
+}
+
 // Маппинг названий стран на ISO коды
 const COUNTRY_TO_CODE: Record<string, string> = {
   "United States": "US",
@@ -59,7 +63,7 @@ const COUNTRY_TO_CODE: Record<string, string> = {
  * Определяет страну и город пользователя по его IP адресу
  * Использует ipapi.co API (бесплатный, до 1000 запросов/день)
  */
-export async function GET(request: NextRequest) {
+export async function GET(request: ExtendedNextRequest) {
   try {
     // Получаем IP адрес из заголовков запроса
     // Проверяем различные заголовки, которые могут содержать реальный IP

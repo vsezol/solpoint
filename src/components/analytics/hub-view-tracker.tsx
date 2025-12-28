@@ -17,7 +17,7 @@ export function HubViewTracker({ hub }: HubViewTrackerProps) {
       hub_slug: hub.slug,
       hub_name: hub.name,
       members_count: hub.members_count,
-      country: hub.country,
+      country: hub.country || "",
     });
   }, [hub]);
 

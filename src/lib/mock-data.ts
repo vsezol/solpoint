@@ -135,6 +135,10 @@ export const mockEvents: Event[] = [
       website: "https://breakpoint.solana.com",
     },
     created_at: "2024-06-01T00:00:00Z",
+    slug: "",
+    is_online: false,
+    owner_type: "hub",
+    owner_id: ""
   },
   {
     id: "e2",
@@ -157,6 +161,10 @@ export const mockEvents: Event[] = [
       instagram: "https://instagram.com/superteamkz",
     },
     created_at: "2024-12-01T00:00:00Z",
+    slug: "",
+    is_online: false,
+    owner_type: "hub",
+    owner_id: ""
   },
   {
     id: "e3",
@@ -177,6 +185,10 @@ export const mockEvents: Event[] = [
       instagram: "https://instagram.com/solana_istanbul",
     },
     created_at: "2025-01-15T00:00:00Z",
+    slug: "",
+    is_online: false,
+    owner_type: "hub",
+    owner_id: ""
   },
   {
     id: "e4",
@@ -196,6 +208,10 @@ export const mockEvents: Event[] = [
     attendees_count: 25,
     socials: {},
     created_at: "2025-01-20T00:00:00Z",
+    slug: "",
+    is_online: false,
+    owner_type: "hub",
+    owner_id: ""
   },
 ];
 
@@ -216,6 +232,8 @@ export const mockHubs: Hub[] = [
       website: "https://superteam.fun",
     },
     created_at: "2023-06-01T00:00:00Z",
+    slug: "",
+    owner_id: ""
   },
   {
     id: "h2",
@@ -230,6 +248,8 @@ export const mockHubs: Hub[] = [
       twitter: "https://twitter.com/superteamtr",
     },
     created_at: "2023-08-15T00:00:00Z",
+    slug: "",
+    owner_id: ""
   },
   {
     id: "h3",
@@ -245,6 +265,8 @@ export const mockHubs: Hub[] = [
       twitter: "https://twitter.com/superteamuae",
     },
     created_at: "2023-04-01T00:00:00Z",
+    slug: "",
+    owner_id: ""
   },
   {
     id: "h4",
@@ -260,6 +282,8 @@ export const mockHubs: Hub[] = [
       twitter: "https://twitter.com/superteamin",
     },
     created_at: "2022-12-01T00:00:00Z",
+    slug: "",
+    owner_id: ""
   },
 ];
 
@@ -282,7 +306,7 @@ export function createMapMarkers(
   };
 
   users.forEach((user) => {
-    const coords = countryCoordinates[user.country] || { lat: 0, lng: 0 };
+    const coords = countryCoordinates[user.country || ""] || { lat: 0, lng: 0 };
     // Add small random offset
     const latOffset = (Math.random() - 0.5) * 2;
     const lngOffset = (Math.random() - 0.5) * 2;
@@ -312,8 +336,8 @@ export function createMapMarkers(
     markers.push({
       id: `hub-${hub.id}`,
       type: "hub",
-      latitude: hub.latitude,
-      longitude: hub.longitude,
+      latitude: hub.latitude || 0,
+      longitude: hub.longitude || 0,
       data: hub,
     });
   });

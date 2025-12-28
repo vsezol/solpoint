@@ -457,7 +457,8 @@ export function CreateEntityForm({
         const countryData = countryCode ? await getCountryByCode(countryCode) : null;
         const countryName = countryData?.name || "";
         const fullAddress = [city, countryName].filter(Boolean).join(", ");
-        entityData.address = fullAddress || city;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (entityData as any).address = fullAddress || city;
       }
 
       if (isAdmin) {

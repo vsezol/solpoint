@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Button, Card, Input } from "@/components/ui";
 import { Header, Footer } from "@/components/layout";
-import { Twitter, MapPin, Globe, AlertCircle } from "lucide-react";
+import { Twitter, MapPin, Globe, AlertCircle, Loader2 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
@@ -19,7 +19,7 @@ import { MAJOR_CITIES } from "@/lib/countries";
 
 type Step = "twitter" | "location" | "profile" | "complete";
 
-export default function SignupPage() {
+function SignupPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
@@ -719,6 +719,24 @@ export default function SignupPage() {
       </main>
       <Footer />
     </>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={
+      <>
+        <Header />
+        <main className="min-h-screen pt-16 flex items-center justify-center animated-bg px-4">
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="w-8 h-8 animate-spin text-[var(--color-primary)]" />
+          </div>
+        </main>
+        <Footer />
+      </>
+    }>
+      <SignupPageContent />
+    </Suspense>
   );
 }
 

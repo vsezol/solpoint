@@ -577,7 +577,7 @@ export function SolPointMap({
         {currentZoom >= 6 && citiesGeoJson && (
           <GeoJSON
             data={citiesGeoJson}
-            smoothFactor={1.5} // Сглаживание линий для более плавных углов
+            // smoothFactor={1.5} // Сглаживание линий для более плавных углов
             style={() => {
               return {
                 fillColor: "transparent", // Прозрачная заливка

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Header, Footer } from "@/components/layout";
 import { Button, Card, Badge } from "@/components/ui";
@@ -9,7 +9,7 @@ import Image from "next/image";
 import { trackEvent } from "@/lib/analytics";
 import { useAuth } from "@/hooks/use-auth";
 
-export default function ActivatePage() {
+function ActivatePageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
@@ -354,6 +354,25 @@ export default function ActivatePage() {
       </main>
       <Footer />
     </>
+  );
+}
+
+export default function ActivatePage() {
+  return (
+    <Suspense fallback={
+      <>
+        <Header />
+        <main className="min-h-screen pt-16 flex items-center justify-center animated-bg px-4">
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="w-8 h-8 animate-spin text-[var(--color-primary)]" />
+            <p className="text-[var(--color-text-secondary)]">Loading...</p>
+          </div>
+        </main>
+        <Footer />
+      </>
+    }>
+      <ActivatePageContent />
+    </Suspense>
   );
 }
 

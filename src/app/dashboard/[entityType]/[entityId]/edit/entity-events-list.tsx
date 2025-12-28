@@ -4,11 +4,11 @@ import { Card, Button } from "@/components/ui";
 import { Calendar, Plus, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import type { Event } from "@/types";
+import type { EntityType, Event } from "@/types";
 
 interface EntityEventsListProps {
   entityId: string;
-  entityType: "hub" | "community" | "project" | "workspace";
+  entityType: EntityType;
 }
 
 export function EntityEventsList({

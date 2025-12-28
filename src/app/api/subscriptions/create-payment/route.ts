@@ -6,6 +6,14 @@ const NOWPAYMENTS_API_URL = "https://api.nowpayments.io/v1";
 export async function POST(request: Request) {
   const supabase = await createClient();
 
+  const {
+    data: { user: authUser },
+  } = await supabase.auth.getUser();
+
+  if (!authUser) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const body = await request.json();
     const { intent_id } = body;
