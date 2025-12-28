@@ -294,7 +294,8 @@ export default async function HubPage({ params }: HubPageProps) {
             {/* Sidebar */}
             <div className="space-y-6">
               {/* Join Card */}
-              <Card variant="bordered">
+              {/* TODO: Temporarily commented out - join/attend functionality */}
+              {/* <Card variant="bordered">
                 <div className="space-y-4">
                   <div>
                     <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">
@@ -323,7 +324,7 @@ export default async function HubPage({ params }: HubPageProps) {
                     className="w-full"
                   />
                 </div>
-              </Card>
+              </Card> */}
 
               {/* Members Card */}
               <HubMembersCard

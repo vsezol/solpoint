@@ -290,7 +290,8 @@ export default async function WorkspacePage({ params }: WorkspacePageProps) {
             </div>
 
             <div className="space-y-6">
-              <Card variant="bordered">
+              {/* TODO: Temporarily commented out - join/attend functionality */}
+              {/* <Card variant="bordered">
                 <div className="space-y-4">
                   <div>
                     <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">
@@ -319,7 +320,7 @@ export default async function WorkspacePage({ params }: WorkspacePageProps) {
                     className="w-full"
                   />
                 </div>
-              </Card>
+              </Card> */}
 
               <EntityMembersCard
                 members={members}
