@@ -144,7 +144,6 @@ export default async function EventPage({ params }: EventPageProps) {
     .single();
 
   if (eventError || !eventData) {
-    console.error("Error fetching event:", eventError);
     notFound();
   }
 
@@ -211,7 +210,7 @@ export default async function EventPage({ params }: EventPageProps) {
       .select("id, status")
       .eq("event_id", event.id)
       .eq("user_id", authUser.id)
-      .single();
+      .maybeSingle(); // Используем maybeSingle() вместо single() чтобы не было ошибки если записи нет
 
     isUserRegistered = userMember?.status === "going";
 
@@ -462,6 +461,7 @@ export default async function EventPage({ params }: EventPageProps) {
                       isHost={true}
                       isVip={isVip}
                       compact={false}
+                      currentUserId={authUser?.id}
                     />
                   </div>
                 </div>
