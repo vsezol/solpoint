@@ -355,28 +355,30 @@ export default function ChatPage() {
         </div>
 
         {/* Message Input */}
-        <form onSubmit={handleSendMessage} className="flex gap-2">
-          <Input
-            value={messageContent}
-            onChange={(e) => setMessageContent(e.target.value)}
-            placeholder="Type a message..."
-            disabled={sending}
-            className="flex-1"
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSendMessage(e);
-              }
-            }}
-          />
-          <Button
-            type="submit"
-            disabled={!messageContent.trim() || sending}
-            isLoading={sending}
-          >
-            Send
-          </Button>
-        </form>
+        <div className="flex justify-center">
+          <form onSubmit={handleSendMessage} className="flex gap-2 max-w-2xl">
+            <Input
+              value={messageContent}
+              onChange={(e) => setMessageContent(e.target.value)}
+              placeholder="Type a message..."
+              disabled={sending}
+              className="flex-1"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendMessage(e);
+                }
+              }}
+            />
+            <Button
+              type="submit"
+              disabled={!messageContent.trim() || sending}
+              isLoading={sending}
+            >
+              Send
+            </Button>
+          </form>
+        </div>
       </main>
       <Footer />
     </div>
