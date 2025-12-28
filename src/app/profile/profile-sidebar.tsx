@@ -9,7 +9,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getAppUrl } from "@/lib/utils";
 import type { User, Event, Invite } from "@/types";
-import { createClient } from "@/lib/supabase/client";
 
 interface ProfileSidebarProps {
   user: User;
@@ -37,31 +36,25 @@ export function ProfileSidebar({ user, upcomingEvents }: ProfileSidebarProps) {
 
   const fetchStatistics = async () => {
     try {
-      const supabase = createClient();
-      
-      // Total users
-      const { count: totalCount } = await supabase
-        .from("profiles")
-        .select("*", { count: "exact", head: true });
-      setTotalUsers(totalCount || 0);
-
-      // Users in country
+      const params = new URLSearchParams();
       if (user.country_code) {
-        const { count: countryCount } = await supabase
-          .from("profiles")
-          .select("*", { count: "exact", head: true })
-          .eq("country_code", user.country_code);
-        setUsersInCountry(countryCount || 0);
+        params.append("country_code", user.country_code);
+      }
+      if (user.city) {
+        params.append("city", user.city);
       }
 
-      // Users in city
-      if (user.city) {
-        const { count: cityCount } = await supabase
-          .from("profiles")
-          .select("*", { count: "exact", head: true })
-          .eq("city", user.city);
-        setUsersInCity(cityCount || 0);
+      const response = await fetch(`/api/profile/stats?${params.toString()}`);
+      
+      if (!response.ok) {
+        console.error("Failed to fetch statistics:", response.status);
+        return;
       }
+
+      const data = await response.json();
+      setTotalUsers(data.total || 0);
+      setUsersInCountry(data.inCountry || 0);
+      setUsersInCity(data.inCity || 0);
     } catch (error) {
       console.error("Error fetching statistics:", error);
     }
