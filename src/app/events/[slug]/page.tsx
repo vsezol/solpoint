@@ -136,12 +136,29 @@ export default async function EventPage({ params }: EventPageProps) {
     isVip = profile?.subscription_tier === "vip";
   }
 
-  // Получаем событие по slug с владельцем
+  // Получаем событие по slug (без join'ов для надежности)
   const { data: eventData, error: eventError } = await supabase
     .from("events")
-    .select(`
-      *,
-      owner_user:profiles!events_owner_id_fkey(
+    .select("*")
+    .eq("slug", slug)
+    .single();
+
+  if (eventError || !eventData) {
+    console.error("Error fetching event:", eventError);
+    notFound();
+  }
+
+  // Проверяем доступ к VIP событию
+  if (eventData.visibility === "vip_only" && !isVip) {
+    notFound();
+  }
+
+  // Опционально получаем organizer только если owner_type = 'user'
+  let organizer: User | undefined;
+  if (eventData.owner_type === "user" && eventData.owner_id) {
+    const { data: ownerProfile } = await supabase
+      .from("profiles")
+      .select(`
         id,
         twitter_id,
         twitter_handle,
@@ -163,43 +180,23 @@ export default async function EventPage({ params }: EventPageProps) {
         countries!fk_profiles_country_code (
           name
         )
-      ),
-      owner_hub:hubs!events_owner_id_fkey(id, name, slug, image_url),
-      owner_community:communities!events_owner_id_fkey(id, name, slug, image_url),
-      owner_project:projects!events_owner_id_fkey(id, name, slug, image_url),
-      owner_workspace:workspaces!events_owner_id_fkey(id, name, slug, image_url)
-    `)
-    .eq("slug", slug)
-    .single();
+      `)
+      .eq("id", eventData.owner_id)
+      .single();
 
-  if (eventError || !eventData) {
-    notFound();
+    if (ownerProfile) {
+      const countryName = Array.isArray(ownerProfile.countries) 
+        ? ownerProfile.countries[0]?.name 
+        : (ownerProfile.countries as { name: string } | null | undefined)?.name;
+      
+      organizer = {
+        ...ownerProfile,
+        country: countryName || ownerProfile.country,
+      } as User;
+    }
   }
 
-  // Проверяем доступ к VIP событию
-  if (eventData.visibility === "vip_only" && !isVip) {
-    notFound();
-  }
-
-  // Преобразуем данные события
-  // Определяем owner в зависимости от owner_type
-  let ownerUser: User | undefined;
-  if (eventData.owner_type === "user" && eventData.owner_user) {
-    ownerUser = {
-      ...eventData.owner_user,
-      countries: eventData.owner_user.countries,
-    } as User & { countries?: { name: string } };
-  }
-
-  const event = {
-    ...eventData,
-    owner_user: ownerUser,
-  } as Event & { owner_user?: User & { countries?: { name: string } } };
-
-  const organizer = ownerUser ? {
-    ...ownerUser,
-    country: (ownerUser as User & { countries?: { name: string } }).countries?.name || ownerUser.country,
-  } as User : undefined;
+  const event = eventData as Event;
 
   // Получаем участников события (только если авторизован)
   let members: (EventMember & { user?: User })[] = [];
