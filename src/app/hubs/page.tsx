@@ -270,12 +270,14 @@ export default function HubsPage() {
                 // Проверяем тип сущности и рендерим соответствующую карточку
                 if ("slug" in entity && "members_count" in entity) {
                   // Определяем тип сущности для правильного пути
-                  let entityType: "hub" | "community" | "workspace" | undefined = undefined;
+                  let entityType: "hub" | "community" | "workspace" | "project" | undefined = undefined;
                   
                   if (entityTypeFilter === "community") {
                     entityType = "community";
                   } else if (entityTypeFilter === "workspaces") {
                     entityType = "workspace";
+                  } else if (entityTypeFilter === "projects") {
+                    entityType = "project";
                   } else if (entityTypeFilter === "hubs") {
                     entityType = "hub";
                   } else if (entityTypeFilter === "all") {
@@ -284,13 +286,15 @@ export default function HubsPage() {
                       entityType = "community";
                     } else if (workspaces.some(w => w.id === entity.id)) {
                       entityType = "workspace";
+                    } else if (projects.some(p => p.id === entity.id)) {
+                      entityType = "project";
                     } else if (hubs.some(h => h.id === entity.id)) {
                       entityType = "hub";
                     }
                   }
                   
                   // HubCard поддерживает все эти типы
-                  return <HubCard key={entity.id} hub={entity as Hub | Community | Workspace} entityType={entityType} />;
+                  return <HubCard key={entity.id} hub={entity as Hub | Community | Workspace | Project} entityType={entityType} />;
                 }
                 return null;
               })}
