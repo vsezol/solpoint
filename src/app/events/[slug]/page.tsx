@@ -574,6 +574,8 @@ export default async function EventPage({ params }: EventPageProps) {
                         : "Unlimited spots left"
                     }
                     emptyText="No attendees yet"
+                    eventSlug={event.slug}
+                    isFriendsList={false}
                   />
 
                   {/* Friends Going */}
@@ -593,6 +595,8 @@ export default async function EventPage({ params }: EventPageProps) {
                       ctaButtonText="Invite friends to this event"
                       ctaButtonHref={`/events/${event.slug}?action=invite`}
                       emptyText="No friends going yet"
+                      eventSlug={event.slug}
+                      isFriendsList={true}
                     />
                   )}
                 </div>

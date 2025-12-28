@@ -109,6 +109,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
   const project = projectData as Project;
 
   let members: (User & { joined_at?: string })[] = [];
+  let userFriendsGoing: User[] = [];
   let isUserMember = false;
 
   if (authUser) {
@@ -160,6 +161,59 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
         joined_at: m.joined_at,
       };
     }).filter((m): m is User & { joined_at?: string } => m !== null && m !== undefined);
+
+    // Получаем взаимных друзей авторизованного пользователя
+    const { data: mutualFriendsData } = await supabase
+      .from("mutual_friends")
+      .select("user_id, friend_id")
+      .or(`user_id.eq.${authUser.id},friend_id.eq.${authUser.id}`);
+
+    // Получаем ID всех друзей
+    const friendIds: string[] = [];
+    if (mutualFriendsData) {
+      for (const mf of mutualFriendsData) {
+        if (mf.user_id === authUser.id) {
+          friendIds.push(mf.friend_id);
+        } else if (mf.friend_id === authUser.id) {
+          friendIds.push(mf.user_id);
+        }
+      }
+    }
+
+    // Находим друзей, которые являются участниками проекта
+    const memberUserIds = new Set(members.map(m => m.id));
+    const friendsGoingIds = friendIds.filter(id => memberUserIds.has(id));
+
+    if (friendsGoingIds.length > 0) {
+      const { data: friendsProfiles } = await supabase
+        .from("profiles")
+        .select(`
+          id,
+          twitter_id,
+          twitter_handle,
+          twitter_name,
+          avatar_url,
+          bio,
+          country,
+          country_code,
+          city,
+          role,
+          is_open_to_meet,
+          subscription_tier,
+          is_verified,
+          wallet_address,
+          socials,
+          last_active_at,
+          created_at,
+          updated_at,
+          countries!fk_profiles_country_code (
+            name
+          )
+        `)
+        .in("id", friendsGoingIds);
+
+      userFriendsGoing = (friendsProfiles || []) as User[];
+    }
   }
 
   return (
@@ -316,6 +370,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
 
               <EntityMembersCard
                 members={members}
+                friends={userFriendsGoing}
                 isVip={isVip}
                 authUser={authUser}
                 entitySlug={project.slug}

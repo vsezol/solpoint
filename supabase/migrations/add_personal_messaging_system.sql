@@ -2,6 +2,15 @@
 -- Creates tables: chats, messages (replaces old messages table)
 -- Date: 2024
 
+-- Step 0: Ensure update_updated_at function exists (used by triggers)
+CREATE OR REPLACE FUNCTION update_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 -- Step 1: Drop old messages table if it exists (we'll replace it with new structure)
 DROP TABLE IF EXISTS public.messages CASCADE;
 
@@ -25,11 +34,16 @@ CREATE TABLE public.messages (
   chat_id UUID NOT NULL REFERENCES public.chats(id) ON DELETE CASCADE,
   sender_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   content TEXT NOT NULL CHECK (char_length(content) <= 5000),
-  reply_to_id UUID REFERENCES public.messages(id) ON DELETE SET NULL, -- Reference to another message for replies
+  reply_to_id UUID, -- Reference to another message for replies
   is_read BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Add explicit foreign key constraint with name for reply_to_id
+ALTER TABLE public.messages
+ADD CONSTRAINT messages_reply_to_id_fkey
+FOREIGN KEY (reply_to_id) REFERENCES public.messages(id) ON DELETE SET NULL;
 
 -- Step 4: Create indexes for performance
 CREATE INDEX idx_chats_user1_id ON public.chats(user1_id);

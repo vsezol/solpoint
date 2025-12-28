@@ -1,106 +1,65 @@
 "use client";
 
-import { useState } from "react";
-import { Card, Button, ProSubscriptionModal } from "@/components/ui";
-import { UserCard } from "@/components/cards/user-card";
-import Link from "next/link";
-import { useAuth } from "@/hooks/use-auth";
+import { Card } from "@/components/ui";
+import { MembersList } from "@/components/ui/members-list";
 import type { User } from "@/types";
 
 interface HubMembersCardProps {
   members: (User & { joined_at?: string })[];
+  friends?: User[];
   isVip: boolean;
   authUser: { id: string } | null;
   hubSlug: string;
 }
 
-export function HubMembersCard({ members, isVip, authUser, hubSlug }: HubMembersCardProps) {
-  const [showProModal, setShowProModal] = useState(false);
-  const { isAuthenticated } = useAuth();
-
+export function HubMembersCard({ members, friends = [], isVip, authUser, hubSlug }: HubMembersCardProps) {
   return (
-    <>
-      <Card variant="bordered">
-        <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
-          Members
-        </h3>
-        {authUser ? (
-          <div className="space-y-4">
-            {members.length > 0 ? (
-              <>
-                <div className="space-y-3">
-                  {members.slice(0, 5).map((member) => (
-                    <UserCard
-                      key={member.id}
-                      user={member}
-                      isVip={isVip}
-                      compact={true}
-                    />
-                  ))}
-                </div>
-                {members.length > 5 && (
-                  <div className="text-center">
-                    <p className="text-sm text-[var(--color-text-muted)] mb-2">
-                      +{members.length - 5} more members
-                    </p>
-                    {isAuthenticated && !isVip ? (
-                      <button
-                        onClick={() => setShowProModal(true)}
-                        className="text-xs text-[var(--color-primary)] hover:underline"
-                      >
-                        Show all members
-                      </button>
-                    ) : (
-                      <Link
-                        href={`/hubs/${hubSlug}?tab=members`}
-                        className="text-xs text-[var(--color-primary)] hover:underline"
-                      >
-                        Show all members
-                      </Link>
-                    )}
-                  </div>
-                )}
-              </>
-            ) : (
-              <p className="text-sm text-[var(--color-text-muted)] text-center">
-                No members yet
-              </p>
-            )}
-          </div>
-        ) : (
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center justify-center z-10">
-              <div className="text-center">
-                <p className="text-sm text-[var(--color-text-secondary)] mb-3">
-                  Sign up or log in to see team members
-                </p>
-                <div className="flex gap-2">
-                  <Button variant="primary" size="sm" asChild>
-                    <Link href="/signup">Sign up</Link>
-                  </Button>
-                  <Button variant="outline" size="sm" asChild>
-                    <Link href="/login">Log in</Link>
-                  </Button>
-                </div>
-              </div>
-            </div>
-            <div className="blur-sm pointer-events-none opacity-50">
-              <div className="space-y-3">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="h-16 bg-[var(--color-surface-border)] rounded-lg" />
-                ))}
-              </div>
-            </div>
-          </div>
+    <Card variant="bordered">
+      <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
+        Members on SolPoint
+      </h3>
+      <div className="space-y-6">
+        {/* All Members */}
+        <MembersList
+          title={`${members.length} ${members.length === 1 ? "person" : "people"} are members of this hub`}
+          items={members.map((member) => ({
+            id: member.id,
+            avatar_url: member.avatar_url,
+            name: member.twitter_name,
+            twitter_handle: member.twitter_handle,
+            isVip: member.subscription_tier === "vip",
+            isVerified: member.is_verified,
+          }))}
+          showAllText="Show all members"
+          showAllHref={`/hubs/${hubSlug}?tab=members`}
+          emptyText="No members yet"
+          entitySlug={hubSlug}
+          entityType="hub"
+          isFriendsList={false}
+        />
+
+        {/* Friends */}
+        {authUser && friends.length > 0 && (
+          <MembersList
+            title={`${friends.length} ${friends.length === 1 ? "fren" : "frens"} are members of this hub`}
+            items={friends.map((friend) => ({
+              id: friend.id,
+              avatar_url: friend.avatar_url,
+              name: friend.twitter_name,
+              twitter_handle: friend.twitter_handle,
+              isVip: friend.subscription_tier === "vip",
+              isVerified: friend.is_verified,
+            }))}
+            showAllText="Show all frens"
+            showAllHref={`/hubs/${hubSlug}?tab=members`}
+            emptyText="No friends yet"
+            entitySlug={hubSlug}
+            entityType="hub"
+            isFriendsList={true}
+          />
         )}
-      </Card>
-      <ProSubscriptionModal
-        isOpen={showProModal}
-        onClose={() => setShowProModal(false)}
-        title="This feature is available only with PRO subscription"
-        description="Viewing all hub members is available only with PRO subscription. Upgrade to PRO to unlock this feature."
-      />
-    </>
+      </div>
+    </Card>
   );
 }
 

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/use-auth";
+import { getOrCreateChat } from "@/lib/api/chats";
 
 interface Message {
   id: string;
@@ -62,12 +63,13 @@ export default function ChatPage() {
   const [sending, setSending] = useState(false);
   const [messageContent, setMessageContent] = useState("");
   const [replyTo, setReplyTo] = useState<Message | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   // Fetch chat data
   useEffect(() => {
-    if (!chatId) return;
+    if (!chatId || !user) return;
 
     const fetchChat = async () => {
       try {
@@ -75,15 +77,43 @@ export default function ChatPage() {
         const response = await fetch(`/api/chats/${chatId}`);
         
         if (!response.ok) {
-          if (response.status === 403 || response.status === 404) {
+          // If chat not found (404), try to create it
+          // Check if chatId might be a user ID (for backward compatibility or direct links)
+          if (response.status === 404) {
+            // Check if chatId is not the current user's ID
+            if (chatId === user.id) {
+              console.error("Cannot create chat with yourself");
+              setLoading(false);
+              return;
+            }
+            
+            // Try to create chat with chatId as other_user_id
+            try {
+              const newChat = await getOrCreateChat(chatId);
+              // Redirect to the correct chat URL
+              router.replace(`/chat/${newChat.id}`);
+              return;
+            } catch (createError) {
+              // If creating chat fails, chatId is probably not a user ID
+              // Show error message
+              console.error("Error creating chat:", createError);
+              setError("Chat not found and could not be created. Please try again.");
+              setLoading(false);
+              return;
+            }
+          }
+          
+          if (response.status === 403) {
             router.push("/");
             return;
           }
+          
           throw new Error("Failed to fetch chat");
         }
 
         const result = await response.json();
         setChat(result.data);
+        setError(null); // Clear any previous errors
 
         // Mark messages as read
         await fetch(`/api/chats/${chatId}/read`, {
@@ -97,7 +127,7 @@ export default function ChatPage() {
     };
 
     fetchChat();
-  }, [chatId, router]);
+  }, [chatId, router, user]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -178,12 +208,19 @@ export default function ChatPage() {
     );
   }
 
-  if (!chat) {
+  if (!chat && !loading) {
     return (
       <div className="min-h-screen flex flex-col">
         <Header />
         <main className="flex-1 flex items-center justify-center">
-          <div className="text-[var(--color-text-secondary)]">Chat not found</div>
+          <div className="text-center">
+            <div className="text-[var(--color-text-secondary)] mb-4">
+              {error || "Chat not found"}
+            </div>
+            <Button onClick={() => router.back()} variant="outline">
+              Go Back
+            </Button>
+          </div>
         </main>
         <Footer />
       </div>

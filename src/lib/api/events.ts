@@ -191,7 +191,7 @@ export async function getEventById(eventId: string): Promise<Event | null> {
  */
 export async function getEventBySlug(slug: string): Promise<Event | null> {
   try {
-    const response = await fetch(`/api/events/slug/${slug}`);
+    const response = await fetch(`/api/events/${slug}`);
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));

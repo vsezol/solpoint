@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useAuth } from "@/hooks/use-auth";
 import Image from "next/image";
 
-interface AttendeeItem {
+interface MemberItem {
   id: string;
   avatar_url?: string | null;
   name: string;
@@ -15,46 +15,42 @@ interface AttendeeItem {
   isVerified?: boolean;
 }
 
-interface AttendeesListProps {
-  title: string; // Например: "13 people going" или "3 friends going"
-  items: AttendeeItem[];
-  showAllText?: string; // Например: "Show all attendees" или "Show all friends"
+interface MembersListProps {
+  title: string; // Например: "13 people are members" или "3 frens are members"
+  items: MemberItem[];
+  showAllText?: string; // Например: "Show all members" или "Show all frens"
   showAllHref?: string; // URL для "Show all" (вместо onShowAll для Server Components)
-  capacityInfo?: string; // Например: "Unlimited spots left" или "5 spots left"
-  ctaButtonText?: string; // Например: "Invite friends to this event"
-  ctaButtonHref?: string; // URL для CTA кнопки (вместо onCtaClick для Server Components)
   emptyText?: string; // Текст когда список пуст
   maxVisible?: number; // Максимальное количество видимых аватаров (по умолчанию 3)
-  eventSlug?: string; // Slug события для загрузки полного списка
+  entitySlug?: string; // Slug сущности для загрузки полного списка
+  entityType?: "hub" | "community" | "project" | "workspace"; // Тип сущности
   isFriendsList?: boolean; // true если это список друзей, false если участников
 }
 
-export function AttendeesList({
+export function MembersList({
   title,
   items,
   showAllText,
   showAllHref,
-  capacityInfo,
-  ctaButtonText,
-  ctaButtonHref,
-  emptyText = "No items yet",
+  emptyText = "No members yet",
   maxVisible = 3,
-  eventSlug,
+  entitySlug,
+  entityType,
   isFriendsList = false,
-}: AttendeesListProps) {
+}: MembersListProps) {
   const { user, isAuthenticated } = useAuth();
   const isVip = user?.subscription_tier === "vip";
   const [showProModal, setShowProModal] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showListModal, setShowListModal] = useState(false);
-  const [allItems, setAllItems] = useState<AttendeeItem[]>([]);
+  const [allItems, setAllItems] = useState<MemberItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const visibleItems = items.slice(0, maxVisible);
   const remainingCount = items.length - maxVisible;
   
-  // Проверяем, является ли это "Show all attendees" или "Show all friends"
-  const isShowAllAttendees = showAllText?.toLowerCase().includes("attendees");
-  const isShowAllFriends = showAllText?.toLowerCase().includes("friends");
+  // Проверяем, является ли это "Show all members" или "Show all frens"
+  const isShowAllMembers = showAllText?.toLowerCase().includes("members");
+  const isShowAllFrens = showAllText?.toLowerCase().includes("frens") || showAllText?.toLowerCase().includes("friends");
 
   const handleShowAll = async () => {
     // Если не авторизован - показываем модальное окно авторизации
@@ -70,17 +66,17 @@ export function AttendeesList({
     }
 
     // Если VIP - загружаем полный список и показываем модальное окно
-    if (eventSlug) {
+    if (entitySlug && entityType) {
       setIsLoading(true);
       try {
         const endpoint = isFriendsList 
-          ? `/api/events/${eventSlug}/friends`
-          : `/api/events/${eventSlug}/attendees`;
+          ? `/api/${entityType}s/${entitySlug}/friends`
+          : `/api/${entityType}s/${entitySlug}/members`;
         
         const response = await fetch(endpoint);
         if (response.ok) {
           const data = await response.json();
-          setAllItems(data.items || data.attendees || data.friends || items);
+          setAllItems(data.items || data.members || data.friends || items);
         } else {
           // Если ошибка, используем уже имеющиеся данные
           setAllItems(items);
@@ -94,9 +90,24 @@ export function AttendeesList({
         setShowListModal(true);
       }
     } else {
-      // Если нет eventSlug, используем уже имеющиеся данные
+      // Если нет entitySlug, используем уже имеющиеся данные
       setAllItems(items);
       setShowListModal(true);
+    }
+  };
+
+  const getEntityName = () => {
+    switch (entityType) {
+      case "hub":
+        return "hub";
+      case "community":
+        return "community";
+      case "project":
+        return "project";
+      case "workspace":
+        return "workspace";
+      default:
+        return "entity";
     }
   };
 
@@ -134,7 +145,7 @@ export function AttendeesList({
 
           {showAllText && (
             <div className="mb-2">
-              {(isShowAllAttendees || isShowAllFriends) ? (
+              {(isShowAllMembers || isShowAllFrens) ? (
                 <button
                   onClick={handleShowAll}
                   disabled={isLoading}
@@ -157,25 +168,6 @@ export function AttendeesList({
         <p className="text-sm text-[var(--color-text-muted)] mb-2">{emptyText}</p>
       )}
 
-      {capacityInfo && (
-        <p className="text-xs text-[var(--color-text-muted)]">
-          {capacityInfo}
-        </p>
-      )}
-
-      {ctaButtonText && ctaButtonHref && (
-        <Button
-          variant="outline"
-          className="w-full mt-3 bg-green-500 hover:bg-green-600 text-white border-green-500 hover:border-green-600"
-          size="sm"
-          asChild
-        >
-          <Link href={ctaButtonHref}>
-            {ctaButtonText}
-          </Link>
-        </Button>
-      )}
-
       {/* Auth Required Modal */}
       <AuthRequiredModal
         isOpen={showAuthModal}
@@ -189,7 +181,7 @@ export function AttendeesList({
         isOpen={showProModal}
         onClose={() => setShowProModal(false)}
         title="This feature is available only with PRO subscription"
-        description={`Viewing all ${isShowAllFriends ? "friends" : "event attendees"} is available only with PRO subscription. Upgrade to PRO to unlock this feature.`}
+        description={`Viewing all ${isShowAllFrens ? "friends" : `${getEntityName()} members`} is available only with PRO subscription. Upgrade to PRO to unlock this feature.`}
       />
 
       {/* List Modal */}
@@ -197,16 +189,16 @@ export function AttendeesList({
         isOpen={showListModal}
         onClose={() => setShowListModal(false)}
         size="md"
-        ariaLabel={isShowAllFriends ? "Friends list" : "Attendees list"}
+        ariaLabel={isShowAllFrens ? "Friends list" : "Members list"}
       >
         <ModalHeader>
-          <ModalTitle>{isShowAllFriends ? "Friends Going" : "All Attendees"}</ModalTitle>
+          <ModalTitle>{isShowAllFrens ? "Friends" : "All Members"}</ModalTitle>
         </ModalHeader>
         <ModalContent>
           <div className="space-y-3 max-h-[60vh] overflow-y-auto">
             {allItems.length === 0 ? (
               <p className="text-sm text-[var(--color-text-secondary)] text-center py-4">
-                {isShowAllFriends ? "No friends going" : "No attendees yet"}
+                {isShowAllFrens ? "No friends" : "No members yet"}
               </p>
             ) : (
               allItems.map((item) => (
