@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { createClient } from "@/lib/supabase/client";
 import type { User } from "@/types";
 import { trackEvent, setUserId } from "@/lib/analytics";
 
@@ -38,7 +37,6 @@ async function fetchProfile(): Promise<User | null> {
 
 export function useAuth() {
   const queryClient = useQueryClient();
-  const isFirstCall = useRef(true);
   const [isFromCallback, setIsFromCallback] = useState(false);
 
   // Проверяем URL на наличие параметра auth=success (только на клиенте)
@@ -72,60 +70,68 @@ export function useAuth() {
         url.searchParams.delete("auth");
         window.history.replaceState({}, "", url.toString());
         setIsFromCallback(false);
+        
+        // Отслеживаем успешный логин
+        trackEvent("login_success", {
+          event_category: "Authentication",
+          method: "twitter",
+        });
       }
     }
   }, [isFromCallback, queryClient]);
 
-  // Подписываемся на изменения аутентификации
+  // Проверяем сессию при инициализации и периодически
   useEffect(() => {
-    const supabase = createClient();
-
-    // Проверяем текущую сессию при инициализации
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        queryClient.invalidateQueries({ queryKey: ["auth", "profile"] });
-        setUserId(session.user.id);
-      }
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === "SIGNED_IN" && session?.user) {
-        queryClient.invalidateQueries({ queryKey: ["auth", "profile"] });
-        setUserId(session.user.id);
-        
-        if (!isFirstCall.current) {
-          trackEvent("login_success", {
-            event_category: "Authentication",
-            method: "twitter",
-          });
-        }
-        
-        isFirstCall.current = false;
-      } else if (event === "SIGNED_OUT") {
-        queryClient.setQueryData(["auth", "profile"], null);
-        setUserId(null);
-        isFirstCall.current = false;
-        trackEvent("logout", {
-          event_category: "Authentication",
+    const checkSession = async () => {
+      try {
+        const response = await fetch("/api/auth/session", {
+          cache: "no-store",
         });
-      } else if (event === "TOKEN_REFRESHED" && session?.user) {
-        queryClient.invalidateQueries({ queryKey: ["auth", "profile"] });
-        isFirstCall.current = false;
-      } else if (event === "INITIAL_SESSION" && session?.user) {
-        queryClient.invalidateQueries({ queryKey: ["auth", "profile"] });
-        setUserId(session.user.id);
-        isFirstCall.current = false;
-      } else {
-        isFirstCall.current = false;
+        
+        if (response.ok) {
+          const { session } = await response.json();
+          if (session?.user) {
+            setUserId(session.user.id);
+            queryClient.invalidateQueries({ queryKey: ["auth", "profile"] });
+          } else {
+            setUserId(null);
+            queryClient.setQueryData(["auth", "profile"], null);
+          }
+        }
+      } catch (error) {
+        console.error("Error checking session:", error);
       }
-    });
+    };
+
+    // Проверяем сразу при загрузке
+    checkSession();
+
+    // Проверяем при возврате фокуса на окно (например, после OAuth редиректа)
+    const handleFocus = () => {
+      checkSession();
+    };
+
+    window.addEventListener("focus", handleFocus);
+
+    // Опционально: проверяем периодически (каждые 60 секунд) для обновления токена
+    const intervalId = setInterval(() => {
+      checkSession();
+    }, 60000);
 
     return () => {
-      subscription.unsubscribe();
+      window.removeEventListener("focus", handleFocus);
+      clearInterval(intervalId);
     };
   }, [queryClient]);
+
+  // Обновляем userId когда загружается профиль
+  useEffect(() => {
+    if (user) {
+      setUserId(user.id);
+    } else {
+      setUserId(null);
+    }
+  }, [user]);
 
   const handleLogout = async () => {
     try {
