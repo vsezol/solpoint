@@ -9,6 +9,7 @@ import type { GeoJsonObject } from "geojson";
 import { UserCard } from "@/components/cards/user-card";
 import { EventCard } from "@/components/cards/event-card";
 import { HubCard } from "@/components/cards/hub-card";
+import { ProSubscriptionModal } from "@/components/ui";
 import { trackEvent } from "@/lib/analytics";
 import { COUNTRIES_STATIC, COUNTRY_CENTERS, MAJOR_CITIES } from "@/lib/countries";
 
@@ -161,6 +162,7 @@ export function SolPointMap({
   const [citiesGeoJson, setCitiesGeoJson] = useState<GeoJsonObject | null>(null);
   const [friendshipStatuses, setFriendshipStatuses] = useState<Record<string, "none" | "following" | "mutual">>({});
   const [currentZoom, setCurrentZoom] = useState(zoom);
+  const [showProModal, setShowProModal] = useState(false);
 
   // Собираем страны и города
   const { countries, cities } = useMemo(() => {
@@ -453,6 +455,31 @@ export function SolPointMap({
     switch (marker.type) {
       case "user":
       case "pro_user": {
+        // Если пользователь не авторизован, не показываем попап с UserCard
+        if (!isAuthenticated) {
+          return (
+            <div className="p-4 text-center">
+              <p className="text-sm text-[var(--color-text-secondary)] mb-3">
+                Sign up or log in to view user profiles
+              </p>
+              <div className="flex gap-2 justify-center">
+                <a
+                  href="/signup"
+                  className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:opacity-90 transition-opacity text-sm"
+                >
+                  Sign up
+                </a>
+                <a
+                  href="/login"
+                  className="px-4 py-2 border border-[var(--color-surface-border)] rounded-lg hover:bg-[var(--color-surface-hover)] transition-colors text-sm"
+                >
+                  Log in
+                </a>
+              </div>
+            </div>
+          );
+        }
+        
         const user = marker.data as User;
         const friendshipStatus = friendshipStatuses[user.id] || "none";
         const isFriend = friendshipStatus === "mutual";
@@ -475,6 +502,12 @@ export function SolPointMap({
             onAddFriend={friendshipStatus === "none" ? () => handleAddFriend(user.id) : undefined}
             onRemoveFriend={friendshipStatus === "following" || friendshipStatus === "mutual" ? () => handleRemoveFriend(user.id) : undefined}
             currentUserId={currentUserId}
+            onProfileClick={(e) => {
+              if (isAuthenticated && !isVip) {
+                e.preventDefault();
+                setShowProModal(true);
+              }
+            }}
           />
         );
       }
@@ -694,6 +727,12 @@ export function SolPointMap({
           display: none !important;
         }
       `}</style>
+      <ProSubscriptionModal
+        isOpen={showProModal}
+        onClose={() => setShowProModal(false)}
+        title="This feature is available only with PRO subscription"
+        description="Viewing user profiles is available only with PRO subscription. Upgrade to PRO to unlock this feature."
+      />
     </div>
   );
 }

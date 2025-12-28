@@ -40,4 +40,5 @@ export { CheckBox } from "./checkbox";
 export type { CheckBoxProps } from "./checkbox";
 
 export { AuthRequiredModal } from "./auth-required-modal";
+export { ProSubscriptionModal } from "./pro-subscription-modal";
 

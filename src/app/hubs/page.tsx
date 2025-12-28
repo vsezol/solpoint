@@ -5,7 +5,7 @@ import { Header, Footer } from "@/components/layout";
 import { HubCard } from "@/components/cards/hub-card";
 import { HubsControls } from "@/components/hubs/hubs-controls";
 import { CreateEntityForm } from "@/components/hubs/create-entity-form";
-import { Modal, ModalHeader, ModalTitle, ModalContent } from "@/components/ui";
+import { Modal, ModalHeader, ModalTitle, ModalContent, ProSubscriptionModal } from "@/components/ui";
 import { AuthRequiredModal } from "@/components/ui/auth-required-modal";
 import { Users, Globe, Home } from "lucide-react";
 import { getHubs } from "@/lib/api/hubs";
@@ -406,12 +406,11 @@ export default function HubsPage() {
         description="Please sign up or log in to use this feature."
       />
 
-      <AuthRequiredModal
+      <ProSubscriptionModal
         isOpen={showProModal}
         onClose={() => setShowProModal(false)}
-        requirePro={true}
-        title="This feature is available only for Pro subscription"
-        description="Please upgrade to Pro subscription to add your hub, community, or project."
+        title="This feature is available only with PRO subscription"
+        description="Adding hubs, communities, projects, or workspaces is available only with PRO subscription. Upgrade to PRO to unlock this feature."
       />
     </>
   );

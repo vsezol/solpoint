@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Input } from "@/components/ui";
-import { AuthRequiredModal } from "@/components/ui/auth-required-modal";
+import { AuthRequiredModal, ProSubscriptionModal } from "@/components/ui";
 import type { MapFilters, UserRole, EventType, ContentTypeFilter } from "@/types";
 import { cn } from "@/lib/utils";
 import CountrySelect from "@/app/map/country-select";
@@ -39,8 +39,9 @@ export function MapFiltersPanel({
   isVip = false,
 }: MapFiltersProps) {
   const { country, setCountry } = useMapStore();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showProModal, setShowProModal] = useState(false);
 
   const handleFilterAction = (action: () => void) => {
     if (!isAuthenticated) {
@@ -111,21 +112,27 @@ export function MapFiltersPanel({
   };
 
   const toggleRole = (role: UserRole) => {
-    handleFilterAction(() => {
-      const currentRoles = filters.userRoles || [];
-      const newRoles = currentRoles.includes(role)
-        ? currentRoles.filter((r) => r !== role)
-        : [...currentRoles, role];
-      trackEvent("map_filter_change", {
-        event_category: "Map",
-        filter_type: "user_role",
-        filter_value: role,
-        is_added: !currentRoles.includes(role),
-      });
-      onFiltersChange({
-        ...filters,
-        userRoles: newRoles.length > 0 ? newRoles : undefined,
-      });
+    if (!isAuthenticated) {
+      setShowAuthModal(true);
+      return;
+    }
+    if (isAuthenticated && !isVip) {
+      setShowProModal(true);
+      return;
+    }
+    const currentRoles = filters.userRoles || [];
+    const newRoles = currentRoles.includes(role)
+      ? currentRoles.filter((r) => r !== role)
+      : [...currentRoles, role];
+    trackEvent("map_filter_change", {
+      event_category: "Map",
+      filter_type: "user_role",
+      filter_value: role,
+      is_added: !currentRoles.includes(role),
+    });
+    onFiltersChange({
+      ...filters,
+      userRoles: newRoles.length > 0 ? newRoles : undefined,
     });
   };
 
@@ -225,11 +232,19 @@ export function MapFiltersPanel({
                 setShowAuthModal(true);
                 return;
               }
+              if (isAuthenticated && !isVip) {
+                setShowProModal(true);
+                return;
+              }
               onFiltersChange({ ...filters, city: e.target.value || undefined });
             }}
             onFocus={() => {
               if (!isAuthenticated) {
                 setShowAuthModal(true);
+                return;
+              }
+              if (isAuthenticated && !isVip) {
+                setShowProModal(true);
               }
             }}
           />
@@ -457,6 +472,12 @@ export function MapFiltersPanel({
         onClose={() => setShowAuthModal(false)}
         title="Sign up or log in to use filters"
         description="Please sign up or log in to use map filters and search."
+      />
+      <ProSubscriptionModal
+        isOpen={showProModal}
+        onClose={() => setShowProModal(false)}
+        title="This feature is available only with PRO subscription"
+        description="City and user type filters are available only with PRO subscription. Upgrade to PRO to unlock these features."
       />
     </div>
   );

@@ -1,8 +1,9 @@
 "use client";
 
-import { Avatar } from "@/components/ui";
-import { Button } from "@/components/ui";
+import { useState } from "react";
+import { Avatar, Button, ProSubscriptionModal } from "@/components/ui";
 import Link from "next/link";
+import { useAuth } from "@/hooks/use-auth";
 
 interface AttendeeItem {
   id: string;
@@ -36,8 +37,14 @@ export function AttendeesList({
   emptyText = "No items yet",
   maxVisible = 3,
 }: AttendeesListProps) {
+  const { user, isAuthenticated } = useAuth();
+  const isVip = user?.subscription_tier === "vip";
+  const [showProModal, setShowProModal] = useState(false);
   const visibleItems = items.slice(0, maxVisible);
   const remainingCount = items.length - maxVisible;
+  
+  // Проверяем, является ли это "Show all attendees" (не "Show all friends")
+  const isShowAllAttendees = showAllText?.toLowerCase().includes("attendees");
 
   return (
     <div className="space-y-2">
@@ -73,12 +80,21 @@ export function AttendeesList({
 
           {showAllText && (
             <div className="mb-2">
-              <Link
-                href={showAllHref || "#"}
-                className="text-xs text-[var(--color-primary)] hover:underline"
-              >
-                {showAllText}
-              </Link>
+              {isShowAllAttendees && isAuthenticated && !isVip ? (
+                <button
+                  onClick={() => setShowProModal(true)}
+                  className="text-xs text-[var(--color-primary)] hover:underline"
+                >
+                  {showAllText}
+                </button>
+              ) : (
+                <Link
+                  href={showAllHref || "#"}
+                  className="text-xs text-[var(--color-primary)] hover:underline"
+                >
+                  {showAllText}
+                </Link>
+              )}
             </div>
           )}
         </>
@@ -103,6 +119,14 @@ export function AttendeesList({
             {ctaButtonText}
           </Link>
         </Button>
+      )}
+      {isShowAllAttendees && (
+        <ProSubscriptionModal
+          isOpen={showProModal}
+          onClose={() => setShowProModal(false)}
+          title="This feature is available only with PRO subscription"
+          description="Viewing all event attendees is available only with PRO subscription. Upgrade to PRO to unlock this feature."
+        />
       )}
     </div>
   );

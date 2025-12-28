@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { Event, User, EventMember } from "@/types";
 import Image from "next/image";
 import Link from "next/link";
-import { UserCard } from "@/components/cards/user-card";
+import { EventHostCard } from "./event-host-card";
 import { AttendButton } from "./attend-button";
 import type { Metadata } from "next";
 import { getAppUrl } from "@/lib/utils";
@@ -456,11 +456,9 @@ export default async function EventPage({ params }: EventPageProps) {
                     Hosts
                   </h2>
                   <div className="w-fit max-w-md">
-                    <UserCard
+                    <EventHostCard
                       user={organizer}
-                      isHost={true}
                       isVip={isVip}
-                      compact={false}
                       currentUserId={authUser?.id}
                     />
                   </div>

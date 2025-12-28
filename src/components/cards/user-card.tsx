@@ -19,6 +19,7 @@ interface UserCardProps {
   onRemoveFriend?: () => void; // Для отписки/отмены запроса
   onMessage?: () => void;
   currentUserId?: string; // ID текущего пользователя для проверки, является ли это собственный профиль
+  onProfileClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void; // Обработчик клика на профиль
 }
 
 export function UserCard({
@@ -34,6 +35,7 @@ export function UserCard({
   onRemoveFriend,
   onMessage,
   currentUserId,
+  onProfileClick,
 }: UserCardProps) {
   const roleLabels: Record<string, string> = {
     developer: "Developer",
@@ -55,6 +57,7 @@ export function UserCard({
             <Link 
               href={`/profile/${user.twitter_handle}`}
               className="flex items-start gap-3 hover:opacity-80 transition-opacity"
+              onClick={onProfileClick}
             >
               <Avatar
                 src={user.avatar_url}

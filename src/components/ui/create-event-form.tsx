@@ -36,6 +36,7 @@ interface CreateEventFormProps {
 export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
   const { user } = useAuth();
   const isAdmin = user?.is_admin || false;
+  const isVip = user?.subscription_tier === "vip";
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isGeocoding, setIsGeocoding] = useState(false);
@@ -547,7 +548,14 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
           }
         }
       } else {
-        // Non-admins submit for review
+        // Non-admins with PRO subscription submit for review
+        // Non-admins without PRO subscription cannot create events
+        if (!isVip) {
+          setError("A PRO subscription is required to create events. Please upgrade to PRO to unlock this feature.");
+          setIsSubmitting(false);
+          return;
+        }
+        
         const submission = await createSubmission({
           entity_type: "event",
           entity_data: eventData,

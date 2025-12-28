@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { Hub, User } from "@/types";
 import Image from "next/image";
 import Link from "next/link";
-import { UserCard } from "@/components/cards/user-card";
+import { HubMembersCard } from "./hub-members-card";
 import type { Metadata } from "next";
 import { getAppUrl } from "@/lib/utils";
 import { HubViewTracker } from "@/components/analytics/hub-view-tracker";
@@ -326,61 +326,12 @@ export default async function HubPage({ params }: HubPageProps) {
               </Card>
 
               {/* Members Card */}
-              <Card variant="bordered">
-                <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
-                  Members
-                </h3>
-                {authUser ? (
-                  <div className="space-y-4">
-                    {members.length > 0 ? (
-                      <div className="space-y-3">
-                        {members.slice(0, 5).map((member) => (
-                          <UserCard
-                            key={member.id}
-                            user={member}
-                            isVip={isVip}
-                            compact={true}
-                          />
-                        ))}
-                        {members.length > 5 && (
-                          <p className="text-sm text-[var(--color-text-muted)] text-center">
-                            +{members.length - 5} more members
-                          </p>
-                        )}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-[var(--color-text-muted)] text-center">
-                        No members yet
-                      </p>
-                    )}
-                  </div>
-                ) : (
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center justify-center z-10">
-                      <div className="text-center">
-                        <p className="text-sm text-[var(--color-text-secondary)] mb-3">
-                          Sign up or log in to see team members
-                        </p>
-                        <div className="flex gap-2">
-                          <Button variant="primary" size="sm" asChild>
-                            <Link href="/signup">Sign up</Link>
-                          </Button>
-                          <Button variant="outline" size="sm" asChild>
-                            <Link href="/login">Log in</Link>
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="blur-sm pointer-events-none opacity-50">
-                      <div className="space-y-3">
-                        {Array.from({ length: 3 }).map((_, i) => (
-                          <div key={i} className="h-16 bg-[var(--color-surface-border)] rounded-lg" />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </Card>
+              <HubMembersCard
+                members={members}
+                isVip={isVip}
+                authUser={authUser}
+                hubSlug={hub.slug}
+              />
             </div>
           </div>
         </div>

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Header, Footer } from "@/components/layout";
 import { EventCard, EventCardSkeleton } from "@/components/cards";
-import { Button, Input, Modal, ModalHeader, ModalTitle, ModalDescription, ModalContent, FilterTag } from "@/components/ui";
+import { Button, Input, Modal, ModalHeader, ModalTitle, ModalDescription, ModalContent, FilterTag, ProSubscriptionModal } from "@/components/ui";
 import { AuthRequiredModal } from "@/components/ui/auth-required-modal";
 import { CreateEventForm } from "@/components/ui/create-event-form";
 import { Search, Calendar } from "lucide-react";
@@ -183,7 +183,7 @@ export default function EventsPage() {
                     setShowAuthModal(true);
                     return;
                   }
-                  if (!isVip) {
+                  if (!isVip && !isAdmin) {
                     setShowProModal(true);
                     return;
                   }
@@ -305,12 +305,11 @@ export default function EventsPage() {
         description="Please sign up or log in to use this feature."
       />
 
-      <AuthRequiredModal
+      <ProSubscriptionModal
         isOpen={showProModal}
         onClose={() => setShowProModal(false)}
-        requirePro={true}
-        title="This feature is available only for Pro users"
-        description="Please upgrade to Pro subscription to host events."
+        title="This feature is available only with PRO subscription"
+        description="Creating events is available only with PRO subscription. Upgrade to PRO to unlock this feature."
       />
     </>
   );

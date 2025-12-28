@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { Workspace, User } from "@/types";
 import Image from "next/image";
 import Link from "next/link";
-import { UserCard } from "@/components/cards/user-card";
+import { EntityMembersCard } from "@/components/entities/entity-members-card";
 import type { Metadata } from "next";
 import { getAppUrl } from "@/lib/utils";
 import { WorkspaceViewTracker } from "@/components/analytics/workspace-view-tracker";
@@ -321,34 +321,14 @@ export default async function WorkspacePage({ params }: WorkspacePageProps) {
                 </div>
               </Card>
 
-              <Card variant="bordered">
-                <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
-                  Members
-                </h3>
-                <div className="space-y-4">
-                  {members.length > 0 ? (
-                    <div className="space-y-3">
-                      {members.slice(0, 5).map((member) => (
-                        <UserCard
-                          key={member.id}
-                          user={member}
-                          isVip={isVip}
-                          compact={true}
-                        />
-                      ))}
-                      {members.length > 5 && (
-                        <p className="text-sm text-[var(--color-text-muted)] text-center">
-                          +{members.length - 5} more members
-                        </p>
-                      )}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-[var(--color-text-muted)] text-center">
-                      No members yet
-                    </p>
-                  )}
-                </div>
-              </Card>
+              <EntityMembersCard
+                members={members}
+                isVip={isVip}
+                authUser={authUser}
+                entitySlug={workspace.slug}
+                entityType="workspace"
+                entityName={workspace.name}
+              />
             </div>
           </div>
         </div>

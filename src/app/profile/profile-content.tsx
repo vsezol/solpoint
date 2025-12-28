@@ -29,9 +29,10 @@ import { useProfileEdit } from "./profile-edit-provider";
 import { AddFriendButton } from "./add-friend-button";
 import { EditProfileButton } from "./edit-profile-button";
 import { trackEvent } from "@/lib/analytics";
-import { Modal, ModalHeader, ModalTitle, ModalContent } from "@/components/ui";
+import { Modal, ModalHeader, ModalTitle, ModalContent, ProSubscriptionModal } from "@/components/ui";
 import { CreateEntityForm } from "@/components/hubs/create-entity-form";
 import type { EntityType } from "@/types";
+import { useAuth } from "@/hooks/use-auth";
 
 interface ProfileContentProps {
   user: User;
@@ -82,7 +83,10 @@ export function ProfileContent({
   const [isFriendRequestsModalOpen, setIsFriendRequestsModalOpen] = useState(false);
   const [friendsList, setFriendsList] = useState<User[]>([]);
   const [friendRequestsList, setFriendRequestsList] = useState<User[]>([]);
+  const [showProModal, setShowProModal] = useState(false);
   const router = useRouter();
+  const { user: currentAuthUser } = useAuth();
+  const isVip = currentAuthUser?.subscription_tier === "vip";
 
   // Обновляем локальное состояние при изменении user prop
   useEffect(() => {
@@ -247,16 +251,8 @@ export function ProfileContent({
   };
 
   const handleShowMutualsList = async () => {
-    const isPro = await checkProSubscription();
-    
-    if (!isPro) {
-      // Показываем сообщение о необходимости PRO подписки
-      const shouldGoToSubscription = confirm(
-        "A PRO subscription is required to view the full list of mutual followers. Would you like to go to the subscription page?"
-      );
-      if (shouldGoToSubscription) {
-        router.push("/subscription");
-      }
+    if (!isVip) {
+      setShowProModal(true);
       return;
     }
 
@@ -275,6 +271,12 @@ export function ProfileContent({
   };
 
   const handleAddEntityClick = () => {
+    // Проверка авторизации не нужна, так как это доступно только для своего профиля
+    // (isOwnProfile проверяется на уровне компонента)
+    if (!isVip) {
+      setShowProModal(true);
+      return;
+    }
     setCreateEntityType("hub");
     setIsCreateModalOpen(true);
   };
@@ -751,55 +753,61 @@ export function ProfileContent({
                         <span className="font-bold">{affiliations.length}</span> <span className="text-[var(--color-text-secondary)] font-normal">Affiliations</span>
                       </h3>
                     </div>
-                    {affiliations.length > 0 ? (
-                      <>
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center -space-x-2">
-                            {affiliations.slice(0, 3).map((affiliation) => (
-                              <Link
-                                key={affiliation.id}
-                                href={
-                                  affiliation.type === "hub"
-                                    ? `/hubs/${affiliation.slug || affiliation.id}`
-                                    : affiliation.type === "community"
-                                    ? `/communities/${affiliation.slug || affiliation.id}`
-                                    : affiliation.type === "project"
-                                    ? `/projects/${affiliation.slug || affiliation.id}`
-                                    : affiliation.type === "event"
-                                    ? `/events/${affiliation.slug || affiliation.id}`
-                                    : `/profile/${user.twitter_handle}`
-                                }
-                                className="w-8 h-8 rounded-full bg-[var(--color-surface-hover)] border-2 border-[var(--color-background)] flex items-center justify-center overflow-hidden hover:z-10 transition-transform hover:scale-110"
+                    {isVip ? (
+                      affiliations.length > 0 ? (
+                        <>
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center -space-x-2">
+                              {affiliations.slice(0, 3).map((affiliation) => (
+                                <Link
+                                  key={affiliation.id}
+                                  href={
+                                    affiliation.type === "hub"
+                                      ? `/hubs/${affiliation.slug || affiliation.id}`
+                                      : affiliation.type === "community"
+                                      ? `/communities/${affiliation.slug || affiliation.id}`
+                                      : affiliation.type === "project"
+                                      ? `/projects/${affiliation.slug || affiliation.id}`
+                                      : affiliation.type === "event"
+                                      ? `/events/${affiliation.slug || affiliation.id}`
+                                      : `/profile/${user.twitter_handle}`
+                                  }
+                                  className="w-8 h-8 rounded-full bg-[var(--color-surface-hover)] border-2 border-[var(--color-background)] flex items-center justify-center overflow-hidden hover:z-10 transition-transform hover:scale-110"
+                                >
+                                  {affiliation.image_url ? (
+                                    <Image
+                                      src={affiliation.image_url}
+                                      alt={affiliation.name}
+                                      width={32}
+                                      height={32}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-xs font-medium">
+                                      {affiliation.name?.[0]?.toUpperCase() || "?"}
+                                    </div>
+                                  )}
+                                </Link>
+                              ))}
+                            </div>
+                            {affiliations.length > 0 && (
+                              <button
+                                onClick={handleShowAffiliationsList}
+                                className="text-sm text-[var(--color-primary)] hover:underline ml-auto cursor-pointer"
                               >
-                                {affiliation.image_url ? (
-                                  <Image
-                                    src={affiliation.image_url}
-                                    alt={affiliation.name}
-                                    width={32}
-                                    height={32}
-                                    className="w-full h-full object-cover"
-                                  />
-                                ) : (
-                                  <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-xs font-medium">
-                                    {affiliation.name?.[0]?.toUpperCase() || "?"}
-                                  </div>
-                                )}
-                              </Link>
-                            ))}
+                                Show list
+                              </button>
+                            )}
                           </div>
-                          {affiliations.length > 0 && (
-                            <button
-                              onClick={handleShowAffiliationsList}
-                              className="text-sm text-[var(--color-primary)] hover:underline ml-auto cursor-pointer"
-                            >
-                              Show list
-                            </button>
-                          )}
-                        </div>
-                      </>
+                        </>
+                      ) : (
+                        <p className="text-sm text-[var(--color-text-secondary)]">
+                          No affiliations yet
+                        </p>
+                      )
                     ) : (
                       <p className="text-sm text-[var(--color-text-secondary)]">
-                        No affiliations yet
+                        Upgrade to PRO to get badges
                       </p>
                     )}
                     <div className="pt-4 border-t border-[var(--color-surface-border)]">
@@ -979,9 +987,18 @@ export function ProfileContent({
                 </p>
               </div>
               <div>
-                <p className="text-sm text-[var(--color-text-secondary)]">
-                  Users in your city: <span className="text-[var(--color-text-primary)] font-medium">{usersInCity.toLocaleString()}</span>
-                </p>
+                {isVip ? (
+                  <p className="text-sm text-[var(--color-text-secondary)]">
+                    Users in your city: <span className="text-[var(--color-text-primary)] font-medium">{usersInCity.toLocaleString()}</span>
+                  </p>
+                ) : (
+                  <button
+                    onClick={() => setShowProModal(true)}
+                    className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+                  >
+                    Users in your city: <span className="text-[var(--color-text-primary)] font-medium">{usersInCity.toLocaleString()}</span>
+                  </button>
+                )}
               </div>
             </div>
 
@@ -1475,6 +1492,14 @@ export function ProfileContent({
           </div>
         </ModalContent>
       </Modal>
+
+      {/* Pro Subscription Modal */}
+      <ProSubscriptionModal
+        isOpen={showProModal}
+        onClose={() => setShowProModal(false)}
+        title="This feature is available only with PRO subscription"
+        description="This feature is available only with PRO subscription. Upgrade to PRO to unlock this feature."
+      />
     </div>
   );
 }
