@@ -8,3 +8,4 @@ ALTER TABLE public.subscription_intents
 -- Комментарий
 COMMENT ON COLUMN public.subscription_intents.expected_amount_lamports IS 'Ожидаемая сумма платежа в lamports (для проверки точности оплаты)';
 
+

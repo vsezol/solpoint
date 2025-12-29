@@ -8,3 +8,4 @@ ALTER TABLE public.events
 -- Комментарий к полю
 COMMENT ON COLUMN public.events.luma_link IS 'Link to the event page on Luma platform';
 
+

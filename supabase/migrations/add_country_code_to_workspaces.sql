@@ -11,3 +11,4 @@ CREATE INDEX IF NOT EXISTS idx_workspaces_country_code ON public.workspaces(coun
 -- Комментарий
 COMMENT ON COLUMN public.workspaces.country_code IS 'Код страны (ISO 3166-1 alpha-2) для фильтрации';
 
+

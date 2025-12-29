@@ -39,3 +39,4 @@ ALTER TABLE public.messages DROP COLUMN IF EXISTS reply_to_id CASCADE;
 -- Step 5: Update table comment to remove mention of reply support
 COMMENT ON TABLE public.messages IS 'Messages in chats';
 
+

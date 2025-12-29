@@ -22,3 +22,4 @@ END $$;
 -- Комментарий для документации
 COMMENT ON TYPE entity_type IS 'Types of entities that can be submitted for moderation: event, hub, community, project, workspace';
 
+
