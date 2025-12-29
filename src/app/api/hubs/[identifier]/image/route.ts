@@ -33,7 +33,7 @@ export async function POST(
   }
 
   // Проверяем, является ли пользователь владельцем хаба
-  const isOwner = await isEntityOwner("hub", id, authUser.id);
+  const isOwner = await isEntityOwner("hub", hubId, authUser.id);
   if (!isOwner) {
     return NextResponse.json(
       { error: "Forbidden: You are not the owner of this hub" },
@@ -72,7 +72,7 @@ export async function POST(
 
     // Генерируем уникальное имя файла
     const fileExt = file.name.split(".").pop();
-    const fileName = `${authUser.id}/${id}/${Date.now()}.${fileExt}`;
+    const fileName = `${authUser.id}/${hubId}/${Date.now()}.${fileExt}`;
 
     // Загружаем файл в Storage
     const { data: uploadData, error: uploadError } = await supabase.storage
@@ -99,7 +99,7 @@ export async function POST(
     const { data: hub } = await supabase
       .from("hubs")
       .select("image_url")
-      .eq("id", id)
+      .eq("id", hubId)
       .single();
 
     if (hub?.image_url) {
@@ -107,7 +107,7 @@ export async function POST(
       const urlParts = hub.image_url.split("/hub-images/");
       if (urlParts.length > 1) {
         const oldPath = urlParts[1].split("?")[0];
-        if (oldPath && oldPath.startsWith(`${authUser.id}/${id}/`)) {
+        if (oldPath && oldPath.startsWith(`${authUser.id}/${hubId}/`)) {
           await supabase.storage
             .from("hub-images")
             .remove([oldPath]);
@@ -119,7 +119,7 @@ export async function POST(
     const { error: updateError } = await supabase
       .from("hubs")
       .update({ image_url: publicUrl })
-      .eq("id", id);
+      .eq("id", hubId);
 
     if (updateError) {
       console.error("Update error:", updateError);
@@ -174,7 +174,7 @@ export async function DELETE(
   }
 
   // Проверяем, является ли пользователь владельцем хаба
-  const isOwner = await isEntityOwner("hub", id, authUser.id);
+  const isOwner = await isEntityOwner("hub", hubId, authUser.id);
   if (!isOwner) {
     return NextResponse.json(
       { error: "Forbidden: You are not the owner of this hub" },
@@ -187,7 +187,7 @@ export async function DELETE(
     const { data: hub } = await supabase
       .from("hubs")
       .select("image_url")
-      .eq("id", id)
+      .eq("id", hubId)
       .single();
 
     if (hub?.image_url) {
@@ -195,7 +195,7 @@ export async function DELETE(
       const urlParts = hub.image_url.split("/hub-images/");
       if (urlParts.length > 1) {
         const path = urlParts[1].split("?")[0];
-        if (path && path.startsWith(`${authUser.id}/${id}/`)) {
+        if (path && path.startsWith(`${authUser.id}/${hubId}/`)) {
           await supabase.storage.from("hub-images").remove([path]);
         }
       }
@@ -205,7 +205,7 @@ export async function DELETE(
     const { error: updateError } = await supabase
       .from("hubs")
       .update({ image_url: null })
-      .eq("id", id);
+      .eq("id", hubId);
 
     if (updateError) {
       return NextResponse.json(

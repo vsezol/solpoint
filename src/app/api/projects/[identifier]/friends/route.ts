@@ -44,7 +44,7 @@ export async function GET(
   const { data: project, error: projectError } = await supabase
     .from("projects")
     .select("id")
-    .eq("id", id)
+    .eq("id", projectId)
     .single();
 
   if (projectError || !project) {
@@ -54,7 +54,7 @@ export async function GET(
   const { data: members, error: membersError } = await supabase
     .from("project_members")
     .select("user_id")
-    .eq("project_id", id);
+    .eq("project_id", projectId);
 
   if (membersError) {
     return NextResponse.json(

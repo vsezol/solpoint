@@ -8,10 +8,10 @@ import { isEventOwner, getEventOwnerUserId } from "@/lib/utils/entity-ownership"
  */
 export async function DELETE(
   request: Request,
-  { params }: { params: Promise<{ id: string; userId: string }> }
+  { params }: { params: Promise<{ identifier: string; userId: string }> }
 ) {
   const supabase = await createClient();
-  const { id, userId } = await params;
+  const { identifier: id, userId } = await params;
 
   const {
     data: { user: authUser },

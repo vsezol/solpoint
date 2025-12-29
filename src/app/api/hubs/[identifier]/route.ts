@@ -35,7 +35,7 @@ export async function PATCH(
     const { data: hub, error: hubError } = await supabase
       .from("hubs")
       .select("owner_id")
-      .eq("id", id)
+      .eq("id", hubId)
       .single();
 
     if (hubError || !hub) {
@@ -71,7 +71,7 @@ export async function PATCH(
     const { data: updatedHub, error: updateError } = await supabase
       .from("hubs")
       .update(updates)
-      .eq("id", id)
+      .eq("id", hubId)
       .select()
       .single();
 

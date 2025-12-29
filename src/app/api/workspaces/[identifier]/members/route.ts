@@ -44,7 +44,7 @@ export async function GET(
   const { data: workspace, error: workspaceError } = await supabase
     .from("workspaces")
     .select("id")
-    .eq("id", id)
+    .eq("id", workspaceId)
     .single();
 
   if (workspaceError || !workspace) {
@@ -79,7 +79,7 @@ export async function GET(
         )
       )
     `)
-    .eq("workspace_id", id)
+    .eq("workspace_id", workspaceId)
     .order("joined_at", { ascending: false });
 
   if (error) {

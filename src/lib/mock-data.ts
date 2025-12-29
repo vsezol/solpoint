@@ -138,7 +138,8 @@ export const mockEvents: Event[] = [
     slug: "",
     is_online: false,
     owner_type: "hub",
-    owner_id: ""
+    owner_id: "",
+    luma_link: ""
   },
   {
     id: "e2",
@@ -164,7 +165,8 @@ export const mockEvents: Event[] = [
     slug: "",
     is_online: false,
     owner_type: "hub",
-    owner_id: ""
+    owner_id: "",
+    luma_link: ""
   },
   {
     id: "e3",
@@ -188,7 +190,8 @@ export const mockEvents: Event[] = [
     slug: "",
     is_online: false,
     owner_type: "hub",
-    owner_id: ""
+    owner_id: "",
+    luma_link: ""
   },
   {
     id: "e4",
@@ -211,7 +214,8 @@ export const mockEvents: Event[] = [
     slug: "",
     is_online: false,
     owner_type: "hub",
-    owner_id: ""
+    owner_id: "",
+    luma_link: ""
   },
 ];
 

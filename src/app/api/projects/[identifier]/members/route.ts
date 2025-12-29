@@ -44,7 +44,7 @@ export async function GET(
   const { data: project, error: projectError } = await supabase
     .from("projects")
     .select("id")
-    .eq("id", id)
+    .eq("id", projectId)
     .single();
 
   if (projectError || !project) {
@@ -79,7 +79,7 @@ export async function GET(
         )
       )
     `)
-    .eq("project_id", id)
+    .eq("project_id", projectId)
     .order("joined_at", { ascending: false });
 
   if (error) {

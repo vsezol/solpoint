@@ -9,10 +9,10 @@ import type { NextRequest } from "next/server";
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { identifier: string } }
+  { params }: { params: Promise<{ identifier: string }> }
 ) {
   const supabase = await createClient();
-  const { id } = await params;
+  const { identifier: id } = await params;
   const { searchParams } = new URL(request.url);
 
   // Проверяем аутентификацию
@@ -95,10 +95,10 @@ export async function GET(
  */
 export async function POST(
   request: Request,
-  { params }: { params: { identifier: string } }
+  { params }: { params: Promise<{ identifier: string }> }
 ) {
   const supabase = await createClient();
-  const { id } = await params;
+  const { identifier: id } = await params;
 
   // Проверяем аутентификацию
   const {
@@ -228,10 +228,10 @@ export async function POST(
  */
 export async function DELETE(
   request: Request,
-  { params }: { params: { identifier: string } }
+  { params }: { params: Promise<{ identifier: string }> }
 ) {
   const supabase = await createClient();
-  const { id } = await params;
+  const { identifier: id } = await params;
 
   // Проверяем аутентификацию
   const {
@@ -271,10 +271,10 @@ export async function DELETE(
  */
 export async function PATCH(
   request: Request,
-  { params }: { params: { identifier: string } }
+  { params }: { params: Promise<{ identifier: string }> }
 ) {
   const supabase = await createClient();
-  const { id } = await params;
+  const { identifier: id } = await params;
 
   // Проверяем аутентификацию
   const {

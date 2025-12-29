@@ -26,7 +26,7 @@ export async function GET(
   const { data: workspace, error } = await supabase
     .from("workspaces")
     .select("*")
-    .eq("id", id)
+    .eq("id", workspaceId)
     .single();
 
   if (error) {
@@ -74,13 +74,13 @@ export async function PATCH(
 
   try {
     // Проверяем, является ли пользователь владельцем или модератором
-    const isOwner = await isEntityOwner("workspace", id, authUser.id);
+    const isOwner = await isEntityOwner("workspace", workspaceId, authUser.id);
     if (!isOwner) {
       // Проверяем, является ли пользователь модератором
       const { data: member } = await supabase
         .from("workspace_members")
         .select("role")
-        .eq("workspace_id", id)
+        .eq("workspace_id", workspaceId)
         .eq("user_id", authUser.id)
         .single();
 
@@ -134,7 +134,7 @@ export async function PATCH(
     const { data: updatedWorkspace, error: updateError } = await supabase
       .from("workspaces")
       .update(updates)
-      .eq("id", id)
+      .eq("id", workspaceId)
       .select()
       .single();
 

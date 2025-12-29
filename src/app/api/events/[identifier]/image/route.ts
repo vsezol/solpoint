@@ -33,7 +33,7 @@ export async function POST(
   }
 
   // Проверяем, является ли пользователь владельцем события
-  const isOwner = await isEventOwner(id, authUser.id);
+  const isOwner = await isEventOwner(eventId, authUser.id);
   if (!isOwner) {
     return NextResponse.json(
       { error: "Forbidden: You are not the owner of this event" },
@@ -72,7 +72,7 @@ export async function POST(
 
     // Генерируем уникальное имя файла
     const fileExt = file.name.split(".").pop();
-    const fileName = `${authUser.id}/${id}/${Date.now()}.${fileExt}`;
+    const fileName = `${authUser.id}/${eventId}/${Date.now()}.${fileExt}`;
 
     // Загружаем файл в Storage
     const { data: uploadData, error: uploadError } = await supabase.storage
@@ -99,7 +99,7 @@ export async function POST(
     const { data: event } = await supabase
       .from("events")
       .select("image_url")
-      .eq("id", id)
+      .eq("id", eventId)
       .single();
 
     if (event?.image_url) {
@@ -107,7 +107,7 @@ export async function POST(
       const urlParts = event.image_url.split("/event-images/");
       if (urlParts.length > 1) {
         const oldPath = urlParts[1].split("?")[0];
-        if (oldPath && oldPath.startsWith(`${authUser.id}/${id}/`)) {
+        if (oldPath && oldPath.startsWith(`${authUser.id}/${eventId}/`)) {
           await supabase.storage
             .from("event-images")
             .remove([oldPath]);
@@ -119,7 +119,7 @@ export async function POST(
     const { error: updateError } = await supabase
       .from("events")
       .update({ image_url: publicUrl })
-      .eq("id", id);
+      .eq("id", eventId);
 
     if (updateError) {
       console.error("Update error:", updateError);
@@ -174,7 +174,7 @@ export async function DELETE(
   }
 
   // Проверяем, является ли пользователь владельцем события
-  const isOwner = await isEventOwner(id, authUser.id);
+  const isOwner = await isEventOwner(eventId, authUser.id);
   if (!isOwner) {
     return NextResponse.json(
       { error: "Forbidden: You are not the owner of this event" },
@@ -187,7 +187,7 @@ export async function DELETE(
     const { data: event } = await supabase
       .from("events")
       .select("image_url")
-      .eq("id", id)
+      .eq("id", eventId)
       .single();
 
     if (event?.image_url) {
@@ -195,7 +195,7 @@ export async function DELETE(
       const urlParts = event.image_url.split("/event-images/");
       if (urlParts.length > 1) {
         const path = urlParts[1].split("?")[0];
-        if (path && path.startsWith(`${authUser.id}/${id}/`)) {
+        if (path && path.startsWith(`${authUser.id}/${eventId}/`)) {
           await supabase.storage.from("event-images").remove([path]);
         }
       }
@@ -205,7 +205,7 @@ export async function DELETE(
     const { error: updateError } = await supabase
       .from("events")
       .update({ image_url: null })
-      .eq("id", id);
+      .eq("id", eventId);
 
     if (updateError) {
       return NextResponse.json(

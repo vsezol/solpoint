@@ -43,7 +43,7 @@ export async function POST(
       );
     }
 
-    const isOwner = await isEntityOwner("workspace", id, authUser.id);
+    const isOwner = await isEntityOwner("workspace", workspaceId, authUser.id);
     if (!isOwner) {
       return NextResponse.json(
         { error: "Forbidden: You are not the owner of this workspace" },
@@ -67,7 +67,7 @@ export async function POST(
     const { data: updatedWorkspace, error: updateError } = await supabase
       .from("workspaces")
       .update({ owner_id: new_owner_id })
-      .eq("id", id)
+      .eq("id", workspaceId)
       .select()
       .single();
 
@@ -81,13 +81,13 @@ export async function POST(
     await supabase
       .from("workspace_members")
       .update({ role: "owner" })
-      .eq("workspace_id", id)
+      .eq("workspace_id", workspaceId)
       .eq("user_id", new_owner_id);
 
     await supabase
       .from("workspace_members")
       .update({ role: "member" })
-      .eq("workspace_id", id)
+      .eq("workspace_id", workspaceId)
       .eq("user_id", authUser.id)
       .neq("role", "owner");
 

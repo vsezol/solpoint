@@ -52,7 +52,7 @@ export async function GET(
   const { data: hub, error: hubError } = await supabase
     .from("hubs")
     .select("id")
-    .eq("id", id)
+    .eq("id", hubId)
     .single();
 
   if (hubError || !hub) {
@@ -88,7 +88,7 @@ export async function GET(
         )
       )
     `)
-    .eq("hub_id", id)
+    .eq("hub_id", hubId)
     .order("joined_at", { ascending: false });
 
   if (error) {
