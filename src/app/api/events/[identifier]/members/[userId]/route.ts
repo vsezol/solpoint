@@ -53,7 +53,7 @@ export async function DELETE(
     }
 
     const { error: deleteError } = await supabase
-      .from("event_attendees")
+      .from("event_members")
       .delete()
       .eq("event_id", id)
       .eq("user_id", userId);

@@ -74,7 +74,7 @@ export async function PATCH(
 
     // Проверяем, что пользователь является участником события
     const { data: attendee, error: attendeeError } = await supabase
-      .from("event_attendees")
+      .from("event_members")
       .select("user_id")
       .eq("event_id", id)
       .eq("user_id", userId)

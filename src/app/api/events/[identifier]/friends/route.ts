@@ -47,9 +47,10 @@ export async function GET(
 
   // Получаем всех участников со статусом "going"
   const { data: members, error: membersError } = await supabase
-    .from("event_attendees")
+    .from("event_members")
     .select("user_id")
-    .eq("event_id", eventId);
+    .eq("event_id", eventId)
+    .eq("status", "going");
 
   if (membersError) {
     console.error("Error fetching event members:", membersError);

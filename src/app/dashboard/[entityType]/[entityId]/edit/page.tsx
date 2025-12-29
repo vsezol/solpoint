@@ -80,12 +80,13 @@ export default async function EntityEditPage({ params }: EntityEditPageProps) {
   let members: (User & { joined_at?: string; role?: "owner" | "moderator" | "member" })[] = [];
 
   if (entityType === "event") {
-    // Для событий нужно объединить attendees с event_roles
+    // Для событий нужно объединить members с event_roles
     const { data: attendeesData } = await supabase
-      .from("event_attendees")
+      .from("event_members")
       .select(`
         registered_at,
-        user:profiles!event_attendees_user_id_fkey(*)
+        status,
+        user:profiles!event_members_user_id_fkey(*)
       `)
       .eq("event_id", entityId)
       .order("registered_at", { ascending: false });

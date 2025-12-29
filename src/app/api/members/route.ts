@@ -43,7 +43,7 @@ const ENTITY_CONFIGS: Record<EntityType, EntityConfig> = {
   },
   event: {
     tableName: "events",
-    membersTable: "event_attendees",
+    membersTable: "event_members",
     entityIdField: "event_id",
     ownerIdField: "owner_id",
     dateField: "registered_at",
@@ -124,6 +124,19 @@ export async function GET(request: NextRequest) {
   // В Supabase PostgREST используем синтаксис table!column_name для join'ов
   console.log(`[API Members] Fetching members from table:`, config.membersTable);
   console.log(`[API Members] Using entityIdField:`, config.entityIdField);
+  console.log(`[API Members] Searching for entityId:`, entityId);
+  
+  // Сначала проверим, есть ли вообще записи в таблице с этим event_id
+  const { data: rawData, error: rawError } = await supabase
+    .from(config.membersTable)
+    .select(`${config.entityIdField}, user_id`)
+    .eq(config.entityIdField, entityId);
+  
+  console.log(`[API Members] Raw query (without join) result:`, {
+    count: rawData?.length || 0,
+    error: rawError,
+    sample: rawData?.[0] || null
+  });
   
   const { data: membersData, error: membersError } = await supabase
     .from(config.membersTable)
@@ -157,9 +170,10 @@ export async function GET(request: NextRequest) {
     .eq(config.entityIdField, entityId)
     .order(config.dateField, { ascending: false });
 
-  console.log(`[API Members] Members query result:`, { 
+  console.log(`[API Members] Members query result (with join):`, { 
     count: membersData?.length || 0, 
     error: membersError,
+    errorDetails: membersError ? JSON.stringify(membersError, null, 2) : null,
     sampleData: membersData?.[0] ? JSON.stringify(membersData[0], null, 2) : null
   });
 

@@ -276,7 +276,7 @@ export const ENTITY_CONFIGS: Record<EntityType, EntityTypeConfig> = {
   event: {
     name: "Event",
     tableName: "events",
-    membersTable: "event_attendees",
+    membersTable: "event_members",
     entityIdField: "event_id",
     ownerIdField: "owner_id",
     canHaveEvents: false, // События не могут иметь свои события

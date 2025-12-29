@@ -279,12 +279,13 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // 5. События (event_attendees)
+    // 5. События (event_members - только со статусом "going")
     const { data: events, error: eventsError } = await supabase
-      .from("event_attendees")
+      .from("event_members")
       .select(
         `
         event_id,
+        status,
         events (
           id,
           name,
@@ -296,7 +297,8 @@ export async function GET(request: NextRequest) {
         )
       `
       )
-      .eq("user_id", userId);
+      .eq("user_id", userId)
+      .eq("status", "going");
 
     if (!eventsError && events) {
       events.forEach((event: any) => {

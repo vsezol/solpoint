@@ -48,12 +48,12 @@ export async function GET(
     );
   }
 
-  // Получаем всех участников
+  // Получаем всех участников (только со статусом "going")
   const { data: members, error } = await supabase
-    .from("event_attendees")
+    .from("event_members")
     .select(`
       *,
-      user:profiles!event_attendees_user_id_fkey(
+      user:profiles!event_members_user_id_fkey(
         id,
         twitter_id,
         twitter_handle,
@@ -78,6 +78,7 @@ export async function GET(
       )
     `)
     .eq("event_id", eventId)
+    .eq("status", "going")
     .order("registered_at", { ascending: false });
 
   if (error) {
