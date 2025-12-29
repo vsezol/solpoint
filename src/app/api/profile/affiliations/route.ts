@@ -16,7 +16,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const userId = authUser.id;
+    // Получаем user_id из query параметров, если указан (для просмотра чужого профиля)
+    const { searchParams } = new URL(request.url);
+    const targetUserId = searchParams.get("user_id");
+    const userId = targetUserId || authUser.id;
     const affiliations: any[] = [];
 
     // 1. Хабы (hub_members и creator)
