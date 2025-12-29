@@ -259,19 +259,18 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // Возвращаем превью (первые 5 для всех участников, включая владельцев, первые 3 для друзей)
-  // Исключаем владельцев из превью участников, чтобы не дублировать их
+  // Возвращаем всех участников (без ограничений)
+  // Исключаем владельцев из списка участников, чтобы не дублировать их
   const regularMembers = allMembers.filter((m) => !m.isOwner);
-  const membersPreview = regularMembers.length > 0 
-    ? regularMembers.slice(0, 5)
-    : allMembers.slice(0, 5); // Если все участники - владельцы, показываем их
-  const friendsPreview = friends.slice(0, 3);
+  const allMembersList = regularMembers.length > 0 
+    ? regularMembers
+    : allMembers; // Если все участники - владельцы, показываем их
 
   const response = {
     totalMembers: allMembers.length,
     totalFriends: friends.length,
-    members: membersPreview,
-    friends: friendsPreview,
+    members: allMembersList, // Все участники, не только превью
+    friends: friends, // Все друзья, не только превью
     team: team,
   };
 

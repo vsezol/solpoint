@@ -121,7 +121,6 @@ export function EntityMembersWidget({
   const [showFriendsModal, setShowFriendsModal] = useState(false);
   const [allMembers, setAllMembers] = useState<Member[]>([]);
   const [allFriends, setAllFriends] = useState<Member[]>([]);
-  const [loadingFullList, setLoadingFullList] = useState(false);
   const [friendStatuses, setFriendStatuses] = useState<Record<string, "none" | "pending_sent" | "pending_received" | "accepted" | "blocked">>({});
   const [sendingFriendRequest, setSendingFriendRequest] = useState<Record<string, boolean>>({});
   const [creatingChat, setCreatingChat] = useState<Record<string, boolean>>({});
@@ -165,65 +164,27 @@ export function EntityMembersWidget({
     loadData();
   }, [entityType, entityId]);
 
-  // Загружаем полный список участников/друзей
+  // Открываем модальное окно с уже загруженными данными
   const loadFullList = async (isFriends: boolean) => {
+    // Проверяем авторизацию
     if (!isAuthenticated) {
       setShowAuthModal(true);
       return;
     }
 
+    // Проверяем VIP статус
     if (!isVip) {
       setShowProModal(true);
       return;
     }
 
-    setLoadingFullList(true);
-    try {
-      // Используем правильные endpoints в зависимости от типа сущности
-      let endpoint: string;
-      if (isFriends) {
-        endpoint = `/api/${entityType}s/${entityId}/friends`;
-      } else {
-        if (entityType === "event") {
-          endpoint = `/api/events/${entityId}/attendees`;
-        } else {
-          endpoint = `/api/${entityType}s/${entityId}/members`;
-        }
-      }
-
-      const response = await fetch(endpoint);
-      if (response.ok) {
-        const result = await response.json();
-        const items = result.items || result.members || result.friends || [];
-        if (isFriends) {
-          setAllFriends(items);
-          setShowFriendsModal(true);
-        } else {
-          setAllMembers(items);
-          setShowMembersModal(true);
-        }
-      } else {
-        // Если ошибка, используем уже имеющиеся данные
-        if (isFriends) {
-          setAllFriends(data?.friends || []);
-          setShowFriendsModal(true);
-        } else {
-          setAllMembers(data?.members || []);
-          setShowMembersModal(true);
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching full list:", error);
-      // При ошибке используем уже имеющиеся данные
-      if (isFriends) {
-        setAllFriends(data?.friends || []);
-        setShowFriendsModal(true);
-      } else {
-        setAllMembers(data?.members || []);
-        setShowMembersModal(true);
-      }
-    } finally {
-      setLoadingFullList(false);
+    // Используем уже загруженные данные, без дополнительного запроса
+    if (isFriends) {
+      setAllFriends(data?.friends || []);
+      setShowFriendsModal(true);
+    } else {
+      setAllMembers(data?.members || []);
+      setShowMembersModal(true);
     }
   };
 
@@ -339,10 +300,9 @@ export function EntityMembersWidget({
     friendsLength: data.friends?.length || 0,
   });
 
-  const visibleMembers = data.members?.slice(0, 3) || [];
-  const remainingMembers = (data.members?.length || 0) - 3;
-  const visibleFriends = data.friends?.slice(0, 3) || [];
-  const remainingFriends = (data.friends?.length || 0) - 3;
+  // Показываем всех участников и друзей (без ограничений)
+  const visibleMembers = data.members || [];
+  const visibleFriends = data.friends || [];
 
   return (
     <>
@@ -374,18 +334,12 @@ export function EntityMembersWidget({
                         />
                       </Link>
                     ))}
-                    {remainingMembers > 0 && (
-                      <div className="w-8 h-8 rounded-full bg-[var(--color-surface-hover)] flex items-center justify-center text-xs text-[var(--color-text-muted)]">
-                        +{remainingMembers}
-                      </div>
-                    )}
                   </div>
                   <button
                     onClick={() => loadFullList(false)}
-                    disabled={loadingFullList}
-                    className="text-xs text-[var(--color-primary)] hover:underline disabled:opacity-50"
+                    className="text-xs text-[var(--color-primary)] hover:underline"
                   >
-                    {loadingFullList ? "Loading..." : texts.showAllMembers}
+                    {texts.showAllMembers}
                   </button>
                 </>
               ) : (
@@ -419,18 +373,12 @@ export function EntityMembersWidget({
                         />
                       </Link>
                     ))}
-                    {remainingFriends > 0 && (
-                      <div className="w-8 h-8 rounded-full bg-[var(--color-surface-hover)] flex items-center justify-center text-xs text-[var(--color-text-muted)]">
-                        +{remainingFriends}
-                      </div>
-                    )}
                   </div>
                   <button
                     onClick={() => loadFullList(true)}
-                    disabled={loadingFullList}
-                    className="text-xs text-[var(--color-primary)] hover:underline disabled:opacity-50"
+                    className="text-xs text-[var(--color-primary)] hover:underline"
                   >
-                    {loadingFullList ? "Loading..." : texts.showAllFriends}
+                    {texts.showAllFriends}
                   </button>
                 </>
               ) : (
