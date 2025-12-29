@@ -37,7 +37,6 @@ export async function getEntityIdByIdentifier(
   }
 
   // Если это slug, получаем ID из базы данных
-
   const { data, error } = await supabase
     .from(tableMap[entityType])
     .select("id")

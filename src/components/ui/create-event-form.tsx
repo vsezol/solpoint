@@ -47,11 +47,13 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
   const errorRef = useRef<HTMLDivElement>(null);
   const locationErrorRef = useRef<HTMLDivElement>(null);
   const contactErrorRef = useRef<HTMLDivElement>(null);
+  const lumaLinkErrorRef = useRef<HTMLDivElement>(null);
   
   // Validation errors for individual fields
   const [locationError, setLocationError] = useState<string | null>(null);
   const [contactEmailError, setContactEmailError] = useState<string | null>(null);
   const [contactTelegramError, setContactTelegramError] = useState<string | null>(null);
+  const [lumaLinkError, setLumaLinkError] = useState<string | null>(null);
   
   // Use Zustand store for form state
   const eventForm = useFormsStore((state) => state.eventForm);
@@ -305,6 +307,7 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
     setLocationError(null);
     setContactEmailError(null);
     setContactTelegramError(null);
+    setLumaLinkError(null);
     
     let hasErrors = false;
     let firstErrorElement: HTMLElement | null = null;
@@ -314,6 +317,25 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
       hasErrors = true;
       if (!firstErrorElement && errorRef.current) {
         firstErrorElement = errorRef.current;
+      }
+    }
+
+    if (!lumaLink.trim()) {
+      setLumaLinkError("Luma link is required");
+      hasErrors = true;
+      if (!firstErrorElement && lumaLinkErrorRef.current) {
+        firstErrorElement = lumaLinkErrorRef.current;
+      }
+    } else {
+      // Validate URL format
+      try {
+        new URL(lumaLink.trim());
+      } catch {
+        setLumaLinkError("Please enter a valid URL");
+        hasErrors = true;
+        if (!firstErrorElement && lumaLinkErrorRef.current) {
+          firstErrorElement = lumaLinkErrorRef.current;
+        }
       }
     }
     
@@ -440,6 +462,7 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
     setLocationError(null);
     setContactEmailError(null);
     setContactTelegramError(null);
+    setLumaLinkError(null);
 
     const isValid = validateForm();
     if (!isValid) {
@@ -493,7 +516,7 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
         max_attendees: maxAttendees ? parseInt(maxAttendees, 10) : undefined,
         is_online: isOnline,
         socials: Object.keys(socials).length > 0 ? socials : undefined,
-        luma_link: lumaLink.trim() || undefined,
+        luma_link: lumaLink.trim(),
         contacts: {
           email: contactEmail.trim() || undefined,
           telegram: contactTelegram.trim() || undefined,
@@ -668,9 +691,9 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
           </div>
         </div>
 
-        <div>
+        <div ref={lumaLinkErrorRef}>
           <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
-            Luma Link
+            Luma Link <span className="text-red-500">*</span>
           </label>
           <Input
             type="url"
@@ -678,7 +701,11 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
             onChange={(e) => setLumaLink(e.target.value)}
             placeholder="https://lu.ma/event/..."
             icon={<LinkIcon className="w-4 h-4" />}
+            className={lumaLinkError ? "border-red-500" : ""}
           />
+          {lumaLinkError && (
+            <p className="text-xs text-red-500 mt-1">{lumaLinkError}</p>
+          )}
           <p className="text-xs text-[var(--color-text-muted)] mt-1">
             Link to the event page on Luma platform
           </p>

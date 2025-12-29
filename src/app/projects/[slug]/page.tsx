@@ -3,10 +3,10 @@ import { Header, Footer } from "@/components/layout";
 import { Button, Card } from "@/components/ui";
 import { MapPin, Globe, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import type { Project, User } from "@/types";
+import type { Project } from "@/types";
 import Image from "next/image";
 import Link from "next/link";
-import { EntityMembersCard } from "@/components/entities/entity-members-card";
+import { EntityMembersWidget } from "@/components/entities/entity-members-widget";
 import type { Metadata } from "next";
 import { getAppUrl } from "@/lib/utils";
 import { ProjectViewTracker } from "@/components/analytics/project-view-tracker";
@@ -82,20 +82,6 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
   const { slug } = await params;
   const supabase = await createClient();
 
-  const {
-    data: { user: authUser },
-  } = await supabase.auth.getUser();
-
-  let isVip = false;
-  if (authUser) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("subscription_tier")
-      .eq("id", authUser.id)
-      .single();
-    isVip = profile?.subscription_tier === "vip";
-  }
-
   const { data: projectData, error: projectError } = await supabase
     .from("projects")
     .select("*")
@@ -107,114 +93,6 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
   }
 
   const project = projectData as Project;
-
-  let members: (User & { joined_at?: string })[] = [];
-  let userFriendsGoing: User[] = [];
-  let isUserMember = false;
-
-  if (authUser) {
-    const { data: userMember } = await supabase
-      .from("project_members")
-      .select("id, joined_at")
-      .eq("project_id", project.id)
-      .eq("user_id", authUser.id)
-      .single();
-
-    isUserMember = !!userMember;
-
-    const { data: membersData } = await supabase
-      .from("project_members")
-      .select(`
-        joined_at,
-        user:profiles(
-          id,
-          twitter_id,
-          twitter_handle,
-          twitter_name,
-          avatar_url,
-          bio,
-          country,
-          country_code,
-          city,
-          role,
-          is_open_to_meet,
-          subscription_tier,
-          is_verified,
-          wallet_address,
-          socials,
-          last_active_at,
-          created_at,
-          updated_at,
-          countries!fk_profiles_country_code (
-            name
-          )
-        )
-      `)
-      .eq("project_id", project.id)
-      .order("joined_at", { ascending: false })
-      .limit(20);
-
-    members = (membersData || []).map((m: any) => {
-      const user = Array.isArray(m.user) ? m.user[0] : m.user;
-      return {
-        ...user,
-        joined_at: m.joined_at,
-      };
-    }).filter((m): m is User & { joined_at?: string } => m !== null && m !== undefined);
-
-    // Получаем взаимных друзей авторизованного пользователя
-    const { data: mutualFriendsData } = await supabase
-      .from("mutual_friends")
-      .select("user_id, friend_id")
-      .or(`user_id.eq.${authUser.id},friend_id.eq.${authUser.id}`);
-
-    // Получаем ID всех друзей
-    const friendIds: string[] = [];
-    if (mutualFriendsData) {
-      for (const mf of mutualFriendsData) {
-        if (mf.user_id === authUser.id) {
-          friendIds.push(mf.friend_id);
-        } else if (mf.friend_id === authUser.id) {
-          friendIds.push(mf.user_id);
-        }
-      }
-    }
-
-    // Находим друзей, которые являются участниками проекта
-    const memberUserIds = new Set(members.map(m => m.id));
-    const friendsGoingIds = friendIds.filter(id => memberUserIds.has(id));
-
-    if (friendsGoingIds.length > 0) {
-      const { data: friendsProfiles } = await supabase
-        .from("profiles")
-        .select(`
-          id,
-          twitter_id,
-          twitter_handle,
-          twitter_name,
-          avatar_url,
-          bio,
-          country,
-          country_code,
-          city,
-          role,
-          is_open_to_meet,
-          subscription_tier,
-          is_verified,
-          wallet_address,
-          socials,
-          last_active_at,
-          created_at,
-          updated_at,
-          countries!fk_profiles_country_code (
-            name
-          )
-        `)
-        .in("id", friendsGoingIds);
-
-      userFriendsGoing = (friendsProfiles || []) as User[];
-    }
-  }
 
   return (
     <>
@@ -368,14 +246,9 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
                 </div>
               </Card> */}
 
-              <EntityMembersCard
-                members={members}
-                friends={userFriendsGoing}
-                isVip={isVip}
-                authUser={authUser}
-                entitySlug={project.slug}
+              <EntityMembersWidget
                 entityType="project"
-                entityName={project.name}
+                entityId={project.id}
               />
             </div>
           </div>

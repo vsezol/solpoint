@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { Hub, User } from "@/types";
 import Image from "next/image";
 import Link from "next/link";
-import { HubMembersCard } from "./hub-members-card";
+import { EntityMembersWidget } from "@/components/entities/entity-members-widget";
 import type { Metadata } from "next";
 import { getAppUrl } from "@/lib/utils";
 import { HubViewTracker } from "@/components/analytics/hub-view-tracker";
@@ -112,117 +112,7 @@ export default async function HubPage({ params }: HubPageProps) {
 
   const hub = hubData as Hub;
 
-  // Получаем участников хаба (только если авторизован)
-  let members: (User & { joined_at?: string })[] = [];
-  let userFriendsGoing: User[] = [];
-  let isUserMember = false;
-
-  if (authUser) {
-    // Проверяем, является ли пользователь участником хаба
-    const { data: userMember } = await supabase
-      .from("hub_members")
-      .select("id, joined_at")
-      .eq("hub_id", hub.id)
-      .eq("user_id", authUser.id)
-      .single();
-
-    isUserMember = !!userMember;
-
-    // Получаем участников хаба
-    const { data: membersData } = await supabase
-      .from("hub_members")
-      .select(`
-        joined_at,
-        user:profiles!hub_members_user_id_fkey(
-          id,
-          twitter_id,
-          twitter_handle,
-          twitter_name,
-          avatar_url,
-          bio,
-          country,
-          country_code,
-          city,
-          role,
-          is_open_to_meet,
-          subscription_tier,
-          is_verified,
-          wallet_address,
-          socials,
-          last_active_at,
-          created_at,
-          updated_at,
-          countries!fk_profiles_country_code (
-            name
-          )
-        )
-      `)
-      .eq("hub_id", hub.id)
-      .order("joined_at", { ascending: false })
-      .limit(20);
-
-    members = (membersData || []).map((m: any) => {
-      const user = Array.isArray(m.user) ? m.user[0] : m.user;
-      return {
-        ...user,
-        joined_at: m.joined_at,
-      };
-    }).filter((m): m is User & { joined_at?: string } => m !== null && m !== undefined);
-
-    // Получаем взаимных друзей авторизованного пользователя
-    const { data: mutualFriendsData } = await supabase
-      .from("mutual_friends")
-      .select("user_id, friend_id")
-      .or(`user_id.eq.${authUser.id},friend_id.eq.${authUser.id}`);
-
-    // Получаем ID всех друзей
-    const friendIds: string[] = [];
-    if (mutualFriendsData) {
-      for (const mf of mutualFriendsData) {
-        if (mf.user_id === authUser.id) {
-          friendIds.push(mf.friend_id);
-        } else if (mf.friend_id === authUser.id) {
-          friendIds.push(mf.user_id);
-        }
-      }
-    }
-
-    // Находим друзей, которые являются участниками хаба
-    const memberUserIds = new Set(members.map(m => m.id));
-    const friendsGoingIds = friendIds.filter(id => memberUserIds.has(id));
-
-    if (friendsGoingIds.length > 0) {
-      const { data: friendsProfiles } = await supabase
-        .from("profiles")
-        .select(`
-          id,
-          twitter_id,
-          twitter_handle,
-          twitter_name,
-          avatar_url,
-          bio,
-          country,
-          country_code,
-          city,
-          role,
-          is_open_to_meet,
-          subscription_tier,
-          is_verified,
-          wallet_address,
-          socials,
-          last_active_at,
-          created_at,
-          updated_at,
-          countries!fk_profiles_country_code (
-            name
-          )
-        `)
-        .in("id", friendsGoingIds);
-
-      userFriendsGoing = (friendsProfiles || []) as User[];
-    }
-  }
-
+  console.log(hub.id, 'hub.id');
   return (
     <>
       <Header />
@@ -380,13 +270,10 @@ export default async function HubPage({ params }: HubPageProps) {
                 </div>
               </Card> */}
 
-              {/* Members Card */}
-              <HubMembersCard
-                members={members}
-                friends={userFriendsGoing}
-                isVip={isVip}
-                authUser={authUser}
-                hubSlug={hub.slug}
+              {/* Members Widget */}
+              <EntityMembersWidget
+                entityType="hub"
+                entityId={hub.id}
               />
             </div>
           </div>

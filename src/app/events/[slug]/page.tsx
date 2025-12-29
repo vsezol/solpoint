@@ -1,13 +1,12 @@
 import { notFound } from "next/navigation";
 import { Header, Footer } from "@/components/layout";
-import { Button, EventBadges, Card, AttendeesList } from "@/components/ui";
-import { Calendar, MapPin, Globe, Ticket } from "lucide-react";
+import { Button, EventBadges, Card } from "@/components/ui";
+import { EntityMembersWidget } from "@/components/entities/entity-members-widget";
+import { Calendar, MapPin, Globe, Ticket, Link as LinkIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import type { Event, User, EventMember } from "@/types";
 import Image from "next/image";
-import Link from "next/link";
 import { EventHostCard } from "./event-host-card";
-import { AttendButton } from "./attend-button";
 import type { Metadata } from "next";
 import { getAppUrl } from "@/lib/utils";
 import { EventViewTracker } from "@/components/analytics/event-view-tracker";
@@ -446,6 +445,64 @@ export default async function EventPage({ params }: EventPageProps) {
                       </p>
                     </div>
                   </div>
+
+                  {/* Social Links */}
+                  {(event.socials?.twitter || event.socials?.instagram || event.socials?.facebook || event.socials?.website) && (
+                    <div className="flex items-start gap-3">
+                      <LinkIcon className="w-5 h-5 text-[var(--color-primary)] mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm text-[var(--color-text-muted)] mb-1">Links</p>
+                        <div className="flex items-center gap-3 flex-wrap">
+                          {event.socials?.twitter && (
+                            <EventSocialLink
+                              event={event}
+                              platform="twitter"
+                              href={event.socials.twitter}
+                            />
+                          )}
+                          {event.socials?.instagram && (
+                            <EventSocialLink
+                              event={event}
+                              platform="instagram"
+                              href={event.socials.instagram}
+                            />
+                          )}
+                          {event.socials?.facebook && (
+                            <EventSocialLink
+                              event={event}
+                              platform="facebook"
+                              href={event.socials.facebook}
+                            />
+                          )}
+                          {event.socials?.website && (
+                            <EventSocialLink
+                              event={event}
+                              platform="website"
+                              href={event.socials.website}
+                            />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Attend/Buy Tickets Button */}
+                <div className="mt-6">
+                  <Button
+                    variant="primary"
+                    className="w-full"
+                    size="lg"
+                    asChild
+                  >
+                    <a
+                      href={event.luma_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {event.is_paid ? "Buy Tickets" : "Attend"}
+                    </a>
+                  </Button>
                 </div>
               </Card>
 
@@ -465,53 +522,6 @@ export default async function EventPage({ params }: EventPageProps) {
                 </div>
               )}
 
-           
-
-              {/* Social Links */}
-              {(event.socials?.twitter || event.socials?.instagram || event.socials?.facebook || event.socials?.website || event.luma_link) && (
-                <Card variant="bordered">
-                  <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">
-                    Links
-                  </h2>
-                  <div className="flex items-center gap-3 flex-wrap">
-                    {event.luma_link && (
-                      <EventSocialLink
-                        event={event}
-                        platform="luma"
-                        href={event.luma_link}
-                      />
-                    )}
-                    {event.socials?.twitter && (
-                      <EventSocialLink
-                        event={event}
-                        platform="twitter"
-                        href={event.socials.twitter}
-                      />
-                    )}
-                    {event.socials?.instagram && (
-                      <EventSocialLink
-                        event={event}
-                        platform="instagram"
-                        href={event.socials.instagram}
-                      />
-                    )}
-                    {event.socials?.facebook && (
-                      <EventSocialLink
-                        event={event}
-                        platform="facebook"
-                        href={event.socials.facebook}
-                      />
-                    )}
-                    {event.socials?.website && (
-                      <EventSocialLink
-                        event={event}
-                        platform="website"
-                        href={event.socials.website}
-                      />
-                    )}
-                  </div>
-                </Card>
-              )}
             </div>
 
             {/* Sidebar */}
@@ -554,60 +564,11 @@ export default async function EventPage({ params }: EventPageProps) {
                 </div>
               </Card> */}
 
-              {/* Attendees Card */}
-              <Card variant="bordered">
-                <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
-                  Attendees
-                </h3>
-                <div className="space-y-6">
-                  {/* All Attendees */}
-                  <AttendeesList
-                    title={`${event.attendees_count} ${event.attendees_count === 1 ? "person" : "people"} going`}
-                    items={members
-                      .filter((m) => m.user)
-                      .map((m) => ({
-                        id: m.user!.id,
-                        avatar_url: m.user!.avatar_url,
-                        name: m.user!.twitter_name,
-                        twitter_handle: m.user!.twitter_handle,
-                        isVip: m.user!.subscription_tier === "vip",
-                        isVerified: m.user!.is_verified,
-                      }))}
-                    showAllText="Show all attendees"
-                    showAllHref={`/events/${event.slug}?tab=attendees`}
-                    capacityInfo={
-                      event.max_attendees
-                        ? `${event.max_attendees - (event.attendees_count || 0)} spots left`
-                        : "Unlimited spots left"
-                    }
-                    emptyText="No attendees yet"
-                    eventSlug={event.slug}
-                    isFriendsList={false}
-                  />
-
-                  {/* Friends Going */}
-                  {authUser && (
-                    <AttendeesList
-                      title={`${userFriendsGoing.length} ${userFriendsGoing.length === 1 ? "friend" : "friends"} going`}
-                      items={userFriendsGoing.map((friend) => ({
-                        id: friend.id,
-                        avatar_url: friend.avatar_url,
-                        name: friend.twitter_name,
-                        twitter_handle: friend.twitter_handle,
-                        isVip: friend.subscription_tier === "vip",
-                        isVerified: friend.is_verified,
-                      }))}
-                      showAllText="Show all friends"
-                      showAllHref={`/events/${event.slug}?tab=attendees`}
-                      ctaButtonText="Invite friends to this event"
-                      ctaButtonHref={`/events/${event.slug}?action=invite`}
-                      emptyText="No friends going yet"
-                      eventSlug={event.slug}
-                      isFriendsList={true}
-                    />
-                  )}
-                </div>
-              </Card>
+              {/* Attendees Widget */}
+              <EntityMembersWidget
+                entityType="event"
+                entityId={event.id}
+              />
             </div>
           </div>
         </div>
