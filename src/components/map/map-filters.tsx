@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Input } from "@/components/ui";
 import { AuthRequiredModal, ProSubscriptionModal } from "@/components/ui";
 import type { MapFilters, UserRole, EventType, ContentTypeFilter } from "@/types";
@@ -42,6 +42,8 @@ export function MapFiltersPanel({
   const { isAuthenticated, user } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showProModal, setShowProModal] = useState(false);
+  const [cityInput, setCityInput] = useState(filters.city || "");
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleFilterAction = (action: () => void) => {
     if (!isAuthenticated) {
@@ -50,6 +52,39 @@ export function MapFiltersPanel({
     }
     action();
   };
+
+  // Синхронизируем локальное состояние города с пропсами
+  useEffect(() => {
+    setCityInput(filters.city || "");
+  }, [filters.city]);
+
+  // Debounce для обновления фильтра города
+  useEffect(() => {
+    // Очищаем предыдущий таймер
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    // Устанавливаем новый таймер
+    debounceTimerRef.current = setTimeout(() => {
+      // Обновляем фильтры только если значение изменилось
+      const newCityValue = cityInput.trim() || undefined;
+      if (newCityValue !== filters.city) {
+        onFiltersChange({
+          ...filters,
+          city: newCityValue,
+        });
+      }
+    }, 900); // 500ms задержка
+
+    // Очистка таймера при размонтировании
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cityInput]);
 
   // Синхронизируем выбранную страну из store с фильтрами
   useEffect(() => {
@@ -71,6 +106,11 @@ export function MapFiltersPanel({
 
   const handleReset = () => {
     setCountry(null);
+    setCityInput("");
+    // Очищаем таймер debounce при сбросе
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
     trackEvent("map_filter_reset", {
       event_category: "Map",
     });
@@ -226,7 +266,7 @@ export function MapFiltersPanel({
           </label>
           <Input
             placeholder="Enter city..."
-            value={filters.city || ""}
+            value={cityInput}
             onChange={(e) => {
               if (!isAuthenticated) {
                 setShowAuthModal(true);
@@ -236,7 +276,8 @@ export function MapFiltersPanel({
                 setShowProModal(true);
                 return;
               }
-              onFiltersChange({ ...filters, city: e.target.value || undefined });
+              // Обновляем только локальное состояние, фильтры обновятся через debounce
+              setCityInput(e.target.value);
             }}
             onFocus={() => {
               if (!isAuthenticated) {
@@ -315,6 +356,7 @@ export function MapFiltersPanel({
                   if (newOpenToMeet) {
                     // При включении "Find frens" сбрасываем все остальные фильтры
                     setCountry(null);
+                    setCityInput("");
                     onFiltersChange({
                       showUsers: true,
                       showEvents: false,
@@ -428,7 +470,14 @@ export function MapFiltersPanel({
               <span className="px-3 py-1.5 text-sm rounded-full bg-[var(--color-surface-border)] text-[var(--color-text-primary)] flex items-center gap-2">
                 {filters.city}
                 <button
-                  onClick={() => onFiltersChange({ ...filters, city: undefined })}
+                  onClick={() => {
+                    setCityInput("");
+                    // Очищаем таймер debounce при удалении
+                    if (debounceTimerRef.current) {
+                      clearTimeout(debounceTimerRef.current);
+                    }
+                    onFiltersChange({ ...filters, city: undefined });
+                  }}
                   className="hover:text-[var(--color-primary)] transition-colors"
                 >
                   ×

@@ -159,6 +159,7 @@ export async function POST(request: Request) {
       registration_deadline,
       is_online,
       socials,
+      luma_link,
       contacts,
       hub_id,
       community_id,
@@ -166,9 +167,9 @@ export async function POST(request: Request) {
     } = body;
 
     // Валидация обязательных полей
-    if (!name || !start_date) {
+    if (!name || !start_date || !luma_link) {
       return NextResponse.json(
-        { error: "Missing required fields: name, start_date" },
+        { error: "Missing required fields: name, start_date, luma_link" },
         { status: 400 }
       );
     }
@@ -305,6 +306,7 @@ export async function POST(request: Request) {
         : null,
       is_online: is_online || false,
       socials: socials || {},
+      luma_link: luma_link,
       contacts: contacts || {},
       // Унифицированные поля
       owner_type: ownerType,

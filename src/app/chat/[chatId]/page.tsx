@@ -1,41 +1,14 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Header, Footer } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/use-auth";
-
-interface Message {
-  id: string;
-  chat_id: string;
-  sender_id: string;
-  content: string;
-  reply_to_id: string | null;
-  is_read: boolean;
-  created_at: string;
-  updated_at: string;
-  sender: {
-    id: string;
-    twitter_handle: string;
-    twitter_name: string;
-    avatar_url: string | null;
-    is_verified: boolean;
-  };
-  reply_to?: {
-    id: string;
-    content: string;
-    sender_id: string;
-    sender: {
-      id: string;
-      twitter_handle: string;
-      twitter_name: string;
-      avatar_url: string | null;
-    };
-  } | null;
-}
+import { getOrCreateChat } from "@/lib/api/chats";
+import { useChatWebSocket, type Message } from "@/hooks/use-chat-websocket";
 
 interface ChatData {
   id: string;
@@ -61,13 +34,59 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [messageContent, setMessageContent] = useState("");
-  const [replyTo, setReplyTo] = useState<Message | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
+  // Handle new messages from WebSocket
+  const handleNewMessage = useCallback(
+    (message: Message) => {
+      setChat((prev) => {
+        if (!prev) return prev;
+        
+        // Check if message already exists (avoid duplicates)
+        if (prev.messages.some((m) => m.id === message.id)) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          messages: [...prev.messages, message],
+          last_message_at: message.created_at,
+        };
+      });
+
+      // Mark messages as read if it's from the other user
+      if (message.sender_id !== user?.id) {
+        fetch(`/api/chats/${chatId}/read`, {
+          method: "PATCH",
+        }).catch((err) => {
+          console.error("Error marking messages as read:", err);
+        });
+      }
+    },
+    [chatId, user?.id]
+  );
+
+  // Handle WebSocket errors
+  const handleWebSocketError = useCallback((error: Error) => {
+    console.error("WebSocket error:", error);
+    // Don't show error to user for connection issues, just log it
+    // The hook will handle reconnection automatically
+  }, []);
+
+  // Setup WebSocket connection
+  const { isConnected, connectionError } = useChatWebSocket({
+    chatId,
+    userId: user?.id || "",
+    onMessage: handleNewMessage,
+    onError: handleWebSocketError,
+    enabled: !!chatId && !!user?.id && !!chat,
+  });
+
   // Fetch chat data
   useEffect(() => {
-    if (!chatId) return;
+    if (!chatId || !user) return;
 
     const fetchChat = async () => {
       try {
@@ -75,15 +94,43 @@ export default function ChatPage() {
         const response = await fetch(`/api/chats/${chatId}`);
         
         if (!response.ok) {
-          if (response.status === 403 || response.status === 404) {
+          // If chat not found (404), try to create it
+          // Check if chatId might be a user ID (for backward compatibility or direct links)
+          if (response.status === 404) {
+            // Check if chatId is not the current user's ID
+            if (chatId === user.id) {
+              console.error("Cannot create chat with yourself");
+              setLoading(false);
+              return;
+            }
+            
+            // Try to create chat with chatId as other_user_id
+            try {
+              const newChat = await getOrCreateChat(chatId);
+              // Redirect to the correct chat URL
+              router.replace(`/chat/${newChat.id}`);
+              return;
+            } catch (createError) {
+              // If creating chat fails, chatId is probably not a user ID
+              // Show error message
+              console.error("Error creating chat:", createError);
+              setError("Chat not found and could not be created. Please try again.");
+              setLoading(false);
+              return;
+            }
+          }
+          
+          if (response.status === 403) {
             router.push("/");
             return;
           }
+          
           throw new Error("Failed to fetch chat");
         }
 
         const result = await response.json();
         setChat(result.data);
+        setError(null); // Clear any previous errors
 
         // Mark messages as read
         await fetch(`/api/chats/${chatId}/read`, {
@@ -97,7 +144,7 @@ export default function ChatPage() {
     };
 
     fetchChat();
-  }, [chatId, router]);
+  }, [chatId, router, user]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -122,7 +169,6 @@ export default function ChatPage() {
         },
         body: JSON.stringify({
           content,
-          reply_to_id: replyTo?.id || null,
         }),
       });
 
@@ -133,17 +179,22 @@ export default function ChatPage() {
       const result = await response.json();
       const newMessage = result.data;
 
-      // Update chat with new message
+      // Update chat with new message (optimistic update)
+      // WebSocket will also receive this message, but we update immediately for better UX
       setChat((prev) => {
         if (!prev) return prev;
+        
+        // Check if message already exists (from WebSocket)
+        if (prev.messages.some((m) => m.id === newMessage.id)) {
+          return prev;
+        }
+
         return {
           ...prev,
           messages: [...prev.messages, newMessage],
           last_message_at: newMessage.created_at,
         };
       });
-
-      setReplyTo(null);
 
       // Mark messages as read
       await fetch(`/api/chats/${chatId}/read`, {
@@ -157,14 +208,6 @@ export default function ChatPage() {
     }
   };
 
-  const handleReply = (message: Message) => {
-    setReplyTo(message);
-    // Scroll to input
-    messagesContainerRef.current?.scrollTo({
-      top: messagesContainerRef.current.scrollHeight,
-      behavior: "smooth",
-    });
-  };
 
   if (loading) {
     return (
@@ -178,12 +221,19 @@ export default function ChatPage() {
     );
   }
 
-  if (!chat) {
+  if (!chat && !loading) {
     return (
       <div className="min-h-screen flex flex-col">
         <Header />
         <main className="flex-1 flex items-center justify-center">
-          <div className="text-[var(--color-text-secondary)]">Chat not found</div>
+          <div className="text-center">
+            <div className="text-[var(--color-text-secondary)] mb-4">
+              {error || "Chat not found"}
+            </div>
+            <Button onClick={() => router.back()} variant="outline">
+              Go Back
+            </Button>
+          </div>
         </main>
         <Footer />
       </div>
@@ -193,7 +243,7 @@ export default function ChatPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      <main className="flex-1 flex flex-col max-w-4xl w-full mx-auto px-4 py-6">
+      <main className="flex-1 flex flex-col max-w-4xl w-full mx-auto px-4 py-6 mt-[50px]">
         {/* Chat Header */}
         <div className="flex items-center gap-3 pb-4 border-b border-[var(--color-surface-border)] mb-4">
           <Button
@@ -227,6 +277,21 @@ export default function ChatPage() {
                   />
                 </svg>
               )}
+              {/* Connection status indicator */}
+              <div
+                className={`w-2 h-2 rounded-full ${
+                  isConnected
+                    ? "bg-green-500"
+                    : "bg-yellow-500 animate-pulse"
+                }`}
+                title={
+                  isConnected
+                    ? "Connected"
+                    : connectionError
+                      ? `Connecting... (${connectionError.message})`
+                      : "Connecting..."
+                }
+              />
             </div>
             <p className="text-sm text-[var(--color-text-secondary)]">
               @{chat.otherUser.twitter_handle}
@@ -262,22 +327,6 @@ export default function ChatPage() {
                       isOwnMessage ? "items-end" : "items-start"
                     }`}
                   >
-                    {message.reply_to && (
-                      <div
-                        className={`mb-1 p-2 text-xs rounded border-l-2 ${
-                          isOwnMessage
-                            ? "bg-[var(--color-surface-hover)] border-[var(--color-primary)]"
-                            : "bg-[var(--color-surface)] border-[var(--color-surface-border)]"
-                        }`}
-                      >
-                        <div className="font-medium text-[var(--color-text-secondary)]">
-                          {message.reply_to.sender.twitter_name}
-                        </div>
-                        <div className="text-[var(--color-text-muted)] truncate">
-                          {message.reply_to.content}
-                        </div>
-                      </div>
-                    )}
                     <div
                       className={`px-4 py-2 rounded-lg ${
                         isOwnMessage
@@ -296,16 +345,6 @@ export default function ChatPage() {
                           minute: "2-digit",
                         })}
                       </span>
-                      {!isOwnMessage && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 px-2 text-xs"
-                          onClick={() => handleReply(message)}
-                        >
-                          Reply
-                        </Button>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -315,51 +354,31 @@ export default function ChatPage() {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Reply Preview */}
-        {replyTo && (
-          <div className="mb-2 p-2 bg-[var(--color-surface)] rounded-lg border border-[var(--color-surface-border)] flex items-center justify-between">
-            <div className="flex-1">
-              <div className="text-xs text-[var(--color-text-secondary)] mb-1">
-                Replying to {replyTo.sender.twitter_name}
-              </div>
-              <div className="text-sm text-[var(--color-text-muted)] truncate">
-                {replyTo.content}
-              </div>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setReplyTo(null)}
-              className="ml-2"
-            >
-              ×
-            </Button>
-          </div>
-        )}
-
         {/* Message Input */}
-        <form onSubmit={handleSendMessage} className="flex gap-2">
-          <Input
-            value={messageContent}
-            onChange={(e) => setMessageContent(e.target.value)}
-            placeholder="Type a message..."
-            disabled={sending}
-            className="flex-1"
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSendMessage(e);
-              }
-            }}
-          />
-          <Button
-            type="submit"
-            disabled={!messageContent.trim() || sending}
-            isLoading={sending}
-          >
-            Send
-          </Button>
-        </form>
+        <div className="flex justify-center">
+          <form onSubmit={handleSendMessage} className="flex gap-2 max-w-2xl">
+            <Input
+              value={messageContent}
+              onChange={(e) => setMessageContent(e.target.value)}
+              placeholder="Type a message..."
+              disabled={sending}
+              className="flex-1"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendMessage(e);
+                }
+              }}
+            />
+            <Button
+              type="submit"
+              disabled={!messageContent.trim() || sending}
+              isLoading={sending}
+            >
+              Send
+            </Button>
+          </form>
+        </div>
       </main>
       <Footer />
     </div>

@@ -5,6 +5,7 @@ import type { User } from "@/types";
 import { Twitter, Instagram, Facebook, Check, X } from "lucide-react";
 import { cn, getSubscriptionDisplayName } from "@/lib/utils";
 import Link from "next/link";
+import { useChat } from "@/hooks/use-chat";
 
 interface UserCardProps {
   user: User;
@@ -37,6 +38,16 @@ export function UserCard({
   currentUserId,
   onProfileClick,
 }: UserCardProps) {
+  const { openChat, isLoading: isChatLoading } = useChat();
+
+  const handleMessage = () => {
+    if (onMessage) {
+      onMessage();
+    } else {
+      openChat(user.id);
+    }
+  };
+
   const roleLabels: Record<string, string> = {
     developer: "Developer",
     trader: "Trader",
@@ -220,7 +231,9 @@ export function UserCard({
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={onMessage} 
+              onClick={handleMessage}
+              disabled={isChatLoading}
+              isLoading={isChatLoading}
               className="flex-1 font-semibold text-sm leading-none tracking-normal border border-white cursor-pointer" 
               style={{ fontFamily: 'var(--font-inter)' }}
             >
@@ -419,7 +432,9 @@ export function UserCard({
           ) : null}
           <Button 
             variant="outline" 
-            onClick={onMessage} 
+            onClick={handleMessage}
+            disabled={isChatLoading}
+            isLoading={isChatLoading}
             className="flex-1 font-semibold text-sm leading-none tracking-normal border border-white cursor-pointer" 
             style={{ fontFamily: 'var(--font-inter)' }}
           >

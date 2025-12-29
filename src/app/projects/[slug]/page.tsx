@@ -3,10 +3,10 @@ import { Header, Footer } from "@/components/layout";
 import { Button, Card } from "@/components/ui";
 import { MapPin, Globe, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import type { Project, User } from "@/types";
+import type { Project } from "@/types";
 import Image from "next/image";
 import Link from "next/link";
-import { EntityMembersCard } from "@/components/entities/entity-members-card";
+import { EntityMembersWidget } from "@/components/entities/entity-members-widget";
 import type { Metadata } from "next";
 import { getAppUrl } from "@/lib/utils";
 import { ProjectViewTracker } from "@/components/analytics/project-view-tracker";
@@ -82,20 +82,6 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
   const { slug } = await params;
   const supabase = await createClient();
 
-  const {
-    data: { user: authUser },
-  } = await supabase.auth.getUser();
-
-  let isVip = false;
-  if (authUser) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("subscription_tier")
-      .eq("id", authUser.id)
-      .single();
-    isVip = profile?.subscription_tier === "vip";
-  }
-
   const { data: projectData, error: projectError } = await supabase
     .from("projects")
     .select("*")
@@ -107,60 +93,6 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
   }
 
   const project = projectData as Project;
-
-  let members: (User & { joined_at?: string })[] = [];
-  let isUserMember = false;
-
-  if (authUser) {
-    const { data: userMember } = await supabase
-      .from("project_members")
-      .select("id, joined_at")
-      .eq("project_id", project.id)
-      .eq("user_id", authUser.id)
-      .single();
-
-    isUserMember = !!userMember;
-
-    const { data: membersData } = await supabase
-      .from("project_members")
-      .select(`
-        joined_at,
-        user:profiles(
-          id,
-          twitter_id,
-          twitter_handle,
-          twitter_name,
-          avatar_url,
-          bio,
-          country,
-          country_code,
-          city,
-          role,
-          is_open_to_meet,
-          subscription_tier,
-          is_verified,
-          wallet_address,
-          socials,
-          last_active_at,
-          created_at,
-          updated_at,
-          countries!fk_profiles_country_code (
-            name
-          )
-        )
-      `)
-      .eq("project_id", project.id)
-      .order("joined_at", { ascending: false })
-      .limit(20);
-
-    members = (membersData || []).map((m: any) => {
-      const user = Array.isArray(m.user) ? m.user[0] : m.user;
-      return {
-        ...user,
-        joined_at: m.joined_at,
-      };
-    }).filter((m): m is User & { joined_at?: string } => m !== null && m !== undefined);
-  }
 
   return (
     <>
@@ -314,13 +246,9 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
                 </div>
               </Card> */}
 
-              <EntityMembersCard
-                members={members}
-                isVip={isVip}
-                authUser={authUser}
-                entitySlug={project.slug}
+              <EntityMembersWidget
                 entityType="project"
-                entityName={project.name}
+                entityId={project.id}
               />
             </div>
           </div>

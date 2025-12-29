@@ -16,7 +16,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const userId = authUser.id;
+    // Получаем user_id из query параметров, если указан (для просмотра чужого профиля)
+    const { searchParams } = new URL(request.url);
+    const targetUserId = searchParams.get("user_id");
+    const userId = targetUserId || authUser.id;
     const affiliations: any[] = [];
 
     // 1. Хабы (hub_members и creator)
@@ -279,12 +282,13 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // 5. События (event_attendees)
+    // 5. События (event_members - только со статусом "going")
     const { data: events, error: eventsError } = await supabase
-      .from("event_attendees")
+      .from("event_members")
       .select(
         `
         event_id,
+        status,
         events (
           id,
           name,
@@ -296,7 +300,8 @@ export async function GET(request: NextRequest) {
         )
       `
       )
-      .eq("user_id", userId);
+      .eq("user_id", userId)
+      .eq("status", "going");
 
     if (!eventsError && events) {
       events.forEach((event: any) => {

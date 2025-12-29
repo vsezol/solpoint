@@ -42,7 +42,6 @@ export interface Message {
   chat_id: string;
   sender_id: string;
   content: string;
-  reply_to_id: string | null;
   is_read: boolean;
   created_at: string;
   updated_at: string;
@@ -53,17 +52,6 @@ export interface Message {
     avatar_url: string | null;
     is_verified: boolean;
   };
-  reply_to?: {
-    id: string;
-    content: string;
-    sender_id: string;
-    sender: {
-      id: string;
-      twitter_handle: string;
-      twitter_name: string;
-      avatar_url: string | null;
-    };
-  } | null;
 }
 
 /**
@@ -127,8 +115,7 @@ export async function getChat(chatId: string): Promise<ChatWithMessages> {
  */
 export async function sendMessage(
   chatId: string,
-  content: string,
-  replyToId?: string | null
+  content: string
 ): Promise<Message> {
   const response = await fetch(`/api/chats/${chatId}/messages`, {
     method: "POST",
@@ -137,7 +124,6 @@ export async function sendMessage(
     },
     body: JSON.stringify({
       content,
-      reply_to_id: replyToId || null,
     }),
   });
 

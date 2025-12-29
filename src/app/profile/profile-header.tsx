@@ -1,10 +1,11 @@
 "use client";
 
-import { Avatar, Badge } from "@/components/ui";
+import { Avatar, Badge, Button } from "@/components/ui";
 import { Crown } from "lucide-react";
 import { ProfileActions } from "./profile-actions";
 import { AddFriendButton } from "./add-friend-button";
 import { useProfileEdit } from "./profile-edit-provider";
+import { useChat } from "@/hooks/use-chat";
 import type { User } from "@/types";
 import { getSubscriptionDisplayName } from "@/lib/utils";
 
@@ -15,6 +16,8 @@ interface ProfileHeaderProps {
 }
 
 export function ProfileHeader({ user, isOwnProfile, friendshipStatus = "none" }: ProfileHeaderProps) {
+  const { openChat, isLoading: isChatLoading } = useChat();
+
   // Если это не свой профиль, не используем контекст
   if (!isOwnProfile) {
     return (
@@ -54,11 +57,24 @@ export function ProfileHeader({ user, isOwnProfile, friendshipStatus = "none" }:
             @{user.twitter_handle}
           </p>
         </div>
-        <AddFriendButton 
-          userId={user.id} 
-          userHandle={user.twitter_handle}
-          initialStatus={friendshipStatus} 
-        />
+        <div className="flex gap-2">
+          <AddFriendButton 
+            userId={user.id} 
+            userHandle={user.twitter_handle}
+            initialStatus={friendshipStatus} 
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => openChat(user.id)}
+            disabled={isChatLoading}
+            isLoading={isChatLoading}
+            className="font-semibold text-sm leading-none tracking-normal"
+            style={{ fontFamily: 'var(--font-inter)' }}
+          >
+            Send Message
+          </Button>
+        </div>
       </div>
     );
   }

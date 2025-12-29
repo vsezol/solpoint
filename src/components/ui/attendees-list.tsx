@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Avatar, Button, ProSubscriptionModal } from "@/components/ui";
+import { Avatar, Button, ProSubscriptionModal, AuthRequiredModal, Modal, ModalHeader, ModalTitle, ModalContent } from "@/components/ui";
 import Link from "next/link";
 import { useAuth } from "@/hooks/use-auth";
+import Image from "next/image";
 
 interface AttendeeItem {
   id: string;
@@ -24,6 +25,8 @@ interface AttendeesListProps {
   ctaButtonHref?: string; // URL для CTA кнопки (вместо onCtaClick для Server Components)
   emptyText?: string; // Текст когда список пуст
   maxVisible?: number; // Максимальное количество видимых аватаров (по умолчанию 3)
+  eventSlug?: string; // Slug события для загрузки полного списка
+  isFriendsList?: boolean; // true если это список друзей, false если участников
 }
 
 export function AttendeesList({
@@ -36,15 +39,66 @@ export function AttendeesList({
   ctaButtonHref,
   emptyText = "No items yet",
   maxVisible = 3,
+  eventSlug,
+  isFriendsList = false,
 }: AttendeesListProps) {
   const { user, isAuthenticated } = useAuth();
   const isVip = user?.subscription_tier === "vip";
   const [showProModal, setShowProModal] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showListModal, setShowListModal] = useState(false);
+  const [allItems, setAllItems] = useState<AttendeeItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const visibleItems = items.slice(0, maxVisible);
   const remainingCount = items.length - maxVisible;
   
-  // Проверяем, является ли это "Show all attendees" (не "Show all friends")
+  // Проверяем, является ли это "Show all attendees" или "Show all friends"
   const isShowAllAttendees = showAllText?.toLowerCase().includes("attendees");
+  const isShowAllFriends = showAllText?.toLowerCase().includes("friends");
+
+  const handleShowAll = async () => {
+    // Если не авторизован - показываем модальное окно авторизации
+    if (!isAuthenticated) {
+      setShowAuthModal(true);
+      return;
+    }
+
+    // Если авторизован, но не VIP - показываем модальное окно подписки
+    if (!isVip) {
+      setShowProModal(true);
+      return;
+    }
+
+    // Если VIP - загружаем полный список и показываем модальное окно
+    if (eventSlug) {
+      setIsLoading(true);
+      try {
+        const endpoint = isFriendsList 
+          ? `/api/events/${eventSlug}/friends`
+          : `/api/events/${eventSlug}/attendees`;
+        
+        const response = await fetch(endpoint);
+        if (response.ok) {
+          const data = await response.json();
+          setAllItems(data.items || data.attendees || data.friends || items);
+        } else {
+          // Если ошибка, используем уже имеющиеся данные
+          setAllItems(items);
+        }
+      } catch (error) {
+        console.error("Error fetching full list:", error);
+        // При ошибке используем уже имеющиеся данные
+        setAllItems(items);
+      } finally {
+        setIsLoading(false);
+        setShowListModal(true);
+      }
+    } else {
+      // Если нет eventSlug, используем уже имеющиеся данные
+      setAllItems(items);
+      setShowListModal(true);
+    }
+  };
 
   return (
     <div className="space-y-2">
@@ -80,12 +134,13 @@ export function AttendeesList({
 
           {showAllText && (
             <div className="mb-2">
-              {isShowAllAttendees && isAuthenticated && !isVip ? (
+              {(isShowAllAttendees || isShowAllFriends) ? (
                 <button
-                  onClick={() => setShowProModal(true)}
-                  className="text-xs text-[var(--color-primary)] hover:underline"
+                  onClick={handleShowAll}
+                  disabled={isLoading}
+                  className="text-xs text-[var(--color-primary)] hover:underline disabled:opacity-50"
                 >
-                  {showAllText}
+                  {isLoading ? "Loading..." : showAllText}
                 </button>
               ) : (
                 <Link
@@ -120,14 +175,78 @@ export function AttendeesList({
           </Link>
         </Button>
       )}
-      {isShowAllAttendees && (
-        <ProSubscriptionModal
-          isOpen={showProModal}
-          onClose={() => setShowProModal(false)}
-          title="This feature is available only with PRO subscription"
-          description="Viewing all event attendees is available only with PRO subscription. Upgrade to PRO to unlock this feature."
-        />
-      )}
+
+      {/* Auth Required Modal */}
+      <AuthRequiredModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        title="Sign in required"
+        description="Please sign up or log in to view the full list."
+      />
+
+      {/* Pro Subscription Modal */}
+      <ProSubscriptionModal
+        isOpen={showProModal}
+        onClose={() => setShowProModal(false)}
+        title="This feature is available only with PRO subscription"
+        description={`Viewing all ${isShowAllFriends ? "friends" : "event attendees"} is available only with PRO subscription. Upgrade to PRO to unlock this feature.`}
+      />
+
+      {/* List Modal */}
+      <Modal
+        isOpen={showListModal}
+        onClose={() => setShowListModal(false)}
+        size="md"
+        ariaLabel={isShowAllFriends ? "Friends list" : "Attendees list"}
+      >
+        <ModalHeader>
+          <ModalTitle>{isShowAllFriends ? "Friends Going" : "All Attendees"}</ModalTitle>
+        </ModalHeader>
+        <ModalContent>
+          <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+            {allItems.length === 0 ? (
+              <p className="text-sm text-[var(--color-text-secondary)] text-center py-4">
+                {isShowAllFriends ? "No friends going" : "No attendees yet"}
+              </p>
+            ) : (
+              allItems.map((item) => (
+                <Link
+                  key={item.id}
+                  href={item.twitter_handle ? `/profile/${item.twitter_handle}` : "#"}
+                  onClick={() => setShowListModal(false)}
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-[var(--color-surface-hover)] transition-colors"
+                >
+                  <div className="w-12 h-12 rounded-full bg-[var(--color-surface-hover)] border-2 border-[var(--color-background)] flex items-center justify-center overflow-hidden flex-shrink-0">
+                    {item.avatar_url ? (
+                      <Image
+                        src={item.avatar_url}
+                        alt={item.name}
+                        width={48}
+                        height={48}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-sm font-medium">
+                        {item.name?.[0]?.toUpperCase() || "?"}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-[var(--color-text-primary)] truncate">
+                      {item.name}
+                    </p>
+                    {item.twitter_handle && (
+                      <p className="text-xs text-[var(--color-text-secondary)] truncate">
+                        @{item.twitter_handle}
+                      </p>
+                    )}
+                  </div>
+                </Link>
+              ))
+            )}
+          </div>
+        </ModalContent>
+      </Modal>
     </div>
   );
 }

@@ -3,10 +3,10 @@ import { Header, Footer } from "@/components/layout";
 import { Button, Card } from "@/components/ui";
 import { MapPin, Globe, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import type { Community, User } from "@/types";
+import type { Community } from "@/types";
 import Image from "next/image";
 import Link from "next/link";
-import { EntityMembersCard } from "@/components/entities/entity-members-card";
+import { EntityMembersWidget } from "@/components/entities/entity-members-widget";
 import type { Metadata } from "next";
 import { getAppUrl } from "@/lib/utils";
 import { CommunityViewTracker } from "@/components/analytics/community-view-tracker";
@@ -84,21 +84,6 @@ export default async function CommunityPage({ params }: CommunityPageProps) {
   const { slug } = await params;
   const supabase = await createClient();
 
-  // Получаем текущего пользователя
-  const {
-    data: { user: authUser },
-  } = await supabase.auth.getUser();
-
-  let isVip = false;
-  if (authUser) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("subscription_tier")
-      .eq("id", authUser.id)
-      .single();
-    isVip = profile?.subscription_tier === "vip";
-  }
-
   // Получаем комьюнити по slug
   const { data: communityData, error: communityError } = await supabase
     .from("communities")
@@ -111,63 +96,6 @@ export default async function CommunityPage({ params }: CommunityPageProps) {
   }
 
   const community = communityData as Community;
-
-  // Получаем участников комьюнити (только если авторизован)
-  let members: (User & { joined_at?: string })[] = [];
-  let isUserMember = false;
-
-  if (authUser) {
-    // Проверяем, является ли пользователь участником комьюнити
-    const { data: userMember } = await supabase
-      .from("community_members")
-      .select("id, joined_at")
-      .eq("community_id", community.id)
-      .eq("user_id", authUser.id)
-      .single();
-
-    isUserMember = !!userMember;
-
-    // Получаем участников комьюнити
-    const { data: membersData } = await supabase
-      .from("community_members")
-      .select(`
-        joined_at,
-        user:profiles!community_members_user_id_fkey(
-          id,
-          twitter_id,
-          twitter_handle,
-          twitter_name,
-          avatar_url,
-          bio,
-          country,
-          country_code,
-          city,
-          role,
-          is_open_to_meet,
-          subscription_tier,
-          is_verified,
-          wallet_address,
-          socials,
-          last_active_at,
-          created_at,
-          updated_at,
-          countries!fk_profiles_country_code (
-            name
-          )
-        )
-      `)
-      .eq("community_id", community.id)
-      .order("joined_at", { ascending: false })
-      .limit(20);
-
-    members = (membersData || []).map((m: any) => {
-      const user = Array.isArray(m.user) ? m.user[0] : m.user;
-      return {
-        ...user,
-        joined_at: m.joined_at,
-      };
-    }).filter((m): m is User & { joined_at?: string } => m !== null && m !== undefined);
-  }
 
   return (
     <>
@@ -329,14 +257,10 @@ export default async function CommunityPage({ params }: CommunityPageProps) {
                 </div>
               </Card> */}
 
-              {/* Members Card */}
-              <EntityMembersCard
-                members={members}
-                isVip={isVip}
-                authUser={authUser}
-                entitySlug={community.slug}
+              {/* Members Widget */}
+              <EntityMembersWidget
                 entityType="community"
-                entityName={community.name}
+                entityId={community.id}
               />
             </div>
           </div>

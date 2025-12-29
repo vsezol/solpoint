@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { Hub, User } from "@/types";
 import Image from "next/image";
 import Link from "next/link";
-import { HubMembersCard } from "./hub-members-card";
+import { EntityMembersWidget } from "@/components/entities/entity-members-widget";
 import type { Metadata } from "next";
 import { getAppUrl } from "@/lib/utils";
 import { HubViewTracker } from "@/components/analytics/hub-view-tracker";
@@ -112,63 +112,7 @@ export default async function HubPage({ params }: HubPageProps) {
 
   const hub = hubData as Hub;
 
-  // Получаем участников хаба (только если авторизован)
-  let members: (User & { joined_at?: string })[] = [];
-  let isUserMember = false;
-
-  if (authUser) {
-    // Проверяем, является ли пользователь участником хаба
-    const { data: userMember } = await supabase
-      .from("hub_members")
-      .select("id, joined_at")
-      .eq("hub_id", hub.id)
-      .eq("user_id", authUser.id)
-      .single();
-
-    isUserMember = !!userMember;
-
-    // Получаем участников хаба
-    const { data: membersData } = await supabase
-      .from("hub_members")
-      .select(`
-        joined_at,
-        user:profiles!hub_members_user_id_fkey(
-          id,
-          twitter_id,
-          twitter_handle,
-          twitter_name,
-          avatar_url,
-          bio,
-          country,
-          country_code,
-          city,
-          role,
-          is_open_to_meet,
-          subscription_tier,
-          is_verified,
-          wallet_address,
-          socials,
-          last_active_at,
-          created_at,
-          updated_at,
-          countries!fk_profiles_country_code (
-            name
-          )
-        )
-      `)
-      .eq("hub_id", hub.id)
-      .order("joined_at", { ascending: false })
-      .limit(20);
-
-    members = (membersData || []).map((m: any) => {
-      const user = Array.isArray(m.user) ? m.user[0] : m.user;
-      return {
-        ...user,
-        joined_at: m.joined_at,
-      };
-    }).filter((m): m is User & { joined_at?: string } => m !== null && m !== undefined);
-  }
-
+  console.log(hub.id, 'hub.id');
   return (
     <>
       <Header />
@@ -326,12 +270,10 @@ export default async function HubPage({ params }: HubPageProps) {
                 </div>
               </Card> */}
 
-              {/* Members Card */}
-              <HubMembersCard
-                members={members}
-                isVip={isVip}
-                authUser={authUser}
-                hubSlug={hub.slug}
+              {/* Members Widget */}
+              <EntityMembersWidget
+                entityType="hub"
+                entityId={hub.id}
               />
             </div>
           </div>

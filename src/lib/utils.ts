@@ -61,3 +61,12 @@ export function isProUser(tier: string | undefined): boolean {
   return tier === "vip";
 }
 
+/**
+ * Проверяет, является ли строка UUID
+ * UUID имеет формат: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx (36 символов с дефисами)
+ */
+export function isUUID(str: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
+}
+

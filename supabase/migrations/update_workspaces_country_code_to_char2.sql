@@ -87,3 +87,4 @@ CREATE INDEX IF NOT EXISTS idx_workspaces_country_code ON public.workspaces(coun
 -- 10. Обновляем комментарий
 COMMENT ON COLUMN public.workspaces.country_code IS 'ISO 3166-1 alpha-2 country code (nullable, uppercase, 2 chars)';
 
+

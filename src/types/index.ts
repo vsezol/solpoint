@@ -82,6 +82,7 @@ export interface Event {
     facebook?: string;
     website?: string;
   };
+  luma_link: string; // Ссылка на событие в Luma
   contacts?: {
     email?: string;
     telegram?: string;
