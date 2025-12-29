@@ -53,7 +53,7 @@ export async function POST(
     }
 
     // Проверяем, является ли текущий пользователь владельцем
-    const isOwner = await isEventOwner(id, authUser.id);
+    const isOwner = await isEventOwner(eventId, authUser.id);
     if (!isOwner) {
       return NextResponse.json(
         { error: "Forbidden: You are not the owner of this event" },
@@ -106,7 +106,7 @@ export async function POST(
         owner_type: new_owner_type,
         owner_id: new_owner_id,
       })
-      .eq("id", id)
+      .eq("id", eventId)
       .select()
       .single();
 

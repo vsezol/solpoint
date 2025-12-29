@@ -43,7 +43,7 @@ export async function POST(
       );
     }
 
-    const isOwner = await isEntityOwner("project", id, authUser.id);
+    const isOwner = await isEntityOwner("project", projectId, authUser.id);
     if (!isOwner) {
       return NextResponse.json(
         { error: "Forbidden: You are not the owner of this project" },
@@ -67,7 +67,7 @@ export async function POST(
     const { data: updatedProject, error: updateError } = await supabase
       .from("projects")
       .update({ owner_id: new_owner_id })
-      .eq("id", id)
+      .eq("id", projectId)
       .select()
       .single();
 
@@ -81,13 +81,13 @@ export async function POST(
     await supabase
       .from("project_members")
       .update({ role: "owner" })
-      .eq("project_id", id)
+      .eq("project_id", projectId)
       .eq("user_id", new_owner_id);
 
     await supabase
       .from("project_members")
       .update({ role: "member" })
-      .eq("project_id", id)
+      .eq("project_id", projectId)
       .eq("user_id", authUser.id)
       .neq("role", "owner");
 

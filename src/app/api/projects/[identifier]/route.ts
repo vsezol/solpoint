@@ -35,7 +35,7 @@ export async function PATCH(
     const { data: project, error: projectError } = await supabase
       .from("projects")
       .select("owner_id")
-      .eq("id", id)
+      .eq("id", projectId)
       .single();
 
     if (projectError || !project) {
@@ -71,7 +71,7 @@ export async function PATCH(
     const { data: updatedProject, error: updateError } = await supabase
       .from("projects")
       .update(updates)
-      .eq("id", id)
+      .eq("id", projectId)
       .select()
       .single();
 

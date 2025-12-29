@@ -7,10 +7,10 @@ import { NextResponse } from "next/server";
  */
 export async function PATCH(
   request: Request,
-  { params }: { params: Promise<{ id: string; userId: string }> }
+  { params }: { params: Promise<{ identifier: string; userId: string }> }
 ) {
   const supabase = await createClient();
-  const { id, userId } = await params;
+  const { identifier: id, userId } = await params;
 
   const {
     data: { user: authUser },

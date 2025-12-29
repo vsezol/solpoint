@@ -44,7 +44,7 @@ export async function POST(
     }
 
     // Проверяем, является ли текущий пользователь владельцем
-    const isOwner = await isEntityOwner("hub", id, authUser.id);
+    const isOwner = await isEntityOwner("hub", hubId, authUser.id);
     if (!isOwner) {
       return NextResponse.json(
         { error: "Forbidden: You are not the owner of this hub" },
@@ -70,7 +70,7 @@ export async function POST(
     const { data: updatedHub, error: updateError } = await supabase
       .from("hubs")
       .update({ owner_id: new_owner_id })
-      .eq("id", id)
+      .eq("id", hubId)
       .select()
       .single();
 
@@ -86,14 +86,14 @@ export async function POST(
     await supabase
       .from("hub_members")
       .update({ role: "owner" })
-      .eq("hub_id", id)
+      .eq("hub_id", hubId)
       .eq("user_id", new_owner_id);
 
     // Старый owner становится member (если он был в members)
     await supabase
       .from("hub_members")
       .update({ role: "member" })
-      .eq("hub_id", id)
+      .eq("hub_id", hubId)
       .eq("user_id", authUser.id)
       .neq("role", "owner"); // Не трогаем если уже owner (на случай если он не был в members)
 

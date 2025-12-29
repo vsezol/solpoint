@@ -113,7 +113,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const ownerId = entity[config.ownerIdField];
+  const ownerId = (entity as Record<string, any>)[config.ownerIdField];
 
   // Получаем текущего пользователя (если авторизован)
   const {

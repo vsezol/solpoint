@@ -117,7 +117,14 @@ export function useChatWebSocket({
               }
 
               if (message && onMessage) {
-                onMessage(message as Message);
+                // Handle sender as array (Supabase returns arrays for relations)
+                const sender = Array.isArray(message.sender) ? message.sender[0] : message.sender;
+                if (sender) {
+                  onMessage({
+                    ...message,
+                    sender,
+                  } as Message);
+                }
               }
             } catch (error) {
               console.error("Error processing message:", error);

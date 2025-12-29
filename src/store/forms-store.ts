@@ -38,6 +38,7 @@ interface EventFormState {
   socialsInstagram: string;
   socialsFacebook: string;
   socialsWebsite: string;
+  lumaLink: string;
   
   // Contacts (for non-admins)
   contactEmail: string;
@@ -68,6 +69,7 @@ interface EventFormState {
   setSocialsInstagram: (socialsInstagram: string) => void;
   setSocialsFacebook: (socialsFacebook: string) => void;
   setSocialsWebsite: (socialsWebsite: string) => void;
+  setLumaLink: (lumaLink: string) => void;
   setContactEmail: (contactEmail: string) => void;
   setContactTelegram: (contactTelegram: string) => void;
   setMapCenterLat: (mapCenterLat: number | undefined) => void;
@@ -150,6 +152,7 @@ const initialEventFormState: Omit<EventFormState, keyof {
   setSocialsInstagram: never;
   setSocialsFacebook: never;
   setSocialsWebsite: never;
+  setLumaLink: never;
   setContactEmail: never;
   setContactTelegram: never;
   setMapCenterLat: never;
@@ -176,6 +179,7 @@ const initialEventFormState: Omit<EventFormState, keyof {
   socialsInstagram: "",
   socialsFacebook: "",
   socialsWebsite: "",
+  lumaLink: "",
   contactEmail: "",
   contactTelegram: "",
   mapCenterLat: undefined,

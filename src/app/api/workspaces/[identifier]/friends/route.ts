@@ -44,7 +44,7 @@ export async function GET(
   const { data: workspace, error: workspaceError } = await supabase
     .from("workspaces")
     .select("id")
-    .eq("id", id)
+    .eq("id", workspaceId)
     .single();
 
   if (workspaceError || !workspace) {
@@ -54,7 +54,7 @@ export async function GET(
   const { data: members, error: membersError } = await supabase
     .from("workspace_members")
     .select("user_id")
-    .eq("workspace_id", id);
+    .eq("workspace_id", workspaceId);
 
   if (membersError) {
     return NextResponse.json(

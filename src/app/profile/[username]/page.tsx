@@ -160,6 +160,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
         owner_type,
         owner_id,
         slug,
+        luma_link,
         created_at,
         updated_at
       )
