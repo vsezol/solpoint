@@ -58,8 +58,8 @@ export async function GET(request: NextRequest) {
 
         const otherUser =
           chat.user1_id === authUser.id
-            ? (chat.user1 as any)
-            : (chat.user2 as any);
+            ? (chat.user2 as any)
+            : (chat.user1 as any);
 
         return {
           id: chat.id,

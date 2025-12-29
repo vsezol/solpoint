@@ -4,9 +4,9 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState } from "react";
-import { Menu, X } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { useState, useRef, useEffect } from "react";
+import { Menu, X, LogOut, User, MessageSquare } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useAuth } from "@/hooks/use-auth";
 import { trackEvent } from "@/lib/analytics";
@@ -22,8 +22,11 @@ const navLinks = [
 
 export function Header() {
   const pathname = usePathname();
+  const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+  const { user, isAuthenticated, isLoading, logout } = useAuth();
 
   // Формируем динамический список ссылок навигации
   const dynamicNavLinks = [...navLinks];
@@ -44,6 +47,28 @@ export function Header() {
       dynamicNavLinks.splice(aboutIndex, 0, ...additionalLinks);
     }
   }
+
+  // Закрываем поп-ап при клике вне его
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+        setIsProfileMenuOpen(false);
+      }
+    };
+
+    if (isProfileMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isProfileMenuOpen]);
+
+  const handleLogout = async () => {
+    setIsProfileMenuOpen(false);
+    await logout();
+  };
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 glass">
@@ -106,8 +131,13 @@ export function Header() {
                 <div className="w-20 h-4 bg-[var(--color-surface-border)] rounded animate-pulse" />
               </div>
             ) : isAuthenticated && user ? (
-              <Button variant="ghost" size="sm" asChild>
-                <Link href={`/profile/${user.twitter_handle}`} className="flex items-center gap-2">
+              <div className="relative" ref={profileMenuRef}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+                  className="flex items-center gap-2"
+                >
                   <div className="w-8 h-8 rounded-full overflow-hidden bg-[var(--color-surface-border)]">
                     {user.avatar_url && (
                       <Image
@@ -122,8 +152,49 @@ export function Header() {
                   <span className="text-sm text-[var(--color-text-secondary)]">
                     @{user.twitter_handle}
                   </span>
-                </Link>
-              </Button>
+                </Button>
+                <AnimatePresence>
+                  {isProfileMenuOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 top-full mt-2 w-48 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg shadow-lg overflow-hidden z-50"
+                    >
+                      <div className="py-1">
+                        <button
+                          onClick={() => {
+                            setIsProfileMenuOpen(false);
+                            router.push(`/profile/${user.twitter_handle}`);
+                          }}
+                          className="w-full px-4 py-2 text-left text-sm text-[var(--color-text-primary)] hover:bg-[var(--color-surface-hover)] flex items-center gap-2 transition-colors"
+                        >
+                          <User className="w-4 h-4" />
+                          Profile
+                        </button>
+                        <button
+                          onClick={() => {
+                            setIsProfileMenuOpen(false);
+                            router.push("/chats");
+                          }}
+                          className="w-full px-4 py-2 text-left text-sm text-[var(--color-text-primary)] hover:bg-[var(--color-surface-hover)] flex items-center gap-2 transition-colors"
+                        >
+                          <MessageSquare className="w-4 h-4" />
+                          Chats
+                        </button>
+                        <button
+                          onClick={handleLogout}
+                          className="w-full px-4 py-2 text-left text-sm text-[var(--color-text-primary)] hover:bg-[var(--color-surface-hover)] flex items-center gap-2 transition-colors"
+                        >
+                          <LogOut className="w-4 h-4" />
+                          Logout
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             ) : (
               <>
                 <Button variant="ghost" size="sm" asChild>

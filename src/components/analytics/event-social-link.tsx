@@ -6,7 +6,7 @@ import { Twitter, Instagram, Facebook, ExternalLink } from "lucide-react";
 
 interface EventSocialLinkProps {
   event: Event;
-  platform: "twitter" | "instagram" | "facebook" | "website";
+  platform: "twitter" | "instagram" | "facebook" | "website" | "luma";
   href: string;
 }
 
@@ -15,6 +15,7 @@ const icons = {
   instagram: Instagram,
   facebook: Facebook,
   website: ExternalLink,
+  luma: ExternalLink,
 };
 
 export function EventSocialLink({ event, platform, href }: EventSocialLinkProps) {
@@ -38,7 +39,7 @@ export function EventSocialLink({ event, platform, href }: EventSocialLinkProps)
       target="_blank"
       rel="noopener noreferrer"
       onClick={handleClick}
-      className="p-3 rounded-full bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+      className="p-2 rounded-full border border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-colors flex-shrink-0"
     >
       <Icon className="w-5 h-5" />
     </a>

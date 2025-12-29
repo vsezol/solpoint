@@ -123,12 +123,13 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   let friends: User[] = [];
   let friendshipStatus: "none" | "pending_sent" | "pending_received" | "accepted" | "blocked" = "none";
 
-  // Получаем события пользователя из event_attendees (события, на которые он зарегистрировался)
+  // Получаем события пользователя из event_members (события, на которые он зарегистрировался со статусом "going")
   const { data: eventAttendees } = await supabase
-    .from("event_attendees")
+    .from("event_members")
     .select(
       `
       event_id,
+      status,
       events (
         id,
         name,
@@ -164,7 +165,8 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
       )
     `
     )
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .eq("status", "going");
 
   const allEvents: Event[] =
     eventAttendees?.map((ea: { event_id: string; events: Event | Event[] }) => {
