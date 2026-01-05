@@ -261,6 +261,28 @@ export function EntityMembersWidget({
     }
   };
 
+  // Обработчик клика по аватару пользователя
+  const handleAvatarClick = (e: React.MouseEvent, twitterHandle?: string) => {
+    e.preventDefault();
+    
+    // Проверяем авторизацию
+    if (!isAuthenticated) {
+      setShowAuthModal(true);
+      return;
+    }
+
+    // Проверяем VIP статус
+    if (!isVip) {
+      setShowProModal(true);
+      return;
+    }
+
+    // Если авторизован и VIP - разрешаем переход
+    if (twitterHandle) {
+      window.location.href = `/profile/${twitterHandle}`;
+    }
+  };
+
   if (loading) {
     return (
       <Card variant="bordered" className={className}>
@@ -321,9 +343,10 @@ export function EntityMembersWidget({
                 <>
                   <div className="flex flex-wrap gap-2 mb-2">
                     {visibleMembers.map((member) => (
-                      <Link
+                      <div
                         key={member.id}
-                        href={member.twitter_handle ? `/profile/${member.twitter_handle}` : "#"}
+                        onClick={(e) => handleAvatarClick(e, member.twitter_handle)}
+                        className="cursor-pointer"
                       >
                         <Avatar
                           src={member.avatar_url}
@@ -332,7 +355,7 @@ export function EntityMembersWidget({
                           isVip={member.isVip}
                           isVerified={member.isVerified}
                         />
-                      </Link>
+                      </div>
                     ))}
                   </div>
                   <button
@@ -360,9 +383,10 @@ export function EntityMembersWidget({
                 <>
                   <div className="flex flex-wrap gap-2 mb-2">
                     {visibleFriends.map((friend) => (
-                      <Link
+                      <div
                         key={friend.id}
-                        href={friend.twitter_handle ? `/profile/${friend.twitter_handle}` : "#"}
+                        onClick={(e) => handleAvatarClick(e, friend.twitter_handle)}
+                        className="cursor-pointer"
                       >
                         <Avatar
                           src={friend.avatar_url}
@@ -371,7 +395,7 @@ export function EntityMembersWidget({
                           isVip={friend.isVip}
                           isVerified={friend.isVerified}
                         />
-                      </Link>
+                      </div>
                     ))}
                   </div>
                   <button

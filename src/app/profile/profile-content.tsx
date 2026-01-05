@@ -29,26 +29,21 @@ import { useProfileEdit } from "./profile-edit-provider";
 import { AddFriendButton } from "./add-friend-button";
 import { EditProfileButton } from "./edit-profile-button";
 import { trackEvent } from "@/lib/analytics";
-import { Modal, ModalHeader, ModalTitle, ModalContent, ProSubscriptionModal } from "@/components/ui";
+import { Modal, ModalHeader, ModalTitle, ModalContent, ProSubscriptionModal, AuthRequiredModal } from "@/components/ui";
 import { CreateEntityForm } from "@/components/hubs/create-entity-form";
 import type { EntityType } from "@/types";
 import { useAuth } from "@/hooks/use-auth";
+import { useChat } from "@/hooks/use-chat";
+import { MessageCircle, UserCheck } from "lucide-react";
 
 interface ProfileContentProps {
   user: User;
   isOwnProfile: boolean;
-  friendshipStatus?: "none" | "pending_sent" | "pending_received" | "accepted" | "blocked";
-  friendsCount?: number;
-  upcomingEvents: Event[]; // События, на которые идет пользователь
-  pastEvents: Event[];
 }
 
 export function ProfileContent({
   user,
   isOwnProfile,
-  friendshipStatus = "none",
-  friendsCount = 0,
-  upcomingEvents,
 }: ProfileContentProps) {
   const { isEditing, setIsEditing } = useProfileEdit();
   const [currentUser, setCurrentUser] = useState<User>(user);
@@ -65,6 +60,11 @@ export function ProfileContent({
   const [isMutualsModalOpen, setIsMutualsModalOpen] = useState(false);
   const [isCheckingPro, setIsCheckingPro] = useState(false);
   const [friendsStats, setFriendsStats] = useState({ friendsCount: 0, friendRequestsCount: 0 });
+  const [friendshipStatus, setFriendshipStatus] = useState<"none" | "pending_sent" | "pending_received" | "accepted" | "blocked">("none");
+  const [friendsCount, setFriendsCount] = useState<number>(0);
+  const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
+  const [pastEvents, setPastEvents] = useState<Event[]>([]);
+  const [isLoadingProfileData, setIsLoadingProfileData] = useState(true);
   const [affiliations, setAffiliations] = useState<Array<{
     id: string;
     name: string;
@@ -85,8 +85,31 @@ export function ProfileContent({
   const [friendRequestsList, setFriendRequestsList] = useState<User[]>([]);
   const [showProModal, setShowProModal] = useState(false);
   const router = useRouter();
-  const { user: currentAuthUser } = useAuth();
+  const { user: currentAuthUser, isAuthenticated } = useAuth();
   const isVip = currentAuthUser?.subscription_tier === "vip";
+  const { openChat } = useChat();
+
+  // States for users list modals
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showProModalUsers, setShowProModalUsers] = useState(false);
+  const [showTotalUsersModal, setShowTotalUsersModal] = useState(false);
+  const [showCountryUsersModal, setShowCountryUsersModal] = useState(false);
+  const [showCityUsersModal, setShowCityUsersModal] = useState(false);
+  const [usersList, setUsersList] = useState<Array<{
+    id: string;
+    avatar_url?: string | null;
+    name: string;
+    twitter_handle?: string;
+    isVip?: boolean;
+    isVerified?: boolean;
+    isOwner?: boolean;
+    joinedAt?: string;
+  }>>([]);
+  const [friendsListUsers, setFriendsListUsers] = useState<typeof usersList>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [friendStatuses, setFriendStatuses] = useState<Record<string, "none" | "pending_sent" | "pending_received" | "accepted" | "blocked">>({});
+  const [sendingFriendRequest, setSendingFriendRequest] = useState<Record<string, boolean>>({});
+  const [creatingChat, setCreatingChat] = useState<Record<string, boolean>>({});
 
   // Обновляем локальное состояние при изменении user prop
   useEffect(() => {
@@ -94,16 +117,51 @@ export function ProfileContent({
     setIsOpenToMeet(user.is_open_to_meet);
   }, [user]);
 
-  // Загружаем статистику и invites
-  useEffect(() => {
-    fetchStatistics();
-    if (isOwnProfile) {
-      fetchUserInvites();
-      fetchMutualFollowers();
-      fetchFriendsStats();
+  // Загружаем данные профиля (events, friendsCount, friendshipStatus, upcomingEvents)
+  const fetchProfileData = async () => {
+    setIsLoadingProfileData(true);
+    try {
+      const response = await fetch(`/api/profile/data?user_id=${user.id}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setPastEvents(data.pastEvents || []);
+      setFriendsCount(data.friendsCount || 0);
+      setFriendshipStatus(data.friendshipStatus || "none");
+      setUpcomingEvents(data.upcomingEvents || []);
+    } catch (error) {
+      console.error("Error fetching profile data:", error);
+    } finally {
+      setIsLoadingProfileData(false);
     }
-    fetchAffiliations(); // Загружаем affiliations для любого профиля
-  }, [user, isOwnProfile]);
+  };
+
+  // Загружаем статистику и invites параллельно
+  useEffect(() => {
+    const loadData = async () => {
+      const promises: Promise<void>[] = [
+        fetchProfileData(),
+        fetchStatistics(),
+        fetchAffiliations()
+      ];
+
+      if (isOwnProfile) {
+        promises.push(
+          fetchUserInvites(),
+          fetchMutualFollowers(),
+          fetchFriendsStats()
+        );
+      }
+
+      await Promise.allSettled(promises);
+    };
+
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user.id, isOwnProfile]);
 
   const fetchStatistics = async () => {
     try {
@@ -131,6 +189,126 @@ export function ProfileContent({
       setUsersInCity(data.inCity || 0);
     } catch (error) {
       console.error("Error fetching statistics:", error);
+    }
+  };
+
+  // Load users list
+  const loadUsersList = async (filterType: "all" | "country" | "city") => {
+    // Check authentication
+    if (!isAuthenticated) {
+      setShowAuthModal(true);
+      return;
+    }
+
+    // Check VIP status
+    if (!isVip) {
+      setShowProModalUsers(true);
+      return;
+    }
+
+    setLoadingUsers(true);
+    try {
+      const params = new URLSearchParams();
+      params.append("filter", filterType);
+      if (filterType === "country" && user.country_code) {
+        params.append("country_code", user.country_code);
+      } else if (filterType === "city" && user.city) {
+        params.append("city", user.city);
+      }
+
+      const response = await fetch(`/api/users/list?${params.toString()}`);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to load users: ${response.status}`);
+      }
+
+      const result = await response.json();
+      setUsersList(result.users || []);
+      setFriendsListUsers(result.friends || []);
+
+      // Open appropriate modal
+      if (filterType === "all") {
+        setShowTotalUsersModal(true);
+      } else if (filterType === "country") {
+        setShowCountryUsersModal(true);
+      } else if (filterType === "city") {
+        setShowCityUsersModal(true);
+      }
+    } catch (error) {
+      console.error("Error loading users list:", error);
+      alert(error instanceof Error ? error.message : "Failed to load users");
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  // Load friend statuses for users in modal
+  useEffect(() => {
+    if ((showTotalUsersModal || showCountryUsersModal || showCityUsersModal) && isAuthenticated && currentAuthUser) {
+      const userIds = usersList.map((u) => u.id);
+
+      Promise.all(
+        userIds.map(async (userId) => {
+          try {
+            const response = await fetch(`/api/friends?user_id=${userId}`);
+            if (response.ok) {
+              const result = await response.json();
+              return { userId, status: result.data?.status || "none" };
+            }
+          } catch (error) {
+            console.error(`Error fetching friend status for ${userId}:`, error);
+          }
+          return { userId, status: "none" as const };
+        })
+      ).then((results) => {
+        const statusMap: Record<string, "none" | "pending_sent" | "pending_received" | "accepted" | "blocked"> = {};
+        results.forEach(({ userId, status }) => {
+          statusMap[userId] = status;
+        });
+        setFriendStatuses(statusMap);
+      });
+    }
+  }, [showTotalUsersModal, showCountryUsersModal, showCityUsersModal, usersList, isAuthenticated, currentAuthUser]);
+
+  // Handle add friend
+  const handleAddFriend = async (userId: string) => {
+    if (!isAuthenticated) {
+      setShowAuthModal(true);
+      return;
+    }
+
+    setSendingFriendRequest((prev) => ({ ...prev, [userId]: true }));
+    try {
+      const response = await fetch("/api/friends", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ friend_id: userId }),
+      });
+
+      if (response.ok) {
+        setFriendStatuses((prev) => ({ ...prev, [userId]: "pending_sent" }));
+      }
+    } catch (error) {
+      console.error("Error adding friend:", error);
+    } finally {
+      setSendingFriendRequest((prev) => ({ ...prev, [userId]: false }));
+    }
+  };
+
+  // Handle send message
+  const handleSendMessage = async (userId: string) => {
+    if (!isAuthenticated) {
+      setShowAuthModal(true);
+      return;
+    }
+
+    setCreatingChat((prev) => ({ ...prev, [userId]: true }));
+    try {
+      await openChat(userId);
+    } catch (error) {
+      console.error("Error creating chat:", error);
+    } finally {
+      setCreatingChat((prev) => ({ ...prev, [userId]: false }));
     }
   };
 
@@ -977,28 +1155,31 @@ export function ProfileContent({
             </h3>
             <div className="space-y-3 mb-4">
               <div>
-                <p className="text-sm text-[var(--color-text-secondary)]">
+                <button
+                  onClick={() => loadUsersList("all")}
+                  disabled={loadingUsers}
+                  className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors cursor-pointer w-full text-left"
+                >
                   Total users on SolPoint: <span className="text-[var(--color-text-primary)] font-medium">{totalUsers.toLocaleString()}</span>
-                </p>
+                </button>
               </div>
               <div>
-                <p className="text-sm text-[var(--color-text-secondary)]">
+                <button
+                  onClick={() => loadUsersList("country")}
+                  disabled={loadingUsers}
+                  className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors cursor-pointer w-full text-left"
+                >
                   Users in your country: <span className="text-[var(--color-text-primary)] font-medium">{usersInCountry.toLocaleString()}</span>
-                </p>
+                </button>
               </div>
               <div>
-                {isVip ? (
-                  <p className="text-sm text-[var(--color-text-secondary)]">
-                    Users in your city: <span className="text-[var(--color-text-primary)] font-medium">{usersInCity.toLocaleString()}</span>
-                  </p>
-                ) : (
-                  <button
-                    onClick={() => setShowProModal(true)}
-                    className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
-                  >
-                    Users in your city: <span className="text-[var(--color-text-primary)] font-medium">{usersInCity.toLocaleString()}</span>
-                  </button>
-                )}
+                <button
+                  onClick={() => loadUsersList("city")}
+                  disabled={loadingUsers}
+                  className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors cursor-pointer w-full text-left"
+                >
+                  Users in your city: <span className="text-[var(--color-text-primary)] font-medium">{usersInCity.toLocaleString()}</span>
+                </button>
               </div>
             </div>
 
@@ -1500,6 +1681,319 @@ export function ProfileContent({
         title="This feature is available only with PRO subscription"
         description="This feature is available only with PRO subscription. Upgrade to PRO to unlock this feature."
       />
+
+      {/* Auth Required Modal */}
+      <AuthRequiredModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        title="Sign in required"
+        description="Please sign up or log in to view the full list."
+      />
+
+      {/* Pro Subscription Modal for Users List */}
+      <ProSubscriptionModal
+        isOpen={showProModalUsers}
+        onClose={() => setShowProModalUsers(false)}
+        title="This feature is available only with PRO subscription"
+        description="Viewing all users is available only with PRO subscription. Upgrade to PRO to unlock this feature."
+      />
+
+      {/* Total Users Modal */}
+      <Modal
+        isOpen={showTotalUsersModal}
+        onClose={() => setShowTotalUsersModal(false)}
+        size="md"
+        ariaLabel="All Users on SolPoint"
+      >
+        <ModalHeader>
+          <ModalTitle>All Users on SolPoint</ModalTitle>
+        </ModalHeader>
+        <ModalContent>
+          <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+            {usersList.length === 0 ? (
+              <p className="text-sm text-[var(--color-text-secondary)] text-center py-4">
+                No users found
+              </p>
+            ) : (
+              usersList.map((member) => {
+                const friendStatus = friendStatuses[member.id] || "none";
+                const isOwnProfile = currentAuthUser?.id === member.id;
+
+                return (
+                  <div
+                    key={member.id}
+                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-[var(--color-surface-hover)] transition-colors"
+                  >
+                    <Link
+                      href={member.twitter_handle ? `/profile/${member.twitter_handle}` : "#"}
+                      className="flex items-center gap-3 flex-1 min-w-0"
+                    >
+                      <div className="w-12 h-12 rounded-full bg-[var(--color-surface-hover)] border-2 border-[var(--color-background)] flex items-center justify-center overflow-hidden flex-shrink-0">
+                        {member.avatar_url ? (
+                          <Image
+                            src={member.avatar_url}
+                            alt={member.name}
+                            width={48}
+                            height={48}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-sm font-medium">
+                            {member.name?.[0]?.toUpperCase() || "?"}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-[var(--color-text-primary)] truncate">
+                          {member.name}
+                        </p>
+                        {member.twitter_handle && (
+                          <p className="text-xs text-[var(--color-text-secondary)] truncate">
+                            @{member.twitter_handle}
+                          </p>
+                        )}
+                      </div>
+                    </Link>
+                    {isAuthenticated && !isOwnProfile && (
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleSendMessage(member.id)}
+                          disabled={creatingChat[member.id]}
+                          title="Send Message"
+                        >
+                          <MessageCircle className="w-4 h-4" />
+                        </Button>
+                        {friendStatus === "none" && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleAddFriend(member.id)}
+                            disabled={sendingFriendRequest[member.id]}
+                            title="Add Friend"
+                          >
+                            <UserPlus className="w-4 h-4" />
+                          </Button>
+                        )}
+                        {friendStatus === "accepted" && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled
+                            title="Already Friends"
+                            className="cursor-default"
+                          >
+                            <UserCheck className="w-4 h-4 text-[var(--color-primary)]" />
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </ModalContent>
+      </Modal>
+
+      {/* Country Users Modal */}
+      <Modal
+        isOpen={showCountryUsersModal}
+        onClose={() => setShowCountryUsersModal(false)}
+        size="md"
+        ariaLabel="Users in your country"
+      >
+        <ModalHeader>
+          <ModalTitle>Users in your country</ModalTitle>
+        </ModalHeader>
+        <ModalContent>
+          <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+            {usersList.length === 0 ? (
+              <p className="text-sm text-[var(--color-text-secondary)] text-center py-4">
+                No users found
+              </p>
+            ) : (
+              usersList.map((member) => {
+                const friendStatus = friendStatuses[member.id] || "none";
+                const isOwnProfile = currentAuthUser?.id === member.id;
+
+                return (
+                  <div
+                    key={member.id}
+                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-[var(--color-surface-hover)] transition-colors"
+                  >
+                    <Link
+                      href={member.twitter_handle ? `/profile/${member.twitter_handle}` : "#"}
+                      className="flex items-center gap-3 flex-1 min-w-0"
+                    >
+                      <div className="w-12 h-12 rounded-full bg-[var(--color-surface-hover)] border-2 border-[var(--color-background)] flex items-center justify-center overflow-hidden flex-shrink-0">
+                        {member.avatar_url ? (
+                          <Image
+                            src={member.avatar_url}
+                            alt={member.name}
+                            width={48}
+                            height={48}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-sm font-medium">
+                            {member.name?.[0]?.toUpperCase() || "?"}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-[var(--color-text-primary)] truncate">
+                          {member.name}
+                        </p>
+                        {member.twitter_handle && (
+                          <p className="text-xs text-[var(--color-text-secondary)] truncate">
+                            @{member.twitter_handle}
+                          </p>
+                        )}
+                      </div>
+                    </Link>
+                    {isAuthenticated && !isOwnProfile && (
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleSendMessage(member.id)}
+                          disabled={creatingChat[member.id]}
+                          title="Send Message"
+                        >
+                          <MessageCircle className="w-4 h-4" />
+                        </Button>
+                        {friendStatus === "none" && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleAddFriend(member.id)}
+                            disabled={sendingFriendRequest[member.id]}
+                            title="Add Friend"
+                          >
+                            <UserPlus className="w-4 h-4" />
+                          </Button>
+                        )}
+                        {friendStatus === "accepted" && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled
+                            title="Already Friends"
+                            className="cursor-default"
+                          >
+                            <UserCheck className="w-4 h-4 text-[var(--color-primary)]" />
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </ModalContent>
+      </Modal>
+
+      {/* City Users Modal */}
+      <Modal
+        isOpen={showCityUsersModal}
+        onClose={() => setShowCityUsersModal(false)}
+        size="md"
+        ariaLabel="Users in your city"
+      >
+        <ModalHeader>
+          <ModalTitle>Users in your city</ModalTitle>
+        </ModalHeader>
+        <ModalContent>
+          <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+            {usersList.length === 0 ? (
+              <p className="text-sm text-[var(--color-text-secondary)] text-center py-4">
+                No users found
+              </p>
+            ) : (
+              usersList.map((member) => {
+                const friendStatus = friendStatuses[member.id] || "none";
+                const isOwnProfile = currentAuthUser?.id === member.id;
+
+                return (
+                  <div
+                    key={member.id}
+                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-[var(--color-surface-hover)] transition-colors"
+                  >
+                    <Link
+                      href={member.twitter_handle ? `/profile/${member.twitter_handle}` : "#"}
+                      className="flex items-center gap-3 flex-1 min-w-0"
+                    >
+                      <div className="w-12 h-12 rounded-full bg-[var(--color-surface-hover)] border-2 border-[var(--color-background)] flex items-center justify-center overflow-hidden flex-shrink-0">
+                        {member.avatar_url ? (
+                          <Image
+                            src={member.avatar_url}
+                            alt={member.name}
+                            width={48}
+                            height={48}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-sm font-medium">
+                            {member.name?.[0]?.toUpperCase() || "?"}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-[var(--color-text-primary)] truncate">
+                          {member.name}
+                        </p>
+                        {member.twitter_handle && (
+                          <p className="text-xs text-[var(--color-text-secondary)] truncate">
+                            @{member.twitter_handle}
+                          </p>
+                        )}
+                      </div>
+                    </Link>
+                    {isAuthenticated && !isOwnProfile && (
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleSendMessage(member.id)}
+                          disabled={creatingChat[member.id]}
+                          title="Send Message"
+                        >
+                          <MessageCircle className="w-4 h-4" />
+                        </Button>
+                        {friendStatus === "none" && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleAddFriend(member.id)}
+                            disabled={sendingFriendRequest[member.id]}
+                            title="Add Friend"
+                          >
+                            <UserPlus className="w-4 h-4" />
+                          </Button>
+                        )}
+                        {friendStatus === "accepted" && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled
+                            title="Already Friends"
+                            className="cursor-default"
+                          >
+                            <UserCheck className="w-4 h-4 text-[var(--color-primary)]" />
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </ModalContent>
+      </Modal>
     </div>
   );
 }

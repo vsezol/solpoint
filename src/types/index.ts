@@ -24,7 +24,6 @@ export interface User {
   subscription_tier: SubscriptionTier;
   is_verified: boolean;
   is_admin?: boolean; // Опционально, так как поле может не существовать до выполнения миграции
-  enable_dashboard?: boolean; // Показывать ли Dashboard в навигации (если пользователь владеет хотя бы одной сущностью)
   wallet_address?: string;
   socials?: {
     twitter?: string;

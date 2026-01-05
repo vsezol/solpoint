@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Card, Input } from "@/components/ui";
 import { useQueryClient } from "@tanstack/react-query";
-import { Save, X, MapPin, Search, Check } from "lucide-react";
+import { Save, X, MapPin, Search, Check, Globe, Twitter, Instagram, Facebook } from "lucide-react";
 // RefreshCw - используется только в закомментированном коде
 import type { User, UserRole } from "@/types";
 // import { useGeolocation } from "@/hooks/use-geolocation"; // Закомментировано: временно отключаем автоматическое определение локации
@@ -43,6 +43,9 @@ export function ProfileEditForm({ user, onCancel, onUpdate }: ProfileEditFormPro
   const [country, setCountry] = useState(user.country || "");
   const [countryCode, setCountryCode] = useState<string | undefined>(user.country_code);
   const [city, setCity] = useState(user.city || "");
+  const [socialsTwitter, setSocialsTwitter] = useState(user.socials?.twitter || "");
+  const [socialsInstagram, setSocialsInstagram] = useState(user.socials?.instagram || "");
+  const [socialsFacebook, setSocialsFacebook] = useState(user.socials?.facebook || "");
 
   // Country selection state
   const [countrySearchQuery, setCountrySearchQuery] = useState("");
@@ -111,6 +114,11 @@ export function ProfileEditForm({ user, onCancel, onUpdate }: ProfileEditFormPro
           country: country || null,
           country_code: countryCode || null,
           city: city.trim() || null,
+          socials: {
+            twitter: socialsTwitter.trim() || null,
+            instagram: socialsInstagram.trim() || null,
+            facebook: socialsFacebook.trim() || null,
+          },
         }),
       });
 
@@ -358,6 +366,54 @@ export function ProfileEditForm({ user, onCancel, onUpdate }: ProfileEditFormPro
             >
               Open to meet
             </label>
+          </div>
+        </div>
+      </Card>
+
+      {/* Social Media */}
+      <Card variant="bordered">
+        <h3 className="text-sm font-medium text-[var(--color-text-muted)] mb-3 flex items-center gap-2">
+          <Globe className="w-4 h-4" />
+          Social Media
+        </h3>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
+              Twitter
+            </label>
+            <Input
+              type="url"
+              value={socialsTwitter}
+              onChange={(e) => setSocialsTwitter(e.target.value)}
+              placeholder="https://twitter.com/..."
+              icon={<Twitter className="w-4 h-4" />}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
+              Instagram
+            </label>
+            <Input
+              type="url"
+              value={socialsInstagram}
+              onChange={(e) => setSocialsInstagram(e.target.value)}
+              placeholder="https://instagram.com/..."
+              icon={<Instagram className="w-4 h-4" />}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
+              Facebook
+            </label>
+            <Input
+              type="url"
+              value={socialsFacebook}
+              onChange={(e) => setSocialsFacebook(e.target.value)}
+              placeholder="https://facebook.com/..."
+              icon={<Facebook className="w-4 h-4" />}
+            />
           </div>
         </div>
       </Card>

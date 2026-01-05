@@ -20,7 +20,7 @@ export async function PATCH(request: Request) {
 
   try {
     const body = await request.json();
-    const { bio, role, is_open_to_meet, country, country_code, city } = body;
+    const { bio, role, is_open_to_meet, country, country_code, city, socials } = body;
 
     // Валидация
     const updates: {
@@ -30,6 +30,11 @@ export async function PATCH(request: Request) {
       country?: string | null;
       country_code?: string | null;
       city?: string | null;
+      socials?: {
+        twitter?: string | null;
+        instagram?: string | null;
+        facebook?: string | null;
+      };
     } = {};
 
     // Валидация bio
@@ -139,6 +144,77 @@ export async function PATCH(request: Request) {
         );
       }
       updates.city = city || null;
+    }
+
+    // Валидация socials
+    if (socials !== undefined) {
+      if (socials !== null && typeof socials !== "object") {
+        return NextResponse.json(
+          { error: "Socials must be an object" },
+          { status: 400 }
+        );
+      }
+      
+      if (socials) {
+        const socialsObj: {
+          twitter?: string | null;
+          instagram?: string | null;
+          facebook?: string | null;
+        } = {};
+        
+        // Валидация twitter
+        if (socials.twitter !== undefined) {
+          if (socials.twitter !== null && typeof socials.twitter !== "string") {
+            return NextResponse.json(
+              { error: "Twitter URL must be a string" },
+              { status: 400 }
+            );
+          }
+          socialsObj.twitter = socials.twitter?.trim() || null;
+        }
+        
+        // Валидация instagram
+        if (socials.instagram !== undefined) {
+          if (socials.instagram !== null && typeof socials.instagram !== "string") {
+            return NextResponse.json(
+              { error: "Instagram URL must be a string" },
+              { status: 400 }
+            );
+          }
+          socialsObj.instagram = socials.instagram?.trim() || null;
+        }
+        
+        // Валидация facebook
+        if (socials.facebook !== undefined) {
+          if (socials.facebook !== null && typeof socials.facebook !== "string") {
+            return NextResponse.json(
+              { error: "Facebook URL must be a string" },
+              { status: 400 }
+            );
+          }
+          socialsObj.facebook = socials.facebook?.trim() || null;
+        }
+        
+        // Если есть поля для обновления, получаем текущие socials из профиля
+        if (Object.keys(socialsObj).length > 0) {
+          const { data: currentProfile } = await supabase
+            .from("profiles")
+            .select("socials")
+            .eq("id", authUser.id)
+            .single();
+          
+          const currentSocials = (currentProfile?.socials as typeof socialsObj) || {};
+          
+          // Объединяем текущие и новые socials
+          updates.socials = {
+            ...currentSocials,
+            ...socialsObj,
+          };
+        }
+        // Если socialsObj пустой, не обновляем socials
+      } else {
+        updates.socials = null;
+      }
     }
 
     // Если нет полей для обновления

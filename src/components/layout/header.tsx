@@ -25,15 +25,45 @@ export function Header() {
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [hasEntities, setHasEntities] = useState<boolean | null>(null);
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const { user, isAuthenticated, isLoading, logout } = useAuth();
+
+  // Проверяем наличие сущностей для показа Dashboard на фронтенде
+  useEffect(() => {
+    if (!isAuthenticated || !user) {
+      // Используем setTimeout чтобы избежать синхронного setState в useEffect
+      const timer = setTimeout(() => setHasEntities(null), 0);
+      return () => clearTimeout(timer);
+    }
+
+    // Проверяем наличие сущностей асинхронно
+    const checkHasEntities = async () => {
+      try {
+        const response = await fetch("/api/dashboard/has-entities", {
+          cache: "no-store",
+        });
+        if (response.ok) {
+          const { hasEntities: result } = await response.json();
+          setHasEntities(result);
+        } else {
+          setHasEntities(false);
+        }
+      } catch (error) {
+        console.error("Error checking entities:", error);
+        setHasEntities(false);
+      }
+    };
+
+    checkHasEntities();
+  }, [isAuthenticated, user]);
 
   // Формируем динамический список ссылок навигации
   const dynamicNavLinks = [...navLinks];
   
   // Собираем дополнительные ссылки (Dashboard и Admin)
   const additionalLinks = [];
-  if (user?.enable_dashboard) {
+  if (hasEntities === true) {
     additionalLinks.push({ href: "/dashboard", label: "Dashboard" });
   }
   if (user?.is_admin) {
