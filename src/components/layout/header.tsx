@@ -101,11 +101,14 @@ export function Header() {
                     key={link.href}
                     href={link.href}
                     onClick={() => {
-                      trackEvent("navigation_click", {
-                        event_category: "Navigation",
-                        event_label: link.label,
-                        destination: link.href,
-                      });
+                      // Вызываем trackEvent асинхронно, чтобы не блокировать навигацию
+                      setTimeout(() => {
+                        trackEvent("navigation_click", {
+                          event_category: "Navigation",
+                          event_label: link.label,
+                          destination: link.href,
+                        });
+                      }, 0);
                     }}
                     className={cn(
                       "px-4 py-2 text-sm font-medium rounded-lg transition-colors",

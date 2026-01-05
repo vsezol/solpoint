@@ -21,15 +21,18 @@ export function CommunitySocialLink({ community, platform, href }: CommunitySoci
   const Icon = icons[platform];
 
   const handleClick = () => {
-    trackEvent("community_social_link_click", {
-      event_category: "Communities",
-      event_label: community.slug || community.id,
-      community_id: community.id,
-      community_slug: community.slug,
-      community_name: community.name,
-      social_platform: platform,
-      source: "community_page",
-    });
+    // Вызываем trackEvent асинхронно, чтобы не блокировать открытие ссылки
+    setTimeout(() => {
+      trackEvent("community_social_link_click", {
+        event_category: "Communities",
+        event_label: community.slug || community.id,
+        community_id: community.id,
+        community_slug: community.slug,
+        community_name: community.name,
+        social_platform: platform,
+        source: "community_page",
+      });
+    }, 0);
   };
 
   return (

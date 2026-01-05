@@ -22,15 +22,18 @@ export function EventSocialLink({ event, platform, href }: EventSocialLinkProps)
   const Icon = icons[platform];
 
   const handleClick = () => {
-    trackEvent("event_social_link_click", {
-      event_category: "Events",
-      event_label: event.slug || event.id,
-      event_id: event.id,
-      event_slug: event.slug,
-      event_name: event.name,
-      social_platform: platform,
-      source: "event_page",
-    });
+    // Вызываем trackEvent асинхронно, чтобы не блокировать открытие ссылки
+    setTimeout(() => {
+      trackEvent("event_social_link_click", {
+        event_category: "Events",
+        event_label: event.slug || event.id,
+        event_id: event.id,
+        event_slug: event.slug,
+        event_name: event.name,
+        social_platform: platform,
+        source: "event_page",
+      });
+    }, 0);
   };
 
   return (

@@ -219,14 +219,17 @@ export function EventCard({
               onClick={(e) => {
                 e.stopPropagation();
                 e.preventDefault();
-                trackEvent("event_share_click", {
-                  event_category: "Events",
-                  event_label: event.slug || event.id,
-                  event_id: event.id,
-                  event_slug: event.slug,
-                  event_name: event.name,
-                  source: "event_card_compact",
-                });
+                // Вызываем trackEvent асинхронно, чтобы не блокировать UI
+                setTimeout(() => {
+                  trackEvent("event_share_click", {
+                    event_category: "Events",
+                    event_label: event.slug || event.id,
+                    event_id: event.id,
+                    event_slug: event.slug,
+                    event_name: event.name,
+                    source: "event_card_compact",
+                  });
+                }, 0);
                 // Share functionality
               }}
             >
@@ -451,14 +454,17 @@ export function EventCard({
             className="w-full text-[var(--color-primary)] border-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 mt-auto cursor-pointer"
             onClick={(e) => {
               e.stopPropagation();
-              trackEvent("event_share_click", {
-                event_category: "Events",
-                event_label: event.slug || event.id,
-                event_id: event.id,
-                event_slug: event.slug,
-                event_name: event.name,
-                source: "event_card_full",
-              });
+              // Вызываем trackEvent асинхронно, чтобы не блокировать UI
+              setTimeout(() => {
+                trackEvent("event_share_click", {
+                  event_category: "Events",
+                  event_label: event.slug || event.id,
+                  event_id: event.id,
+                  event_slug: event.slug,
+                  event_name: event.name,
+                  source: "event_card_full",
+                });
+              }, 0);
               // Share functionality
             }}
           >

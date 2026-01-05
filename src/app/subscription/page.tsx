@@ -1018,7 +1018,7 @@ function SubscriptionPageContent() {
                         : plan.highlighted && canUpgrade 
                           ? "Upgrade to PRO" 
                           : plan.isFree
-                            ? "Current Plan"
+                            ? "Basic Plan"
                             : plan.cta}
                     </Button>
                   </Card>

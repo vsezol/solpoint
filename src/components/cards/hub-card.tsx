@@ -220,14 +220,17 @@ export function HubCard({ hub, compact = false, entityType, isBlurred = false }:
       <Link 
         href={path}
         onClick={() => {
-          trackEvent("hub_card_click", {
-            event_category: "Hubs",
-            event_label: hub.slug || hub.id,
-            hub_id: hub.id,
-            hub_slug: hub.slug,
-            hub_name: hub.name,
-            source: "hub_card_compact",
-          });
+          // Вызываем trackEvent асинхронно, чтобы не блокировать навигацию
+          setTimeout(() => {
+            trackEvent("hub_card_click", {
+              event_category: "Hubs",
+              event_label: hub.slug || hub.id,
+              hub_id: hub.id,
+              hub_slug: hub.slug,
+              hub_name: hub.name,
+              source: "hub_card_compact",
+            });
+          }, 0);
         }}
         className="block p-4 min-w-[280px] bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-xl cursor-pointer transition-all duration-300 hover:scale-105 hover:border-white hover:shadow-lg"
       >
@@ -627,14 +630,17 @@ export function HubCard({ hub, compact = false, entityType, isBlurred = false }:
           className="flex-1 text-[var(--color-primary)] border-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 cursor-pointer"
           onClick={(e) => {
             e.stopPropagation();
-            trackEvent("hub_share_click", {
-              event_category: "Hubs",
-              event_label: hub.slug || hub.id,
-              hub_id: hub.id,
-              hub_slug: hub.slug,
-              hub_name: hub.name,
-              source: "hub_card_full",
-            });
+            // Вызываем trackEvent асинхронно, чтобы не блокировать UI
+            setTimeout(() => {
+              trackEvent("hub_share_click", {
+                event_category: "Hubs",
+                event_label: hub.slug || hub.id,
+                hub_id: hub.id,
+                hub_slug: hub.slug,
+                hub_name: hub.name,
+                source: "hub_card_full",
+              });
+            }, 0);
             // TODO: Implement share functionality
           }}
         >
@@ -647,14 +653,17 @@ export function HubCard({ hub, compact = false, entityType, isBlurred = false }:
             className="flex-1 cursor-pointer"
             onClick={(e) => {
               e.stopPropagation();
-              trackEvent("hub_card_click", {
-                event_category: "Hubs",
-                event_label: hub.slug || hub.id,
-                hub_id: hub.id,
-                hub_slug: hub.slug,
-                hub_name: hub.name,
-                source: "hub_card_full_details_button",
-              });
+              // Вызываем trackEvent асинхронно, чтобы не блокировать навигацию
+              setTimeout(() => {
+                trackEvent("hub_card_click", {
+                  event_category: "Hubs",
+                  event_label: hub.slug || hub.id,
+                  hub_id: hub.id,
+                  hub_slug: hub.slug,
+                  hub_name: hub.name,
+                  source: "hub_card_full_details_button",
+                });
+              }, 0);
             }}
             asChild
           >
