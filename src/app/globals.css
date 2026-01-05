@@ -160,6 +160,32 @@ input::selection {
   color: var(--color-text-secondary) !important;
 }
 
+/* Ensure Leaflet popups stay below header */
+.leaflet-popup-pane {
+  z-index: 999 !important;
+}
+
+.leaflet-control {
+  z-index: 999 !important;
+}
+
+.leaflet-control-zoom {
+  z-index: 999 !important;
+}
+
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 999 !important;
+}
+
+.leaflet-top .leaflet-control {
+  z-index: 999 !important;
+}
+
+.leaflet-bottom .leaflet-control {
+  z-index: 999 !important;
+}
+
 /* Custom utilities */
 .text-gradient {
   background: var(--gradient-primary);

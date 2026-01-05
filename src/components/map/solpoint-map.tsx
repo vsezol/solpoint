@@ -707,6 +707,7 @@ export function SolPointMap({
           border: 1px solid var(--color-surface-border) !important;
           border-radius: 8px !important;
           overflow: hidden;
+          z-index: 999 !important;
         }
         
         .leaflet-control-zoom a {

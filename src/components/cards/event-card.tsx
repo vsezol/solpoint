@@ -240,15 +240,18 @@ export function EventCard({
               onClick={(e) => {
                 e.stopPropagation();
                 e.preventDefault();
-                trackEvent("event_card_click", {
-                  event_category: "Events",
-                  event_label: event.slug || event.id,
-                  event_id: event.id,
-                  event_slug: event.slug,
-                  event_name: event.name,
-                  event_type: event.event_type,
-                  source: "event_card_compact",
-                });
+                // Вызываем trackEvent асинхронно, чтобы не блокировать навигацию
+                setTimeout(() => {
+                  trackEvent("event_card_click", {
+                    event_category: "Events",
+                    event_label: event.slug || event.id,
+                    event_id: event.id,
+                    event_slug: event.slug,
+                    event_name: event.name,
+                    event_type: event.event_type,
+                    source: "event_card_compact",
+                  });
+                }, 0);
                 router.push(`/events/${event.slug}`);
               }}
             >
@@ -285,15 +288,18 @@ export function EventCard({
       href={`/events/${event.slug}`} 
       className="block h-full"
       onClick={() => {
-        trackEvent("event_card_click", {
-          event_category: "Events",
-          event_label: event.slug || event.id,
-          event_id: event.id,
-          event_slug: event.slug,
-          event_name: event.name,
-          event_type: event.event_type,
-          source: "event_card_full",
-        });
+        // Вызываем trackEvent асинхронно, чтобы не блокировать навигацию
+        setTimeout(() => {
+          trackEvent("event_card_click", {
+            event_category: "Events",
+            event_label: event.slug || event.id,
+            event_id: event.id,
+            event_slug: event.slug,
+            event_name: event.name,
+            event_type: event.event_type,
+            source: "event_card_full",
+          });
+        }, 0);
       }}
     >
       <div className="bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-xl overflow-hidden flex flex-col h-full transition-all duration-200 hover:scale-[1.02] hover:border-white cursor-pointer">
