@@ -45,11 +45,14 @@ export default function MapPage() {
 
   // Отслеживаем просмотр карты
   useEffect(() => {
-    trackEvent("map_view", {
-      event_category: "Map",
-      is_vip: isVip,
-      is_authenticated: isAuthenticated,
-    });
+    // Вызываем trackEvent асинхронно, чтобы не блокировать загрузку страницы
+    setTimeout(() => {
+      trackEvent("map_view", {
+        event_category: "Map",
+        is_vip: isVip,
+        is_authenticated: isAuthenticated,
+      });
+    }, 0);
   }, [isVip, isAuthenticated]);
 
   // Загружаем маркеры при изменении фильтров
