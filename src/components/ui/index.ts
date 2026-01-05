@@ -42,4 +42,5 @@ export type { CheckBoxProps } from "./checkbox";
 
 export { AuthRequiredModal } from "./auth-required-modal";
 export { ProSubscriptionModal } from "./pro-subscription-modal";
+export { UserListItem } from "./user-list-item";
 

@@ -3,13 +3,12 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { Card, Button, Avatar } from "@/components/ui";
-import { Modal, ModalHeader, ModalTitle, ModalContent, AuthRequiredModal, ProSubscriptionModal } from "@/components/ui";
-import { UserPlus, Crown, Calendar, Check, MessageCircle, UserCheck } from "lucide-react";
+import { Modal, ModalHeader, ModalTitle, ModalContent, AuthRequiredModal, ProSubscriptionModal, UserListItem } from "@/components/ui";
+import { UserPlus, Crown, Calendar, Check } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getAppUrl } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
-import { useChat } from "@/hooks/use-chat";
 import type { User, Event, Invite } from "@/types";
 
 interface ProfileSidebarProps {
@@ -354,22 +353,6 @@ export function ProfileSidebar({ user, upcomingEvents }: ProfileSidebarProps) {
     }
   };
 
-  // Handle send message
-  const handleSendMessage = async (userId: string) => {
-    if (!isAuthenticated) {
-      setShowAuthModal(true);
-      return;
-    }
-
-    setCreatingChat((prev) => ({ ...prev, [userId]: true }));
-    try {
-      await openChat(userId);
-    } catch (error) {
-      console.error("Error creating chat:", error);
-    } finally {
-      setCreatingChat((prev) => ({ ...prev, [userId]: false }));
-    }
-  };
 
   const formatEventDate = (startDate: string, endDate?: string, timezone?: string) => {
     const start = new Date(startDate);
@@ -628,79 +611,16 @@ export function ProfileSidebar({ user, upcomingEvents }: ProfileSidebarProps) {
             ) : (
               usersList.map((member) => {
                 const friendStatus = friendStatuses[member.id] || "none";
-                const isOwnProfile = currentUser?.id === member.id;
 
                 return (
-                  <div
+                  <UserListItem
                     key={member.id}
-                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-[var(--color-surface-hover)] transition-colors"
-                  >
-                    <Link
-                      href={member.twitter_handle ? `/profile/${member.twitter_handle}` : "#"}
-                      className="flex items-center gap-3 flex-1 min-w-0"
-                    >
-                      <div className="w-12 h-12 rounded-full bg-[var(--color-surface-hover)] border-2 border-[var(--color-background)] flex items-center justify-center overflow-hidden flex-shrink-0">
-                        {member.avatar_url ? (
-                          <Image
-                            src={member.avatar_url}
-                            alt={member.name}
-                            width={48}
-                            height={48}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-sm font-medium">
-                            {member.name?.[0]?.toUpperCase() || "?"}
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-[var(--color-text-primary)] truncate">
-                          {member.name}
-                        </p>
-                        {member.twitter_handle && (
-                          <p className="text-xs text-[var(--color-text-secondary)] truncate">
-                            @{member.twitter_handle}
-                          </p>
-                        )}
-                      </div>
-                    </Link>
-                    {isAuthenticated && !isOwnProfile && (
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleSendMessage(member.id)}
-                          disabled={creatingChat[member.id]}
-                          title="Send Message"
-                        >
-                          <MessageCircle className="w-4 h-4" />
-                        </Button>
-                        {friendStatus === "none" && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleAddFriend(member.id)}
-                            disabled={sendingFriendRequest[member.id]}
-                            title="Add Friend"
-                          >
-                            <UserPlus className="w-4 h-4" />
-                          </Button>
-                        )}
-                        {friendStatus === "accepted" && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            disabled
-                            title="Already Friends"
-                            className="cursor-default"
-                          >
-                            <UserCheck className="w-4 h-4 text-[var(--color-primary)]" />
-                          </Button>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                    member={member}
+                    friendStatus={friendStatus}
+                    onAddFriend={handleAddFriend}
+                    sendingFriendRequest={sendingFriendRequest[member.id]}
+                    creatingChat={creatingChat[member.id]}
+                  />
                 );
               })
             )}
@@ -727,79 +647,16 @@ export function ProfileSidebar({ user, upcomingEvents }: ProfileSidebarProps) {
             ) : (
               usersList.map((member) => {
                 const friendStatus = friendStatuses[member.id] || "none";
-                const isOwnProfile = currentUser?.id === member.id;
 
                 return (
-                  <div
+                  <UserListItem
                     key={member.id}
-                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-[var(--color-surface-hover)] transition-colors"
-                  >
-                    <Link
-                      href={member.twitter_handle ? `/profile/${member.twitter_handle}` : "#"}
-                      className="flex items-center gap-3 flex-1 min-w-0"
-                    >
-                      <div className="w-12 h-12 rounded-full bg-[var(--color-surface-hover)] border-2 border-[var(--color-background)] flex items-center justify-center overflow-hidden flex-shrink-0">
-                        {member.avatar_url ? (
-                          <Image
-                            src={member.avatar_url}
-                            alt={member.name}
-                            width={48}
-                            height={48}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-sm font-medium">
-                            {member.name?.[0]?.toUpperCase() || "?"}
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-[var(--color-text-primary)] truncate">
-                          {member.name}
-                        </p>
-                        {member.twitter_handle && (
-                          <p className="text-xs text-[var(--color-text-secondary)] truncate">
-                            @{member.twitter_handle}
-                          </p>
-                        )}
-                      </div>
-                    </Link>
-                    {isAuthenticated && !isOwnProfile && (
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleSendMessage(member.id)}
-                          disabled={creatingChat[member.id]}
-                          title="Send Message"
-                        >
-                          <MessageCircle className="w-4 h-4" />
-                        </Button>
-                        {friendStatus === "none" && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleAddFriend(member.id)}
-                            disabled={sendingFriendRequest[member.id]}
-                            title="Add Friend"
-                          >
-                            <UserPlus className="w-4 h-4" />
-                          </Button>
-                        )}
-                        {friendStatus === "accepted" && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            disabled
-                            title="Already Friends"
-                            className="cursor-default"
-                          >
-                            <UserCheck className="w-4 h-4 text-[var(--color-primary)]" />
-                          </Button>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                    member={member}
+                    friendStatus={friendStatus}
+                    onAddFriend={handleAddFriend}
+                    sendingFriendRequest={sendingFriendRequest[member.id]}
+                    creatingChat={creatingChat[member.id]}
+                  />
                 );
               })
             )}
@@ -826,79 +683,16 @@ export function ProfileSidebar({ user, upcomingEvents }: ProfileSidebarProps) {
             ) : (
               usersList.map((member) => {
                 const friendStatus = friendStatuses[member.id] || "none";
-                const isOwnProfile = currentUser?.id === member.id;
 
                 return (
-                  <div
+                  <UserListItem
                     key={member.id}
-                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-[var(--color-surface-hover)] transition-colors"
-                  >
-                    <Link
-                      href={member.twitter_handle ? `/profile/${member.twitter_handle}` : "#"}
-                      className="flex items-center gap-3 flex-1 min-w-0"
-                    >
-                      <div className="w-12 h-12 rounded-full bg-[var(--color-surface-hover)] border-2 border-[var(--color-background)] flex items-center justify-center overflow-hidden flex-shrink-0">
-                        {member.avatar_url ? (
-                          <Image
-                            src={member.avatar_url}
-                            alt={member.name}
-                            width={48}
-                            height={48}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-sm font-medium">
-                            {member.name?.[0]?.toUpperCase() || "?"}
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-[var(--color-text-primary)] truncate">
-                          {member.name}
-                        </p>
-                        {member.twitter_handle && (
-                          <p className="text-xs text-[var(--color-text-secondary)] truncate">
-                            @{member.twitter_handle}
-                          </p>
-                        )}
-                      </div>
-                    </Link>
-                    {isAuthenticated && !isOwnProfile && (
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleSendMessage(member.id)}
-                          disabled={creatingChat[member.id]}
-                          title="Send Message"
-                        >
-                          <MessageCircle className="w-4 h-4" />
-                        </Button>
-                        {friendStatus === "none" && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleAddFriend(member.id)}
-                            disabled={sendingFriendRequest[member.id]}
-                            title="Add Friend"
-                          >
-                            <UserPlus className="w-4 h-4" />
-                          </Button>
-                        )}
-                        {friendStatus === "accepted" && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            disabled
-                            title="Already Friends"
-                            className="cursor-default"
-                          >
-                            <UserCheck className="w-4 h-4 text-[var(--color-primary)]" />
-                          </Button>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                    member={member}
+                    friendStatus={friendStatus}
+                    onAddFriend={handleAddFriend}
+                    sendingFriendRequest={sendingFriendRequest[member.id]}
+                    creatingChat={creatingChat[member.id]}
+                  />
                 );
               })
             )}

@@ -1,12 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card, Avatar, Button, ProSubscriptionModal, AuthRequiredModal, Modal, ModalHeader, ModalTitle, ModalContent } from "@/components/ui";
-import Link from "next/link";
+import { Card, Avatar, ProSubscriptionModal, AuthRequiredModal, Modal, ModalHeader, ModalTitle, ModalContent, UserListItem } from "@/components/ui";
 import { useAuth } from "@/hooks/use-auth";
 import { useChat } from "@/hooks/use-chat";
-import Image from "next/image";
-import { MessageCircle, UserPlus, ExternalLink } from "lucide-react";
 
 type EntityType = "hub" | "community" | "project" | "workspace" | "event";
 
@@ -448,75 +445,16 @@ export function EntityMembersWidget({
             ) : (
               allMembers.map((member) => {
                 const friendStatus = friendStatuses[member.id] || "none";
-                const isOwnProfile = user?.id === member.id;
 
                 return (
-                  <div
+                  <UserListItem
                     key={member.id}
-                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-[var(--color-surface-hover)] transition-colors"
-                  >
-                    <Link
-                      href={member.twitter_handle ? `/profile/${member.twitter_handle}` : "#"}
-                      className="flex items-center gap-3 flex-1 min-w-0"
-                    >
-                      <div className="w-12 h-12 rounded-full bg-[var(--color-surface-hover)] border-2 border-[var(--color-background)] flex items-center justify-center overflow-hidden flex-shrink-0">
-                        {member.avatar_url ? (
-                          <Image
-                            src={member.avatar_url}
-                            alt={member.name}
-                            width={48}
-                            height={48}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-sm font-medium">
-                            {member.name?.[0]?.toUpperCase() || "?"}
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-[var(--color-text-primary)] truncate">
-                          {member.name}
-                        </p>
-                        {member.twitter_handle && (
-                          <p className="text-xs text-[var(--color-text-secondary)] truncate">
-                            @{member.twitter_handle}
-                          </p>
-                        )}
-                      </div>
-                    </Link>
-                    {isAuthenticated && !isOwnProfile && (
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleSendMessage(member.id)}
-                          disabled={creatingChat[member.id]}
-                          title="Send Message"
-                        >
-                          <MessageCircle className="w-4 h-4" />
-                        </Button>
-                        {friendStatus === "none" && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleAddFriend(member.id)}
-                            disabled={sendingFriendRequest[member.id]}
-                            title="Add Friend"
-                          >
-                            <UserPlus className="w-4 h-4" />
-                          </Button>
-                        )}
-                        <Link
-                          href={member.twitter_handle ? `/profile/${member.twitter_handle}` : "#"}
-                          className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
-                          title="View Profile"
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                        </Link>
-                      </div>
-                    )}
-                  </div>
+                    member={member}
+                    friendStatus={friendStatus}
+                    onAddFriend={handleAddFriend}
+                    sendingFriendRequest={sendingFriendRequest[member.id]}
+                    creatingChat={creatingChat[member.id]}
+                  />
                 );
               })
             )}
@@ -541,67 +479,16 @@ export function EntityMembersWidget({
                 {texts.emptyFriends}
               </p>
             ) : (
-              allFriends.map((friend) => {
-                const isOwnProfile = user?.id === friend.id;
-
-                return (
-                  <div
-                    key={friend.id}
-                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-[var(--color-surface-hover)] transition-colors"
-                  >
-                    <Link
-                      href={friend.twitter_handle ? `/profile/${friend.twitter_handle}` : "#"}
-                      className="flex items-center gap-3 flex-1 min-w-0"
-                    >
-                      <div className="w-12 h-12 rounded-full bg-[var(--color-surface-hover)] border-2 border-[var(--color-background)] flex items-center justify-center overflow-hidden flex-shrink-0">
-                        {friend.avatar_url ? (
-                          <Image
-                            src={friend.avatar_url}
-                            alt={friend.name}
-                            width={48}
-                            height={48}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-sm font-medium">
-                            {friend.name?.[0]?.toUpperCase() || "?"}
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-[var(--color-text-primary)] truncate">
-                          {friend.name}
-                        </p>
-                        {friend.twitter_handle && (
-                          <p className="text-xs text-[var(--color-text-secondary)] truncate">
-                            @{friend.twitter_handle}
-                          </p>
-                        )}
-                      </div>
-                    </Link>
-                    {isAuthenticated && !isOwnProfile && (
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleSendMessage(friend.id)}
-                          disabled={creatingChat[friend.id]}
-                          title="Send Message"
-                        >
-                          <MessageCircle className="w-4 h-4" />
-                        </Button>
-                        <Link
-                          href={friend.twitter_handle ? `/profile/${friend.twitter_handle}` : "#"}
-                          className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
-                          title="View Profile"
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                        </Link>
-                      </div>
-                    )}
-                  </div>
-                );
-              })
+              allFriends.map((friend) => (
+                <UserListItem
+                  key={friend.id}
+                  member={friend}
+                  friendStatus="accepted"
+                  onAddFriend={handleAddFriend}
+                  sendingFriendRequest={sendingFriendRequest[friend.id]}
+                  creatingChat={creatingChat[friend.id]}
+                />
+              ))
             )}
           </div>
         </ModalContent>
