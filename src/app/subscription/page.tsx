@@ -180,16 +180,25 @@ function SubscriptionPageContent() {
     }
   }, [searchParams]);
 
-  // Загружаем планы и текущую подписку
+  // Загружаем планы и текущую подписку параллельно
   useEffect(() => {
-    fetchPlans();
-    // Загружаем подписку только если пользователь авторизован
+    // Загружаем планы и подписку параллельно для оптимизации
     if (isAuthenticated && !authLoading) {
-      fetchCurrentSubscription();
+      Promise.all([
+        fetchPlans(),
+        fetchCurrentSubscription(),
+      ]);
+    } else {
+      fetchPlans();
     }
-    trackEvent("subscription_page_view", {
-      event_category: "Subscription",
-    });
+    
+    // Вызываем trackEvent асинхронно, чтобы не блокировать загрузку
+    setTimeout(() => {
+      trackEvent("subscription_page_view", {
+        event_category: "Subscription",
+      });
+    }, 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, authLoading]);
 
   const fetchPlans = async () => {

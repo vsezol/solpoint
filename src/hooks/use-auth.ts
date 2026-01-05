@@ -5,6 +5,12 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { User } from "@/types";
 import { trackEvent, setUserId } from "@/lib/analytics";
 
+// Глобальный флаг для отслеживания инициализации checkSession
+// Это предотвращает множественные вызовы при нескольких экземплярах useAuth
+let sessionCheckSetupDone = false;
+let globalFocusHandler: (() => void) | null = null;
+let globalIntervalId: NodeJS.Timeout | null = null;
+
 // Функция для загрузки профиля через API
 async function fetchProfile(): Promise<User | null> {
   const controller = new AbortController();
@@ -57,8 +63,8 @@ export function useAuth() {
     queryKey: ["auth", "profile"],
     queryFn: fetchProfile,
     retry: 1,
-    staleTime: 0,
-    gcTime: 0,
+    staleTime: 5 * 60 * 1000, // 5 минут - данные считаются свежими
+    gcTime: 10 * 60 * 1000, // 10 минут - кешируем в памяти
   });
 
   // Принудительно обновляем данные после callback
@@ -81,6 +87,7 @@ export function useAuth() {
   }, [isFromCallback, queryClient]);
 
   // Проверяем сессию при инициализации и периодически
+  // Используем глобальный флаг, чтобы checkSession инициализировался только один раз
   useEffect(() => {
     const checkSession = async () => {
       try {
@@ -92,7 +99,11 @@ export function useAuth() {
           const { session } = await response.json();
           if (session?.user) {
             setUserId(session.user.id);
-            queryClient.invalidateQueries({ queryKey: ["auth", "profile"] });
+            // Обновляем данные только если профиль не загружен или устарел
+            const queryData = queryClient.getQueryData(["auth", "profile"]);
+            if (!queryData) {
+              queryClient.invalidateQueries({ queryKey: ["auth", "profile"] });
+            }
           } else {
             setUserId(null);
             queryClient.setQueryData(["auth", "profile"], null);
@@ -103,24 +114,30 @@ export function useAuth() {
       }
     };
 
-    // Проверяем сразу при загрузке
-    checkSession();
-
-    // Проверяем при возврате фокуса на окно (например, после OAuth редиректа)
-    const handleFocus = () => {
+    // Инициализируем проверку сессии только один раз глобально
+    if (!sessionCheckSetupDone) {
+      sessionCheckSetupDone = true;
+      
+      // Проверяем сразу при первой загрузке
       checkSession();
-    };
 
-    window.addEventListener("focus", handleFocus);
+      // Проверяем при возврате фокуса на окно (например, после OAuth редиректа)
+      globalFocusHandler = () => {
+        checkSession();
+      };
 
-    // Опционально: проверяем периодически (каждые 60 секунд) для обновления токена
-    const intervalId = setInterval(() => {
-      checkSession();
-    }, 60000);
+      window.addEventListener("focus", globalFocusHandler);
 
+      // Опционально: проверяем периодически (каждые 60 секунд) для обновления токена
+      globalIntervalId = setInterval(() => {
+        checkSession();
+      }, 60000);
+    }
+
+    // Cleanup не нужен, так как мы используем глобальные обработчики
+    // которые остаются на все время жизни приложения
     return () => {
-      window.removeEventListener("focus", handleFocus);
-      clearInterval(intervalId);
+      // Оставляем обработчики активными для всех компонентов
     };
   }, [queryClient]);
 
