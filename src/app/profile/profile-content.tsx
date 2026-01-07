@@ -912,7 +912,7 @@ export function ProfileContent({
           {/* Profile Info */}
           <div className="flex flex-col gap-4">
             <div>
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-start justify-between mb-2">
                 <div>
                   <h1 className="text-2xl font-bold text-[var(--color-text-primary)] mb-1">
                     {currentUser.twitter_name}
@@ -922,7 +922,7 @@ export function ProfileContent({
                   </p>
                 </div>
                 {isOwnProfile && (
-                  <div>
+                  <div className="mb-auto">
                     <EditProfileButton />
                   </div>
                 )}
