@@ -1,8 +1,9 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui";
 import type { Hub, Community, Workspace, Project } from "@/types";
-import { Twitter, Instagram, Facebook, ExternalLink, MapPin, Users, Share2 } from "lucide-react";
+import { Twitter, Instagram, Facebook, ExternalLink, MapPin, Users, Share2, Check } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { trackEvent } from "@/lib/analytics";
@@ -15,6 +16,17 @@ interface HubCardProps {
 }
 
 export function HubCard({ hub, compact = false, entityType, isBlurred = false }: HubCardProps) {
+  const [copied, setCopied] = useState(false);
+
+  // Reset copied state after 2 seconds
+  useEffect(() => {
+    if (copied) {
+      const timer = setTimeout(() => {
+        setCopied(false);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [copied]);
 
   // Определяем тип сущности и путь
   const getEntityPath = (slug: string): string => {
@@ -28,6 +40,55 @@ export function HubCard({ hub, compact = false, entityType, isBlurred = false }:
       return `/projects/${slug}`;
     }
     return `/hubs/${slug}`;
+  };
+
+  // Получаем публичную ссылку на сущность
+  const getPublicUrl = (): string => {
+    if (typeof window === "undefined") {
+      return "";
+    }
+    if (!hub.slug) {
+      return window.location.href;
+    }
+    const path = getEntityPath(hub.slug);
+    return `${window.location.origin}${path}`;
+  };
+
+  // Обработчик копирования ссылки
+  const handleShare = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    try {
+      const url = getPublicUrl();
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+
+      trackEvent("hub_share_click", {
+        event_category: "Hubs",
+        event_label: hub.slug || hub.id,
+        hub_id: hub.id,
+        hub_slug: hub.slug,
+        hub_name: hub.name,
+        source: compact ? "hub_card_compact" : "hub_card_full",
+        share_method: "clipboard",
+      });
+    } catch (error) {
+      console.error("Error copying to clipboard:", error);
+      // Fallback для старых браузеров
+      try {
+        const textarea = document.createElement("textarea");
+        textarea.value = getPublicUrl();
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+        setCopied(true);
+      } catch (fallbackError) {
+        console.error("Fallback copy failed:", fallbackError);
+      }
+    }
   };
 
   if (compact) {
@@ -150,21 +211,19 @@ export function HubCard({ hub, compact = false, entityType, isBlurred = false }:
               variant="outline"
               size="sm"
               className="flex-1 text-[var(--color-primary)] border-[var(--color-primary)] cursor-pointer"
-              onClick={(e) => {
-                e.stopPropagation();
-                trackEvent("hub_share_click", {
-                  event_category: "Hubs",
-                  event_label: hub.slug || hub.id,
-                  hub_id: hub.id,
-                  hub_slug: hub.slug,
-                  hub_name: hub.name,
-                  source: "hub_card_compact",
-                });
-                // TODO: Implement share functionality
-              }}
+              onClick={handleShare}
             >
-              <Share2 className="w-4 h-4 mr-1" />
-              Share
+              {copied ? (
+                <>
+                  <Check className="w-4 h-4 mr-1" />
+                  Copied!
+                </>
+              ) : (
+                <>
+                  <Share2 className="w-4 h-4 mr-1" />
+                  Share
+                </>
+              )}
             </Button>
             {hub.slug && (
               <Button 
@@ -348,21 +407,19 @@ export function HubCard({ hub, compact = false, entityType, isBlurred = false }:
             variant="outline"
             size="sm"
             className="flex-1 text-[var(--color-primary)] border-[var(--color-primary)] cursor-pointer"
-            onClick={(e) => {
-              e.stopPropagation();
-              trackEvent("hub_share_click", {
-                event_category: "Hubs",
-                event_label: hub.slug || hub.id,
-                hub_id: hub.id,
-                hub_slug: hub.slug,
-                hub_name: hub.name,
-                source: "hub_card_compact",
-              });
-              // TODO: Implement share functionality
-            }}
+            onClick={handleShare}
           >
-            <Share2 className="w-4 h-4 mr-1" />
-            Share
+            {copied ? (
+              <>
+                <Check className="w-4 h-4 mr-1" />
+                Copied!
+              </>
+            ) : (
+              <>
+                <Share2 className="w-4 h-4 mr-1" />
+                Share
+              </>
+            )}
           </Button>
           {hub.slug && (
             <Button 
@@ -490,20 +547,19 @@ export function HubCard({ hub, compact = false, entityType, isBlurred = false }:
           <Button
             variant="outline"
             className="flex-1 text-[var(--color-primary)] border-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 cursor-pointer"
-            onClick={() => {
-              trackEvent("hub_share_click", {
-                event_category: "Hubs",
-                event_label: hub.slug || hub.id,
-                hub_id: hub.id,
-                hub_slug: hub.slug,
-                hub_name: hub.name,
-                source: "hub_card_full",
-              });
-              // TODO: Implement share functionality
-            }}
+            onClick={handleShare}
           >
-            <Share2 className="w-4 h-4 mr-2" />
-            Share
+            {copied ? (
+              <>
+                <Check className="w-4 h-4 mr-2" />
+                Copied!
+              </>
+            ) : (
+              <>
+                <Share2 className="w-4 h-4 mr-2" />
+                Share
+              </>
+            )}
           </Button>
         </div>
       </div>
@@ -628,24 +684,19 @@ export function HubCard({ hub, compact = false, entityType, isBlurred = false }:
         <Button
           variant="outline"
           className="flex-1 text-[var(--color-primary)] border-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 cursor-pointer"
-          onClick={(e) => {
-            e.stopPropagation();
-            // Вызываем trackEvent асинхронно, чтобы не блокировать UI
-            setTimeout(() => {
-              trackEvent("hub_share_click", {
-                event_category: "Hubs",
-                event_label: hub.slug || hub.id,
-                hub_id: hub.id,
-                hub_slug: hub.slug,
-                hub_name: hub.name,
-                source: "hub_card_full",
-              });
-            }, 0);
-            // TODO: Implement share functionality
-          }}
+          onClick={handleShare}
         >
-          <Share2 className="w-4 h-4 mr-2" />
-          Share
+          {copied ? (
+            <>
+              <Check className="w-4 h-4 mr-2" />
+              Copied!
+            </>
+          ) : (
+            <>
+              <Share2 className="w-4 h-4 mr-2" />
+              Share
+            </>
+          )}
         </Button>
         {hub.slug && (
           <Button 
