@@ -2,8 +2,27 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import dynamic from "next/dynamic";
 import { Header, Footer } from "@/components/layout";
 import { Button, Card, Badge, Modal, ModalHeader, ModalTitle, ModalDescription, ModalContent } from "@/components/ui";
+import { getMapMarkers } from "@/lib/api/map";
+import type { MapMarker, MapFilters } from "@/types";
+
+// Dynamic import for map component to avoid SSR issues with Leaflet
+const SolPointMap = dynamic(
+  () => import("@/components/map/solpoint-map").then((mod) => mod.SolPointMap),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-full h-full flex items-center justify-center bg-[var(--color-surface)]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
+          <p className="text-[var(--color-text-secondary)]">Loading map...</p>
+        </div>
+      </div>
+    ),
+  }
+);
 import {
   Check,
   MapPin,
@@ -134,12 +153,15 @@ const faqItems = [
 function SubscriptionPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [currentSubscription, setCurrentSubscription] = useState<Subscription | null>(null);
   const [loadingPlans, setLoadingPlans] = useState(true);
+  const [mapMarkers, setMapMarkers] = useState<MapMarker[]>([]);
+  const [loadingMap, setLoadingMap] = useState(true);
+  const isVip = user?.subscription_tier === "vip";
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [paymentData, setPaymentData] = useState<{
@@ -200,6 +222,33 @@ function SubscriptionPageContent() {
     }, 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, authLoading]);
+
+  // Загружаем маркеры для карты (показываем все сущности)
+  useEffect(() => {
+    async function loadMapMarkers() {
+      try {
+        setLoadingMap(true);
+        const filters: MapFilters = {
+          showUsers: true,
+          showEvents: true,
+          showHubs: true,
+          showCommunities: true,
+          showWorkspaces: true,
+          contentType: "all",
+        };
+        const markers = await getMapMarkers(filters, user?.id, isVip);
+        setMapMarkers(markers);
+      } catch (error) {
+        console.error("Error loading map markers:", error);
+      } finally {
+        setLoadingMap(false);
+      }
+    }
+
+    if (!authLoading) {
+      loadMapMarkers();
+    }
+  }, [user?.id, isVip, authLoading]);
 
   const fetchPlans = async () => {
     try {
@@ -782,16 +831,25 @@ function SubscriptionPageContent() {
                 </div>
               </div>
 
-              {/* Visual */}
-              <div className="relative">
-                <div className="aspect-video bg-gradient-to-br from-[var(--color-primary)]/20 via-[#0D1316] to-[#0D1316] rounded-lg border border-[var(--color-primary)]/30 p-8 flex items-center justify-center">
-                  <div className="text-center space-y-4">
-                    <MapPin className="w-16 h-16 text-[var(--color-primary)] mx-auto" />
-                    <p className="text-sm text-[var(--color-text-muted)]">
-                      Map view with role filters & city-level access
-                    </p>
+              {/* Visual - Interactive Map */}
+              <div className="relative overflow-hidden rounded-lg border border-[var(--color-primary)]/30 aspect-video">
+                {loadingMap ? (
+                  <div className="w-full h-full flex items-center justify-center bg-[var(--color-surface)]">
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="w-12 h-12 border-4 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
+                      <p className="text-[var(--color-text-secondary)]">Loading map...</p>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <SolPointMap
+                    markers={mapMarkers}
+                    center={[35, 55]}
+                    zoom={4}
+                    isVip={isVip}
+                    isAuthenticated={isAuthenticated}
+                    currentUserId={user?.id}
+                  />
+                )}
               </div>
             </div>
           </div>
