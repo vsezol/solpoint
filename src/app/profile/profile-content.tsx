@@ -813,11 +813,7 @@ export function ProfileContent({
                 isVerified={currentUser.is_verified}
               />
             </div>
-            {isOwnProfile ? (
-              <div className="mr-[14px]">
-                <EditProfileButton />
-              </div>
-            ) : (
+            {!isOwnProfile && (
               <div className="mr-[14px]">
                 <AddFriendButton 
                   userId={user.id} 
@@ -831,12 +827,21 @@ export function ProfileContent({
           {/* Profile Info */}
           <div className="flex flex-col gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-[var(--color-text-primary)] mb-1">
-                {currentUser.twitter_name}
-              </h1>
-              <p className="text-[var(--color-text-muted)]">
-                @{currentUser.twitter_handle}
-              </p>
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <h1 className="text-2xl font-bold text-[var(--color-text-primary)] mb-1">
+                    {currentUser.twitter_name}
+                  </h1>
+                  <p className="text-[var(--color-text-muted)]">
+                    @{currentUser.twitter_handle}
+                  </p>
+                </div>
+                {isOwnProfile && (
+                  <div>
+                    <EditProfileButton />
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Role */}
