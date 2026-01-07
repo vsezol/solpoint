@@ -34,6 +34,13 @@ export async function PATCH(request: Request) {
         twitter?: string | null;
         instagram?: string | null;
         facebook?: string | null;
+        telegram?: string | null;
+        youtube?: string | null;
+        discord?: string | null;
+        github?: string | null;
+        linkedin?: string | null;
+        medium?: string | null;
+        substack?: string | null;
       };
     } = {};
 
@@ -160,9 +167,16 @@ export async function PATCH(request: Request) {
           twitter?: string | null;
           instagram?: string | null;
           facebook?: string | null;
+          telegram?: string | null;
+          youtube?: string | null;
+          discord?: string | null;
+          github?: string | null;
+          linkedin?: string | null;
+          medium?: string | null;
+          substack?: string | null;
         } = {};
         
-        // Валидация twitter
+        // Валидация twitter (оставляем для обратной совместимости, но не обновляем)
         if (socials.twitter !== undefined) {
           if (socials.twitter !== null && typeof socials.twitter !== "string") {
             return NextResponse.json(
@@ -170,7 +184,7 @@ export async function PATCH(request: Request) {
               { status: 400 }
             );
           }
-          socialsObj.twitter = socials.twitter?.trim() || null;
+          // Twitter автоматически генерируется из twitter_handle, поэтому не сохраняем
         }
         
         // Валидация instagram
@@ -195,20 +209,102 @@ export async function PATCH(request: Request) {
           socialsObj.facebook = socials.facebook?.trim() || null;
         }
         
-        // Если есть поля для обновления, получаем текущие socials из профиля
+        // Валидация telegram
+        if (socials.telegram !== undefined) {
+          if (socials.telegram !== null && typeof socials.telegram !== "string") {
+            return NextResponse.json(
+              { error: "Telegram URL must be a string" },
+              { status: 400 }
+            );
+          }
+          socialsObj.telegram = socials.telegram?.trim() || null;
+        }
+        
+        // Валидация youtube
+        if (socials.youtube !== undefined) {
+          if (socials.youtube !== null && typeof socials.youtube !== "string") {
+            return NextResponse.json(
+              { error: "YouTube URL must be a string" },
+              { status: 400 }
+            );
+          }
+          socialsObj.youtube = socials.youtube?.trim() || null;
+        }
+        
+        // Валидация discord
+        if (socials.discord !== undefined) {
+          if (socials.discord !== null && typeof socials.discord !== "string") {
+            return NextResponse.json(
+              { error: "Discord URL must be a string" },
+              { status: 400 }
+            );
+          }
+          socialsObj.discord = socials.discord?.trim() || null;
+        }
+        
+        // Валидация github
+        if (socials.github !== undefined) {
+          if (socials.github !== null && typeof socials.github !== "string") {
+            return NextResponse.json(
+              { error: "GitHub URL must be a string" },
+              { status: 400 }
+            );
+          }
+          socialsObj.github = socials.github?.trim() || null;
+        }
+        
+        // Валидация linkedin
+        if (socials.linkedin !== undefined) {
+          if (socials.linkedin !== null && typeof socials.linkedin !== "string") {
+            return NextResponse.json(
+              { error: "LinkedIn URL must be a string" },
+              { status: 400 }
+            );
+          }
+          socialsObj.linkedin = socials.linkedin?.trim() || null;
+        }
+        
+        // Валидация medium
+        if (socials.medium !== undefined) {
+          if (socials.medium !== null && typeof socials.medium !== "string") {
+            return NextResponse.json(
+              { error: "Medium URL must be a string" },
+              { status: 400 }
+            );
+          }
+          socialsObj.medium = socials.medium?.trim() || null;
+        }
+        
+        // Валидация substack
+        if (socials.substack !== undefined) {
+          if (socials.substack !== null && typeof socials.substack !== "string") {
+            return NextResponse.json(
+              { error: "Substack URL must be a string" },
+              { status: 400 }
+            );
+          }
+          socialsObj.substack = socials.substack?.trim() || null;
+        }
+        
+        // Если есть поля для обновления, получаем текущие socials и twitter_handle из профиля
         if (Object.keys(socialsObj).length > 0) {
           const { data: currentProfile } = await supabase
             .from("profiles")
-            .select("socials")
+            .select("socials, twitter_handle")
             .eq("id", authUser.id)
             .single();
           
           const currentSocials = (currentProfile?.socials as typeof socialsObj) || {};
           
           // Объединяем текущие и новые socials
+          // Twitter всегда генерируется автоматически из twitter_handle
           updates.socials = {
             ...currentSocials,
             ...socialsObj,
+            // Twitter автоматически генерируется из twitter_handle, не сохраняем вручную
+            twitter: currentProfile?.twitter_handle 
+              ? `https://twitter.com/${currentProfile.twitter_handle}` 
+              : null,
           };
         }
         // Если socialsObj пустой, не обновляем socials

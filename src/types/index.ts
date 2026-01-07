@@ -26,9 +26,16 @@ export interface User {
   is_admin?: boolean; // Опционально, так как поле может не существовать до выполнения миграции
   wallet_address?: string;
   socials?: {
-    twitter?: string;
+    twitter?: string; // Автоматически генерируется из twitter_handle
     instagram?: string;
     facebook?: string;
+    telegram?: string;
+    youtube?: string;
+    discord?: string;
+    github?: string;
+    linkedin?: string;
+    medium?: string;
+    substack?: string;
   };
   last_active_at: string;
   created_at: string;

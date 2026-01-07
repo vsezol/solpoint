@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Card, Input } from "@/components/ui";
 import { useQueryClient } from "@tanstack/react-query";
-import { Save, X, MapPin, Search, Check, Globe, Twitter, Instagram, Facebook } from "lucide-react";
+import { Save, X, MapPin, Search, Check, Globe, Twitter, Instagram, Facebook, Send, Youtube, MessageSquare, Github, Linkedin, BookOpen, Rss } from "lucide-react";
 // RefreshCw - используется только в закомментированном коде
 import type { User, UserRole } from "@/types";
 // import { useGeolocation } from "@/hooks/use-geolocation"; // Закомментировано: временно отключаем автоматическое определение локации
@@ -35,6 +35,7 @@ export function ProfileEditForm({ user, onCancel, onUpdate }: ProfileEditFormPro
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // const { isDetecting, requestGeolocation } = useGeolocation(); // Закомментировано: временно отключаем автоматическое определение локации
+  const formRef = useRef<HTMLFormElement>(null);
 
   // Form state
   const [bio, setBio] = useState(user.bio || "");
@@ -43,14 +44,27 @@ export function ProfileEditForm({ user, onCancel, onUpdate }: ProfileEditFormPro
   const [country, setCountry] = useState(user.country || "");
   const [countryCode, setCountryCode] = useState<string | undefined>(user.country_code);
   const [city, setCity] = useState(user.city || "");
-  const [socialsTwitter, setSocialsTwitter] = useState(user.socials?.twitter || "");
   const [socialsInstagram, setSocialsInstagram] = useState(user.socials?.instagram || "");
   const [socialsFacebook, setSocialsFacebook] = useState(user.socials?.facebook || "");
+  const [socialsTelegram, setSocialsTelegram] = useState(user.socials?.telegram || "");
+  const [socialsYoutube, setSocialsYoutube] = useState(user.socials?.youtube || "");
+  const [socialsDiscord, setSocialsDiscord] = useState(user.socials?.discord || "");
+  const [socialsGithub, setSocialsGithub] = useState(user.socials?.github || "");
+  const [socialsLinkedin, setSocialsLinkedin] = useState(user.socials?.linkedin || "");
+  const [socialsMedium, setSocialsMedium] = useState(user.socials?.medium || "");
+  const [socialsSubstack, setSocialsSubstack] = useState(user.socials?.substack || "");
 
   // Country selection state
   const [countrySearchQuery, setCountrySearchQuery] = useState("");
   const [isCountryDropdownOpen, setIsCountryDropdownOpen] = useState(false);
   const countryDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Скролл к форме при монтировании
+  useEffect(() => {
+    if (formRef.current) {
+      formRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, []);
 
   // Закрываем dropdown при клике вне его
   useEffect(() => {
@@ -115,9 +129,15 @@ export function ProfileEditForm({ user, onCancel, onUpdate }: ProfileEditFormPro
           country_code: countryCode || null,
           city: city.trim() || null,
           socials: {
-            twitter: socialsTwitter.trim() || null,
             instagram: socialsInstagram.trim() || null,
             facebook: socialsFacebook.trim() || null,
+            telegram: socialsTelegram.trim() || null,
+            youtube: socialsYoutube.trim() || null,
+            discord: socialsDiscord.trim() || null,
+            github: socialsGithub.trim() || null,
+            linkedin: socialsLinkedin.trim() || null,
+            medium: socialsMedium.trim() || null,
+            substack: socialsSubstack.trim() || null,
           },
         }),
       });
@@ -161,7 +181,7 @@ export function ProfileEditForm({ user, onCancel, onUpdate }: ProfileEditFormPro
   const maxBioLength = 150;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
       {/* Bio */}
       <Card variant="bordered">
         <h3 className="text-sm font-medium text-[var(--color-text-muted)] mb-2">
@@ -377,17 +397,16 @@ export function ProfileEditForm({ user, onCancel, onUpdate }: ProfileEditFormPro
           Social Media
         </h3>
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
-              Twitter
-            </label>
-            <Input
-              type="url"
-              value={socialsTwitter}
-              onChange={(e) => setSocialsTwitter(e.target.value)}
-              placeholder="https://twitter.com/..."
-              icon={<Twitter className="w-4 h-4" />}
-            />
+          <div className="p-3 rounded-lg bg-[var(--color-surface-hover)] border border-[var(--color-surface-border)]">
+            <div className="flex items-center gap-2 mb-1">
+              <Twitter className="w-4 h-4 text-[var(--color-text-muted)]" />
+              <label className="text-sm font-medium text-[var(--color-text-primary)]">
+                Twitter
+              </label>
+            </div>
+            <p className="text-xs text-[var(--color-text-muted)]">
+              Your Twitter link is automatically generated from your username: <span className="font-mono">@{user.twitter_handle}</span>
+            </p>
           </div>
 
           <div>
@@ -413,6 +432,97 @@ export function ProfileEditForm({ user, onCancel, onUpdate }: ProfileEditFormPro
               onChange={(e) => setSocialsFacebook(e.target.value)}
               placeholder="https://facebook.com/..."
               icon={<Facebook className="w-4 h-4" />}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
+              Telegram
+            </label>
+            <Input
+              type="url"
+              value={socialsTelegram}
+              onChange={(e) => setSocialsTelegram(e.target.value)}
+              placeholder="https://t.me/..."
+              icon={<Send className="w-4 h-4" />}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
+              YouTube
+            </label>
+            <Input
+              type="url"
+              value={socialsYoutube}
+              onChange={(e) => setSocialsYoutube(e.target.value)}
+              placeholder="https://youtube.com/@..."
+              icon={<Youtube className="w-4 h-4" />}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
+              Discord
+            </label>
+            <Input
+              type="url"
+              value={socialsDiscord}
+              onChange={(e) => setSocialsDiscord(e.target.value)}
+              placeholder="https://discord.gg/..."
+              icon={<MessageSquare className="w-4 h-4" />}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
+              GitHub
+            </label>
+            <Input
+              type="url"
+              value={socialsGithub}
+              onChange={(e) => setSocialsGithub(e.target.value)}
+              placeholder="https://github.com/..."
+              icon={<Github className="w-4 h-4" />}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
+              LinkedIn
+            </label>
+            <Input
+              type="url"
+              value={socialsLinkedin}
+              onChange={(e) => setSocialsLinkedin(e.target.value)}
+              placeholder="https://linkedin.com/in/..."
+              icon={<Linkedin className="w-4 h-4" />}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
+              Medium
+            </label>
+            <Input
+              type="url"
+              value={socialsMedium}
+              onChange={(e) => setSocialsMedium(e.target.value)}
+              placeholder="https://medium.com/@..."
+              icon={<BookOpen className="w-4 h-4" />}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
+              Substack
+            </label>
+            <Input
+              type="url"
+              value={socialsSubstack}
+              onChange={(e) => setSocialsSubstack(e.target.value)}
+              placeholder="https://substack.com/@..."
+              icon={<Rss className="w-4 h-4" />}
             />
           </div>
         </div>

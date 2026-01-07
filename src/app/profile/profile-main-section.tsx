@@ -7,6 +7,13 @@ import {
   Twitter, 
   Instagram, 
   Facebook, 
+  Send,
+  Youtube,
+  MessageSquare,
+  Github,
+  Linkedin,
+  BookOpen,
+  Rss,
   Wallet, 
   LogOut, 
   MapPin, 
@@ -399,7 +406,7 @@ export function ProfileMainSection({ user, isOwnProfile, friendsCount = 0 }: Pro
               <h3 className="text-sm font-medium text-[var(--color-text-muted)]">
                 Socials
               </h3>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <a
                   href={`https://twitter.com/${currentUser.twitter_handle}`}
                   target="_blank"
@@ -429,6 +436,83 @@ export function ProfileMainSection({ user, isOwnProfile, friendsCount = 0 }: Pro
                     aria-label="Facebook"
                   >
                     <Facebook className="w-5 h-5" />
+                  </a>
+                )}
+                {currentUser.socials?.telegram && (
+                  <a
+                    href={currentUser.socials.telegram}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2 rounded-lg bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+                    aria-label="Telegram"
+                  >
+                    <Send className="w-5 h-5" />
+                  </a>
+                )}
+                {currentUser.socials?.youtube && (
+                  <a
+                    href={currentUser.socials.youtube}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2 rounded-lg bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+                    aria-label="YouTube"
+                  >
+                    <Youtube className="w-5 h-5" />
+                  </a>
+                )}
+                {currentUser.socials?.discord && (
+                  <a
+                    href={currentUser.socials.discord}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2 rounded-lg bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+                    aria-label="Discord"
+                  >
+                    <MessageSquare className="w-5 h-5" />
+                  </a>
+                )}
+                {currentUser.socials?.github && (
+                  <a
+                    href={currentUser.socials.github}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2 rounded-lg bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+                    aria-label="GitHub"
+                  >
+                    <Github className="w-5 h-5" />
+                  </a>
+                )}
+                {currentUser.socials?.linkedin && (
+                  <a
+                    href={currentUser.socials.linkedin}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2 rounded-lg bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+                    aria-label="LinkedIn"
+                  >
+                    <Linkedin className="w-5 h-5" />
+                  </a>
+                )}
+                {currentUser.socials?.medium && (
+                  <a
+                    href={currentUser.socials.medium}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2 rounded-lg bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+                    aria-label="Medium"
+                  >
+                    <BookOpen className="w-5 h-5" />
+                  </a>
+                )}
+                {currentUser.socials?.substack && (
+                  <a
+                    href={currentUser.socials.substack}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2 rounded-lg bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+                    aria-label="Substack"
+                  >
+                    <Rss className="w-5 h-5" />
                   </a>
                 )}
               </div>
