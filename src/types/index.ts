@@ -138,10 +138,12 @@ export interface Hub {
   image_url?: string;
   slug: string; // Публичная ссылка для SEO
   country?: string | null; // Страна для размещения на карте. NULL для глобальных хабов
+  country_code?: string | null; // ISO 3166-1 alpha-2 country code
   city?: string | null; // Опционально, если есть локация
   latitude?: number | null; // Координаты для размещения на карте (не точные). NULL для глобальных хабов
   longitude?: number | null; // NULL для глобальных хабов
   members_count: number;
+  is_recommended?: boolean; // Рекомендованный хаб (показывается в приоритете)
   socials?: {
     twitter?: string;
     instagram?: string;
@@ -164,10 +166,12 @@ export interface Community {
   image_url?: string;
   slug: string; // Публичная ссылка для SEO
   country?: string | null; // Страна для размещения на карте. NULL для глобальных комьюнити
+  country_code?: string | null; // ISO 3166-1 alpha-2 country code
   city?: string | null; // Опционально, если есть локация
   latitude?: number | null; // Координаты для размещения на карте (не точные). NULL для глобальных комьюнити
   longitude?: number | null; // NULL для глобальных комьюнити
   members_count: number;
+  is_recommended?: boolean; // Рекомендованное комьюнити (показывается в приоритете)
   socials?: {
     twitter?: string;
     instagram?: string;
@@ -190,10 +194,12 @@ export interface Project {
   image_url?: string;
   slug: string; // Публичная ссылка для SEO
   country?: string | null; // Страна для размещения на карте. NULL для глобальных проектов
+  country_code?: string | null; // ISO 3166-1 alpha-2 country code
   city?: string | null; // Опционально, если есть локация
   latitude?: number | null; // Координаты для размещения на карте (не точные). NULL для глобальных проектов
   longitude?: number | null; // NULL для глобальных проектов
   members_count: number;
+  is_recommended?: boolean; // Рекомендованный проект (показывается в приоритете)
   socials?: {
     twitter?: string;
     instagram?: string;
@@ -216,11 +222,13 @@ export interface Workspace {
   image_url?: string;
   slug: string; // Публичная ссылка для SEO
   country: string; // Страна обязательна
+  country_code?: string | null; // ISO 3166-1 alpha-2 country code
   city?: string | null; // Опционально
   address: string; // Адрес обязателен для workspaces
   latitude: number;
   longitude: number;
   members_count: number;
+  is_recommended?: boolean; // Рекомендованный workspace (показывается в приоритете)
   socials?: {
     twitter?: string;
     instagram?: string;

@@ -35,7 +35,6 @@ export function HubsControls() {
     { value: "recommended", label: "Recommended" },
     { value: "name", label: "Name" },
     { value: "members", label: "Members" },
-    { value: "country", label: "Country" },
   ];
 
   return (

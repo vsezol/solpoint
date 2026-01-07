@@ -153,10 +153,8 @@ export default function HubsPage() {
       entities.sort((a, b) => a.name.localeCompare(b.name));
     } else if (sortBy === "members") {
       entities.sort((a, b) => b.members_count - a.members_count);
-    } else if (sortBy === "country") {
-      entities.sort((a, b) => a?.country?.localeCompare(b?.country || "") || 0);
     }
-    // "recommended" - оставляем как есть (уже отсортировано по members_count)
+    // "recommended" - оставляем как есть (уже отсортировано на бэкенде: сначала is_recommended=true, потом members_count)
 
     return entities;
   }, [hubs, communities, projects, workspaces, entityTypeFilter, sortBy]);

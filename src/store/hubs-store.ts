@@ -1,7 +1,7 @@
 import { create } from "zustand";
 
 export type EntityTypeFilter = "all" | "community" | "hubs" | "workspaces" | "projects";
-export type SortOption = "recommended" | "name" | "members" | "country";
+export type SortOption = "recommended" | "name" | "members";
 
 interface HubsState {
   searchQuery: string;

@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
   let query = supabase
     .from("projects")
     .select("*")
+    .order("is_recommended", { ascending: false })
     .order("members_count", { ascending: false });
 
   // Фильтры по стране (приоритет country_code, fallback на country для обратной совместимости)
