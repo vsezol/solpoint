@@ -92,6 +92,7 @@ export function ProfileContent({
   const [showTotalUsersModal, setShowTotalUsersModal] = useState(false);
   const [showCountryUsersModal, setShowCountryUsersModal] = useState(false);
   const [showCityUsersModal, setShowCityUsersModal] = useState(false);
+  const [showUserFriendsModal, setShowUserFriendsModal] = useState(false);
   const [usersList, setUsersList] = useState<Array<{
     id: string;
     avatar_url?: string | null;
@@ -103,8 +104,11 @@ export function ProfileContent({
     joinedAt?: string;
   }>>([]);
   const [friendsListUsers, setFriendsListUsers] = useState<typeof usersList>([]);
+  const [userFriendsList, setUserFriendsList] = useState<typeof usersList>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [loadingUserFriends, setLoadingUserFriends] = useState(false);
   const [friendStatuses, setFriendStatuses] = useState<Record<string, "none" | "pending_sent" | "pending_received" | "accepted" | "blocked">>({});
+  const [userFriendsStatuses, setUserFriendsStatuses] = useState<Record<string, "none" | "pending_sent" | "pending_received" | "accepted" | "blocked">>({});
   const [sendingFriendRequest, setSendingFriendRequest] = useState<Record<string, boolean>>({});
   const [creatingChat, setCreatingChat] = useState<Record<string, boolean>>({});
 
@@ -267,6 +271,34 @@ export function ProfileContent({
     }
   }, [showTotalUsersModal, showCountryUsersModal, showCityUsersModal, usersList, isAuthenticated, currentAuthUser]);
 
+  // Load friend statuses for user friends in modal
+  useEffect(() => {
+    if (showUserFriendsModal && isAuthenticated && currentAuthUser) {
+      const userIds = userFriendsList.map((u) => u.id);
+
+      Promise.all(
+        userIds.map(async (userId) => {
+          try {
+            const response = await fetch(`/api/friends?user_id=${userId}`);
+            if (response.ok) {
+              const result = await response.json();
+              return { userId, status: result.data?.status || "none" };
+            }
+          } catch (error) {
+            console.error(`Error fetching friend status for ${userId}:`, error);
+          }
+          return { userId, status: "none" as const };
+        })
+      ).then((results) => {
+        const statusMap: Record<string, "none" | "pending_sent" | "pending_received" | "accepted" | "blocked"> = {};
+        results.forEach(({ userId, status }) => {
+          statusMap[userId] = status;
+        });
+        setUserFriendsStatuses(statusMap);
+      });
+    }
+  }, [showUserFriendsModal, userFriendsList, isAuthenticated, currentAuthUser]);
+
   // Handle add friend
   const handleAddFriend = async (userId: string) => {
     if (!isAuthenticated) {
@@ -284,6 +316,7 @@ export function ProfileContent({
 
       if (response.ok) {
         setFriendStatuses((prev) => ({ ...prev, [userId]: "pending_sent" }));
+        setUserFriendsStatuses((prev) => ({ ...prev, [userId]: "pending_sent" }));
       }
     } catch (error) {
       console.error("Error adding friend:", error);
@@ -464,6 +497,51 @@ export function ProfileContent({
       }
     } catch (error) {
       console.error("Error fetching friends list:", error);
+    }
+  };
+
+  // Load user friends list (for viewing other user's friends)
+  const handleShowUserFriendsList = async () => {
+    // Check authentication
+    if (!isAuthenticated) {
+      setShowAuthModal(true);
+      return;
+    }
+
+    // Check VIP status
+    if (!isVip) {
+      setShowProModalUsers(true);
+      return;
+    }
+
+    setLoadingUserFriends(true);
+    try {
+      const response = await fetch(`/api/friends/list?user_id=${user.id}&type=mutual`);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to load friends: ${response.status}`);
+      }
+
+      const result = await response.json();
+      const friends = result.data || [];
+      
+      // Transform friends data to match UserListItem format
+      const formattedFriends = friends.map((friend: User) => ({
+        id: friend.id,
+        avatar_url: friend.avatar_url,
+        name: friend.twitter_name,
+        twitter_handle: friend.twitter_handle,
+        isVip: friend.subscription_tier === "vip",
+        isVerified: friend.is_verified,
+      }));
+
+      setUserFriendsList(formattedFriends);
+      setShowUserFriendsModal(true);
+    } catch (error) {
+      console.error("Error loading user friends list:", error);
+      alert(error instanceof Error ? error.message : "Failed to load friends");
+    } finally {
+      setLoadingUserFriends(false);
     }
   };
 
@@ -889,9 +967,20 @@ export function ProfileContent({
                 )}
               </div>
             ) : (
-              <p className="text-[var(--color-text-secondary)]">
-                {friendsCount} {friendsCount === 1 ? "fren" : "frens"}
-              </p>
+              <button
+                onClick={handleShowUserFriendsList}
+                disabled={loadingUserFriends}
+                className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors cursor-pointer text-left flex items-center gap-2"
+              >
+                {loadingUserFriends ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>{friendsCount} {friendsCount === 1 ? "fren" : "frens"}</span>
+                  </>
+                ) : (
+                  <span>{friendsCount} {friendsCount === 1 ? "fren" : "frens"}</span>
+                )}
+              </button>
             )}
 
             {/* Affiliations */}
@@ -1775,6 +1864,42 @@ export function ProfileContent({
             ) : (
               usersList.map((member) => {
                 const friendStatus = friendStatuses[member.id] || "none";
+
+                return (
+                  <UserListItem
+                    key={member.id}
+                    member={member}
+                    friendStatus={friendStatus}
+                    onAddFriend={handleAddFriend}
+                    sendingFriendRequest={sendingFriendRequest[member.id]}
+                    creatingChat={creatingChat[member.id]}
+                  />
+                );
+              })
+            )}
+          </div>
+        </ModalContent>
+      </Modal>
+
+      {/* User Friends Modal */}
+      <Modal
+        isOpen={showUserFriendsModal}
+        onClose={() => setShowUserFriendsModal(false)}
+        size="md"
+        ariaLabel={`${user.twitter_name}'s Friends`}
+      >
+        <ModalHeader>
+          <ModalTitle>{user.twitter_name}&apos;s Friends</ModalTitle>
+        </ModalHeader>
+        <ModalContent>
+          <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+            {userFriendsList.length === 0 ? (
+              <p className="text-sm text-[var(--color-text-secondary)] text-center py-4">
+                No friends found
+              </p>
+            ) : (
+              userFriendsList.map((member) => {
+                const friendStatus = userFriendsStatuses[member.id] || "none";
 
                 return (
                   <UserListItem
