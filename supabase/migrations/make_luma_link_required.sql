@@ -10,3 +10,4 @@ WHERE luma_link IS NULL OR luma_link = '';
 ALTER TABLE public.events 
   ALTER COLUMN luma_link SET NOT NULL;
 
+
