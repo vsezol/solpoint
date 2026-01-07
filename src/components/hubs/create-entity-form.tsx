@@ -3,6 +3,7 @@
 import { useState, FormEvent, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import { Button, Input, CheckBox } from "@/components/ui";
+import { generateSlug } from "@/lib/utils/event-slug";
 
 // Dynamic import for LocationPicker to avoid SSR issues with leaflet
 const LocationPicker = dynamic(
@@ -72,6 +73,7 @@ export function CreateEntityForm({
   const entityForm = useFormsStore((state) => state.entityForm);
   const {
     name,
+    slug,
     description,
     imageUrl,
     locationType,
@@ -88,6 +90,7 @@ export function CreateEntityForm({
     mapCenterLat,
     mapCenterLng,
     setName,
+    setSlug,
     setDescription,
     setImageUrl,
     setLocationType,
@@ -105,6 +108,24 @@ export function CreateEntityForm({
     setMapCenterLng,
     resetEntityForm,
   } = entityForm;
+
+  // Автогенерация slug при изменении name (только если slug пустой или совпадает с предыдущим автогенерированным)
+  const previousGeneratedSlugRef = useRef<string>("");
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
+  
+  useEffect(() => {
+    if (name.trim() && !slugManuallyEdited) {
+      const generatedSlug = generateSlug(name);
+      // Автогенерируем только если slug пустой или совпадает с предыдущим автогенерированным
+      if (!slug.trim() || slug === previousGeneratedSlugRef.current) {
+        setSlug(generatedSlug);
+        previousGeneratedSlugRef.current = generatedSlug;
+      }
+    } else if (!name.trim() && !slugManuallyEdited) {
+      setSlug("");
+      previousGeneratedSlugRef.current = "";
+    }
+  }, [name, setSlug]); // Не добавляем slug в зависимости, чтобы избежать зацикливания
 
   // Для workspace адрес обязателен, поэтому по умолчанию выбираем "city"
   useEffect(() => {
@@ -267,6 +288,25 @@ export function CreateEntityForm({
       hasErrors = true;
       if (!firstErrorElement && errorRef.current) {
         firstErrorElement = errorRef.current;
+      }
+    }
+
+    // Валидация slug
+    if (!slug.trim()) {
+      setError("Public URL (slug) is required");
+      hasErrors = true;
+      if (!firstErrorElement && errorRef.current) {
+        firstErrorElement = errorRef.current;
+      }
+    } else {
+      // Проверяем, что slug содержит только валидные символы (латинские буквы, цифры, дефисы)
+      const slugRegex = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+      if (!slugRegex.test(slug)) {
+        setError("Public URL can only contain lowercase letters, numbers, and hyphens. It cannot start or end with a hyphen.");
+        hasErrors = true;
+        if (!firstErrorElement && errorRef.current) {
+          firstErrorElement = errorRef.current;
+        }
       }
     }
 
@@ -440,6 +480,7 @@ export function CreateEntityForm({
 
       const entityData = {
         name: name.trim(),
+        slug: slug.trim(), // Передаем slug из формы
         description: description.trim() || undefined,
         // Не передаем image_url если выбран файл (загрузим после создания) или если это blob URL
         image_url: selectedImageFile 
@@ -637,10 +678,41 @@ export function CreateEntityForm({
           </label>
           <Input
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => {
+              setName(e.target.value);
+              // Сбрасываем флаг ручного редактирования при изменении name
+              if (slugManuallyEdited && slug === previousGeneratedSlugRef.current) {
+                setSlugManuallyEdited(false);
+              }
+            }}
             placeholder={`e.g., Solana ${entityTypeLabel} ${entityType === "project" ? "XYZ" : "Moscow"}`}
             required
           />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
+            Public URL (slug) <span className="text-[var(--color-error)]">*</span>
+          </label>
+          <Input
+            value={slug}
+            onChange={(e) => {
+              const newSlug = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "");
+              setSlug(newSlug);
+              setSlugManuallyEdited(true);
+            }}
+            placeholder="e.g., solana-hub-moscow"
+            required
+            className="font-mono text-sm"
+          />
+          <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+            This will be your public URL. Only lowercase letters, numbers, and hyphens are allowed.
+            {slug && (
+              <span className="block mt-1 text-[var(--color-primary)]">
+                Preview: /{entityType === "hub" ? "hubs" : entityType === "community" ? "communities" : entityType === "workspace" ? "workspaces" : "projects"}/{slug}
+              </span>
+            )}
+          </p>
         </div>
 
         <div>

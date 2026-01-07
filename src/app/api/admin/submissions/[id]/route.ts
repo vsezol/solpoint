@@ -150,19 +150,47 @@ export async function PATCH(
           }
 
           case "hub": {
-            const { generateHubSlug, getUniqueHubSlug } = await import(
-              "@/lib/utils/hub-slug"
+            const { generateSlug, getUniqueSlug } = await import(
+              "@/lib/utils/event-slug"
             );
             const entityData = submission.entity_data;
-            const baseSlug = generateHubSlug(entityData.name, entityData.city);
-            const slug = await getUniqueHubSlug(baseSlug, async (slug) => {
-              const { data } = await supabase
+            // Используем slug из entity_data, если он есть, иначе генерируем
+            let finalSlug = entityData.slug?.trim();
+            if (!finalSlug) {
+              const baseSlug = generateSlug(entityData.name);
+              if (!baseSlug || baseSlug.trim() === "") {
+                finalSlug = `hub-${Date.now()}`;
+              } else {
+                finalSlug = await getUniqueSlug(baseSlug, async (checkSlug) => {
+                  const { data } = await supabase
+                    .from("hubs")
+                    .select("id")
+                    .eq("slug", checkSlug)
+                    .maybeSingle();
+                  return !!data;
+                });
+              }
+            } else {
+              // Проверяем уникальность переданного slug
+              const { data: existingHub } = await supabase
                 .from("hubs")
                 .select("id")
-                .eq("slug", slug)
+                .eq("slug", finalSlug)
                 .maybeSingle();
-              return !!data;
-            });
+              
+              if (existingHub) {
+                // Если slug уже существует, добавляем суффикс
+                finalSlug = await getUniqueSlug(finalSlug, async (checkSlug) => {
+                  const { data } = await supabase
+                    .from("hubs")
+                    .select("id")
+                    .eq("slug", checkSlug)
+                    .maybeSingle();
+                  return !!data;
+                });
+              }
+            }
+            const slug = finalSlug;
 
             const { data: hub, error: hubError } = await supabase
               .from("hubs")
@@ -190,19 +218,47 @@ export async function PATCH(
           }
 
           case "community": {
-            const { generateHubSlug, getUniqueHubSlug } = await import(
-              "@/lib/utils/hub-slug"
+            const { generateSlug, getUniqueSlug } = await import(
+              "@/lib/utils/event-slug"
             );
             const entityData = submission.entity_data;
-            const baseSlug = generateHubSlug(entityData.name, entityData.city);
-            const slug = await getUniqueHubSlug(baseSlug, async (slug) => {
-              const { data } = await supabase
+            // Используем slug из entity_data, если он есть, иначе генерируем
+            let finalSlug = entityData.slug?.trim();
+            if (!finalSlug) {
+              const baseSlug = generateSlug(entityData.name);
+              if (!baseSlug || baseSlug.trim() === "") {
+                finalSlug = `community-${Date.now()}`;
+              } else {
+                finalSlug = await getUniqueSlug(baseSlug, async (checkSlug) => {
+                  const { data } = await supabase
+                    .from("communities")
+                    .select("id")
+                    .eq("slug", checkSlug)
+                    .maybeSingle();
+                  return !!data;
+                });
+              }
+            } else {
+              // Проверяем уникальность переданного slug
+              const { data: existingCommunity } = await supabase
                 .from("communities")
                 .select("id")
-                .eq("slug", slug)
+                .eq("slug", finalSlug)
                 .maybeSingle();
-              return !!data;
-            });
+              
+              if (existingCommunity) {
+                // Если slug уже существует, добавляем суффикс
+                finalSlug = await getUniqueSlug(finalSlug, async (checkSlug) => {
+                  const { data } = await supabase
+                    .from("communities")
+                    .select("id")
+                    .eq("slug", checkSlug)
+                    .maybeSingle();
+                  return !!data;
+                });
+              }
+            }
+            const slug = finalSlug;
 
             const { data: community, error: communityError } = await supabase
               .from("communities")
@@ -232,19 +288,47 @@ export async function PATCH(
           }
 
           case "project": {
-            const { generateHubSlug, getUniqueHubSlug } = await import(
-              "@/lib/utils/hub-slug"
+            const { generateSlug, getUniqueSlug } = await import(
+              "@/lib/utils/event-slug"
             );
             const entityData = submission.entity_data;
-            const baseSlug = generateHubSlug(entityData.name, entityData.city);
-            const slug = await getUniqueHubSlug(baseSlug, async (slug) => {
-              const { data } = await supabase
+            // Используем slug из entity_data, если он есть, иначе генерируем
+            let finalSlug = entityData.slug?.trim();
+            if (!finalSlug) {
+              const baseSlug = generateSlug(entityData.name);
+              if (!baseSlug || baseSlug.trim() === "") {
+                finalSlug = `project-${Date.now()}`;
+              } else {
+                finalSlug = await getUniqueSlug(baseSlug, async (checkSlug) => {
+                  const { data } = await supabase
+                    .from("projects")
+                    .select("id")
+                    .eq("slug", checkSlug)
+                    .maybeSingle();
+                  return !!data;
+                });
+              }
+            } else {
+              // Проверяем уникальность переданного slug
+              const { data: existingProject } = await supabase
                 .from("projects")
                 .select("id")
-                .eq("slug", slug)
+                .eq("slug", finalSlug)
                 .maybeSingle();
-              return !!data;
-            });
+              
+              if (existingProject) {
+                // Если slug уже существует, добавляем суффикс
+                finalSlug = await getUniqueSlug(finalSlug, async (checkSlug) => {
+                  const { data } = await supabase
+                    .from("projects")
+                    .select("id")
+                    .eq("slug", checkSlug)
+                    .maybeSingle();
+                  return !!data;
+                });
+              }
+            }
+            const slug = finalSlug;
 
             const { data: project, error: projectError } = await supabase
               .from("projects")
@@ -274,8 +358,8 @@ export async function PATCH(
           }
 
           case "workspace": {
-            const { generateHubSlug, getUniqueHubSlug } = await import(
-              "@/lib/utils/hub-slug"
+            const { generateSlug, getUniqueSlug } = await import(
+              "@/lib/utils/event-slug"
             );
             const entityData = submission.entity_data;
             
@@ -284,15 +368,43 @@ export async function PATCH(
               throw new Error("Address is required for workspace");
             }
 
-            const baseSlug = generateHubSlug(entityData.name, entityData.city || entityData.country);
-            const slug = await getUniqueHubSlug(baseSlug, async (slug) => {
-              const { data } = await supabase
+            // Используем slug из entity_data, если он есть, иначе генерируем
+            let finalSlug = entityData.slug?.trim();
+            if (!finalSlug) {
+              const baseSlug = generateSlug(entityData.name);
+              if (!baseSlug || baseSlug.trim() === "") {
+                finalSlug = `workspace-${Date.now()}`;
+              } else {
+                finalSlug = await getUniqueSlug(baseSlug, async (checkSlug) => {
+                  const { data } = await supabase
+                    .from("workspaces")
+                    .select("id")
+                    .eq("slug", checkSlug)
+                    .maybeSingle();
+                  return !!data;
+                });
+              }
+            } else {
+              // Проверяем уникальность переданного slug
+              const { data: existingWorkspace } = await supabase
                 .from("workspaces")
                 .select("id")
-                .eq("slug", slug)
+                .eq("slug", finalSlug)
                 .maybeSingle();
-              return !!data;
-            });
+              
+              if (existingWorkspace) {
+                // Если slug уже существует, добавляем суффикс
+                finalSlug = await getUniqueSlug(finalSlug, async (checkSlug) => {
+                  const { data } = await supabase
+                    .from("workspaces")
+                    .select("id")
+                    .eq("slug", checkSlug)
+                    .maybeSingle();
+                  return !!data;
+                });
+              }
+            }
+            const slug = finalSlug;
 
             const { data: workspace, error: workspaceError } = await supabase
               .from("workspaces")

@@ -105,18 +105,43 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Генерируем slug из name, если slug не указан
-    let finalSlug = slug;
-    if (!finalSlug || finalSlug.trim() === "") {
+    // Генерируем slug из name, если slug не указан или пустой
+    let finalSlug = slug?.trim();
+    if (!finalSlug) {
       const baseSlug = generateSlug(name);
-      finalSlug = await getUniqueSlug(baseSlug, async (checkSlug) => {
-        const { data } = await supabase
-          .from("workspaces")
-          .select("id")
-          .eq("slug", checkSlug)
-          .maybeSingle();
-        return !!data;
-      });
+      // Если generateSlug вернул пустую строку, используем fallback
+      if (!baseSlug || baseSlug.trim() === "") {
+        // Fallback: используем временный slug
+        finalSlug = `workspace-${Date.now()}`;
+      } else {
+        finalSlug = await getUniqueSlug(baseSlug, async (checkSlug) => {
+          const { data } = await supabase
+            .from("workspaces")
+            .select("id")
+            .eq("slug", checkSlug)
+            .maybeSingle();
+          return !!data;
+        });
+      }
+    } else {
+      // Если slug указан из формы, проверяем его уникальность
+      const { data: existingWorkspace } = await supabase
+        .from("workspaces")
+        .select("id")
+        .eq("slug", finalSlug)
+        .maybeSingle();
+      
+      if (existingWorkspace) {
+        // Если slug уже существует, добавляем суффикс
+        finalSlug = await getUniqueSlug(finalSlug, async (checkSlug) => {
+          const { data } = await supabase
+            .from("workspaces")
+            .select("id")
+            .eq("slug", checkSlug)
+            .maybeSingle();
+          return !!data;
+        });
+      }
     }
 
     const { data: workspace, error } = await supabase
