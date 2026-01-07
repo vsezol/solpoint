@@ -8,7 +8,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { EntityMembersWidget } from "@/components/entities/entity-members-widget";
 import type { Metadata } from "next";
-import { getAppUrl } from "@/lib/utils";
+import { getAppUrl, isUUID } from "@/lib/utils";
 import { CommunityViewTracker } from "@/components/analytics/community-view-tracker";
 import { CommunityShareButton } from "@/components/analytics/community-share-button";
 import { CommunitySocialLink } from "@/components/analytics/community-social-link";
@@ -22,12 +22,18 @@ export async function generateMetadata({ params }: CommunityPageProps): Promise<
   const { slug } = await params;
   const supabase = await createClient();
 
-  // Получаем комьюнити для метаданных
-  const { data: communityData } = await supabase
+  // Получаем комьюнити для метаданных - сначала по слагу, потом по ID
+  let query = supabase
     .from("communities")
-    .select("*")
-    .eq("slug", slug)
-    .single();
+    .select("*");
+
+  if (isUUID(slug)) {
+    query = query.eq("id", slug);
+  } else {
+    query = query.eq("slug", slug);
+  }
+
+  const { data: communityData } = await query.single();
 
   if (!communityData) {
     return {
@@ -37,7 +43,8 @@ export async function generateMetadata({ params }: CommunityPageProps): Promise<
 
   const community = communityData as Community;
   const appUrl = getAppUrl();
-  const communityUrl = `${appUrl}/communities/${slug}`;
+  // Используем слаг из базы данных для URL, если он есть
+  const communityUrl = `${appUrl}/communities/${community.slug || slug}`;
   // Используем картинку комьюнити, если она есть, иначе логотип
   const imageUrl = community.image_url && community.image_url.trim() !== ''
     ? (community.image_url.startsWith('http://') || community.image_url.startsWith('https://'))
@@ -84,12 +91,18 @@ export default async function CommunityPage({ params }: CommunityPageProps) {
   const { slug } = await params;
   const supabase = await createClient();
 
-  // Получаем комьюнити по slug
-  const { data: communityData, error: communityError } = await supabase
+  // Получаем комьюнити - сначала по слагу, потом по ID (если параметр является UUID)
+  let query = supabase
     .from("communities")
-    .select("*")
-    .eq("slug", slug)
-    .single();
+    .select("*");
+
+  if (isUUID(slug)) {
+    query = query.eq("id", slug);
+  } else {
+    query = query.eq("slug", slug);
+  }
+
+  const { data: communityData, error: communityError } = await query.single();
 
   if (communityError || !communityData) {
     notFound();

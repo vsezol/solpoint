@@ -8,7 +8,7 @@ import type { Event, User, EventMember } from "@/types";
 import Image from "next/image";
 import { EventHostCard } from "./event-host-card";
 import type { Metadata } from "next";
-import { getAppUrl } from "@/lib/utils";
+import { getAppUrl, isUUID } from "@/lib/utils";
 import { EventViewTracker } from "@/components/analytics/event-view-tracker";
 import { EventShareButton } from "@/components/analytics/event-share-button";
 import { EventSocialLink } from "@/components/analytics/event-social-link";
@@ -21,12 +21,18 @@ export async function generateMetadata({ params }: EventPageProps): Promise<Meta
   const { slug } = await params;
   const supabase = await createClient();
 
-  // Получаем событие для метаданных
-  const { data: eventData } = await supabase
+  // Получаем событие для метаданных - сначала по слагу, потом по ID
+  let query = supabase
     .from("events")
-    .select("*")
-    .eq("slug", slug)
-    .single();
+    .select("*");
+
+  if (isUUID(slug)) {
+    query = query.eq("id", slug);
+  } else {
+    query = query.eq("slug", slug);
+  }
+
+  const { data: eventData } = await query.single();
 
   if (!eventData) {
     return {
@@ -36,7 +42,8 @@ export async function generateMetadata({ params }: EventPageProps): Promise<Meta
 
   const event = eventData as Event;
   const appUrl = getAppUrl();
-  const eventUrl = `${appUrl}/events/${slug}`;
+  // Используем слаг из базы данных для URL, если он есть
+  const eventUrl = `${appUrl}/events/${event.slug || slug}`;
   // Используем картинку события, если она есть, иначе логотип
   const imageUrl = event.image_url && event.image_url.trim() !== ''
     ? (event.image_url.startsWith('http://') || event.image_url.startsWith('https://'))
@@ -135,12 +142,18 @@ export default async function EventPage({ params }: EventPageProps) {
     isVip = profile?.subscription_tier === "vip";
   }
 
-  // Получаем событие по slug (без join'ов для надежности)
-  const { data: eventData, error: eventError } = await supabase
+  // Получаем событие - сначала по слагу, потом по ID (если параметр является UUID)
+  let query = supabase
     .from("events")
-    .select("*")
-    .eq("slug", slug)
-    .single();
+    .select("*");
+
+  if (isUUID(slug)) {
+    query = query.eq("id", slug);
+  } else {
+    query = query.eq("slug", slug);
+  }
+
+  const { data: eventData, error: eventError } = await query.single();
 
   if (eventError || !eventData) {
     notFound();
