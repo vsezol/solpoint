@@ -248,6 +248,12 @@ export function EntityMembersWidget({
       return;
     }
 
+    // Check if user has PRO subscription
+    if (!isVip) {
+      setShowProModal(true);
+      return;
+    }
+
     setCreatingChat((prev) => ({ ...prev, [userId]: true }));
     try {
       await openChat(userId);

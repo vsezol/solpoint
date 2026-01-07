@@ -400,7 +400,7 @@ export function MapFiltersPanel({
           {isVip && (
             <label className="flex items-center justify-between cursor-pointer">
               <span className="text-sm text-[var(--color-text-secondary)]">
-                Active users only
+                Pro users only
               </span>
               <button
                 onClick={() => {

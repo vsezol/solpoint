@@ -1,8 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Button } from "@/components/ui";
+import { Button, ProSubscriptionModal } from "@/components/ui";
 import { MessageCircle, UserPlus, UserCheck } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useChat } from "@/hooks/use-chat";
@@ -35,11 +36,18 @@ export function UserListItem({
 }: UserListItemProps) {
   const { user: currentUser, isAuthenticated } = useAuth();
   const { openChat } = useChat();
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
 
   const isOwnProfile = currentUser?.id === member.id;
 
   const handleSendMessage = async (userId: string) => {
     if (!isAuthenticated) {
+      return;
+    }
+
+    // Check if user has PRO subscription
+    if (currentUser?.subscription_tier !== "vip") {
+      setShowSubscriptionModal(true);
       return;
     }
 
@@ -123,6 +131,14 @@ export function UserListItem({
           )}
         </div>
       )}
+      
+      {/* Subscription Modal */}
+      <ProSubscriptionModal
+        isOpen={showSubscriptionModal}
+        onClose={() => setShowSubscriptionModal(false)}
+        title="Private messaging is available only with PRO subscription"
+        description="Upgrade to PRO to send direct messages to other users."
+      />
     </div>
   );
 }

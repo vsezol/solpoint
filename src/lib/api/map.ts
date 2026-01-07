@@ -81,9 +81,12 @@ export async function getMapMarkers(
                     return;
                   }
                   
+                  // Определяем тип маркера: pro_user для VIP/Pro пользователей, user для остальных
+                  const isProUser = user.subscription_tier === "vip" || user.subscription_tier === "pro";
+                  
                   markers.push({
                     id: `user-${user.id}`,
-                    type: user.subscription_tier === "vip" ? "pro_user" : "user",
+                    type: isProUser ? "pro_user" : "user",
                     latitude: coords.lat,
                     longitude: coords.lng,
                     data: user,

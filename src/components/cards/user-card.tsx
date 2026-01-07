@@ -1,11 +1,13 @@
 "use client";
 
-import { Avatar, Badge, Button } from "@/components/ui";
+import { useState } from "react";
+import { Avatar, Badge, Button, ProSubscriptionModal } from "@/components/ui";
 import type { User } from "@/types";
 import { Twitter, Instagram, Facebook, Check, X } from "lucide-react";
 import { cn, getSubscriptionDisplayName } from "@/lib/utils";
 import Link from "next/link";
 import { useChat } from "@/hooks/use-chat";
+import { useAuth } from "@/hooks/use-auth";
 
 interface UserCardProps {
   user: User;
@@ -39,11 +41,18 @@ export function UserCard({
   onProfileClick,
 }: UserCardProps) {
   const { openChat, isLoading: isChatLoading } = useChat();
+  const { user: currentUser } = useAuth();
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
 
   const handleMessage = () => {
     if (onMessage) {
       onMessage();
     } else {
+      // Check if user has PRO subscription
+      if (currentUser?.subscription_tier !== "vip") {
+        setShowSubscriptionModal(true);
+        return;
+      }
       openChat(user.id);
     }
   };
@@ -443,6 +452,14 @@ export function UserCard({
           </Button>
         </div>
       )}
+      
+      {/* Subscription Modal */}
+      <ProSubscriptionModal
+        isOpen={showSubscriptionModal}
+        onClose={() => setShowSubscriptionModal(false)}
+        title="Private messaging is available only with PRO subscription"
+        description="Upgrade to PRO to send direct messages to other users."
+      />
     </div>
   );
 }
