@@ -2,27 +2,31 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import dynamic from "next/dynamic";
+import Image from "next/image";
+// TODO: Uncomment when database has enough data to display interactive map
+// import dynamic from "next/dynamic";
 import { Header, Footer } from "@/components/layout";
 import { Button, Card, Badge, Modal, ModalHeader, ModalTitle, ModalDescription, ModalContent } from "@/components/ui";
-import { getMapMarkers } from "@/lib/api/map";
-import type { MapMarker, MapFilters } from "@/types";
+// TODO: Uncomment when database has enough data to display interactive map
+// import { getMapMarkers } from "@/lib/api/map";
+// import type { MapMarker, MapFilters } from "@/types";
 
 // Dynamic import for map component to avoid SSR issues with Leaflet
-const SolPointMap = dynamic(
-  () => import("@/components/map/solpoint-map").then((mod) => mod.SolPointMap),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="w-full h-full flex items-center justify-center bg-[var(--color-surface)]">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
-          <p className="text-[var(--color-text-secondary)]">Loading map...</p>
-        </div>
-      </div>
-    ),
-  }
-);
+// TODO: Uncomment when database has enough data to display
+// const SolPointMap = dynamic(
+//   () => import("@/components/map/solpoint-map").then((mod) => mod.SolPointMap),
+//   {
+//     ssr: false,
+//     loading: () => (
+//       <div className="w-full h-full flex items-center justify-center bg-[var(--color-surface)]">
+//         <div className="flex flex-col items-center gap-4">
+//           <div className="w-12 h-12 border-4 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
+//           <p className="text-[var(--color-text-secondary)]">Loading map...</p>
+//         </div>
+//       </div>
+//     ),
+//   }
+// );
 import {
   Check,
   MapPin,
@@ -159,9 +163,10 @@ function SubscriptionPageContent() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [currentSubscription, setCurrentSubscription] = useState<Subscription | null>(null);
   const [loadingPlans, setLoadingPlans] = useState(true);
-  const [mapMarkers, setMapMarkers] = useState<MapMarker[]>([]);
-  const [loadingMap, setLoadingMap] = useState(true);
-  const isVip = user?.subscription_tier === "vip";
+  // TODO: Uncomment when database has enough data to display interactive map
+  // const [mapMarkers, setMapMarkers] = useState<MapMarker[]>([]);
+  // const [loadingMap, setLoadingMap] = useState(true);
+  // const isVip = user?.subscription_tier === "vip";
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [paymentData, setPaymentData] = useState<{
@@ -220,35 +225,36 @@ function SubscriptionPageContent() {
         event_category: "Subscription",
       });
     }, 0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [isAuthenticated, authLoading]);
 
   // Загружаем маркеры для карты (показываем все сущности)
-  useEffect(() => {
-    async function loadMapMarkers() {
-      try {
-        setLoadingMap(true);
-        const filters: MapFilters = {
-          showUsers: true,
-          showEvents: true,
-          showHubs: true,
-          showCommunities: true,
-          showWorkspaces: true,
-          contentType: "all",
-        };
-        const markers = await getMapMarkers(filters, user?.id, isVip);
-        setMapMarkers(markers);
-      } catch (error) {
-        console.error("Error loading map markers:", error);
-      } finally {
-        setLoadingMap(false);
-      }
-    }
+  // TODO: Uncomment when database has enough data to display
+  // useEffect(() => {
+  //   async function loadMapMarkers() {
+  //     try {
+  //       setLoadingMap(true);
+  //       const filters: MapFilters = {
+  //         showUsers: true,
+  //         showEvents: true,
+  //         showHubs: true,
+  //         showCommunities: true,
+  //         showWorkspaces: true,
+  //         contentType: "all",
+  //       };
+  //       const markers = await getMapMarkers(filters, user?.id, isVip);
+  //       setMapMarkers(markers);
+  //     } catch (error) {
+  //       console.error("Error loading map markers:", error);
+  //     } finally {
+  //       setLoadingMap(false);
+  //     }
+  //   }
 
-    if (!authLoading) {
-      loadMapMarkers();
-    }
-  }, [user?.id, isVip, authLoading]);
+  //   if (!authLoading) {
+  //     loadMapMarkers();
+  //   }
+  // }, [user?.id, isVip, authLoading]);
 
   const fetchPlans = async () => {
     try {
@@ -831,8 +837,20 @@ function SubscriptionPageContent() {
                 </div>
               </div>
 
+              {/* Visual */}
+              <div className="relative overflow-hidden rounded-lg border border-[var(--color-primary)]/30">
+                <Image
+                  src="/degen-map.png"
+                  alt="Map view with role filters & city-level access"
+                  width={800}
+                  height={450}
+                  className="w-full h-full object-cover aspect-video"
+                />
+              </div>
+
+              {/* TODO: Uncomment interactive map when database has enough data to display */}
               {/* Visual - Interactive Map */}
-              <div className="relative overflow-hidden rounded-lg border border-[var(--color-primary)]/30 aspect-video">
+              {/* <div className="relative overflow-hidden rounded-lg border border-[var(--color-primary)]/30 aspect-video">
                 {loadingMap ? (
                   <div className="w-full h-full flex items-center justify-center bg-[var(--color-surface)]">
                     <div className="flex flex-col items-center gap-4">
@@ -850,7 +868,7 @@ function SubscriptionPageContent() {
                     currentUserId={user?.id}
                   />
                 )}
-              </div>
+              </div> */}
             </div>
           </div>
 
