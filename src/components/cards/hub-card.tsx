@@ -28,18 +28,44 @@ export function HubCard({ hub, compact = false, entityType, isBlurred = false }:
     }
   }, [copied]);
 
+  // Определяем тип сущности автоматически, если не передан
+  const detectEntityType = (): "hub" | "community" | "workspace" | "project" => {
+    if (entityType) {
+      return entityType;
+    }
+    // Workspace имеет обязательное поле address
+    if ("address" in hub && hub.address) {
+      return "workspace";
+    }
+    // Определить по другим признакам невозможно, возвращаем hub по умолчанию
+    // В большинстве случаев entityType должен передаваться явно
+    return "hub";
+  };
+
   // Определяем тип сущности и путь
-  const getEntityPath = (slug: string): string => {
-    if (entityType === "community") {
-      return `/communities/${slug}`;
+  const getEntityPath = (slug?: string | null, id?: string): string => {
+    if (!slug && !id) {
+      // Если нет ни slug, ни id, возвращаем пустой путь (не должно произойти)
+      return "#";
     }
-    if (entityType === "workspace") {
-      return `/workspaces/${slug}`;
+    
+    const identifier = slug || id;
+    if (!identifier) {
+      return "#";
     }
-    if (entityType === "project") {
-      return `/projects/${slug}`;
+    
+    const detectedType = detectEntityType();
+    
+    if (detectedType === "community") {
+      return `/communities/${identifier}`;
     }
-    return `/hubs/${slug}`;
+    if (detectedType === "workspace") {
+      return `/workspaces/${identifier}`;
+    }
+    if (detectedType === "project") {
+      return `/projects/${identifier}`;
+    }
+    return `/hubs/${identifier}`;
   };
 
   // Получаем публичную ссылку на сущность
@@ -47,10 +73,10 @@ export function HubCard({ hub, compact = false, entityType, isBlurred = false }:
     if (typeof window === "undefined") {
       return "";
     }
-    if (!hub.slug) {
+    if (!hub.slug && !hub.id) {
       return window.location.href;
     }
-    const path = getEntityPath(hub.slug);
+    const path = getEntityPath(hub.slug, hub.id);
     return `${window.location.origin}${path}`;
   };
 
@@ -243,7 +269,7 @@ export function HubCard({ hub, compact = false, entityType, isBlurred = false }:
                 }}
                 asChild
               >
-                <Link href={getEntityPath(hub.slug)}>
+                <Link href={getEntityPath(hub.slug, hub.id)}>
                   <ExternalLink className="w-4 h-4 mr-1" />
                   Details
                 </Link>
@@ -274,7 +300,7 @@ export function HubCard({ hub, compact = false, entityType, isBlurred = false }:
     }
 
     // Если есть slug, оборачиваем в Link
-    const path = getEntityPath(hub.slug);
+    const path = getEntityPath(hub.slug, hub.id);
     return (
       <Link 
         href={path}
@@ -451,122 +477,9 @@ export function HubCard({ hub, compact = false, entityType, isBlurred = false }:
   }
 
   // Full card view
-  if (!hub.slug) {
-    return (
-      <div className="bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-xl p-5 flex flex-col h-full transition-all duration-300">
-        {/* Header */}
-        <div className="flex items-start gap-4 mb-4">
-          <div className="relative w-20 h-20 rounded-xl overflow-hidden bg-[var(--color-surface-hover)] flex-shrink-0">
-            {hub.image_url ? (
-              <Image
-                src={hub.image_url}
-                alt={hub.name}
-                fill
-                className="object-cover"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[var(--color-info)]/30 to-[var(--color-secondary)]/30">
-                <Users className="w-10 h-10 text-[var(--color-info)]" />
-              </div>
-            )}
-          </div>
-          <div className="flex-1">
-            <h3 className="text-xl font-semibold text-[var(--color-text-primary)] mb-1">
-              {hub.name}
-            </h3>
-            <div className="flex items-center gap-2 text-[var(--color-text-secondary)]">
-              <MapPin className="w-4 h-4" />
-              <span>
-                {"address" in hub && hub.address ? (
-                  `${hub.address}${hub.city ? `, ${hub.city}` : ""}${hub.country ? `, ${hub.country}` : ""}`
-                ) : (
-                  <>
-                    {hub.country}
-                    {hub.city && `, ${hub.city}`}
-                  </>
-                )}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Description */}
-        {hub.description && (
-          <div className="mb-4">
-            <p className="text-xs text-[var(--color-primary)] mb-1">About:</p>
-            <p className="text-[var(--color-text-secondary)]">
-              {hub.description}
-            </p>
-          </div>
-        )}
-
-        {/* Members count */}
-        <div className="flex items-center gap-2 mb-4">
-          <Users className="w-4 h-4 text-[var(--color-info)]" />
-          <span className="text-sm text-[var(--color-text-muted)]">
-            {hub.members_count} members
-          </span>
-        </div>
-
-        {/* Socials */}
-        <div className="flex items-center gap-3 mb-4">
-          {hub.socials?.twitter && (
-            <a
-              href={hub.socials.twitter}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-2 rounded-full bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
-            >
-              <Twitter className="w-5 h-5" />
-            </a>
-          )}
-          {hub.socials?.instagram && (
-            <a
-              href={hub.socials.instagram}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-2 rounded-full bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
-            >
-              <Instagram className="w-5 h-5" />
-            </a>
-          )}
-          {hub.socials?.website && (
-            <a
-              href={hub.socials.website}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-2 rounded-full bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
-            >
-              <ExternalLink className="w-5 h-5" />
-            </a>
-          )}
-        </div>
-
-        {/* Actions */}
-        <div className="flex gap-3 mt-auto">
-          <Button
-            variant="outline"
-            className="flex-1 text-[var(--color-primary)] border-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 cursor-pointer"
-            onClick={handleShare}
-          >
-            {copied ? (
-              <>
-                <Check className="w-4 h-4 mr-2" />
-                Copied!
-              </>
-            ) : (
-              <>
-                <Share2 className="w-4 h-4 mr-2" />
-                Share
-              </>
-            )}
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  const path = getEntityPath(hub.slug);
+  // Всегда рендерим карточку с Link, если есть slug или id
+  // Если нет ни того, ни другого - рендерим без Link (но такого не должно быть)
+  const path = hub.slug || hub.id ? getEntityPath(hub.slug, hub.id) : "#";
   return (
     <Link
       href={path}
@@ -698,7 +611,7 @@ export function HubCard({ hub, compact = false, entityType, isBlurred = false }:
             </>
           )}
         </Button>
-        {hub.slug && (
+        {(hub.slug || hub.id) && (
           <Button 
             variant="outline" 
             className="flex-1 cursor-pointer"
@@ -718,7 +631,7 @@ export function HubCard({ hub, compact = false, entityType, isBlurred = false }:
             }}
             asChild
           >
-            <Link href={getEntityPath(hub.slug)}>
+            <Link href={getEntityPath(hub.slug, hub.id)}>
               <ExternalLink className="w-4 h-4 mr-2" />
               Details
             </Link>

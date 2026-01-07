@@ -515,7 +515,7 @@ export default async function DashboardPage() {
                               </Link>
                             </Button>
                             <Button variant="outline" size="sm" asChild>
-                              <Link href={`/hubs/${workspace.slug}`}>
+                              <Link href={`/workspaces/${workspace.slug}`}>
                                 <ExternalLink className="w-4 h-4 mr-1" />
                                 View
                               </Link>
