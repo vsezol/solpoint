@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { MapContainer, Marker, Popup, useMap, GeoJSON, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import type { MapMarker, User, Event, Hub, Community, Workspace } from "@/types";
+import type { MapMarker, User, Event, Hub, Community, Workspace, Project } from "@/types";
 import type { GeoJsonObject } from "geojson";
 import { UserCard } from "@/components/cards/user-card";
 import { EventCard } from "@/components/cards/event-card";
@@ -556,6 +556,8 @@ export function SolPointMap({
         return <HubCard hub={marker.data as Workspace} compact entityType="workspace" isBlurred={!isAuthenticated} />;
       case "community":
         return <HubCard hub={marker.data as Community} compact entityType="community" isBlurred={!isAuthenticated} />;
+      case "project":
+        return <HubCard hub={marker.data as Project} compact entityType="project" isBlurred={!isAuthenticated} />;
       default:
         return null;
     }
