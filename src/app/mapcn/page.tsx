@@ -169,7 +169,7 @@ export default function MapCnPage() {
                       zoom={4}
                     >
                       <WaterLayer />
-                      <CountriesLayer landColor="#8B5CF6" />
+                      <CountriesLayer landColor="#452D9F" />
                       <MapMarkersLayer
                         markers={markers}
                         isVip={isVip}
