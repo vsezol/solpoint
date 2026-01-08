@@ -1,11 +1,13 @@
 "use client";
 
-import { Avatar, Badge, Button } from "@/components/ui";
+import { useState } from "react";
+import { Avatar, Badge, Button, ProSubscriptionModal } from "@/components/ui";
 import { Crown } from "lucide-react";
 import { ProfileActions } from "./profile-actions";
 import { AddFriendButton } from "./add-friend-button";
 import { useProfileEdit } from "./profile-edit-provider";
 import { useChat } from "@/hooks/use-chat";
+import { useAuth } from "@/hooks/use-auth";
 import type { User } from "@/types";
 import { getSubscriptionDisplayName } from "@/lib/utils";
 
@@ -17,65 +19,86 @@ interface ProfileHeaderProps {
 
 export function ProfileHeader({ user, isOwnProfile, friendshipStatus = "none" }: ProfileHeaderProps) {
   const { openChat, isLoading: isChatLoading } = useChat();
+  const { user: currentUser } = useAuth();
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+
+  const handleSendMessage = () => {
+    // Check if user has PRO subscription
+    if (currentUser?.subscription_tier !== "vip") {
+      setShowSubscriptionModal(true);
+      return;
+    }
+    openChat(user.id);
+  };
 
   // Если это не свой профиль, не используем контекст
   if (!isOwnProfile) {
     return (
-      <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4">
-        <Avatar
-          src={user.avatar_url}
-          alt={user.twitter_name}
-          size="xl"
-          isVip={user.subscription_tier === "vip"}
-          isVerified={user.is_verified}
-          className="ring-4 ring-[var(--color-background)]"
-        />
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">
-              {user.twitter_name}
-            </h1>
-            {user.is_verified && (
-              <Badge variant="primary" size="sm">
-                Verified
-              </Badge>
-            )}
-            {user.subscription_tier === "vip" && (
-              <Badge variant="warning" size="sm">
-                <Crown className="w-3 h-3 mr-1" />
-                {getSubscriptionDisplayName(user.subscription_tier)}
-              </Badge>
-            )}
-            {/* Отладка: показываем статус is_admin */}
-            {('is_admin' in user) && (
-              <Badge variant={user.is_admin === true ? "primary" : "secondary"} size="sm">
-                {String(user.is_admin)} - {user.is_admin === true ? "ADMIN" : "NOT ADMIN"}
-              </Badge>
-            )}
-          </div>
-          <p className="text-[var(--color-text-muted)]">
-            @{user.twitter_handle}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <AddFriendButton 
-            userId={user.id} 
-            userHandle={user.twitter_handle}
-            initialStatus={friendshipStatus} 
+      <>
+        <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4">
+          <Avatar
+            src={user.avatar_url}
+            alt={user.twitter_name}
+            size="xl"
+            isVip={user.subscription_tier === "vip"}
+            isVerified={user.is_verified}
+            className="ring-4 ring-[var(--color-background)]"
           />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => openChat(user.id)}
-            disabled={isChatLoading}
-            isLoading={isChatLoading}
-            className="font-semibold text-sm leading-none tracking-normal"
-            style={{ fontFamily: 'var(--font-inter)' }}
-          >
-            Send Message
-          </Button>
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">
+                {user.twitter_name}
+              </h1>
+              {user.is_verified && (
+                <Badge variant="primary" size="sm">
+                  Verified
+                </Badge>
+              )}
+              {user.subscription_tier === "vip" && (
+                <Badge variant="warning" size="sm">
+                  <Crown className="w-3 h-3 mr-1" />
+                  {getSubscriptionDisplayName(user.subscription_tier)}
+                </Badge>
+              )}
+              {/* Отладка: показываем статус is_admin */}
+              {('is_admin' in user) && (
+                <Badge variant={user.is_admin === true ? "primary" : "secondary"} size="sm">
+                  {String(user.is_admin)} - {user.is_admin === true ? "ADMIN" : "NOT ADMIN"}
+                </Badge>
+              )}
+            </div>
+            <p className="text-[var(--color-text-muted)]">
+              @{user.twitter_handle}
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <AddFriendButton 
+              userId={user.id} 
+              userHandle={user.twitter_handle}
+              initialStatus={friendshipStatus} 
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSendMessage}
+              disabled={isChatLoading}
+              isLoading={isChatLoading}
+              className="font-semibold text-sm leading-none tracking-normal"
+              style={{ fontFamily: 'var(--font-inter)' }}
+            >
+              Send Message
+            </Button>
+          </div>
         </div>
-      </div>
+        
+        {/* Subscription Modal */}
+        <ProSubscriptionModal
+          isOpen={showSubscriptionModal}
+          onClose={() => setShowSubscriptionModal(false)}
+          title="Private messaging is available only with PRO subscription"
+          description="Upgrade to PRO to send direct messages to other users."
+        />
+      </>
     );
   }
 

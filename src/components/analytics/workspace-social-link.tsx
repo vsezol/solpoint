@@ -21,15 +21,18 @@ export function WorkspaceSocialLink({ workspace, platform, href }: WorkspaceSoci
   const Icon = icons[platform];
 
   const handleClick = () => {
-    trackEvent("workspace_social_link_click", {
-      event_category: "Workspaces",
-      event_label: workspace.slug || workspace.id,
-      workspace_id: workspace.id,
-      workspace_slug: workspace.slug,
-      workspace_name: workspace.name,
-      social_platform: platform,
-      source: "workspace_page",
-    });
+    // Вызываем trackEvent асинхронно, чтобы не блокировать открытие ссылки
+    setTimeout(() => {
+      trackEvent("workspace_social_link_click", {
+        event_category: "Workspaces",
+        event_label: workspace.slug || workspace.id,
+        workspace_id: workspace.id,
+        workspace_slug: workspace.slug,
+        workspace_name: workspace.name,
+        social_platform: platform,
+        source: "workspace_page",
+      });
+    }, 0);
   };
 
   return (

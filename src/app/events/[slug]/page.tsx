@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { Header, Footer } from "@/components/layout";
-import { Button, EventBadges, Card } from "@/components/ui";
+import { EventBadges, Card } from "@/components/ui";
 import { EntityMembersWidget } from "@/components/entities/entity-members-widget";
 import { Calendar, MapPin, Globe, Ticket, Link as LinkIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
@@ -8,10 +8,11 @@ import type { Event, User, EventMember } from "@/types";
 import Image from "next/image";
 import { EventHostCard } from "./event-host-card";
 import type { Metadata } from "next";
-import { getAppUrl } from "@/lib/utils";
+import { getAppUrl, isUUID } from "@/lib/utils";
 import { EventViewTracker } from "@/components/analytics/event-view-tracker";
 import { EventShareButton } from "@/components/analytics/event-share-button";
 import { EventSocialLink } from "@/components/analytics/event-social-link";
+import { LumaAttendButtonWrapper } from "./luma-attend-button-wrapper";
 
 interface EventPageProps {
   params: Promise<{ slug: string }>;
@@ -21,12 +22,18 @@ export async function generateMetadata({ params }: EventPageProps): Promise<Meta
   const { slug } = await params;
   const supabase = await createClient();
 
-  // Получаем событие для метаданных
-  const { data: eventData } = await supabase
+  // Получаем событие для метаданных - сначала по слагу, потом по ID
+  let query = supabase
     .from("events")
-    .select("*")
-    .eq("slug", slug)
-    .single();
+    .select("*");
+
+  if (isUUID(slug)) {
+    query = query.eq("id", slug);
+  } else {
+    query = query.eq("slug", slug);
+  }
+
+  const { data: eventData } = await query.single();
 
   if (!eventData) {
     return {
@@ -36,7 +43,8 @@ export async function generateMetadata({ params }: EventPageProps): Promise<Meta
 
   const event = eventData as Event;
   const appUrl = getAppUrl();
-  const eventUrl = `${appUrl}/events/${slug}`;
+  // Используем слаг из базы данных для URL, если он есть
+  const eventUrl = `${appUrl}/events/${event.slug || slug}`;
   // Используем картинку события, если она есть, иначе логотип
   const imageUrl = event.image_url && event.image_url.trim() !== ''
     ? (event.image_url.startsWith('http://') || event.image_url.startsWith('https://'))
@@ -135,12 +143,18 @@ export default async function EventPage({ params }: EventPageProps) {
     isVip = profile?.subscription_tier === "vip";
   }
 
-  // Получаем событие по slug (без join'ов для надежности)
-  const { data: eventData, error: eventError } = await supabase
+  // Получаем событие - сначала по слагу, потом по ID (если параметр является UUID)
+  let query = supabase
     .from("events")
-    .select("*")
-    .eq("slug", slug)
-    .single();
+    .select("*");
+
+  if (isUUID(slug)) {
+    query = query.eq("id", slug);
+  } else {
+    query = query.eq("slug", slug);
+  }
+
+  const { data: eventData, error: eventError } = await query.single();
 
   if (eventError || !eventData) {
     notFound();
@@ -447,7 +461,7 @@ export default async function EventPage({ params }: EventPageProps) {
                   </div>
 
                   {/* Social Links */}
-                  {(event.socials?.twitter || event.socials?.instagram || event.socials?.facebook || event.socials?.website) && (
+                  {(event.socials?.twitter || event.socials?.instagram || event.socials?.facebook || event.socials?.website || event.socials?.luma) && (
                     <div className="flex items-start gap-3">
                       <LinkIcon className="w-5 h-5 text-[var(--color-primary)] mt-0.5 flex-shrink-0" />
                       <div>
@@ -481,6 +495,13 @@ export default async function EventPage({ params }: EventPageProps) {
                               href={event.socials.website}
                             />
                           )}
+                          {event.socials?.luma && (
+                            <EventSocialLink
+                              event={event}
+                              platform="luma"
+                              href={event.socials.luma}
+                            />
+                          )}
                         </div>
                       </div>
                     </div>
@@ -489,20 +510,13 @@ export default async function EventPage({ params }: EventPageProps) {
 
                 {/* Attend/Buy Tickets Button */}
                 <div className="mt-6">
-                  <Button
-                    variant="primary"
-                    className="w-full"
-                    size="lg"
-                    asChild
-                  >
-                    <a
-                      href={event.luma_link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {event.is_paid ? "Buy Tickets" : "Attend"}
-                    </a>
-                  </Button>
+                  <LumaAttendButtonWrapper
+                    eventSlug={event.slug || slug}
+                    lumaLink={event.luma_link}
+                    isPaid={event.is_paid || false}
+                    isRegistered={isUserRegistered}
+                    priceSol={event.price_sol}
+                  />
                 </div>
               </Card>
 

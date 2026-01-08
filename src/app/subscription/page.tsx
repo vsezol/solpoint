@@ -2,8 +2,51 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import Image from "next/image";
+import dynamic from "next/dynamic";
 import { Header, Footer } from "@/components/layout";
 import { Button, Card, Badge, Modal, ModalHeader, ModalTitle, ModalDescription, ModalContent } from "@/components/ui";
+import { getMapMarkers } from "@/lib/api/map";
+import type { MapMarker, MapFilters } from "@/types";
+
+// Dynamic imports to avoid SSR issues with maplibre-gl
+const WaterLayer = dynamic(
+  () => import("../mapcn/water-layer").then((mod) => ({ default: mod.WaterLayer })),
+  { ssr: false }
+);
+
+const CountriesLayer = dynamic(
+  () => import("../mapcn/countries-layer").then((mod) => ({ default: mod.CountriesLayer })),
+  { ssr: false }
+);
+
+const MapMarkersLayer = dynamic(
+  () => import("../mapcn/markers-layer").then((mod) => ({ default: mod.MapMarkersLayer })),
+  { ssr: false }
+);
+
+// Dynamic import for map component to avoid SSR issues with MapLibre GL
+const Map = dynamic(
+  () => import("@/components/ui/map").then((mod) => mod.Map),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-full h-full flex items-center justify-center bg-[var(--color-surface)]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
+          <p className="text-[var(--color-text-secondary)]">Loading map...</p>
+        </div>
+      </div>
+    ),
+  }
+);
+
+const MapControls = dynamic(
+  () => import("@/components/ui/map").then((mod) => mod.MapControls),
+  {
+    ssr: false,
+  }
+);
 import {
   Check,
   MapPin,
@@ -33,6 +76,7 @@ import type { Plan, Subscription } from "@/types";
 import { SolanaPaymentButton } from "@/components/subscription/solana-payment-button";
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 
 const freePlanFeatures = [
   { text: "See users on map by country", included: true },
@@ -134,12 +178,16 @@ const faqItems = [
 function SubscriptionPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const queryClient = useQueryClient();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [currentSubscription, setCurrentSubscription] = useState<Subscription | null>(null);
   const [loadingPlans, setLoadingPlans] = useState(true);
+  const [mapMarkers, setMapMarkers] = useState<MapMarker[]>([]);
+  const [loadingMap, setLoadingMap] = useState(true);
+  const isVip = user?.subscription_tier === "vip";
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [paymentData, setPaymentData] = useState<{
@@ -161,11 +209,13 @@ function SubscriptionPageContent() {
   const [currentIntentId, setCurrentIntentId] = useState<string | null>(null);
   const [solanaPaymentStatus, setSolanaPaymentStatus] = useState<string>("");
   const [solanaPaymentError, setSolanaPaymentError] = useState<string>("");
+  const [solanaPaymentIntentId, setSolanaPaymentIntentId] = useState<string | null>(null);
 
   // Проверяем параметры URL для успешной/отмененной оплаты
   useEffect(() => {
     const success = searchParams.get("success");
     const cancelled = searchParams.get("cancelled");
+    const activated = searchParams.get("activated");
     
     if (success) {
       // Обновляем подписку после успешной оплаты
@@ -177,20 +227,63 @@ function SubscriptionPageContent() {
       trackEvent("subscription_payment_cancelled", {
         event_category: "Subscription",
       });
-    }
-  }, [searchParams]);
-
-  // Загружаем планы и текущую подписку
-  useEffect(() => {
-    fetchPlans();
-    // Загружаем подписку только если пользователь авторизован
-    if (isAuthenticated && !authLoading) {
+    } else if (activated) {
+      // После активации обновляем профиль, чтобы subscription_tier обновился
+      queryClient.invalidateQueries({ queryKey: ["auth", "profile"] });
       fetchCurrentSubscription();
+      trackEvent("subscription_activated_view", {
+        event_category: "Subscription",
+      });
     }
-    trackEvent("subscription_page_view", {
-      event_category: "Subscription",
-    });
+  }, [searchParams, queryClient]);
+
+  // Загружаем планы и текущую подписку параллельно
+  useEffect(() => {
+    // Загружаем планы и подписку параллельно для оптимизации
+    if (isAuthenticated && !authLoading) {
+      Promise.all([
+        fetchPlans(),
+        fetchCurrentSubscription(),
+      ]);
+    } else {
+      fetchPlans();
+    }
+    
+    // Вызываем trackEvent асинхронно, чтобы не блокировать загрузку
+    setTimeout(() => {
+      trackEvent("subscription_page_view", {
+        event_category: "Subscription",
+      });
+    }, 0);
+     
   }, [isAuthenticated, authLoading]);
+
+  // Загружаем маркеры для карты (показываем все сущности)
+  useEffect(() => {
+    async function loadMapMarkers() {
+      try {
+        setLoadingMap(true);
+        const filters: MapFilters = {
+          showUsers: true,
+          showEvents: true,
+          showHubs: true,
+          showCommunities: true,
+          showWorkspaces: true,
+          contentType: "all",
+        };
+        const markers = await getMapMarkers(filters, user?.id, isVip);
+        setMapMarkers(markers);
+      } catch (error) {
+        console.error("Error loading map markers:", error);
+      } finally {
+        setLoadingMap(false);
+      }
+    }
+
+    if (!authLoading) {
+      loadMapMarkers();
+    }
+  }, [user?.id, isVip, authLoading]);
 
   const fetchPlans = async () => {
     try {
@@ -773,16 +866,38 @@ function SubscriptionPageContent() {
                 </div>
               </div>
 
-              {/* Visual */}
-              <div className="relative">
-                <div className="aspect-video bg-gradient-to-br from-[var(--color-primary)]/20 via-[#0D1316] to-[#0D1316] rounded-lg border border-[var(--color-primary)]/30 p-8 flex items-center justify-center">
-                  <div className="text-center space-y-4">
-                    <MapPin className="w-16 h-16 text-[var(--color-primary)] mx-auto" />
-                    <p className="text-sm text-[var(--color-text-muted)]">
-                      Map view with role filters & city-level access
-                    </p>
+              {/* Visual - Interactive Map */}
+              <div className="relative overflow-hidden rounded-lg border border-[var(--color-primary)]/30 aspect-video">
+                {loadingMap ? (
+                  <div className="w-full h-full flex items-center justify-center bg-[var(--color-surface)]">
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="w-12 h-12 border-4 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
+                      <p className="text-[var(--color-text-secondary)]">Loading map...</p>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <Card className="h-full p-0 overflow-hidden mapcn-map-container" style={{ background: "#18E3C5" }}>
+                    <Map 
+                      center={[55, 35]} 
+                      zoom={4}
+                    >
+                      <WaterLayer />
+                      <CountriesLayer landColor="#452D9F" />
+                      <MapMarkersLayer
+                        markers={mapMarkers}
+                        isVip={isVip}
+                        isAuthenticated={isAuthenticated}
+                        currentUserId={user?.id}
+                      />
+                      <MapControls 
+                        showZoom={true}
+                        showCompass={true}
+                        showLocate={true}
+                        showFullscreen={true}
+                      />
+                    </Map>
+                  </Card>
+                )}
               </div>
             </div>
           </div>
@@ -1018,7 +1133,7 @@ function SubscriptionPageContent() {
                         : plan.highlighted && canUpgrade 
                           ? "Upgrade to PRO" 
                           : plan.isFree
-                            ? "Current Plan"
+                            ? "Basic Plan"
                             : plan.cta}
                     </Button>
                   </Card>
@@ -1294,9 +1409,15 @@ function SubscriptionPageContent() {
                       payment_method: "solana",
                     });
                   }}
-                  onError={(error) => {
+                  onError={(error, intentId) => {
                     setSolanaPaymentError(error);
                     setSolanaPaymentStatus("error");
+                    if (intentId) {
+                      setSolanaPaymentIntentId(intentId);
+                    }
+                  }}
+                  onEmailValidationError={(error) => {
+                    setEmailError(error);
                   }}
                 />
                 
@@ -1322,22 +1443,52 @@ function SubscriptionPageContent() {
                       <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-red-500 mb-1">
-                          Payment Error
+                          {solanaPaymentIntentId ? "Payment Intent Created" : "Payment Error"}
                         </p>
                         <div className="text-sm text-red-400 mb-3 break-words">
                           {solanaPaymentError}
                         </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSolanaPaymentError("");
-                            setSolanaPaymentStatus("");
-                          }}
-                          className="w-auto min-w-[120px]"
-                        >
-                          Try Again
-                        </Button>
+                        <div className="flex gap-2">
+                          {solanaPaymentIntentId ? (
+                            <>
+                              <Button
+                                variant="primary"
+                                size="sm"
+                                onClick={() => {
+                                  window.location.href = `/activate?code=${solanaPaymentIntentId}`;
+                                }}
+                                className="w-auto min-w-[120px]"
+                              >
+                                Activate Subscription
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSolanaPaymentError("");
+                                  setSolanaPaymentStatus("");
+                                  setSolanaPaymentIntentId(null);
+                                }}
+                                className="w-auto min-w-[120px]"
+                              >
+                                Dismiss
+                              </Button>
+                            </>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSolanaPaymentError("");
+                                setSolanaPaymentStatus("");
+                                setSolanaPaymentIntentId(null);
+                              }}
+                              className="w-auto min-w-[120px]"
+                            >
+                              Try Again
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1357,7 +1508,18 @@ function SubscriptionPageContent() {
                   </div>
                   <Button
                     variant="outline"
-                    onClick={handleNowPaymentsPayment}
+                    onClick={() => {
+                      // Проверяем email перед началом оплаты
+                      if (!email || !email.trim()) {
+                        setEmailError("Email is required. Please enter your email first.");
+                        return;
+                      }
+                      if (!validateEmail(email)) {
+                        setEmailError("Please enter a valid email address");
+                        return;
+                      }
+                      handleNowPaymentsPayment();
+                    }}
                     disabled={!email || !!emailError}
                   >
                     Select

@@ -31,7 +31,8 @@ CREATE TABLE public.profiles (
   avatar_url TEXT,
   banner_url TEXT, -- URL баннера профиля из Supabase Storage (bucket: profile-banners)
   bio TEXT CHECK (char_length(bio) <= 150),
-  country TEXT NOT NULL,
+  country TEXT,
+  country_code CHAR(2),
   city TEXT,
   role user_role DEFAULT 'degen',
   is_open_to_meet BOOLEAN DEFAULT false,

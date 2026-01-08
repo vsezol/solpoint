@@ -8,7 +8,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { EntityMembersWidget } from "@/components/entities/entity-members-widget";
 import type { Metadata } from "next";
-import { getAppUrl } from "@/lib/utils";
+import { getAppUrl, isUUID } from "@/lib/utils";
 import { WorkspaceViewTracker } from "@/components/analytics/workspace-view-tracker";
 import { WorkspaceShareButton } from "@/components/analytics/workspace-share-button";
 import { WorkspaceSocialLink } from "@/components/analytics/workspace-social-link";
@@ -22,11 +22,18 @@ export async function generateMetadata({ params }: WorkspacePageProps): Promise<
   const { slug } = await params;
   const supabase = await createClient();
 
-  const { data: workspaceData } = await supabase
+  // Получаем воркспейс для метаданных - сначала по слагу, потом по ID
+  let query = supabase
     .from("workspaces")
-    .select("*")
-    .eq("slug", slug)
-    .single();
+    .select("*");
+
+  if (isUUID(slug)) {
+    query = query.eq("id", slug);
+  } else {
+    query = query.eq("slug", slug);
+  }
+
+  const { data: workspaceData } = await query.single();
 
   if (!workspaceData) {
     return {
@@ -36,7 +43,8 @@ export async function generateMetadata({ params }: WorkspacePageProps): Promise<
 
   const workspace = workspaceData as Workspace;
   const appUrl = getAppUrl();
-  const workspaceUrl = `${appUrl}/workspaces/${slug}`;
+  // Используем слаг из базы данных для URL, если он есть
+  const workspaceUrl = `${appUrl}/workspaces/${workspace.slug || slug}`;
   const imageUrl = workspace.image_url && workspace.image_url.trim() !== ''
     ? (workspace.image_url.startsWith('http://') || workspace.image_url.startsWith('https://'))
       ? workspace.image_url
@@ -82,11 +90,18 @@ export default async function WorkspacePage({ params }: WorkspacePageProps) {
   const { slug } = await params;
   const supabase = await createClient();
 
-  const { data: workspaceData, error: workspaceError } = await supabase
+  // Получаем воркспейс - сначала по слагу, потом по ID (если параметр является UUID)
+  let query = supabase
     .from("workspaces")
-    .select("*")
-    .eq("slug", slug)
-    .single();
+    .select("*");
+
+  if (isUUID(slug)) {
+    query = query.eq("id", slug);
+  } else {
+    query = query.eq("slug", slug);
+  }
+
+  const { data: workspaceData, error: workspaceError } = await query.single();
 
   if (workspaceError || !workspaceData) {
     notFound();

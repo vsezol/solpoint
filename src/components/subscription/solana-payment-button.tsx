@@ -63,7 +63,8 @@ interface SolanaPaymentButtonProps {
   email?: string;
   onStatusChange?: (status: string, message?: string) => void;
   onSuccess?: (intentId: string) => void;
-  onError?: (error: string) => void;
+  onError?: (error: string, intentId?: string) => void;
+  onEmailValidationError?: (error: string) => void;
 }
 
 export function SolanaPaymentButton({ 
@@ -71,7 +72,8 @@ export function SolanaPaymentButton({
   email,
   onStatusChange,
   onSuccess, 
-  onError 
+  onError,
+  onEmailValidationError
 }: SolanaPaymentButtonProps) {
   const { connection } = useConnection();
   const { publicKey, sendTransaction, connected } = useWallet();
@@ -168,12 +170,16 @@ export function SolanaPaymentButton({
 
       // Отправляем транзакцию
       updateStatus("sending", "Sending transaction to your wallet...");
+      
+      
       const signature = await sendTransaction(transaction, connection, {
         skipPreflight: false,
       });
 
+
       // Создаем intent ПОСЛЕ отправки транзакции (когда есть signature)
       updateStatus("creating_intent", "Creating payment record...");
+      
       const intentResponse = await fetch("/api/subscriptions/create-intent-with-signature", {
         method: "POST",
         headers: {
@@ -186,13 +192,89 @@ export function SolanaPaymentButton({
         }),
       });
 
+
       if (!intentResponse.ok) {
         const errorData = await intentResponse.json().catch(() => ({}));
-        throw new Error(errorData.error || "Failed to create payment record. Please contact support with your transaction signature.");
+        
+        
+        // КРИТИЧНО: Транзакция уже отправлена, но intent не создан
+        // Сохраняем информацию о транзакции для восстановления
+        if (typeof window !== "undefined") {
+          localStorage.setItem("failed_payment_recovery", JSON.stringify({
+            signature,
+            plan_id: plan.id,
+            email: email.trim(),
+            amount_lamports: amountInLamports,
+            timestamp: Date.now(),
+            error: errorData.error || "Failed to create payment record"
+          }));
+        }
+        
+        // Пробуем восстановить intent через альтернативный endpoint
+        try {
+          const recoveryResponse = await fetch("/api/subscriptions/recover-intent", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              plan_id: plan.id,
+              email: email.trim(),
+              tx_signature: signature,
+            }),
+          });
+          
+          if (recoveryResponse.ok) {
+            const recoveryData = await recoveryResponse.json();
+            // Продолжаем с восстановленным intent
+            const intentId = recoveryData.intent_id;
+            if (typeof window !== "undefined") {
+              localStorage.setItem("subscription_intent_id", intentId);
+              localStorage.setItem("subscription_intent_status", "pending");
+            }
+            // Продолжаем процесс верификации
+            updateStatus("verifying", "Verifying payment...");
+            const response = await fetch("/api/subscriptions/solana-payment", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                signature,
+                payer: publicKey.toString(),
+                intent_id: intentId,
+              }),
+            });
+            if (response.ok) {
+              const data = await response.json();
+              if (data.success) {
+                updateStatus("success", "Payment verified successfully!");
+                if (typeof window !== "undefined") {
+                  localStorage.setItem("subscription_intent_status", "paid");
+                }
+                if (data.redirect_url) {
+                  setTimeout(() => {
+                    window.location.href = data.redirect_url;
+                  }, 1000);
+                } else {
+                  onSuccess?.(data.intent_id || intentId);
+                }
+                return;
+              }
+            }
+          }
+        } catch (recoveryError) {
+        }
+        
+        throw new Error(
+          errorData.error || 
+          `Failed to create payment record. Your transaction signature: ${signature}. Please contact support with this signature to recover your payment.`
+        );
       }
 
       const intentData = await intentResponse.json();
       const intentId = intentData.intent_id;
+      
 
       // Сохраняем intent_id и статус в localStorage
       if (typeof window !== "undefined") {
@@ -202,73 +284,83 @@ export function SolanaPaymentButton({
 
       updateStatus("confirming", "Waiting for transaction confirmation...");
 
+
       // Ждем подтверждения транзакции с увеличенным таймаутом и retry логикой
       // Используем getTransaction вместо confirmTransaction для более надежной проверки
       let confirmed = false;
-      const maxWaitTime = 180000; // 180 секунд (3 минуты)
-      const checkInterval = 3000; // Проверяем каждые 3 секунды
+      const maxWaitTime = 60000; // 60 секунд (уменьшено с 180)
+      const checkInterval = 2000; // Проверяем каждые 2 секунды (уменьшено с 3)
       const startTime = Date.now();
+      let iterationCount = 0;
 
       while (!confirmed && (Date.now() - startTime) < maxWaitTime) {
+        iterationCount++;
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        
+
         try {
-          // Пробуем confirmTransaction с коротким таймаутом
-          try {
-            await Promise.race([
-              connection.confirmTransaction(signature, "finalized"),
-              new Promise((_, reject) => 
-                setTimeout(() => reject(new Error("timeout")), 10000)
-              )
-            ]);
-            confirmed = true;
-            break;
-          } catch (confirmError: any) {
-            // Если таймаут, проверяем транзакцию напрямую
-            if (confirmError?.message?.includes("timeout") || confirmError?.message?.includes("not confirmed")) {
-              const tx = await connection.getTransaction(signature, {
-                commitment: "finalized",
-                maxSupportedTransactionVersion: 0,
-              });
-              
-              if (tx && tx.meta?.err === null) {
+          // Сразу проверяем транзакцию через getTransaction (более надежно)
+          // confirmTransaction может зависнуть, поэтому используем прямой запрос
+          const tx = await Promise.race([
+            connection.getTransaction(signature, {
+              commitment: "confirmed", // Используем confirmed вместо finalized для более быстрой проверки
+              maxSupportedTransactionVersion: 0,
+            }),
+            new Promise<null>((_, reject) => 
+              setTimeout(() => reject(new Error("timeout")), 5000)
+            )
+          ]);
+          
+          
+          if (tx && tx.meta && tx.meta.err === null) {
                 // Транзакция подтверждена
                 confirmed = true;
                 break;
-              }
-            } else {
-              // Другая ошибка, пробрасываем дальше
-              throw confirmError;
-            }
+          } else if (tx && tx.meta && tx.meta.err !== null) {
+            // Транзакция выполнена, но с ошибкой
+            throw new Error(`Transaction failed: ${JSON.stringify(tx.meta.err)}`);
           }
+          // Если tx === null, транзакция еще не подтверждена, продолжаем ждать
 
           // Ждем перед следующей проверкой
           await new Promise(resolve => setTimeout(resolve, checkInterval));
           
-          // Обновляем статус каждые 10 секунд
-          const elapsed = Math.floor((Date.now() - startTime) / 1000);
-          if (elapsed % 10 === 0) {
+          // Обновляем статус каждые 5 секунд
+          if (elapsed % 5 === 0 && elapsed > 0) {
             updateStatus("confirming", `Waiting for confirmation... (${elapsed}s)`);
           }
         } catch (error: any) {
+          
           // Если это не таймаут, выбрасываем ошибку
           if (!error?.message?.includes("timeout") && !error?.message?.includes("not confirmed")) {
             throw error;
           }
+          
+          // При таймауте продолжаем цикл
+          await new Promise(resolve => setTimeout(resolve, checkInterval));
         }
       }
 
       // Если не подтвердилось за отведенное время, проверяем последний раз
       if (!confirmed) {
+        
         try {
-          const tx = await connection.getTransaction(signature, {
-            commitment: "finalized",
-            maxSupportedTransactionVersion: 0,
-          });
+          const tx = await Promise.race([
+            connection.getTransaction(signature, {
+              commitment: "confirmed",
+              maxSupportedTransactionVersion: 0,
+            }),
+            new Promise<null>((_, reject) => 
+              setTimeout(() => reject(new Error("timeout")), 5000)
+            )
+          ]);
           
           if (tx && tx.meta?.err === null) {
             confirmed = true;
+          } else {
           }
         } catch (checkError) {
-          // Игнорируем ошибку проверки
+          // Игнорируем ошибку проверки - продолжаем верификацию на backend
         }
       }
 
@@ -295,6 +387,16 @@ export function SolanaPaymentButton({
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        
+        
+        // Если intent создан и можно активировать, передаем intent_id в onError
+        if (errorData.can_activate && errorData.intent_id) {
+          updateStatus("pending_activation", errorData.message || "Your payment intent has been created. You can activate your subscription now.");
+          // Передаем intent_id в onError, чтобы родительский компонент мог показать кнопку активации
+          onError?.(errorData.message || errorData.error || "Payment intent created. You can activate your subscription.", errorData.intent_id);
+          return;
+        }
+        
         throw new Error(errorData.error || "Failed to verify payment. Please contact support with your transaction signature.");
       }
 
@@ -323,7 +425,14 @@ export function SolanaPaymentButton({
       console.error("Payment error:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
       updateStatus("error", errorMessage);
-      onError?.(errorMessage);
+      
+      // Проверяем, есть ли сохраненный intent_id в localStorage
+      let savedIntentId: string | null = null;
+      if (typeof window !== "undefined") {
+        savedIntentId = localStorage.getItem("subscription_intent_id");
+      }
+      
+      onError?.(errorMessage, savedIntentId || undefined);
     } finally {
       setIsProcessing(false);
     }
@@ -344,17 +453,35 @@ export function SolanaPaymentButton({
   }
 
   if (!connected) {
+    // Если email не введен, показываем кастомную кнопку с валидацией
+    if (!email || !email.trim()) {
+      return (
+        <div className="flex flex-col items-center gap-2">
+          <Button
+            variant="primary"
+            size="lg"
+            className="w-full"
+            onClick={() => {
+              onEmailValidationError?.("Please insert email.");
+            }}
+          >
+            <Wallet className="mr-2 h-4 w-4" />
+            Select Wallet
+          </Button>
+          <p className="text-sm text-muted-foreground">
+            Connect wallet to pay with Solana
+          </p>
+        </div>
+      );
+    }
+
+    // Если email введен, показываем настоящий WalletMultiButton
     return (
       <div className="flex flex-col items-center gap-2">
         <WalletMultiButton className="!bg-primary !text-primary-foreground hover:!bg-primary/90" />
         <p className="text-sm text-muted-foreground">
           Connect wallet to pay with Solana
         </p>
-        {!email && (
-          <p className="text-xs text-yellow-500 mt-1">
-            Please enter your email above first
-          </p>
-        )}
       </div>
     );
   }

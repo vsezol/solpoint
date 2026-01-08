@@ -120,6 +120,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if user has PRO subscription
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("subscription_tier")
+      .eq("id", authUser.id)
+      .single();
+
+    if (profileError) throw profileError;
+
+    if (profile?.subscription_tier !== "vip") {
+      return NextResponse.json(
+        { error: "PRO subscription required to send messages" },
+        { status: 403 }
+      );
+    }
+
     // Use the database function to get or create chat
     const { data: chatId, error: functionError } = await supabase.rpc(
       "get_or_create_chat",

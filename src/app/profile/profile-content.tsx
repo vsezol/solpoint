@@ -7,6 +7,13 @@ import {
   Twitter, 
   Instagram, 
   Facebook, 
+  Send,
+  Youtube,
+  MessageSquare,
+  Github,
+  Linkedin,
+  BookOpen,
+  Rss,
   Wallet, 
   LogOut, 
   MapPin, 
@@ -29,7 +36,7 @@ import { useProfileEdit } from "./profile-edit-provider";
 import { AddFriendButton } from "./add-friend-button";
 import { EditProfileButton } from "./edit-profile-button";
 import { trackEvent } from "@/lib/analytics";
-import { Modal, ModalHeader, ModalTitle, ModalContent, ProSubscriptionModal } from "@/components/ui";
+import { Modal, ModalHeader, ModalTitle, ModalContent, ProSubscriptionModal, AuthRequiredModal, UserListItem } from "@/components/ui";
 import { CreateEntityForm } from "@/components/hubs/create-entity-form";
 import type { EntityType } from "@/types";
 import { useAuth } from "@/hooks/use-auth";
@@ -37,18 +44,11 @@ import { useAuth } from "@/hooks/use-auth";
 interface ProfileContentProps {
   user: User;
   isOwnProfile: boolean;
-  friendshipStatus?: "none" | "pending_sent" | "pending_received" | "accepted" | "blocked";
-  friendsCount?: number;
-  upcomingEvents: Event[]; // События, на которые идет пользователь
-  pastEvents: Event[];
 }
 
 export function ProfileContent({
   user,
   isOwnProfile,
-  friendshipStatus = "none",
-  friendsCount = 0,
-  upcomingEvents,
 }: ProfileContentProps) {
   const { isEditing, setIsEditing } = useProfileEdit();
   const [currentUser, setCurrentUser] = useState<User>(user);
@@ -65,6 +65,11 @@ export function ProfileContent({
   const [isMutualsModalOpen, setIsMutualsModalOpen] = useState(false);
   const [isCheckingPro, setIsCheckingPro] = useState(false);
   const [friendsStats, setFriendsStats] = useState({ friendsCount: 0, friendRequestsCount: 0 });
+  const [friendshipStatus, setFriendshipStatus] = useState<"none" | "pending_sent" | "pending_received" | "accepted" | "blocked">("none");
+  const [friendsCount, setFriendsCount] = useState<number>(0);
+  const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
+  const [pastEvents, setPastEvents] = useState<Event[]>([]);
+  const [isLoadingProfileData, setIsLoadingProfileData] = useState(true);
   const [affiliations, setAffiliations] = useState<Array<{
     id: string;
     name: string;
@@ -85,8 +90,34 @@ export function ProfileContent({
   const [friendRequestsList, setFriendRequestsList] = useState<User[]>([]);
   const [showProModal, setShowProModal] = useState(false);
   const router = useRouter();
-  const { user: currentAuthUser } = useAuth();
+  const { user: currentAuthUser, isAuthenticated } = useAuth();
   const isVip = currentAuthUser?.subscription_tier === "vip";
+
+  // States for users list modals
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showProModalUsers, setShowProModalUsers] = useState(false);
+  const [showTotalUsersModal, setShowTotalUsersModal] = useState(false);
+  const [showCountryUsersModal, setShowCountryUsersModal] = useState(false);
+  const [showCityUsersModal, setShowCityUsersModal] = useState(false);
+  const [showUserFriendsModal, setShowUserFriendsModal] = useState(false);
+  const [usersList, setUsersList] = useState<Array<{
+    id: string;
+    avatar_url?: string | null;
+    name: string;
+    twitter_handle?: string;
+    isVip?: boolean;
+    isVerified?: boolean;
+    isOwner?: boolean;
+    joinedAt?: string;
+  }>>([]);
+  const [friendsListUsers, setFriendsListUsers] = useState<typeof usersList>([]);
+  const [userFriendsList, setUserFriendsList] = useState<typeof usersList>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [loadingUserFriends, setLoadingUserFriends] = useState(false);
+  const [friendStatuses, setFriendStatuses] = useState<Record<string, "none" | "pending_sent" | "pending_received" | "accepted" | "blocked">>({});
+  const [userFriendsStatuses, setUserFriendsStatuses] = useState<Record<string, "none" | "pending_sent" | "pending_received" | "accepted" | "blocked">>({});
+  const [sendingFriendRequest, setSendingFriendRequest] = useState<Record<string, boolean>>({});
+  const [creatingChat, setCreatingChat] = useState<Record<string, boolean>>({});
 
   // Обновляем локальное состояние при изменении user prop
   useEffect(() => {
@@ -94,16 +125,51 @@ export function ProfileContent({
     setIsOpenToMeet(user.is_open_to_meet);
   }, [user]);
 
-  // Загружаем статистику и invites
-  useEffect(() => {
-    fetchStatistics();
-    if (isOwnProfile) {
-      fetchUserInvites();
-      fetchMutualFollowers();
-      fetchFriendsStats();
+  // Загружаем данные профиля (events, friendsCount, friendshipStatus, upcomingEvents)
+  const fetchProfileData = async () => {
+    setIsLoadingProfileData(true);
+    try {
+      const response = await fetch(`/api/profile/data?user_id=${user.id}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setPastEvents(data.pastEvents || []);
+      setFriendsCount(data.friendsCount || 0);
+      setFriendshipStatus(data.friendshipStatus || "none");
+      setUpcomingEvents(data.upcomingEvents || []);
+    } catch (error) {
+      console.error("Error fetching profile data:", error);
+    } finally {
+      setIsLoadingProfileData(false);
     }
-    fetchAffiliations(); // Загружаем affiliations для любого профиля
-  }, [user, isOwnProfile]);
+  };
+
+  // Загружаем статистику и invites параллельно
+  useEffect(() => {
+    const loadData = async () => {
+      const promises: Promise<void>[] = [
+        fetchProfileData(),
+        fetchStatistics(),
+        fetchAffiliations()
+      ];
+
+      if (isOwnProfile) {
+        promises.push(
+          fetchUserInvites(),
+          fetchMutualFollowers(),
+          fetchFriendsStats()
+        );
+      }
+
+      await Promise.allSettled(promises);
+    };
+
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user.id, isOwnProfile]);
 
   const fetchStatistics = async () => {
     try {
@@ -133,6 +199,139 @@ export function ProfileContent({
       console.error("Error fetching statistics:", error);
     }
   };
+
+  // Load users list
+  const loadUsersList = async (filterType: "all" | "country" | "city") => {
+    // Check authentication
+    if (!isAuthenticated) {
+      setShowAuthModal(true);
+      return;
+    }
+
+    // Check VIP status
+    if (!isVip) {
+      setShowProModalUsers(true);
+      return;
+    }
+
+    setLoadingUsers(true);
+    try {
+      const params = new URLSearchParams();
+      params.append("filter", filterType);
+      if (filterType === "country" && user.country_code) {
+        params.append("country_code", user.country_code);
+      } else if (filterType === "city" && user.city) {
+        params.append("city", user.city);
+      }
+
+      const response = await fetch(`/api/users/list?${params.toString()}`);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to load users: ${response.status}`);
+      }
+
+      const result = await response.json();
+      setUsersList(result.users || []);
+      setFriendsListUsers(result.friends || []);
+
+      // Open appropriate modal
+      if (filterType === "all") {
+        setShowTotalUsersModal(true);
+      } else if (filterType === "country") {
+        setShowCountryUsersModal(true);
+      } else if (filterType === "city") {
+        setShowCityUsersModal(true);
+      }
+    } catch (error) {
+      console.error("Error loading users list:", error);
+      alert(error instanceof Error ? error.message : "Failed to load users");
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  // Load friend statuses for users in modal
+  useEffect(() => {
+    if ((showTotalUsersModal || showCountryUsersModal || showCityUsersModal) && isAuthenticated && currentAuthUser) {
+      const userIds = usersList.map((u) => u.id);
+
+      Promise.all(
+        userIds.map(async (userId) => {
+          try {
+            const response = await fetch(`/api/friends?user_id=${userId}`);
+            if (response.ok) {
+              const result = await response.json();
+              return { userId, status: result.data?.status || "none" };
+            }
+          } catch (error) {
+            console.error(`Error fetching friend status for ${userId}:`, error);
+          }
+          return { userId, status: "none" as const };
+        })
+      ).then((results) => {
+        const statusMap: Record<string, "none" | "pending_sent" | "pending_received" | "accepted" | "blocked"> = {};
+        results.forEach(({ userId, status }) => {
+          statusMap[userId] = status;
+        });
+        setFriendStatuses(statusMap);
+      });
+    }
+  }, [showTotalUsersModal, showCountryUsersModal, showCityUsersModal, usersList, isAuthenticated, currentAuthUser]);
+
+  // Load friend statuses for user friends in modal
+  useEffect(() => {
+    if (showUserFriendsModal && isAuthenticated && currentAuthUser) {
+      const userIds = userFriendsList.map((u) => u.id);
+
+      Promise.all(
+        userIds.map(async (userId) => {
+          try {
+            const response = await fetch(`/api/friends?user_id=${userId}`);
+            if (response.ok) {
+              const result = await response.json();
+              return { userId, status: result.data?.status || "none" };
+            }
+          } catch (error) {
+            console.error(`Error fetching friend status for ${userId}:`, error);
+          }
+          return { userId, status: "none" as const };
+        })
+      ).then((results) => {
+        const statusMap: Record<string, "none" | "pending_sent" | "pending_received" | "accepted" | "blocked"> = {};
+        results.forEach(({ userId, status }) => {
+          statusMap[userId] = status;
+        });
+        setUserFriendsStatuses(statusMap);
+      });
+    }
+  }, [showUserFriendsModal, userFriendsList, isAuthenticated, currentAuthUser]);
+
+  // Handle add friend
+  const handleAddFriend = async (userId: string) => {
+    if (!isAuthenticated) {
+      setShowAuthModal(true);
+      return;
+    }
+
+    setSendingFriendRequest((prev) => ({ ...prev, [userId]: true }));
+    try {
+      const response = await fetch("/api/friends", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ friend_id: userId }),
+      });
+
+      if (response.ok) {
+        setFriendStatuses((prev) => ({ ...prev, [userId]: "pending_sent" }));
+        setUserFriendsStatuses((prev) => ({ ...prev, [userId]: "pending_sent" }));
+      }
+    } catch (error) {
+      console.error("Error adding friend:", error);
+    } finally {
+      setSendingFriendRequest((prev) => ({ ...prev, [userId]: false }));
+    }
+  };
+
 
   const fetchUserInvites = async () => {
     setIsLoadingInvite(true);
@@ -305,6 +504,51 @@ export function ProfileContent({
       }
     } catch (error) {
       console.error("Error fetching friends list:", error);
+    }
+  };
+
+  // Load user friends list (for viewing other user's friends)
+  const handleShowUserFriendsList = async () => {
+    // Check authentication
+    if (!isAuthenticated) {
+      setShowAuthModal(true);
+      return;
+    }
+
+    // Check VIP status
+    if (!isVip) {
+      setShowProModalUsers(true);
+      return;
+    }
+
+    setLoadingUserFriends(true);
+    try {
+      const response = await fetch(`/api/friends/list?user_id=${user.id}&type=mutual`);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to load friends: ${response.status}`);
+      }
+
+      const result = await response.json();
+      const friends = result.data || [];
+      
+      // Transform friends data to match UserListItem format
+      const formattedFriends = friends.map((friend: User) => ({
+        id: friend.id,
+        avatar_url: friend.avatar_url,
+        name: friend.twitter_name,
+        twitter_handle: friend.twitter_handle,
+        isVip: friend.subscription_tier === "vip",
+        isVerified: friend.is_verified,
+      }));
+
+      setUserFriendsList(formattedFriends);
+      setShowUserFriendsModal(true);
+    } catch (error) {
+      console.error("Error loading user friends list:", error);
+      alert(error instanceof Error ? error.message : "Failed to load friends");
+    } finally {
+      setLoadingUserFriends(false);
     }
   };
 
@@ -654,11 +898,7 @@ export function ProfileContent({
                 isVerified={currentUser.is_verified}
               />
             </div>
-            {isOwnProfile ? (
-              <div className="mr-[14px]">
-                <EditProfileButton />
-              </div>
-            ) : (
+            {!isOwnProfile && (
               <div className="mr-[14px]">
                 <AddFriendButton 
                   userId={user.id} 
@@ -672,12 +912,21 @@ export function ProfileContent({
           {/* Profile Info */}
           <div className="flex flex-col gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-[var(--color-text-primary)] mb-1">
-                {currentUser.twitter_name}
-              </h1>
-              <p className="text-[var(--color-text-muted)]">
-                @{currentUser.twitter_handle}
-              </p>
+              <div className="flex items-start justify-between mb-2">
+                <div>
+                  <h1 className="text-2xl font-bold text-[var(--color-text-primary)] mb-1">
+                    {currentUser.twitter_name}
+                  </h1>
+                  <p className="text-[var(--color-text-muted)]">
+                    @{currentUser.twitter_handle}
+                  </p>
+                </div>
+                {isOwnProfile && (
+                  <div className="mb-auto">
+                    <EditProfileButton />
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Role */}
@@ -725,9 +974,20 @@ export function ProfileContent({
                 )}
               </div>
             ) : (
-              <p className="text-[var(--color-text-secondary)]">
-                {friendsCount} {friendsCount === 1 ? "fren" : "frens"}
-              </p>
+              <button
+                onClick={handleShowUserFriendsList}
+                disabled={loadingUserFriends}
+                className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors cursor-pointer text-left flex items-center gap-2"
+              >
+                {loadingUserFriends ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>{friendsCount} {friendsCount === 1 ? "fren" : "frens"}</span>
+                  </>
+                ) : (
+                  <span>{friendsCount} {friendsCount === 1 ? "fren" : "frens"}</span>
+                )}
+              </button>
             )}
 
             {/* Affiliations */}
@@ -864,7 +1124,7 @@ export function ProfileContent({
                   <h3 className="text-sm font-medium text-[var(--color-text-muted)]">
                     Socials
                   </h3>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <a
                       href={`https://twitter.com/${currentUser.twitter_handle}`}
                       target="_blank"
@@ -918,6 +1178,139 @@ export function ProfileContent({
                         aria-label="Facebook"
                       >
                         <Facebook className="w-5 h-5" />
+                      </a>
+                    )}
+                    {currentUser.socials?.telegram && (
+                      <a
+                        href={currentUser.socials.telegram}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => {
+                          trackEvent("profile_social_link_click", {
+                            event_category: "Profiles",
+                            event_label: currentUser.twitter_handle || currentUser.id,
+                            target_user_id: currentUser.id,
+                            social_platform: "telegram",
+                          });
+                        }}
+                        className="p-2 rounded-lg bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+                        aria-label="Telegram"
+                      >
+                        <Send className="w-5 h-5" />
+                      </a>
+                    )}
+                    {currentUser.socials?.youtube && (
+                      <a
+                        href={currentUser.socials.youtube}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => {
+                          trackEvent("profile_social_link_click", {
+                            event_category: "Profiles",
+                            event_label: currentUser.twitter_handle || currentUser.id,
+                            target_user_id: currentUser.id,
+                            social_platform: "youtube",
+                          });
+                        }}
+                        className="p-2 rounded-lg bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+                        aria-label="YouTube"
+                      >
+                        <Youtube className="w-5 h-5" />
+                      </a>
+                    )}
+                    {currentUser.socials?.discord && (
+                      <a
+                        href={currentUser.socials.discord}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => {
+                          trackEvent("profile_social_link_click", {
+                            event_category: "Profiles",
+                            event_label: currentUser.twitter_handle || currentUser.id,
+                            target_user_id: currentUser.id,
+                            social_platform: "discord",
+                          });
+                        }}
+                        className="p-2 rounded-lg bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+                        aria-label="Discord"
+                      >
+                        <MessageSquare className="w-5 h-5" />
+                      </a>
+                    )}
+                    {currentUser.socials?.github && (
+                      <a
+                        href={currentUser.socials.github}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => {
+                          trackEvent("profile_social_link_click", {
+                            event_category: "Profiles",
+                            event_label: currentUser.twitter_handle || currentUser.id,
+                            target_user_id: currentUser.id,
+                            social_platform: "github",
+                          });
+                        }}
+                        className="p-2 rounded-lg bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+                        aria-label="GitHub"
+                      >
+                        <Github className="w-5 h-5" />
+                      </a>
+                    )}
+                    {currentUser.socials?.linkedin && (
+                      <a
+                        href={currentUser.socials.linkedin}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => {
+                          trackEvent("profile_social_link_click", {
+                            event_category: "Profiles",
+                            event_label: currentUser.twitter_handle || currentUser.id,
+                            target_user_id: currentUser.id,
+                            social_platform: "linkedin",
+                          });
+                        }}
+                        className="p-2 rounded-lg bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+                        aria-label="LinkedIn"
+                      >
+                        <Linkedin className="w-5 h-5" />
+                      </a>
+                    )}
+                    {currentUser.socials?.medium && (
+                      <a
+                        href={currentUser.socials.medium}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => {
+                          trackEvent("profile_social_link_click", {
+                            event_category: "Profiles",
+                            event_label: currentUser.twitter_handle || currentUser.id,
+                            target_user_id: currentUser.id,
+                            social_platform: "medium",
+                          });
+                        }}
+                        className="p-2 rounded-lg bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+                        aria-label="Medium"
+                      >
+                        <BookOpen className="w-5 h-5" />
+                      </a>
+                    )}
+                    {currentUser.socials?.substack && (
+                      <a
+                        href={currentUser.socials.substack}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => {
+                          trackEvent("profile_social_link_click", {
+                            event_category: "Profiles",
+                            event_label: currentUser.twitter_handle || currentUser.id,
+                            target_user_id: currentUser.id,
+                            social_platform: "substack",
+                          });
+                        }}
+                        className="p-2 rounded-lg bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+                        aria-label="Substack"
+                      >
+                        <Rss className="w-5 h-5" />
                       </a>
                     )}
                   </div>
@@ -977,28 +1370,31 @@ export function ProfileContent({
             </h3>
             <div className="space-y-3 mb-4">
               <div>
-                <p className="text-sm text-[var(--color-text-secondary)]">
+                <button
+                  onClick={() => loadUsersList("all")}
+                  disabled={loadingUsers}
+                  className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors cursor-pointer w-full text-left"
+                >
                   Total users on SolPoint: <span className="text-[var(--color-text-primary)] font-medium">{totalUsers.toLocaleString()}</span>
-                </p>
+                </button>
               </div>
               <div>
-                <p className="text-sm text-[var(--color-text-secondary)]">
+                <button
+                  onClick={() => loadUsersList("country")}
+                  disabled={loadingUsers}
+                  className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors cursor-pointer w-full text-left"
+                >
                   Users in your country: <span className="text-[var(--color-text-primary)] font-medium">{usersInCountry.toLocaleString()}</span>
-                </p>
+                </button>
               </div>
               <div>
-                {isVip ? (
-                  <p className="text-sm text-[var(--color-text-secondary)]">
-                    Users in your city: <span className="text-[var(--color-text-primary)] font-medium">{usersInCity.toLocaleString()}</span>
-                  </p>
-                ) : (
-                  <button
-                    onClick={() => setShowProModal(true)}
-                    className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
-                  >
-                    Users in your city: <span className="text-[var(--color-text-primary)] font-medium">{usersInCity.toLocaleString()}</span>
-                  </button>
-                )}
+                <button
+                  onClick={() => loadUsersList("city")}
+                  disabled={loadingUsers}
+                  className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors cursor-pointer w-full text-left"
+                >
+                  Users in your city: <span className="text-[var(--color-text-primary)] font-medium">{usersInCity.toLocaleString()}</span>
+                </button>
               </div>
             </div>
 
@@ -1500,6 +1896,166 @@ export function ProfileContent({
         title="This feature is available only with PRO subscription"
         description="This feature is available only with PRO subscription. Upgrade to PRO to unlock this feature."
       />
+
+      {/* Auth Required Modal */}
+      <AuthRequiredModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        title="Sign in required"
+        description="Please sign up or log in to view the full list."
+      />
+
+      {/* Pro Subscription Modal for Users List */}
+      <ProSubscriptionModal
+        isOpen={showProModalUsers}
+        onClose={() => setShowProModalUsers(false)}
+        title="This feature is available only with PRO subscription"
+        description="Viewing all users is available only with PRO subscription. Upgrade to PRO to unlock this feature."
+      />
+
+      {/* Total Users Modal */}
+      <Modal
+        isOpen={showTotalUsersModal}
+        onClose={() => setShowTotalUsersModal(false)}
+        size="md"
+        ariaLabel="All Users on SolPoint"
+      >
+        <ModalHeader>
+          <ModalTitle>All Users on SolPoint</ModalTitle>
+        </ModalHeader>
+        <ModalContent>
+          <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+            {usersList.length === 0 ? (
+              <p className="text-sm text-[var(--color-text-secondary)] text-center py-4">
+                No users found
+              </p>
+            ) : (
+              usersList.map((member) => {
+                const friendStatus = friendStatuses[member.id] || "none";
+
+                return (
+                  <UserListItem
+                    key={member.id}
+                    member={member}
+                    friendStatus={friendStatus}
+                    onAddFriend={handleAddFriend}
+                    sendingFriendRequest={sendingFriendRequest[member.id]}
+                    creatingChat={creatingChat[member.id]}
+                  />
+                );
+              })
+            )}
+          </div>
+        </ModalContent>
+      </Modal>
+
+      {/* Country Users Modal */}
+      <Modal
+        isOpen={showCountryUsersModal}
+        onClose={() => setShowCountryUsersModal(false)}
+        size="md"
+        ariaLabel="Users in your country"
+      >
+        <ModalHeader>
+          <ModalTitle>Users in your country</ModalTitle>
+        </ModalHeader>
+        <ModalContent>
+          <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+            {usersList.length === 0 ? (
+              <p className="text-sm text-[var(--color-text-secondary)] text-center py-4">
+                No users found
+              </p>
+            ) : (
+              usersList.map((member) => {
+                const friendStatus = friendStatuses[member.id] || "none";
+
+                return (
+                  <UserListItem
+                    key={member.id}
+                    member={member}
+                    friendStatus={friendStatus}
+                    onAddFriend={handleAddFriend}
+                    sendingFriendRequest={sendingFriendRequest[member.id]}
+                    creatingChat={creatingChat[member.id]}
+                  />
+                );
+              })
+            )}
+          </div>
+        </ModalContent>
+      </Modal>
+
+      {/* City Users Modal */}
+      <Modal
+        isOpen={showCityUsersModal}
+        onClose={() => setShowCityUsersModal(false)}
+        size="md"
+        ariaLabel="Users in your city"
+      >
+        <ModalHeader>
+          <ModalTitle>Users in your city</ModalTitle>
+        </ModalHeader>
+        <ModalContent>
+          <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+            {usersList.length === 0 ? (
+              <p className="text-sm text-[var(--color-text-secondary)] text-center py-4">
+                No users found
+              </p>
+            ) : (
+              usersList.map((member) => {
+                const friendStatus = friendStatuses[member.id] || "none";
+
+                return (
+                  <UserListItem
+                    key={member.id}
+                    member={member}
+                    friendStatus={friendStatus}
+                    onAddFriend={handleAddFriend}
+                    sendingFriendRequest={sendingFriendRequest[member.id]}
+                    creatingChat={creatingChat[member.id]}
+                  />
+                );
+              })
+            )}
+          </div>
+        </ModalContent>
+      </Modal>
+
+      {/* User Friends Modal */}
+      <Modal
+        isOpen={showUserFriendsModal}
+        onClose={() => setShowUserFriendsModal(false)}
+        size="md"
+        ariaLabel={`${user.twitter_name}'s Friends`}
+      >
+        <ModalHeader>
+          <ModalTitle>{user.twitter_name}&apos;s Friends</ModalTitle>
+        </ModalHeader>
+        <ModalContent>
+          <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+            {userFriendsList.length === 0 ? (
+              <p className="text-sm text-[var(--color-text-secondary)] text-center py-4">
+                No friends found
+              </p>
+            ) : (
+              userFriendsList.map((member) => {
+                const friendStatus = userFriendsStatuses[member.id] || "none";
+
+                return (
+                  <UserListItem
+                    key={member.id}
+                    member={member}
+                    friendStatus={friendStatus}
+                    onAddFriend={handleAddFriend}
+                    sendingFriendRequest={sendingFriendRequest[member.id]}
+                    creatingChat={creatingChat[member.id]}
+                  />
+                );
+              })
+            )}
+          </div>
+        </ModalContent>
+      </Modal>
     </div>
   );
 }

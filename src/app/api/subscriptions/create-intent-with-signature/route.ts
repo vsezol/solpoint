@@ -5,9 +5,11 @@ import { randomBytes } from "crypto";
 export async function POST(request: Request) {
   const supabase = await createClient();
 
+
   try {
     const body = await request.json();
     const { plan_id, email, tx_signature } = body;
+
 
     if (!plan_id) {
       return NextResponse.json(
@@ -90,27 +92,51 @@ export async function POST(request: Request) {
     const finalAmount = Math.max(amountWithBuffer, 0.01);
     const expectedAmountLamports = Math.ceil(finalAmount * 1e9);
 
+
     // Генерируем уникальный intent_id
     const intentId = randomBytes(16).toString("hex");
+
 
     // Создаем intent с истечением через 15 минут и signature
     const expiresAt = new Date();
     expiresAt.setMinutes(expiresAt.getMinutes() + 15);
 
-    const { data: intent, error: intentError } = await supabase
+
+    // Пытаемся создать intent с expected_amount_lamports
+    // Если колонка отсутствует (ошибка PGRST204), создаем без неё
+    const baseInsertData = {
+      intent_id: intentId,
+      plan_id: plan.id,
+      email: email.toLowerCase().trim(),
+      status: "pending" as const,
+      tx_signature: tx_signature,
+      provider: "solana" as const,
+      expires_at: expiresAt.toISOString(),
+    };
+
+    // Сначала пытаемся с expected_amount_lamports
+    let { data: intent, error: intentError } = await supabase
       .from("subscription_intents")
       .insert({
-        intent_id: intentId,
-        plan_id: plan.id,
-        email: email.toLowerCase().trim(),
-        status: "pending",
-        tx_signature: tx_signature,
-        provider: "solana",
+        ...baseInsertData,
         expected_amount_lamports: expectedAmountLamports,
-        expires_at: expiresAt.toISOString(),
       })
       .select()
       .single();
+
+    // Если ошибка связана с отсутствием колонки (PGRST204), пробуем без неё
+    if (intentError && intentError.code === 'PGRST204' && intentError.message?.includes('expected_amount_lamports')) {
+      
+      const retryResult = await supabase
+        .from("subscription_intents")
+        .insert(baseInsertData)
+        .select()
+        .single();
+      
+      intent = retryResult.data;
+      intentError = retryResult.error;
+    }
+
 
     if (intentError) {
       console.error("Error creating intent:", intentError);

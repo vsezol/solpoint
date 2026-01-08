@@ -122,6 +122,22 @@ export async function POST(
       );
     }
 
+    // Check if user has PRO subscription
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("subscription_tier")
+      .eq("id", authUser.id)
+      .single();
+
+    if (profileError) throw profileError;
+
+    if (profile?.subscription_tier !== "vip") {
+      return NextResponse.json(
+        { error: "PRO subscription required to send messages" },
+        { status: 403 }
+      );
+    }
+
     // Create message
     const { data: message, error: messageError } = await supabase
       .from("messages")

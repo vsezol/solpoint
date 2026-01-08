@@ -125,6 +125,14 @@ export default function HubsPage() {
 
   // Фильтрация и сортировка данных
   const filteredAndSortedEntities = useMemo(() => {
+    // Создаем Map для быстрого поиска типа по ID
+    const entityTypeMap = new Map<string, "hub" | "community" | "workspace" | "project">();
+    
+    hubs.forEach(hub => entityTypeMap.set(hub.id, "hub"));
+    communities.forEach(community => entityTypeMap.set(community.id, "community"));
+    projects.forEach(project => entityTypeMap.set(project.id, "project"));
+    workspaces.forEach(workspace => entityTypeMap.set(workspace.id, "workspace"));
+
     let entities: (Hub | Community | Project | Workspace)[] = [];
 
     // Фильтрация по типу
@@ -145,10 +153,8 @@ export default function HubsPage() {
       entities.sort((a, b) => a.name.localeCompare(b.name));
     } else if (sortBy === "members") {
       entities.sort((a, b) => b.members_count - a.members_count);
-    } else if (sortBy === "country") {
-      entities.sort((a, b) => a?.country?.localeCompare(b?.country || "") || 0);
     }
-    // "recommended" - оставляем как есть (уже отсортировано по members_count)
+    // "recommended" - оставляем как есть (уже отсортировано на бэкенде: сначала is_recommended=true, потом members_count)
 
     return entities;
   }, [hubs, communities, projects, workspaces, entityTypeFilter, sortBy]);
@@ -287,6 +293,13 @@ export default function HubsPage() {
                   // Определяем тип сущности для правильного пути
                   let entityType: "hub" | "community" | "workspace" | "project" | undefined = undefined;
                   
+                  // Создаем Map для быстрого поиска типа по ID
+                  const entityTypeMap = new Map<string, "hub" | "community" | "workspace" | "project">();
+                  hubs.forEach(hub => entityTypeMap.set(hub.id, "hub"));
+                  communities.forEach(community => entityTypeMap.set(community.id, "community"));
+                  projects.forEach(project => entityTypeMap.set(project.id, "project"));
+                  workspaces.forEach(workspace => entityTypeMap.set(workspace.id, "workspace"));
+                  
                   if (entityTypeFilter === "community") {
                     entityType = "community";
                   } else if (entityTypeFilter === "workspaces") {
@@ -296,19 +309,11 @@ export default function HubsPage() {
                   } else if (entityTypeFilter === "hubs") {
                     entityType = "hub";
                   } else if (entityTypeFilter === "all") {
-                    // Определяем по ID, в каком массиве находится сущность
-                    if (communities.some(c => c.id === entity.id)) {
-                      entityType = "community";
-                    } else if (workspaces.some(w => w.id === entity.id)) {
-                      entityType = "workspace";
-                    } else if (projects.some(p => p.id === entity.id)) {
-                      entityType = "project";
-                    } else if (hubs.some(h => h.id === entity.id)) {
-                      entityType = "hub";
-                    }
+                    // Определяем тип по ID из Map
+                    entityType = entityTypeMap.get(entity.id);
                   }
                   
-                  // HubCard поддерживает все эти типы
+                  // HubCard поддерживает все эти типы и автоматически определит тип, если не передан
                   return <HubCard key={entity.id} hub={entity as Hub | Community | Workspace | Project} entityType={entityType} />;
                 }
                 return null;

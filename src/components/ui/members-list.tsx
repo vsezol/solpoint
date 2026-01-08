@@ -96,6 +96,28 @@ export function MembersList({
     }
   };
 
+  // Обработчик клика по аватару пользователя
+  const handleAvatarClick = (e: React.MouseEvent, twitterHandle?: string) => {
+    e.preventDefault();
+    
+    // Проверяем авторизацию
+    if (!isAuthenticated) {
+      setShowAuthModal(true);
+      return;
+    }
+
+    // Проверяем VIP статус
+    if (!isVip) {
+      setShowProModal(true);
+      return;
+    }
+
+    // Если авторизован и VIP - разрешаем переход
+    if (twitterHandle) {
+      window.location.href = `/profile/${twitterHandle}`;
+    }
+  };
+
   const getEntityName = () => {
     switch (entityType) {
       case "hub":
@@ -123,9 +145,10 @@ export function MembersList({
         <>
           <div className="flex flex-wrap gap-2 mb-2">
             {visibleItems.map((item) => (
-              <Link
+              <div
                 key={item.id}
-                href={item.twitter_handle ? `/profile/${item.twitter_handle}` : "#"}
+                onClick={(e) => handleAvatarClick(e, item.twitter_handle)}
+                className="cursor-pointer"
               >
                 <Avatar
                   src={item.avatar_url}
@@ -134,7 +157,7 @@ export function MembersList({
                   isVip={item.isVip}
                   isVerified={item.isVerified}
                 />
-              </Link>
+              </div>
             ))}
             {remainingCount > 0 && (
               <div className="w-8 h-8 rounded-full bg-[var(--color-surface-hover)] flex items-center justify-center text-xs text-[var(--color-text-muted)]">

@@ -10,6 +10,7 @@ const SOLANA_RPC_URL = process.env.SOLANA_RPC_URL || "https://solana-rpc.publicn
 export async function POST(request: Request) {
   const supabase = await createClient();
 
+
   if (!RECIPIENT_ADDRESS) {
     return NextResponse.json(
       { error: "Payment service configuration error: recipient address not set" },
@@ -20,6 +21,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { signature, payer, intent_id } = body;
+
 
     if (!signature || !payer) {
       return NextResponse.json(
@@ -41,6 +43,7 @@ export async function POST(request: Request) {
       .select("*, plans(*)")
       .eq("intent_id", intent_id)
       .single();
+
 
     if (intentError || !intent) {
       return NextResponse.json(
@@ -106,16 +109,18 @@ export async function POST(request: Request) {
       );
     }
 
-    // Проверяем, не использовалась ли эта signature в другом intent
+    // Проверяем, не использовалась ли эта signature в ДРУГОМ intent (исключаем текущий)
     const { data: existingIntent } = await supabase
       .from("subscription_intents")
-      .select("id")
+      .select("id, intent_id")
       .eq("tx_signature", signature)
+      .neq("id", intent.id) // ИСКЛЮЧАЕМ текущий intent из проверки!
       .single();
+
 
     if (existingIntent) {
       return NextResponse.json(
-        { error: "This transaction signature has already been used" },
+        { error: "This transaction signature has already been used in another intent" },
         { status: 400 }
       );
     }
@@ -123,25 +128,63 @@ export async function POST(request: Request) {
     // Подключаемся к Solana RPC
     const connection = new Connection(SOLANA_RPC_URL, "finalized");
 
-    // Получаем транзакцию с commitment=finalized
-    let transaction;
+
+    // Получаем транзакцию - сначала пробуем confirmed, потом finalized
+    let transaction = null;
+    let transactionError = null;
+    
+    // Пробуем сначала confirmed (быстрее)
     try {
-      transaction = await connection.getTransaction(signature, {
-        commitment: "finalized",
-        maxSupportedTransactionVersion: 0,
-      });
+      transaction = await Promise.race([
+        connection.getTransaction(signature, {
+          commitment: "confirmed",
+          maxSupportedTransactionVersion: 0,
+        }),
+        new Promise<null>((_, reject) => 
+          setTimeout(() => reject(new Error("timeout")), 10000)
+        )
+      ]);
+      
     } catch (error) {
-      console.error("Error fetching transaction:", error);
-      return NextResponse.json(
-        { error: "Failed to fetch transaction from Solana network. Transaction may not be finalized yet." },
-        { status: 500 }
-      );
+      transactionError = error;
+      
+      // Если не получилось с confirmed, пробуем finalized
+      try {
+        transaction = await Promise.race([
+          connection.getTransaction(signature, {
+            commitment: "finalized",
+            maxSupportedTransactionVersion: 0,
+          }),
+          new Promise<null>((_, reject) => 
+            setTimeout(() => reject(new Error("timeout")), 15000)
+          )
+        ]);
+        
+      } catch (finalizedError) {
+        console.error("Error fetching transaction:", finalizedError);
+        // Если intent уже создан, возвращаем специальный ответ для активации
+        return NextResponse.json(
+          { 
+            error: "Transaction not found or not finalized yet",
+            intent_id: intent.intent_id,
+            can_activate: true,
+            message: "Your payment intent has been created. The transaction may still be processing. You can try to activate your subscription."
+          },
+          { status: 404 }
+        );
+      }
     }
 
     // Проверка 1: Транзакция существует
     if (!transaction) {
+      // Если intent уже создан, возвращаем специальный ответ для активации
       return NextResponse.json(
-        { error: "Transaction not found or not finalized" },
+        { 
+          error: "Transaction not found or not finalized",
+          intent_id: intent.intent_id,
+          can_activate: true,
+          message: "Your payment intent has been created. The transaction may still be processing. You can try to activate your subscription."
+        },
         { status: 404 }
       );
     }

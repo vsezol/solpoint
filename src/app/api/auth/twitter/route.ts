@@ -1,15 +1,16 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { getAppOrigin } from "@/lib/utils";
 
 export async function GET(request: Request) {
   const supabase = await createClient();
   const { searchParams } = new URL(request.url);
   const redirectTo = searchParams.get("redirect_to") || "/profile";
 
-  // Всегда используем origin из запроса для правильного определения localhost
+  // Автоматически определяем origin в зависимости от окружения
   const requestUrl = new URL(request.url);
-  const origin = requestUrl.origin;
+  const origin = getAppOrigin(requestUrl.origin);
 
   // Сохраняем redirect_to в cookie, чтобы восстановить его в callback
   const cookieStore = await cookies();

@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { MapContainer, Marker, Popup, useMap, GeoJSON, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import type { MapMarker, User, Event, Hub, Community, Workspace } from "@/types";
+import type { MapMarker, User, Event, Hub, Community, Workspace, Project } from "@/types";
 import type { GeoJsonObject } from "geojson";
 import { UserCard } from "@/components/cards/user-card";
 import { EventCard } from "@/components/cards/event-card";
@@ -23,44 +23,50 @@ if (typeof window !== "undefined") {
   });
 }
 
-// Custom marker icons for users
-const createCustomIcon = (type: MapMarker["type"]) => {
-  // Free user marker using free-user-pin.svg
-  if (type === "user") {
-    return L.divIcon({
-      html: `<img src="/free-user-pin.svg" alt="User" style="width: 46px; height: 54px;" />`,
-      className: "custom-marker user-marker",
-      iconSize: [46, 54],
-      iconAnchor: [23, 54],
-      popupAnchor: [0, -50],
-    });
-  }
+// Custom marker icons for users with avatar
+const createCustomIcon = (type: MapMarker["type"], user?: User) => {
+  // Get avatar URL or use default
+  const avatarUrl = user?.avatar_url || "";
+  // Create unique ID for clipPath (sanitize user ID to avoid conflicts)
+  const clipId = user?.id ? `avatar-clip-${user.id.replace(/[^a-zA-Z0-9]/g, '-')}` : 'avatar-clip-default';
+  
+  // Escape avatar URL for use in SVG
+  const escapedAvatarUrl = avatarUrl ? avatarUrl.replace(/"/g, '&quot;') : '';
+  
+  // Create SVG with hub colors (#111820 background, #14f195 stroke) and "thin stem" pin shape (like old user pins)
+  const svg = `
+    <svg width="46" height="54" viewBox="0 0 27 42" fill="none" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+      <!-- Pin shape (geometry based on old user pins) -->
+      <path d="M13.5 1C20.4036 1 26 6.59644 26 13.5C26 16.3142 25.0694 18.9108 23.5 21C21 24.5 14.5 29 14.5 38C14.5 38.5523 14.0523 39 13.5 39C12.9477 39 12.5 38.5523 12.5 38C12.5 29 6 24.5 3.5 21C1.93058 18.9108 1 16.3142 1 13.5C1 6.59644 6.59644 1 13.5 1Z" fill="#111820" stroke="#14f195" stroke-width="1.5"/>
 
-  // Pro user marker using pro-user-pin.svg
-  if (type === "pro_user") {
-    return L.divIcon({
-      html: `<img src="/pro-user-pin.svg" alt="Pro User" style="width: 46px; height: 54px;" />`,
-      className: "custom-marker pro-user-marker",
-      iconSize: [46, 54],
-      iconAnchor: [23, 54],
-      popupAnchor: [0, -50],
-    });
-  }
+      <!-- Avatar circle border (bigger) -->
+      <circle cx="13.5" cy="13.5" r="11" fill="none" stroke="#14f195" stroke-width="1.5"/>
+      ${avatarUrl ? `
+        <defs>
+          <clipPath id="${clipId}">
+            <circle cx="13.5" cy="13.5" r="10.6"/>
+          </clipPath>
+        </defs>
+        <image xlink:href="${escapedAvatarUrl}" x="2.9" y="2.9" width="21.2" height="21.2" clip-path="url(#${clipId})" preserveAspectRatio="xMidYMid slice"/>
+      ` : `
+        <circle cx="13.5" cy="13.5" r="10.6" fill="#14f195" fill-opacity="0.3"/>
+      `}
+    </svg>
+  `;
 
-  // Fallback (should not happen for user types, but just in case)
   return L.divIcon({
-    html: `<img src="/free-user-pin.svg" alt="User" style="width: 46px; height: 54px;" />`,
-    className: "custom-marker user-marker",
+    html: svg,
+    className: `custom-marker ${type === "pro_user" ? "pro-user-marker" : "user-marker"}`,
     iconSize: [46, 54],
     iconAnchor: [23, 54],
     popupAnchor: [0, -50],
   });
 };
 
-// Hub marker using community-hubs.svg
+// Hub marker using hub-pin.svg
 const createHubIcon = () => {
   return L.divIcon({
-    html: `<img src="/community-hubs.svg" alt="Hub" style="width: 46px; height: 54px;" />`,
+    html: `<img src="/hub-pin.svg" alt="Hub" style="width: 46px; height: 54px;" />`,
     className: "custom-marker hub-marker",
     iconSize: [46, 54],
     iconAnchor: [23, 54],
@@ -68,11 +74,44 @@ const createHubIcon = () => {
   });
 };
 
-// Event marker using event-icon.svg
+// Event marker using event-pin.svg
 const createEventIcon = () => {
   return L.divIcon({
-    html: `<img src="/event-icon.svg" alt="Event" style="width: 46px; height: 54px;" />`,
+    html: `<img src="/event-pin.svg" alt="Event" style="width: 46px; height: 54px;" />`,
     className: "custom-marker event-marker",
+    iconSize: [46, 54],
+    iconAnchor: [23, 54],
+    popupAnchor: [0, -50],
+  });
+};
+
+// Community marker using community-pin.svg
+const createCommunityIcon = () => {
+  return L.divIcon({
+    html: `<img src="/community-pin.svg" alt="Community" style="width: 46px; height: 54px;" />`,
+    className: "custom-marker community-marker",
+    iconSize: [46, 54],
+    iconAnchor: [23, 54],
+    popupAnchor: [0, -50],
+  });
+};
+
+// Workspace marker using workspace-pin.svg
+const createWorkspaceIcon = () => {
+  return L.divIcon({
+    html: `<img src="/workspace-pin.svg" alt="Workspace" style="width: 46px; height: 54px;" />`,
+    className: "custom-marker workspace-marker",
+    iconSize: [46, 54],
+    iconAnchor: [23, 54],
+    popupAnchor: [0, -50],
+  });
+};
+
+// Project marker using project-pin.svg
+const createProjectIcon = () => {
+  return L.divIcon({
+    html: `<img src="/project-pin.svg" alt="Project" style="width: 46px; height: 54px;" />`,
+    className: "custom-marker project-marker",
     iconSize: [46, 54],
     iconAnchor: [23, 54],
     popupAnchor: [0, -50],
@@ -377,11 +416,18 @@ export function SolPointMap({
   const getIcon = (marker: MapMarker) => {
     switch (marker.type) {
       case "hub":
-      case "workspace":
-      case "community":
         return createHubIcon();
+      case "workspace":
+        return createWorkspaceIcon();
+      case "community":
+        return createCommunityIcon();
+      case "project":
+        return createProjectIcon();
       case "event":
         return createEventIcon();
+      case "user":
+      case "pro_user":
+        return createCustomIcon(marker.type, marker.data as User);
       default:
         return createCustomIcon(marker.type);
     }
@@ -519,6 +565,8 @@ export function SolPointMap({
         return <HubCard hub={marker.data as Workspace} compact entityType="workspace" isBlurred={!isAuthenticated} />;
       case "community":
         return <HubCard hub={marker.data as Community} compact entityType="community" isBlurred={!isAuthenticated} />;
+      case "project":
+        return <HubCard hub={marker.data as Project} compact entityType="project" isBlurred={!isAuthenticated} />;
       default:
         return null;
     }
@@ -707,6 +755,7 @@ export function SolPointMap({
           border: 1px solid var(--color-surface-border) !important;
           border-radius: 8px !important;
           overflow: hidden;
+          z-index: 999 !important;
         }
         
         .leaflet-control-zoom a {

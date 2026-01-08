@@ -21,15 +21,18 @@ export function HubSocialLink({ hub, platform, href }: HubSocialLinkProps) {
   const Icon = icons[platform];
 
   const handleClick = () => {
-    trackEvent("hub_social_link_click", {
-      event_category: "Hubs",
-      event_label: hub.slug || hub.id,
-      hub_id: hub.id,
-      hub_slug: hub.slug,
-      hub_name: hub.name,
-      social_platform: platform,
-      source: "hub_page",
-    });
+    // Вызываем trackEvent асинхронно, чтобы не блокировать открытие ссылки
+    setTimeout(() => {
+      trackEvent("hub_social_link_click", {
+        event_category: "Hubs",
+        event_label: hub.slug || hub.id,
+        hub_id: hub.id,
+        hub_slug: hub.slug,
+        hub_name: hub.name,
+        social_platform: platform,
+        source: "hub_page",
+      });
+    }, 0);
   };
 
   return (

@@ -33,12 +33,33 @@ export async function GET(request: NextRequest) {
 
     if (type === "mutual") {
       // Взаимные друзья (mutual follows)
-      const { data: mutualFriendsData, error } = await supabase
+      // Сначала получаем ID друзей из view (mutual_friends - это VIEW, не таблица)
+      const { data: mutualFriendsData, error: mutualError } = await supabase
         .from("mutual_friends")
-        .select(
-          `
-          friend_id,
-          profiles!mutual_friends_friend_id_fkey (
+        .select("user_id, friend_id")
+        .or(`user_id.eq.${user_id},friend_id.eq.${user_id}`);
+
+      if (mutualError) throw mutualError;
+
+      // Получаем ID всех друзей пользователя
+      const friendIds: string[] = [];
+      if (mutualFriendsData) {
+        for (const mf of mutualFriendsData) {
+          if (mf.user_id === user_id) {
+            friendIds.push(mf.friend_id);
+          } else if (mf.friend_id === user_id) {
+            friendIds.push(mf.user_id);
+          }
+        }
+      }
+
+      if (friendIds.length === 0) {
+        users = [];
+      } else {
+        // Загружаем профили друзей отдельным запросом
+        const { data: friendsProfiles, error: profilesError } = await supabase
+          .from("profiles")
+          .select(`
             id,
             twitter_id,
             twitter_handle,
@@ -60,20 +81,12 @@ export async function GET(request: NextRequest) {
             countries!fk_profiles_country_code (
               name
             )
-          )
-        `
-        )
-        .eq("user_id", user_id);
+          `)
+          .in("id", friendIds);
 
-      if (error) throw error;
-
-      users =
-        mutualFriendsData?.map((mf: any) => {
-          const profile = Array.isArray(mf.profiles)
-            ? mf.profiles[0]
-            : mf.profiles;
-          return profile;
-        }).filter((p: any) => Boolean(p)) || [];
+        if (profilesError) throw profilesError;
+        users = friendsProfiles || [];
+      }
     } else if (type === "followers") {
       // Подписчики (те, кто подписан на пользователя)
       const { data: followersData, error } = await supabase

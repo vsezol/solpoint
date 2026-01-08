@@ -20,9 +20,9 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  // Получаем все сущности пользователя напрямую из БД
+  // Получаем все сущности пользователя и события пользователя параллельно
   // Для events нужно проверить owner_type и owner_id (может быть user или сущность)
-  const [hubsResult, projectsResult, communitiesResult, workspacesResult] = await Promise.all([
+  const [hubsResult, projectsResult, communitiesResult, workspacesResult, userOwnedEventsResult] = await Promise.all([
     supabase
       .from("hubs")
       .select("*")
@@ -43,111 +43,110 @@ export default async function DashboardPage() {
       .select("*")
       .eq("owner_id", authUser.id)
       .order("created_at", { ascending: false }),
+    supabase
+      .from("events")
+      .select("*")
+      .eq("owner_type", "user")
+      .eq("owner_id", authUser.id)
+      .order("created_at", { ascending: false }),
   ]);
 
   const hubs = hubsResult.data || [];
   const workspaces = workspacesResult.data || [];
   const projects = projectsResult.data || [];
   const communities = communitiesResult.data || [];
+  const userOwnedEvents = userOwnedEventsResult.data || [];
 
-  // Получаем события пользователя
-  // 1. События, где owner_type = 'user' AND owner_id = userId
-  const { data: userOwnedEvents, error: userEventsError } = await supabase
-    .from("events")
-    .select("*")
-    .eq("owner_type", "user")
-    .eq("owner_id", authUser.id)
-    .order("created_at", { ascending: false });
-
-  if (userEventsError) {
-    console.error("Error fetching user owned events:", userEventsError);
+  if (userOwnedEventsResult.error) {
+    console.error("Error fetching user owned events:", userOwnedEventsResult.error);
   }
 
-  // 2. События, принадлежащие workspace/hub/community/project пользователя
-  let entityOwnedEvents: any[] = [];
-
   // Получаем события, принадлежащие сущностям пользователя (параллельно)
-  const entityEventsPromises: PromiseLike<any>[] = [];
+  const entityEventsPromises: Promise<any>[] = [];
 
   if (hubs.length > 0) {
     entityEventsPromises.push(
-      supabase
-        .from("events")
-        .select("*")
-        .eq("owner_type", "hub")
-        .in("owner_id", hubs.map((h) => h.id))
-        .order("created_at", { ascending: false })
-        .then(({ data, error }) => {
-          if (error) {
-            console.error("Error fetching hub events:", error);
-            return [];
-          }
-          return data || [];
-        })
+      Promise.resolve(
+        supabase
+          .from("events")
+          .select("*")
+          .eq("owner_type", "hub")
+          .in("owner_id", hubs.map((h) => h.id))
+          .order("created_at", { ascending: false })
+      ).then(({ data, error }) => {
+        if (error) {
+          console.error("Error fetching hub events:", error);
+          return [];
+        }
+        return data || [];
+      })
     );
   }
 
   if (projects.length > 0) {
     entityEventsPromises.push(
-      supabase
-        .from("events")
-        .select("*")
-        .eq("owner_type", "project")
-        .in("owner_id", projects.map((p) => p.id))
-        .order("created_at", { ascending: false })
-        .then(({ data, error }) => {
-          if (error) {
-            console.error("Error fetching project events:", error);
-            return [];
-          }
-          return data || [];
-        })
+      Promise.resolve(
+        supabase
+          .from("events")
+          .select("*")
+          .eq("owner_type", "project")
+          .in("owner_id", projects.map((p) => p.id))
+          .order("created_at", { ascending: false })
+      ).then(({ data, error }) => {
+        if (error) {
+          console.error("Error fetching project events:", error);
+          return [];
+        }
+        return data || [];
+      })
     );
   }
 
   if (communities.length > 0) {
     entityEventsPromises.push(
-      supabase
-        .from("events")
-        .select("*")
-        .eq("owner_type", "community")
-        .in("owner_id", communities.map((c) => c.id))
-        .order("created_at", { ascending: false })
-        .then(({ data, error }) => {
-          if (error) {
-            console.error("Error fetching community events:", error);
-            return [];
-          }
-          return data || [];
-        })
+      Promise.resolve(
+        supabase
+          .from("events")
+          .select("*")
+          .eq("owner_type", "community")
+          .in("owner_id", communities.map((c) => c.id))
+          .order("created_at", { ascending: false })
+      ).then(({ data, error }) => {
+        if (error) {
+          console.error("Error fetching community events:", error);
+          return [];
+        }
+        return data || [];
+      })
     );
   }
 
   if (workspaces.length > 0) {
     entityEventsPromises.push(
-      supabase
-        .from("events")
-        .select("*")
-        .eq("owner_type", "workspace")
-        .in("owner_id", workspaces.map((w) => w.id))
-        .order("created_at", { ascending: false })
-        .then(({ data, error }) => {
-          if (error) {
-            console.error("Error fetching workspace events:", error);
-            return [];
-          }
-          return data || [];
-        })
+      Promise.resolve(
+        supabase
+          .from("events")
+          .select("*")
+          .eq("owner_type", "workspace")
+          .in("owner_id", workspaces.map((w) => w.id))
+          .order("created_at", { ascending: false })
+      ).then(({ data, error }) => {
+        if (error) {
+          console.error("Error fetching workspace events:", error);
+          return [];
+        }
+        return data || [];
+      })
     );
   }
 
-  if (entityEventsPromises.length > 0) {
-    const entityEventsResults = await Promise.all(entityEventsPromises);
-    entityOwnedEvents = entityEventsResults.flat();
-  }
+  const entityEventsResults = entityEventsPromises.length > 0 
+    ? await Promise.all(entityEventsPromises)
+    : [];
+  const entityOwnedEvents = entityEventsResults.flat();
 
   // Объединяем все события пользователя
-  const events = [...(userOwnedEvents || []), ...entityOwnedEvents];
+  const events = [...userOwnedEvents, ...entityOwnedEvents];
 
   const totalCount = events.length + hubs.length + projects.length + communities.length + workspaces.length;
 
@@ -520,7 +519,7 @@ export default async function DashboardPage() {
                               </Link>
                             </Button>
                             <Button variant="outline" size="sm" asChild>
-                              <Link href={`/hubs/${workspace.slug}`}>
+                              <Link href={`/workspaces/${workspace.slug}`}>
                                 <ExternalLink className="w-4 h-4 mr-1" />
                                 View
                               </Link>

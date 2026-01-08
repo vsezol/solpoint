@@ -8,7 +8,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { EntityMembersWidget } from "@/components/entities/entity-members-widget";
 import type { Metadata } from "next";
-import { getAppUrl } from "@/lib/utils";
+import { getAppUrl, isUUID } from "@/lib/utils";
 import { HubViewTracker } from "@/components/analytics/hub-view-tracker";
 import { HubShareButton } from "@/components/analytics/hub-share-button";
 import { HubSocialLink } from "@/components/analytics/hub-social-link";
@@ -22,12 +22,18 @@ export async function generateMetadata({ params }: HubPageProps): Promise<Metada
   const { slug } = await params;
   const supabase = await createClient();
 
-  // Получаем хаб для метаданных
-  const { data: hubData } = await supabase
+  // Получаем хаб для метаданных - сначала по слагу, потом по ID
+  let query = supabase
     .from("hubs")
-    .select("*")
-    .eq("slug", slug)
-    .single();
+    .select("*");
+
+  if (isUUID(slug)) {
+    query = query.eq("id", slug);
+  } else {
+    query = query.eq("slug", slug);
+  }
+
+  const { data: hubData } = await query.single();
 
   if (!hubData) {
     return {
@@ -37,7 +43,8 @@ export async function generateMetadata({ params }: HubPageProps): Promise<Metada
 
   const hub = hubData as Hub;
   const appUrl = getAppUrl();
-  const hubUrl = `${appUrl}/hubs/${slug}`;
+  // Используем слаг из базы данных для URL, если он есть
+  const hubUrl = `${appUrl}/hubs/${hub.slug || slug}`;
   // Используем картинку хаба, если она есть, иначе логотип
   const imageUrl = hub.image_url && hub.image_url.trim() !== ''
     ? (hub.image_url.startsWith('http://') || hub.image_url.startsWith('https://'))
@@ -99,12 +106,18 @@ export default async function HubPage({ params }: HubPageProps) {
     isVip = profile?.subscription_tier === "vip";
   }
 
-  // Получаем хаб по slug
-  const { data: hubData, error: hubError } = await supabase
+  // Получаем хаб - сначала по слагу, потом по ID (если параметр является UUID)
+  let query = supabase
     .from("hubs")
-    .select("*")
-    .eq("slug", slug)
-    .single();
+    .select("*");
+
+  if (isUUID(slug)) {
+    query = query.eq("id", slug);
+  } else {
+    query = query.eq("slug", slug);
+  }
+
+  const { data: hubData, error: hubError } = await query.single();
 
   if (hubError || !hubData) {
     notFound();
@@ -112,7 +125,6 @@ export default async function HubPage({ params }: HubPageProps) {
 
   const hub = hubData as Hub;
 
-  console.log(hub.id, 'hub.id');
   return (
     <>
       <Header />

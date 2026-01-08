@@ -81,6 +81,7 @@ interface EventFormState {
 interface EntityFormState {
   // Basic fields
   name: string;
+  slug: string; // Public URL slug
   description: string;
   imageUrl: string;
   
@@ -107,6 +108,7 @@ interface EntityFormState {
   
   // Setters
   setName: (name: string) => void;
+  setSlug: (slug: string) => void;
   setDescription: (description: string) => void;
   setImageUrl: (imageUrl: string) => void;
   setLocationType: (locationType: LocationType) => void;
@@ -188,6 +190,7 @@ const initialEventFormState: Omit<EventFormState, keyof {
 
 const initialEntityFormState: Omit<EntityFormState, keyof {
   setName: never;
+  setSlug: never;
   setDescription: never;
   setImageUrl: never;
   setLocationType: never;
@@ -206,6 +209,7 @@ const initialEntityFormState: Omit<EntityFormState, keyof {
   resetEntityForm: never;
 }> = {
   name: "",
+  slug: "",
   description: "",
   imageUrl: "",
   locationType: "country",
@@ -256,6 +260,7 @@ export const useFormsStore = create<FormsStore>((set) => ({
   entityForm: {
     ...initialEntityFormState,
     setName: (name) => set((state) => ({ entityForm: { ...state.entityForm, name } })),
+    setSlug: (slug) => set((state) => ({ entityForm: { ...state.entityForm, slug } })),
     setDescription: (description) => set((state) => ({ entityForm: { ...state.entityForm, description } })),
     setImageUrl: (imageUrl) => set((state) => ({ entityForm: { ...state.entityForm, imageUrl } })),
     setLocationType: (locationType) => set((state) => ({ entityForm: { ...state.entityForm, locationType } })),

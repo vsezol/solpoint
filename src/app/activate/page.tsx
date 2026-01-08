@@ -8,10 +8,12 @@ import { Twitter, AlertCircle, CheckCircle2, Loader2, UserPlus } from "lucide-re
 import Image from "next/image";
 import { trackEvent } from "@/lib/analytics";
 import { useAuth } from "@/hooks/use-auth";
+import { useQueryClient } from "@tanstack/react-query";
 
 function ActivatePageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const [code, setCode] = useState<string | null>(null);
   const [intent, setIntent] = useState<{
@@ -157,6 +159,9 @@ function ActivatePageContent() {
         localStorage.setItem("subscription_intent_status", "success");
         localStorage.removeItem("subscription_intent_id");
       }
+
+      // Инвалидируем кеш профиля, чтобы обновился subscription_tier
+      queryClient.invalidateQueries({ queryKey: ["auth", "profile"] });
 
       setSuccess(true);
       

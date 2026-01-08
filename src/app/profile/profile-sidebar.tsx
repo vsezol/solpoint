@@ -3,11 +3,13 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { Card, Button, Avatar } from "@/components/ui";
-import { Modal, ModalHeader, ModalTitle, ModalContent } from "@/components/ui";
+import { Modal, ModalHeader, ModalTitle, ModalContent, AuthRequiredModal, ProSubscriptionModal, UserListItem } from "@/components/ui";
 import { UserPlus, Crown, Calendar, Check } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getAppUrl } from "@/lib/utils";
+import { useAuth } from "@/hooks/use-auth";
+import { useChat } from "@/hooks/use-chat";
 import type { User, Event, Invite } from "@/types";
 
 interface ProfileSidebarProps {
@@ -15,7 +17,22 @@ interface ProfileSidebarProps {
   upcomingEvents: Event[];
 }
 
+interface Member {
+  id: string;
+  avatar_url?: string | null;
+  name: string;
+  twitter_handle?: string;
+  isVip?: boolean;
+  isVerified?: boolean;
+  isOwner?: boolean;
+  joinedAt?: string;
+}
+
 export function ProfileSidebar({ user, upcomingEvents }: ProfileSidebarProps) {
+  const { user: currentUser, isAuthenticated } = useAuth();
+  const isVip = currentUser?.subscription_tier === "vip";
+  const { openChat } = useChat();
+  
   const [totalUsers, setTotalUsers] = useState<number>(0);
   const [usersInCountry, setUsersInCountry] = useState<number>(0);
   const [usersInCity, setUsersInCity] = useState<number>(0);
@@ -26,6 +43,20 @@ export function ProfileSidebar({ user, upcomingEvents }: ProfileSidebarProps) {
   const [isLoadingInvite, setIsLoadingInvite] = useState(false);
   const [isMutualsModalOpen, setIsMutualsModalOpen] = useState(false);
   const [isCheckingPro, setIsCheckingPro] = useState(false);
+  
+  // States for users list modals
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showProModal, setShowProModal] = useState(false);
+  const [showTotalUsersModal, setShowTotalUsersModal] = useState(false);
+  const [showCountryUsersModal, setShowCountryUsersModal] = useState(false);
+  const [showCityUsersModal, setShowCityUsersModal] = useState(false);
+  const [usersList, setUsersList] = useState<Member[]>([]);
+  const [friendsList, setFriendsList] = useState<Member[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [friendStatuses, setFriendStatuses] = useState<Record<string, "none" | "pending_sent" | "pending_received" | "accepted" | "blocked">>({});
+  const [sendingFriendRequest, setSendingFriendRequest] = useState<Record<string, boolean>>({});
+  const [creatingChat, setCreatingChat] = useState<Record<string, boolean>>({});
+  
   const router = useRouter();
 
   useEffect(() => {
@@ -220,6 +251,110 @@ export function ProfileSidebar({ user, upcomingEvents }: ProfileSidebarProps) {
     }
   };
 
+  // Load users list
+  const loadUsersList = async (filterType: "all" | "country" | "city") => {
+    // Check authentication
+    if (!isAuthenticated) {
+      setShowAuthModal(true);
+      return;
+    }
+
+    // Check VIP status
+    if (!isVip) {
+      setShowProModal(true);
+      return;
+    }
+
+    setLoadingUsers(true);
+    try {
+      const params = new URLSearchParams();
+      params.append("filter", filterType);
+      if (filterType === "country" && user.country_code) {
+        params.append("country_code", user.country_code);
+      } else if (filterType === "city" && user.city) {
+        params.append("city", user.city);
+      }
+
+      const response = await fetch(`/api/users/list?${params.toString()}`);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to load users: ${response.status}`);
+      }
+
+      const result = await response.json();
+      setUsersList(result.users || []);
+      setFriendsList(result.friends || []);
+
+      // Open appropriate modal
+      if (filterType === "all") {
+        setShowTotalUsersModal(true);
+      } else if (filterType === "country") {
+        setShowCountryUsersModal(true);
+      } else if (filterType === "city") {
+        setShowCityUsersModal(true);
+      }
+    } catch (error) {
+      console.error("Error loading users list:", error);
+      alert(error instanceof Error ? error.message : "Failed to load users");
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  // Load friend statuses for users in modal
+  useEffect(() => {
+    if ((showTotalUsersModal || showCountryUsersModal || showCityUsersModal) && isAuthenticated && currentUser) {
+      const userIds = usersList.map((u) => u.id);
+
+      Promise.all(
+        userIds.map(async (userId) => {
+          try {
+            const response = await fetch(`/api/friends?user_id=${userId}`);
+            if (response.ok) {
+              const result = await response.json();
+              return { userId, status: result.data?.status || "none" };
+            }
+          } catch (error) {
+            console.error(`Error fetching friend status for ${userId}:`, error);
+          }
+          return { userId, status: "none" as const };
+        })
+      ).then((results) => {
+        const statusMap: Record<string, "none" | "pending_sent" | "pending_received" | "accepted" | "blocked"> = {};
+        results.forEach(({ userId, status }) => {
+          statusMap[userId] = status;
+        });
+        setFriendStatuses(statusMap);
+      });
+    }
+  }, [showTotalUsersModal, showCountryUsersModal, showCityUsersModal, usersList, isAuthenticated, currentUser]);
+
+  // Handle add friend
+  const handleAddFriend = async (userId: string) => {
+    if (!isAuthenticated) {
+      setShowAuthModal(true);
+      return;
+    }
+
+    setSendingFriendRequest((prev) => ({ ...prev, [userId]: true }));
+    try {
+      const response = await fetch("/api/friends", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ friend_id: userId }),
+      });
+
+      if (response.ok) {
+        setFriendStatuses((prev) => ({ ...prev, [userId]: "pending_sent" }));
+      }
+    } catch (error) {
+      console.error("Error adding friend:", error);
+    } finally {
+      setSendingFriendRequest((prev) => ({ ...prev, [userId]: false }));
+    }
+  };
+
+
   const formatEventDate = (startDate: string, endDate?: string, timezone?: string) => {
     const start = new Date(startDate);
     const end = endDate ? new Date(endDate) : null;
@@ -270,19 +405,31 @@ export function ProfileSidebar({ user, upcomingEvents }: ProfileSidebarProps) {
         </h3>
         <div className="space-y-3 mb-4">
           <div>
-            <p className="text-sm text-[var(--color-text-secondary)]">
+            <button
+              onClick={() => loadUsersList("all")}
+              disabled={loadingUsers}
+              className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors cursor-pointer w-full text-left"
+            >
               Total users on SolPoint: <span className="text-[var(--color-text-primary)] font-medium">{totalUsers.toLocaleString()}</span>
-            </p>
+            </button>
           </div>
           <div>
-            <p className="text-sm text-[var(--color-text-secondary)]">
+            <button
+              onClick={() => loadUsersList("country")}
+              disabled={loadingUsers}
+              className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors cursor-pointer w-full text-left"
+            >
               Users in your country: <span className="text-[var(--color-text-primary)] font-medium">{usersInCountry.toLocaleString()}</span>
-            </p>
+            </button>
           </div>
           <div>
-            <p className="text-sm text-[var(--color-text-secondary)]">
+            <button
+              onClick={() => loadUsersList("city")}
+              disabled={loadingUsers}
+              className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors cursor-pointer w-full text-left"
+            >
               Users in your city: <span className="text-[var(--color-text-primary)] font-medium">{usersInCity.toLocaleString()}</span>
-            </p>
+            </button>
           </div>
         </div>
 
@@ -429,6 +576,130 @@ export function ProfileSidebar({ user, upcomingEvents }: ProfileSidebarProps) {
           </Button>
         </Card>
       )}
+
+      {/* Auth Required Modal */}
+      <AuthRequiredModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        title="Sign in required"
+        description="Please sign up or log in to view the full list."
+      />
+
+      {/* Pro Subscription Modal */}
+      <ProSubscriptionModal
+        isOpen={showProModal}
+        onClose={() => setShowProModal(false)}
+        title="This feature is available only with PRO subscription"
+        description="Viewing all users is available only with PRO subscription. Upgrade to PRO to unlock this feature."
+      />
+
+      {/* Total Users Modal */}
+      <Modal
+        isOpen={showTotalUsersModal}
+        onClose={() => setShowTotalUsersModal(false)}
+        size="md"
+        ariaLabel="All Users on SolPoint"
+      >
+        <ModalHeader>
+          <ModalTitle>All Users on SolPoint</ModalTitle>
+        </ModalHeader>
+        <ModalContent>
+          <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+            {usersList.length === 0 ? (
+              <p className="text-sm text-[var(--color-text-secondary)] text-center py-4">
+                No users found
+              </p>
+            ) : (
+              usersList.map((member) => {
+                const friendStatus = friendStatuses[member.id] || "none";
+
+                return (
+                  <UserListItem
+                    key={member.id}
+                    member={member}
+                    friendStatus={friendStatus}
+                    onAddFriend={handleAddFriend}
+                    sendingFriendRequest={sendingFriendRequest[member.id]}
+                    creatingChat={creatingChat[member.id]}
+                  />
+                );
+              })
+            )}
+          </div>
+        </ModalContent>
+      </Modal>
+
+      {/* Country Users Modal */}
+      <Modal
+        isOpen={showCountryUsersModal}
+        onClose={() => setShowCountryUsersModal(false)}
+        size="md"
+        ariaLabel="Users in your country"
+      >
+        <ModalHeader>
+          <ModalTitle>Users in your country</ModalTitle>
+        </ModalHeader>
+        <ModalContent>
+          <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+            {usersList.length === 0 ? (
+              <p className="text-sm text-[var(--color-text-secondary)] text-center py-4">
+                No users found
+              </p>
+            ) : (
+              usersList.map((member) => {
+                const friendStatus = friendStatuses[member.id] || "none";
+
+                return (
+                  <UserListItem
+                    key={member.id}
+                    member={member}
+                    friendStatus={friendStatus}
+                    onAddFriend={handleAddFriend}
+                    sendingFriendRequest={sendingFriendRequest[member.id]}
+                    creatingChat={creatingChat[member.id]}
+                  />
+                );
+              })
+            )}
+          </div>
+        </ModalContent>
+      </Modal>
+
+      {/* City Users Modal */}
+      <Modal
+        isOpen={showCityUsersModal}
+        onClose={() => setShowCityUsersModal(false)}
+        size="md"
+        ariaLabel="Users in your city"
+      >
+        <ModalHeader>
+          <ModalTitle>Users in your city</ModalTitle>
+        </ModalHeader>
+        <ModalContent>
+          <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+            {usersList.length === 0 ? (
+              <p className="text-sm text-[var(--color-text-secondary)] text-center py-4">
+                No users found
+              </p>
+            ) : (
+              usersList.map((member) => {
+                const friendStatus = friendStatuses[member.id] || "none";
+
+                return (
+                  <UserListItem
+                    key={member.id}
+                    member={member}
+                    friendStatus={friendStatus}
+                    onAddFriend={handleAddFriend}
+                    sendingFriendRequest={sendingFriendRequest[member.id]}
+                    creatingChat={creatingChat[member.id]}
+                  />
+                );
+              })
+            )}
+          </div>
+        </ModalContent>
+      </Modal>
 
       {/* Modal для списка mutuals */}
       <Modal

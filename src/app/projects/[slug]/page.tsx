@@ -8,7 +8,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { EntityMembersWidget } from "@/components/entities/entity-members-widget";
 import type { Metadata } from "next";
-import { getAppUrl } from "@/lib/utils";
+import { getAppUrl, isUUID } from "@/lib/utils";
 import { ProjectViewTracker } from "@/components/analytics/project-view-tracker";
 import { ProjectShareButton } from "@/components/analytics/project-share-button";
 import { ProjectSocialLink } from "@/components/analytics/project-social-link";
@@ -22,11 +22,18 @@ export async function generateMetadata({ params }: ProjectPageProps): Promise<Me
   const { slug } = await params;
   const supabase = await createClient();
 
-  const { data: projectData } = await supabase
+  // Получаем проект для метаданных - сначала по слагу, потом по ID
+  let query = supabase
     .from("projects")
-    .select("*")
-    .eq("slug", slug)
-    .single();
+    .select("*");
+
+  if (isUUID(slug)) {
+    query = query.eq("id", slug);
+  } else {
+    query = query.eq("slug", slug);
+  }
+
+  const { data: projectData } = await query.single();
 
   if (!projectData) {
     return {
@@ -36,7 +43,8 @@ export async function generateMetadata({ params }: ProjectPageProps): Promise<Me
 
   const project = projectData as Project;
   const appUrl = getAppUrl();
-  const projectUrl = `${appUrl}/projects/${slug}`;
+  // Используем слаг из базы данных для URL, если он есть
+  const projectUrl = `${appUrl}/projects/${project.slug || slug}`;
   const imageUrl = project.image_url && project.image_url.trim() !== ''
     ? (project.image_url.startsWith('http://') || project.image_url.startsWith('https://'))
       ? project.image_url
@@ -82,11 +90,18 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
   const { slug } = await params;
   const supabase = await createClient();
 
-  const { data: projectData, error: projectError } = await supabase
+  // Получаем проект - сначала по слагу, потом по ID (если параметр является UUID)
+  let query = supabase
     .from("projects")
-    .select("*")
-    .eq("slug", slug)
-    .single();
+    .select("*");
+
+  if (isUUID(slug)) {
+    query = query.eq("id", slug);
+  } else {
+    query = query.eq("slug", slug);
+  }
+
+  const { data: projectData, error: projectError } = await query.single();
 
   if (projectError || !projectData) {
     notFound();

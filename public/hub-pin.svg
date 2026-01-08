@@ -1,0 +1,34 @@
+<svg width="46" height="54" viewBox="0 0 46 54" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Pin shape with dark background -->
+  <path d="M23 0C10.85 0 1 9.85 1 22C1 31.5 8.5 41.5 23 54C37.5 41.5 45 31.5 45 22C45 9.85 35.15 0 23 0Z" fill="#111820" stroke="#14f195" stroke-width="2"/>
+  
+  <!-- Hub icon - network/connection symbol like in the image -->
+  <g transform="translate(9, 8)">
+    <!-- Central large circle (hub) -->
+    <circle cx="14" cy="14" r="5" fill="none" stroke="#14f195" stroke-width="2.5"/>
+    
+    <!-- Top small circle (person/node) -->
+    <circle cx="14" cy="2" r="2.5" fill="none" stroke="#14f195" stroke-width="2"/>
+    <line x1="14" y1="4.5" x2="14" y2="9" stroke="#14f195" stroke-width="2" stroke-linecap="round"/>
+    
+    <!-- Top-right small circle -->
+    <circle cx="24" cy="6" r="2.5" fill="none" stroke="#14f195" stroke-width="2"/>
+    <line x1="22.5" y1="7.5" x2="17.5" y2="11.5" stroke="#14f195" stroke-width="2" stroke-linecap="round"/>
+    
+    <!-- Bottom-right small circle -->
+    <circle cx="24" cy="22" r="2.5" fill="none" stroke="#14f195" stroke-width="2"/>
+    <line x1="22.5" y1="20.5" x2="17.5" y2="16.5" stroke="#14f195" stroke-width="2" stroke-linecap="round"/>
+    
+    <!-- Bottom small circle -->
+    <circle cx="14" cy="26" r="2.5" fill="none" stroke="#14f195" stroke-width="2"/>
+    <line x1="14" y1="23.5" x2="14" y2="19" stroke="#14f195" stroke-width="2" stroke-linecap="round"/>
+    
+    <!-- Bottom-left small circle -->
+    <circle cx="4" cy="22" r="2.5" fill="none" stroke="#14f195" stroke-width="2"/>
+    <line x1="5.5" y1="20.5" x2="10.5" y2="16.5" stroke="#14f195" stroke-width="2" stroke-linecap="round"/>
+    
+    <!-- Top-left small circle -->
+    <circle cx="4" cy="6" r="2.5" fill="none" stroke="#14f195" stroke-width="2"/>
+    <line x1="5.5" y1="7.5" x2="10.5" y2="11.5" stroke="#14f195" stroke-width="2" stroke-linecap="round"/>
+  </g>
+</svg>

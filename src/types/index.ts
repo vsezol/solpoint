@@ -24,12 +24,18 @@ export interface User {
   subscription_tier: SubscriptionTier;
   is_verified: boolean;
   is_admin?: boolean; // Опционально, так как поле может не существовать до выполнения миграции
-  enable_dashboard?: boolean; // Показывать ли Dashboard в навигации (если пользователь владеет хотя бы одной сущностью)
   wallet_address?: string;
   socials?: {
-    twitter?: string;
+    twitter?: string; // Автоматически генерируется из twitter_handle
     instagram?: string;
     facebook?: string;
+    telegram?: string;
+    youtube?: string;
+    discord?: string;
+    github?: string;
+    linkedin?: string;
+    medium?: string;
+    substack?: string;
   };
   last_active_at: string;
   created_at: string;
@@ -81,6 +87,7 @@ export interface Event {
     instagram?: string;
     facebook?: string;
     website?: string;
+    luma?: string;
   };
   luma_link: string; // Ссылка на событие в Luma
   contacts?: {
@@ -132,15 +139,18 @@ export interface Hub {
   image_url?: string;
   slug: string; // Публичная ссылка для SEO
   country?: string | null; // Страна для размещения на карте. NULL для глобальных хабов
+  country_code?: string | null; // ISO 3166-1 alpha-2 country code
   city?: string | null; // Опционально, если есть локация
   latitude?: number | null; // Координаты для размещения на карте (не точные). NULL для глобальных хабов
   longitude?: number | null; // NULL для глобальных хабов
   members_count: number;
+  is_recommended?: boolean; // Рекомендованный хаб (показывается в приоритете)
   socials?: {
     twitter?: string;
     instagram?: string;
     facebook?: string;
     website?: string;
+    luma?: string;
   };
   // Унифицированное поле
   owner_id: string;
@@ -158,15 +168,18 @@ export interface Community {
   image_url?: string;
   slug: string; // Публичная ссылка для SEO
   country?: string | null; // Страна для размещения на карте. NULL для глобальных комьюнити
+  country_code?: string | null; // ISO 3166-1 alpha-2 country code
   city?: string | null; // Опционально, если есть локация
   latitude?: number | null; // Координаты для размещения на карте (не точные). NULL для глобальных комьюнити
   longitude?: number | null; // NULL для глобальных комьюнити
   members_count: number;
+  is_recommended?: boolean; // Рекомендованное комьюнити (показывается в приоритете)
   socials?: {
     twitter?: string;
     instagram?: string;
     facebook?: string;
     website?: string;
+    luma?: string;
   };
   // Унифицированное поле
   owner_id?: string;
@@ -184,15 +197,18 @@ export interface Project {
   image_url?: string;
   slug: string; // Публичная ссылка для SEO
   country?: string | null; // Страна для размещения на карте. NULL для глобальных проектов
+  country_code?: string | null; // ISO 3166-1 alpha-2 country code
   city?: string | null; // Опционально, если есть локация
   latitude?: number | null; // Координаты для размещения на карте (не точные). NULL для глобальных проектов
   longitude?: number | null; // NULL для глобальных проектов
   members_count: number;
+  is_recommended?: boolean; // Рекомендованный проект (показывается в приоритете)
   socials?: {
     twitter?: string;
     instagram?: string;
     facebook?: string;
     website?: string;
+    luma?: string;
   };
   // Унифицированное поле
   owner_id: string; // Проект должен иметь владельца
@@ -210,16 +226,19 @@ export interface Workspace {
   image_url?: string;
   slug: string; // Публичная ссылка для SEO
   country: string; // Страна обязательна
+  country_code?: string | null; // ISO 3166-1 alpha-2 country code
   city?: string | null; // Опционально
   address: string; // Адрес обязателен для workspaces
   latitude: number;
   longitude: number;
   members_count: number;
+  is_recommended?: boolean; // Рекомендованный workspace (показывается в приоритете)
   socials?: {
     twitter?: string;
     instagram?: string;
     facebook?: string;
     website?: string;
+    luma?: string;
   };
   owner_id: string;
   created_at: string;

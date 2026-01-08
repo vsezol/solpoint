@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
   let query = supabase
     .from("projects")
     .select("*")
+    .order("is_recommended", { ascending: false })
     .order("members_count", { ascending: false });
 
   // Фильтры по стране (приоритет country_code, fallback на country для обратной совместимости)
@@ -126,18 +127,43 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Генерируем slug из name, если slug не указан
-    let finalSlug = slug;
-    if (!finalSlug || finalSlug.trim() === "") {
+    // Генерируем slug из name, если slug не указан или пустой
+    let finalSlug = slug?.trim();
+    if (!finalSlug) {
       const baseSlug = generateSlug(name);
-      finalSlug = await getUniqueSlug(baseSlug, async (checkSlug) => {
-        const { data } = await supabase
-          .from("projects")
-          .select("id")
-          .eq("slug", checkSlug)
-          .maybeSingle();
-        return !!data;
-      });
+      // Если generateSlug вернул пустую строку, используем fallback
+      if (!baseSlug || baseSlug.trim() === "") {
+        // Fallback: используем временный slug
+        finalSlug = `project-${Date.now()}`;
+      } else {
+        finalSlug = await getUniqueSlug(baseSlug, async (checkSlug) => {
+          const { data } = await supabase
+            .from("projects")
+            .select("id")
+            .eq("slug", checkSlug)
+            .maybeSingle();
+          return !!data;
+        });
+      }
+    } else {
+      // Если slug указан из формы, проверяем его уникальность
+      const { data: existingProject } = await supabase
+        .from("projects")
+        .select("id")
+        .eq("slug", finalSlug)
+        .maybeSingle();
+      
+      if (existingProject) {
+        // Если slug уже существует, добавляем суффикс
+        finalSlug = await getUniqueSlug(finalSlug, async (checkSlug) => {
+          const { data } = await supabase
+            .from("projects")
+            .select("id")
+            .eq("slug", checkSlug)
+            .maybeSingle();
+          return !!data;
+        });
+      }
     }
 
     // Создаем проект

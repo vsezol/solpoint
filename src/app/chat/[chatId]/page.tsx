@@ -6,6 +6,7 @@ import { Header, Footer } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
+import { ProSubscriptionModal } from "@/components/ui";
 import { useAuth } from "@/hooks/use-auth";
 import { getOrCreateChat } from "@/lib/api/chats";
 import { useChatWebSocket, type Message } from "@/hooks/use-chat-websocket";
@@ -35,6 +36,7 @@ export default function ChatPage() {
   const [sending, setSending] = useState(false);
   const [messageContent, setMessageContent] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
@@ -156,6 +158,12 @@ export default function ChatPage() {
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!messageContent.trim() || sending || !chat) return;
+
+    // Check if user has PRO subscription
+    if (user?.subscription_tier !== "vip") {
+      setShowSubscriptionModal(true);
+      return;
+    }
 
     const content = messageContent.trim();
     setMessageContent("");
@@ -385,6 +393,14 @@ export default function ChatPage() {
         </div>
       </main>
       <Footer />
+      
+      {/* Subscription Modal */}
+      <ProSubscriptionModal
+        isOpen={showSubscriptionModal}
+        onClose={() => setShowSubscriptionModal(false)}
+        title="Private messaging is available only with PRO subscription"
+        description="Upgrade to PRO to send direct messages to other users."
+      />
     </div>
   );
 }

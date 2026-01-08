@@ -10,3 +10,4 @@ ON CONFLICT (hub_id, user_id) DO NOTHING;
 
 -- Note: members_count will be automatically updated by the trigger
 
+

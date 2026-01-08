@@ -4,9 +4,23 @@ import { Button } from "@/components/ui";
 import { Edit } from "lucide-react";
 import { useProfileEdit } from "./profile-edit-provider";
 import { trackEvent } from "@/lib/analytics";
+import { useEffect } from "react";
 
 export function EditProfileButton() {
   const { isEditing, setIsEditing } = useProfileEdit();
+
+  // Находим форму редактирования и скроллим к ней при включении режима редактирования
+  useEffect(() => {
+    if (isEditing) {
+      // Небольшая задержка, чтобы форма успела отрендериться
+      setTimeout(() => {
+        const formElement = document.querySelector('form[class*="space-y-6"]');
+        if (formElement) {
+          formElement.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 100);
+    }
+  }, [isEditing]);
 
   return (
     <Button

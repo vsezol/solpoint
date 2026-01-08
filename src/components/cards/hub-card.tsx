@@ -1,8 +1,9 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui";
 import type { Hub, Community, Workspace, Project } from "@/types";
-import { Twitter, Instagram, Facebook, ExternalLink, MapPin, Users, Share2 } from "lucide-react";
+import { Twitter, Instagram, Facebook, ExternalLink, MapPin, Users, Share2, Check } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { trackEvent } from "@/lib/analytics";
@@ -15,26 +16,112 @@ interface HubCardProps {
 }
 
 export function HubCard({ hub, compact = false, entityType, isBlurred = false }: HubCardProps) {
+  const [copied, setCopied] = useState(false);
+
+  // Reset copied state after 2 seconds
+  useEffect(() => {
+    if (copied) {
+      const timer = setTimeout(() => {
+        setCopied(false);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [copied]);
+
+  // Определяем тип сущности автоматически, если не передан
+  const detectEntityType = (): "hub" | "community" | "workspace" | "project" => {
+    if (entityType) {
+      return entityType;
+    }
+    // Workspace имеет обязательное поле address
+    if ("address" in hub && hub.address) {
+      return "workspace";
+    }
+    // Определить по другим признакам невозможно, возвращаем hub по умолчанию
+    // В большинстве случаев entityType должен передаваться явно
+    return "hub";
+  };
 
   // Определяем тип сущности и путь
-  const getEntityPath = (slug: string): string => {
-    if (entityType === "community") {
-      return `/communities/${slug}`;
+  const getEntityPath = (slug?: string | null, id?: string): string => {
+    if (!slug && !id) {
+      // Если нет ни slug, ни id, возвращаем пустой путь (не должно произойти)
+      return "#";
     }
-    if (entityType === "workspace") {
-      return `/workspaces/${slug}`;
+    
+    const identifier = slug || id;
+    if (!identifier) {
+      return "#";
     }
-    if (entityType === "project") {
-      return `/projects/${slug}`;
+    
+    const detectedType = detectEntityType();
+    
+    if (detectedType === "community") {
+      return `/communities/${identifier}`;
     }
-    return `/hubs/${slug}`;
+    if (detectedType === "workspace") {
+      return `/workspaces/${identifier}`;
+    }
+    if (detectedType === "project") {
+      return `/projects/${identifier}`;
+    }
+    return `/hubs/${identifier}`;
+  };
+
+  // Получаем публичную ссылку на сущность
+  const getPublicUrl = (): string => {
+    if (typeof window === "undefined") {
+      return "";
+    }
+    if (!hub.slug && !hub.id) {
+      return window.location.href;
+    }
+    const path = getEntityPath(hub.slug, hub.id);
+    return `${window.location.origin}${path}`;
+  };
+
+  // Обработчик копирования ссылки
+  const handleShare = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    try {
+      const url = getPublicUrl();
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+
+      trackEvent("hub_share_click", {
+        event_category: "Hubs",
+        event_label: hub.slug || hub.id,
+        hub_id: hub.id,
+        hub_slug: hub.slug,
+        hub_name: hub.name,
+        source: compact ? "hub_card_compact" : "hub_card_full",
+        share_method: "clipboard",
+      });
+    } catch (error) {
+      console.error("Error copying to clipboard:", error);
+      // Fallback для старых браузеров
+      try {
+        const textarea = document.createElement("textarea");
+        textarea.value = getPublicUrl();
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+        setCopied(true);
+      } catch (fallbackError) {
+        console.error("Fallback copy failed:", fallbackError);
+      }
+    }
   };
 
   if (compact) {
     if (!hub.slug) {
       // Если нет slug, возвращаем карточку без ссылки
       return (
-        <div className="p-4 min-w-[280px] transition-all duration-300">
+        <div className="p-4 min-w-[280px] max-w-[350px] bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-xl transition-all duration-300">
         {/* Image */}
         <div className="relative w-20 h-20 mx-auto mb-3 rounded-full overflow-hidden bg-[var(--color-surface-hover)]">
           {hub.image_url ? (
@@ -150,21 +237,19 @@ export function HubCard({ hub, compact = false, entityType, isBlurred = false }:
               variant="outline"
               size="sm"
               className="flex-1 text-[var(--color-primary)] border-[var(--color-primary)] cursor-pointer"
-              onClick={(e) => {
-                e.stopPropagation();
-                trackEvent("hub_share_click", {
-                  event_category: "Hubs",
-                  event_label: hub.slug || hub.id,
-                  hub_id: hub.id,
-                  hub_slug: hub.slug,
-                  hub_name: hub.name,
-                  source: "hub_card_compact",
-                });
-                // TODO: Implement share functionality
-              }}
+              onClick={handleShare}
             >
-              <Share2 className="w-4 h-4 mr-1" />
-              Share
+              {copied ? (
+                <>
+                  <Check className="w-4 h-4 mr-1" />
+                  Copied!
+                </>
+              ) : (
+                <>
+                  <Share2 className="w-4 h-4 mr-1" />
+                  Share
+                </>
+              )}
             </Button>
             {hub.slug && (
               <Button 
@@ -184,7 +269,7 @@ export function HubCard({ hub, compact = false, entityType, isBlurred = false }:
                 }}
                 asChild
               >
-                <Link href={getEntityPath(hub.slug)}>
+                <Link href={getEntityPath(hub.slug, hub.id)}>
                   <ExternalLink className="w-4 h-4 mr-1" />
                   Details
                 </Link>
@@ -215,21 +300,24 @@ export function HubCard({ hub, compact = false, entityType, isBlurred = false }:
     }
 
     // Если есть slug, оборачиваем в Link
-    const path = getEntityPath(hub.slug);
+    const path = getEntityPath(hub.slug, hub.id);
     return (
       <Link 
         href={path}
         onClick={() => {
-          trackEvent("hub_card_click", {
-            event_category: "Hubs",
-            event_label: hub.slug || hub.id,
-            hub_id: hub.id,
-            hub_slug: hub.slug,
-            hub_name: hub.name,
-            source: "hub_card_compact",
-          });
+          // Вызываем trackEvent асинхронно, чтобы не блокировать навигацию
+          setTimeout(() => {
+            trackEvent("hub_card_click", {
+              event_category: "Hubs",
+              event_label: hub.slug || hub.id,
+              hub_id: hub.id,
+              hub_slug: hub.slug,
+              hub_name: hub.name,
+              source: "hub_card_compact",
+            });
+          }, 0);
         }}
-        className="block p-4 min-w-[280px] bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-xl cursor-pointer transition-all duration-300 hover:scale-105 hover:border-white hover:shadow-lg"
+        className="block p-4 min-w-[280px] max-w-[350px] bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-xl cursor-pointer transition-all duration-300 hover:scale-105 hover:border-[var(--color-primary)] hover:shadow-lg"
       >
         {/* Image */}
         <div className="relative w-20 h-20 mx-auto mb-3 rounded-full overflow-hidden bg-[var(--color-surface-hover)]">
@@ -345,21 +433,19 @@ export function HubCard({ hub, compact = false, entityType, isBlurred = false }:
             variant="outline"
             size="sm"
             className="flex-1 text-[var(--color-primary)] border-[var(--color-primary)] cursor-pointer"
-            onClick={(e) => {
-              e.stopPropagation();
-              trackEvent("hub_share_click", {
-                event_category: "Hubs",
-                event_label: hub.slug || hub.id,
-                hub_id: hub.id,
-                hub_slug: hub.slug,
-                hub_name: hub.name,
-                source: "hub_card_compact",
-              });
-              // TODO: Implement share functionality
-            }}
+            onClick={handleShare}
           >
-            <Share2 className="w-4 h-4 mr-1" />
-            Share
+            {copied ? (
+              <>
+                <Check className="w-4 h-4 mr-1" />
+                Copied!
+              </>
+            ) : (
+              <>
+                <Share2 className="w-4 h-4 mr-1" />
+                Share
+              </>
+            )}
           </Button>
           {hub.slug && (
             <Button 
@@ -391,123 +477,9 @@ export function HubCard({ hub, compact = false, entityType, isBlurred = false }:
   }
 
   // Full card view
-  if (!hub.slug) {
-    return (
-      <div className="bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-xl p-5 flex flex-col h-full transition-all duration-300">
-        {/* Header */}
-        <div className="flex items-start gap-4 mb-4">
-          <div className="relative w-20 h-20 rounded-xl overflow-hidden bg-[var(--color-surface-hover)] flex-shrink-0">
-            {hub.image_url ? (
-              <Image
-                src={hub.image_url}
-                alt={hub.name}
-                fill
-                className="object-cover"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[var(--color-info)]/30 to-[var(--color-secondary)]/30">
-                <Users className="w-10 h-10 text-[var(--color-info)]" />
-              </div>
-            )}
-          </div>
-          <div className="flex-1">
-            <h3 className="text-xl font-semibold text-[var(--color-text-primary)] mb-1">
-              {hub.name}
-            </h3>
-            <div className="flex items-center gap-2 text-[var(--color-text-secondary)]">
-              <MapPin className="w-4 h-4" />
-              <span>
-                {"address" in hub && hub.address ? (
-                  `${hub.address}${hub.city ? `, ${hub.city}` : ""}${hub.country ? `, ${hub.country}` : ""}`
-                ) : (
-                  <>
-                    {hub.country}
-                    {hub.city && `, ${hub.city}`}
-                  </>
-                )}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Description */}
-        {hub.description && (
-          <div className="mb-4">
-            <p className="text-xs text-[var(--color-primary)] mb-1">About:</p>
-            <p className="text-[var(--color-text-secondary)]">
-              {hub.description}
-            </p>
-          </div>
-        )}
-
-        {/* Members count */}
-        <div className="flex items-center gap-2 mb-4">
-          <Users className="w-4 h-4 text-[var(--color-info)]" />
-          <span className="text-sm text-[var(--color-text-muted)]">
-            {hub.members_count} members
-          </span>
-        </div>
-
-        {/* Socials */}
-        <div className="flex items-center gap-3 mb-4">
-          {hub.socials?.twitter && (
-            <a
-              href={hub.socials.twitter}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-2 rounded-full bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
-            >
-              <Twitter className="w-5 h-5" />
-            </a>
-          )}
-          {hub.socials?.instagram && (
-            <a
-              href={hub.socials.instagram}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-2 rounded-full bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
-            >
-              <Instagram className="w-5 h-5" />
-            </a>
-          )}
-          {hub.socials?.website && (
-            <a
-              href={hub.socials.website}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-2 rounded-full bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
-            >
-              <ExternalLink className="w-5 h-5" />
-            </a>
-          )}
-        </div>
-
-        {/* Actions */}
-        <div className="flex gap-3 mt-auto">
-          <Button
-            variant="outline"
-            className="flex-1 text-[var(--color-primary)] border-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 cursor-pointer"
-            onClick={() => {
-              trackEvent("hub_share_click", {
-                event_category: "Hubs",
-                event_label: hub.slug || hub.id,
-                hub_id: hub.id,
-                hub_slug: hub.slug,
-                hub_name: hub.name,
-                source: "hub_card_full",
-              });
-              // TODO: Implement share functionality
-            }}
-          >
-            <Share2 className="w-4 h-4 mr-2" />
-            Share
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  const path = getEntityPath(hub.slug);
+  // Всегда рендерим карточку с Link, если есть slug или id
+  // Если нет ни того, ни другого - рендерим без Link (но такого не должно быть)
+  const path = hub.slug || hub.id ? getEntityPath(hub.slug, hub.id) : "#";
   return (
     <Link
       href={path}
@@ -521,7 +493,7 @@ export function HubCard({ hub, compact = false, entityType, isBlurred = false }:
           source: "hub_card_full",
         });
       }}
-      className="block bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-xl p-5 flex flex-col h-full cursor-pointer transition-all duration-300 hover:scale-105 hover:border-white hover:shadow-lg"
+      className="block bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-xl p-5 flex flex-col h-full cursor-pointer transition-all duration-300 hover:scale-105 hover:border-[var(--color-primary)] hover:shadow-lg"
     >
       {/* Header */}
       <div className="flex items-start gap-4 mb-4">
@@ -625,40 +597,41 @@ export function HubCard({ hub, compact = false, entityType, isBlurred = false }:
         <Button
           variant="outline"
           className="flex-1 text-[var(--color-primary)] border-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 cursor-pointer"
-          onClick={(e) => {
-            e.stopPropagation();
-            trackEvent("hub_share_click", {
-              event_category: "Hubs",
-              event_label: hub.slug || hub.id,
-              hub_id: hub.id,
-              hub_slug: hub.slug,
-              hub_name: hub.name,
-              source: "hub_card_full",
-            });
-            // TODO: Implement share functionality
-          }}
+          onClick={handleShare}
         >
-          <Share2 className="w-4 h-4 mr-2" />
-          Share
+          {copied ? (
+            <>
+              <Check className="w-4 h-4 mr-2" />
+              Copied!
+            </>
+          ) : (
+            <>
+              <Share2 className="w-4 h-4 mr-2" />
+              Share
+            </>
+          )}
         </Button>
-        {hub.slug && (
+        {(hub.slug || hub.id) && (
           <Button 
             variant="outline" 
             className="flex-1 cursor-pointer"
             onClick={(e) => {
               e.stopPropagation();
-              trackEvent("hub_card_click", {
-                event_category: "Hubs",
-                event_label: hub.slug || hub.id,
-                hub_id: hub.id,
-                hub_slug: hub.slug,
-                hub_name: hub.name,
-                source: "hub_card_full_details_button",
-              });
+              // Вызываем trackEvent асинхронно, чтобы не блокировать навигацию
+              setTimeout(() => {
+                trackEvent("hub_card_click", {
+                  event_category: "Hubs",
+                  event_label: hub.slug || hub.id,
+                  hub_id: hub.id,
+                  hub_slug: hub.slug,
+                  hub_name: hub.name,
+                  source: "hub_card_full_details_button",
+                });
+              }, 0);
             }}
             asChild
           >
-            <Link href={getEntityPath(hub.slug)}>
+            <Link href={getEntityPath(hub.slug, hub.id)}>
               <ExternalLink className="w-4 h-4 mr-2" />
               Details
             </Link>

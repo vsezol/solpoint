@@ -21,15 +21,18 @@ export function ProjectSocialLink({ project, platform, href }: ProjectSocialLink
   const Icon = icons[platform];
 
   const handleClick = () => {
-    trackEvent("project_social_link_click", {
-      event_category: "Projects",
-      event_label: project.slug || project.id,
-      project_id: project.id,
-      project_slug: project.slug,
-      project_name: project.name,
-      social_platform: platform,
-      source: "project_page",
-    });
+    // Вызываем trackEvent асинхронно, чтобы не блокировать открытие ссылки
+    setTimeout(() => {
+      trackEvent("project_social_link_click", {
+        event_category: "Projects",
+        event_label: project.slug || project.id,
+        project_id: project.id,
+        project_slug: project.slug,
+        project_name: project.name,
+        social_platform: platform,
+        source: "project_page",
+      });
+    }, 0);
   };
 
   return (
