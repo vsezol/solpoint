@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Space_Grotesk, JetBrains_Mono, Inter } from "next/font/google";
 import "./globals.css";
+import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/components/providers/auth-provider";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { WalletContextProvider } from "@/components/providers/wallet-provider";
@@ -66,19 +67,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className="dark" suppressHydrationWarning>
       <body
         className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} ${inter.variable} antialiased`}
       >
-        <GoogleAnalytics />
-        <QueryProvider>
-          <WalletContextProvider>
-            <AuthProvider>
-              <IntentChecker />
-              {children}
-            </AuthProvider>
-          </WalletContextProvider>
-        </QueryProvider>
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+          <GoogleAnalytics />
+          <QueryProvider>
+            <WalletContextProvider>
+              <AuthProvider>
+                <IntentChecker />
+                {children}
+              </AuthProvider>
+            </WalletContextProvider>
+          </QueryProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
