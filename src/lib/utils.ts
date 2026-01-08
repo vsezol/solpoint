@@ -48,11 +48,11 @@ export function getAppUrl(): string {
  * 
  * Автоматически определяет правильный URL в зависимости от окружения:
  * - В development: всегда использует localhost:3000 (или NEXT_PUBLIC_APP_URL если установлен)
- * - В production: использует NEXT_PUBLIC_APP_URL (должен быть установлен в переменных окружения)
+ * - В production: использует NEXT_PUBLIC_APP_URL или fallback на https://solpoint.xyz
  * 
  * Важно: В Supabase Dashboard и Twitter App нужно один раз добавить оба redirect URL:
  * - http://localhost:3000/api/auth/callback (для development)
- * - https://your-domain.com/api/auth/callback (для production)
+ * - https://solpoint.xyz/api/auth/callback (для production)
  * 
  * После этого код автоматически выберет правильный URL в зависимости от окружения.
  * 
@@ -64,9 +64,8 @@ export function getAppOrigin(requestOrigin?: string): string {
     return process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   }
   
-  // В production используем переменную окружения (обязательно должна быть установлена)
-  // или fallback на request origin
-  return process.env.NEXT_PUBLIC_APP_URL || requestOrigin || "http://localhost:3000";
+  // В production используем переменную окружения или fallback на production домен
+  return process.env.NEXT_PUBLIC_APP_URL || requestOrigin || "https://solpoint.xyz";
 }
 
 /**
