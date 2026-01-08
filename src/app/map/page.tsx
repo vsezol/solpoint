@@ -4,15 +4,31 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Header, Footer } from "@/components/layout";
+import { Card } from "@/components/ui";
 import { MapFiltersPanel } from "@/components/map";
 import type { MapFilters, MapMarker } from "@/types";
 import { getMapMarkers } from "@/lib/api/map";
 import { useAuth } from "@/hooks/use-auth";
 import { trackEvent } from "@/lib/analytics";
+// Dynamic imports to avoid SSR issues with maplibre-gl
+const WaterLayer = dynamic(
+  () => import("../mapcn/water-layer").then((mod) => ({ default: mod.WaterLayer })),
+  { ssr: false }
+);
 
-// Dynamic import for map component to avoid SSR issues with Leaflet
-const SolPointMap = dynamic(
-  () => import("@/components/map/solpoint-map").then((mod) => mod.SolPointMap),
+const CountriesLayer = dynamic(
+  () => import("../mapcn/countries-layer").then((mod) => ({ default: mod.CountriesLayer })),
+  { ssr: false }
+);
+
+const MapMarkersLayer = dynamic(
+  () => import("../mapcn/markers-layer").then((mod) => ({ default: mod.MapMarkersLayer })),
+  { ssr: false }
+);
+
+// Dynamic import for map component to avoid SSR issues with MapLibre GL
+const Map = dynamic(
+  () => import("@/components/ui/map").then((mod) => mod.Map),
   {
     ssr: false,
     loading: () => (
@@ -23,6 +39,13 @@ const SolPointMap = dynamic(
         </div>
       </div>
     ),
+  }
+);
+
+const MapControls = dynamic(
+  () => import("@/components/ui/map").then((mod) => mod.MapControls),
+  {
+    ssr: false,
   }
 );
 
@@ -110,9 +133,8 @@ export default function MapPage() {
             </svg>
           </div>
           <h1 className="text-4xl sm:text-5xl font-bold mb-4 inline-block bg-gradient-to-r from-[#00F58D] to-[#A73EFF] bg-clip-text text-transparent">
-  Solana Map
-</h1>
-         
+            Solana Map
+          </h1>
           <p className="text-lg text-[var(--color-text-secondary)] max-w-2xl mx-auto">
             Discover Solana Users, Hubs, and Events Around the World.
           </p>
@@ -153,14 +175,27 @@ export default function MapPage() {
                     </div>
                   </div>
                 ) : (
-                  <SolPointMap
-                    markers={markers}
-                    center={[35, 55]}
-                    zoom={4}
-                    isVip={isVip}
-                    isAuthenticated={isAuthenticated}
-                    currentUserId={user?.id}
-                  />
+                  <Card className="h-full p-0 overflow-hidden mapcn-map-container" style={{ background: "#18E3C5" }}>
+                    <Map 
+                      center={[55, 35]} 
+                      zoom={4}
+                    >
+                      <WaterLayer />
+                      <CountriesLayer landColor="#452D9F" />
+                      <MapMarkersLayer
+                        markers={markers}
+                        isVip={isVip}
+                        isAuthenticated={isAuthenticated}
+                        currentUserId={user?.id}
+                      />
+                      <MapControls 
+                        showZoom={true}
+                        showCompass={true}
+                        showLocate={true}
+                        showFullscreen={true}
+                      />
+                    </Map>
+                  </Card>
                 )}
               </div>
             </div>
@@ -171,4 +206,3 @@ export default function MapPage() {
     </>
   );
 }
-

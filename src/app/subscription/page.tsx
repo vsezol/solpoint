@@ -3,30 +3,50 @@
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
-// TODO: Uncomment when database has enough data to display interactive map
-// import dynamic from "next/dynamic";
+import dynamic from "next/dynamic";
 import { Header, Footer } from "@/components/layout";
 import { Button, Card, Badge, Modal, ModalHeader, ModalTitle, ModalDescription, ModalContent } from "@/components/ui";
-// TODO: Uncomment when database has enough data to display interactive map
-// import { getMapMarkers } from "@/lib/api/map";
-// import type { MapMarker, MapFilters } from "@/types";
+import { getMapMarkers } from "@/lib/api/map";
+import type { MapMarker, MapFilters } from "@/types";
 
-// Dynamic import for map component to avoid SSR issues with Leaflet
-// TODO: Uncomment when database has enough data to display
-// const SolPointMap = dynamic(
-//   () => import("@/components/map/solpoint-map").then((mod) => mod.SolPointMap),
-//   {
-//     ssr: false,
-//     loading: () => (
-//       <div className="w-full h-full flex items-center justify-center bg-[var(--color-surface)]">
-//         <div className="flex flex-col items-center gap-4">
-//           <div className="w-12 h-12 border-4 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
-//           <p className="text-[var(--color-text-secondary)]">Loading map...</p>
-//         </div>
-//       </div>
-//     ),
-//   }
-// );
+// Dynamic imports to avoid SSR issues with maplibre-gl
+const WaterLayer = dynamic(
+  () => import("../mapcn/water-layer").then((mod) => ({ default: mod.WaterLayer })),
+  { ssr: false }
+);
+
+const CountriesLayer = dynamic(
+  () => import("../mapcn/countries-layer").then((mod) => ({ default: mod.CountriesLayer })),
+  { ssr: false }
+);
+
+const MapMarkersLayer = dynamic(
+  () => import("../mapcn/markers-layer").then((mod) => ({ default: mod.MapMarkersLayer })),
+  { ssr: false }
+);
+
+// Dynamic import for map component to avoid SSR issues with MapLibre GL
+const Map = dynamic(
+  () => import("@/components/ui/map").then((mod) => mod.Map),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-full h-full flex items-center justify-center bg-[var(--color-surface)]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
+          <p className="text-[var(--color-text-secondary)]">Loading map...</p>
+        </div>
+      </div>
+    ),
+  }
+);
+
+const MapControls = dynamic(
+  () => import("@/components/ui/map").then((mod) => mod.MapControls),
+  {
+    ssr: false,
+  }
+);
 import {
   Check,
   MapPin,
@@ -163,10 +183,9 @@ function SubscriptionPageContent() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [currentSubscription, setCurrentSubscription] = useState<Subscription | null>(null);
   const [loadingPlans, setLoadingPlans] = useState(true);
-  // TODO: Uncomment when database has enough data to display interactive map
-  // const [mapMarkers, setMapMarkers] = useState<MapMarker[]>([]);
-  // const [loadingMap, setLoadingMap] = useState(true);
-  // const isVip = user?.subscription_tier === "vip";
+  const [mapMarkers, setMapMarkers] = useState<MapMarker[]>([]);
+  const [loadingMap, setLoadingMap] = useState(true);
+  const isVip = user?.subscription_tier === "vip";
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [paymentData, setPaymentData] = useState<{
@@ -229,32 +248,31 @@ function SubscriptionPageContent() {
   }, [isAuthenticated, authLoading]);
 
   // Загружаем маркеры для карты (показываем все сущности)
-  // TODO: Uncomment when database has enough data to display
-  // useEffect(() => {
-  //   async function loadMapMarkers() {
-  //     try {
-  //       setLoadingMap(true);
-  //       const filters: MapFilters = {
-  //         showUsers: true,
-  //         showEvents: true,
-  //         showHubs: true,
-  //         showCommunities: true,
-  //         showWorkspaces: true,
-  //         contentType: "all",
-  //       };
-  //       const markers = await getMapMarkers(filters, user?.id, isVip);
-  //       setMapMarkers(markers);
-  //     } catch (error) {
-  //       console.error("Error loading map markers:", error);
-  //     } finally {
-  //       setLoadingMap(false);
-  //     }
-  //   }
+  useEffect(() => {
+    async function loadMapMarkers() {
+      try {
+        setLoadingMap(true);
+        const filters: MapFilters = {
+          showUsers: true,
+          showEvents: true,
+          showHubs: true,
+          showCommunities: true,
+          showWorkspaces: true,
+          contentType: "all",
+        };
+        const markers = await getMapMarkers(filters, user?.id, isVip);
+        setMapMarkers(markers);
+      } catch (error) {
+        console.error("Error loading map markers:", error);
+      } finally {
+        setLoadingMap(false);
+      }
+    }
 
-  //   if (!authLoading) {
-  //     loadMapMarkers();
-  //   }
-  // }, [user?.id, isVip, authLoading]);
+    if (!authLoading) {
+      loadMapMarkers();
+    }
+  }, [user?.id, isVip, authLoading]);
 
   const fetchPlans = async () => {
     try {
@@ -837,20 +855,8 @@ function SubscriptionPageContent() {
                 </div>
               </div>
 
-              {/* Visual */}
-              <div className="relative overflow-hidden rounded-lg border border-[var(--color-primary)]/30">
-                <Image
-                  src="/degen-map.png"
-                  alt="Map view with role filters & city-level access"
-                  width={800}
-                  height={450}
-                  className="w-full h-full object-cover aspect-video"
-                />
-              </div>
-
-              {/* TODO: Uncomment interactive map when database has enough data to display */}
               {/* Visual - Interactive Map */}
-              {/* <div className="relative overflow-hidden rounded-lg border border-[var(--color-primary)]/30 aspect-video">
+              <div className="relative overflow-hidden rounded-lg border border-[var(--color-primary)]/30 aspect-video">
                 {loadingMap ? (
                   <div className="w-full h-full flex items-center justify-center bg-[var(--color-surface)]">
                     <div className="flex flex-col items-center gap-4">
@@ -859,16 +865,29 @@ function SubscriptionPageContent() {
                     </div>
                   </div>
                 ) : (
-                  <SolPointMap
-                    markers={mapMarkers}
-                    center={[35, 55]}
-                    zoom={4}
-                    isVip={isVip}
-                    isAuthenticated={isAuthenticated}
-                    currentUserId={user?.id}
-                  />
+                  <Card className="h-full p-0 overflow-hidden mapcn-map-container" style={{ background: "#18E3C5" }}>
+                    <Map 
+                      center={[55, 35]} 
+                      zoom={4}
+                    >
+                      <WaterLayer />
+                      <CountriesLayer landColor="#452D9F" />
+                      <MapMarkersLayer
+                        markers={mapMarkers}
+                        isVip={isVip}
+                        isAuthenticated={isAuthenticated}
+                        currentUserId={user?.id}
+                      />
+                      <MapControls 
+                        showZoom={true}
+                        showCompass={true}
+                        showLocate={true}
+                        showFullscreen={true}
+                      />
+                    </Map>
+                  </Card>
                 )}
-              </div> */}
+              </div>
             </div>
           </div>
 
