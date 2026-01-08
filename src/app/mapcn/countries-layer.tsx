@@ -53,9 +53,6 @@ export function CountriesLayer({ dataUrl = "/world.geo.json", geoJsonData }: Cou
 
     const updateZoomEnd = () => {
       const newZoom = map.getZoom();
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'countries-layer.tsx:60',message:'Zoom ended - updating state',data:{oldZoom:currentZoom,newZoom},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,C'})}).catch(()=>{});
-      // #endregion
       setCurrentZoom(newZoom);
     };
 
@@ -71,28 +68,18 @@ export function CountriesLayer({ dataUrl = "/world.geo.json", geoJsonData }: Cou
   useEffect(() => {
     if (!isLoaded || !map || !geoJson) return;
 
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'countries-layer.tsx:72',message:'Effect triggered',data:{isLoaded,hasMap:!!map,hasGeoJson:!!geoJson,currentZoom,geoJsonFeatures:geoJson?.features?.length||0},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B,D'})}).catch(()=>{});
-    // #endregion
-
     // Add source
     if (!map.getSource(sourceId)) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'countries-layer.tsx:76',message:'Adding new source',data:{sourceId},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B,D'})}).catch(()=>{});
-      // #endregion
       map.addSource(sourceId, {
         type: "geojson",
         data: geoJson,
       });
     } else {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'countries-layer.tsx:82',message:'Updating existing source',data:{sourceId},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B,D'})}).catch(()=>{});
-      // #endregion
       const source = map.getSource(sourceId) as MapLibreGL.GeoJSONSource;
       source.setData(geoJson);
     }
 
-    // Add fill layer for countries
+    // Add fill layer for countries - using lower opacity to let base map details show through
     if (!map.getLayer(fillLayerId)) {
       map.addLayer({
         id: fillLayerId,
@@ -100,9 +87,9 @@ export function CountriesLayer({ dataUrl = "/world.geo.json", geoJsonData }: Cou
         source: sourceId,
         paint: {
           "fill-color": "#452D9F", // Purple for continents
-          "fill-opacity": 0.9,
+          "fill-opacity": 0.6, // Lower opacity to preserve base map details (cities, labels, etc.)
         },
-      });
+      }); // Add after base map layers - will overlay but allow details to show through
     }
 
     // Add border layer with dynamic color based on zoom
@@ -112,11 +99,24 @@ export function CountriesLayer({ dataUrl = "/world.geo.json", geoJsonData }: Cou
         type: "line",
         source: sourceId,
         paint: {
-          "line-color": currentZoom >= 5 ? "#8B7EC8" : "#A4E3B4", // Darker purple at zoom >= 5, light green at zoom < 5
-          "line-width": currentZoom < 5 ? 1.5 : currentZoom < 7 ? 1.2 : 1,
-          "line-opacity": 1,
+          "line-color": [
+            "case",
+            [">=", ["zoom"], 5],
+            "#8B7EC8",
+            "#A4E3B4",
+          ],
+          "line-width": [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            0, 1.5,
+            5, 1.5,
+            7, 1.2,
+            10, 1,
+          ],
+          "line-opacity": 0.8, // Slightly transparent to blend with base map
         },
-      });
+      }); // Add after fill layer
     }
 
     // Update border properties with expressions that depend on zoom
@@ -163,8 +163,8 @@ export function CountriesLayer({ dataUrl = "/world.geo.json", geoJsonData }: Cou
       map.setPaintProperty(fillLayerId, "fill-opacity", [
         "case",
         ["boolean", ["feature-state", "hover"], false],
-        0.85,
-        0.9,
+        0.75, // Slightly more visible on hover
+        0.6,  // Base opacity to preserve base map details
       ]);
     }
 

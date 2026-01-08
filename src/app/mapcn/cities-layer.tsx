@@ -31,9 +31,6 @@ export function CitiesLayer({ dataUrl = "/cities.json", minZoom = 6 }: CitiesLay
 
     const updateZoom = () => {
       const newZoom = map.getZoom();
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'cities-layer.tsx:33',message:'Zoom changed in cities layer',data:{oldZoom:currentZoom,newZoom,minZoom,shouldShow:newZoom >= minZoom},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
       setCurrentZoom(newZoom);
     };
 
@@ -53,10 +50,6 @@ export function CitiesLayer({ dataUrl = "/cities.json", minZoom = 6 }: CitiesLay
     if (isLoadedOnce) return; // Load only once
     if (currentZoom < minZoom) return;
 
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'cities-layer.tsx:56',message:'Loading cities GeoJSON',data:{currentZoom,minZoom,dataUrl},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
-
     fetch(dataUrl)
       .then((response) => {
         if (!response.ok) throw new Error("Failed to load cities GeoJSON");
@@ -69,16 +62,10 @@ export function CitiesLayer({ dataUrl = "/cities.json", minZoom = 6 }: CitiesLay
             (feature: any) => feature.geometry !== null
           );
         }
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'cities-layer.tsx:72',message:'Cities GeoJSON loaded',data:{featuresCount:data.features?.length||0},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
         setGeoJson(data);
         setIsLoadedOnce(true);
       })
       .catch((error) => {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'cities-layer.tsx:78',message:'Error loading cities GeoJSON',data:{error:error.message},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
         console.error("Error loading cities GeoJSON:", error);
       });
   }, [isLoaded, map, currentZoom, minZoom, dataUrl, isLoadedOnce]);
@@ -93,10 +80,6 @@ export function CitiesLayer({ dataUrl = "/cities.json", minZoom = 6 }: CitiesLay
       }
       return;
     }
-
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'cities-layer.tsx:99',message:'Adding cities layer',data:{currentZoom,minZoom,sourceId,borderLayerId},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
 
     // Add source
     if (!map.getSource(sourceId)) {

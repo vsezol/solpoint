@@ -80,36 +80,6 @@ export default function MapCnPage() {
               <Map 
                 center={[55, 35]} 
                 zoom={4}
-                styles={{
-                  dark: {
-                    version: 8,
-                    sources: {},
-                    layers: [
-                      {
-                        id: "background",
-                        type: "background",
-                        paint: {
-                          "background-color": "#18E3C5", // Cyan color for water
-                        },
-                      },
-                    ],
-                    glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
-                  },
-                  light: {
-                    version: 8,
-                    sources: {},
-                    layers: [
-                      {
-                        id: "background",
-                        type: "background",
-                        paint: {
-                          "background-color": "#18E3C5", // Cyan color for water
-                        },
-                      },
-                    ],
-                    glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
-                  },
-                }}
               >
                 <CountriesLayer />
                 <CitiesLayer />
