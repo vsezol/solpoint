@@ -4,45 +4,58 @@ import { useEffect } from "react";
 import { useMap } from "@/components/ui/map";
 
 interface CountriesLayerProps {
-  /** Color for land/continents fill (default: #8B5CF6 - purple) */
+  /** Color for land/continents fill (default: #452D9F - purple from design) */
   landColor?: string;
 }
 
 /**
- * Component that modifies the base map's land/continent layers to use purple color
+ * Component that modifies the base map's land/continent layers to use purple color palette
  * Instead of adding GeoJSON layers (which have low resolution and misaligned borders),
- * this component directly modifies the base map style layers to change land color.
+ * this component directly modifies the base map style layers to change land colors.
  * This ensures perfect alignment with the base map's accurate boundaries.
+ * 
+ * Uses a palette of purple shades to maintain map detail differentiation:
+ * - Base land: #452D9F (from design)
+ * - Vegetation/landcover: #5A3FB5 (lighter)
+ * - Parks/nature: #6B4FC9 (even lighter)
+ * - Residential areas: #3F2890 (darker than base)
+ * - Buildings: #352075 (darkest)
  */
-export function CountriesLayer({ landColor = "#8B5CF6" }: CountriesLayerProps) {
+export function CountriesLayer({ landColor = "#452D9F" }: CountriesLayerProps) {
   const { map, isLoaded } = useMap();
 
   useEffect(() => {
     if (!isLoaded || !map) return;
+
+    // Purple color palette for different land types
+    // This maintains visual differentiation while keeping everything in purple tones
+    const colorPalette = {
+      base: landColor,              // #452D9F - Base land/continents
+      vegetation: "#5A3FB5",         // Lighter - forests, fields, landcover
+      parks: "#6B4FC9",              // Even lighter - parks, nature reserves
+      residential: "#3F2890",        // Darker than base - residential areas
+      buildings: "#352075",          // Darkest - buildings and structures
+    };
 
     // Function to update land layer colors in the base map
     const updateLandColor = () => {
       const style = map.getStyle();
       const allLayers = style.layers || [];
 
-      console.log("🎨 Applying land color:", landColor);
-
-      // MAIN FIX: The primary land/continent layer is the "background" layer with type "background"
-      // This is what makes continents black by default
       allLayers.forEach((layer) => {
         if (typeof layer === "string") return;
 
-        // Change the main background layer (continents)
+        // 1. Change the main background layer (base continents)
         if (layer.id === "background" && layer.type === "background") {
           try {
-            map.setPaintProperty("background", "background-color", landColor);
-            console.log("✓ Modified MAIN land layer: background");
-          } catch (error) {
-            console.log("✗ Failed to modify background:", error);
+            map.setPaintProperty("background", "background-color", colorPalette.base);
+          } catch {
+            // Ignore if property can't be set
           }
+          return;
         }
 
-        // Also modify other land-related fill layers for consistency
+        // 2. Apply specific colors to different fill layer types
         if (layer.type === "fill") {
           const layerId = layer.id.toLowerCase();
           
@@ -54,18 +67,30 @@ export function CountriesLayer({ landColor = "#8B5CF6" }: CountriesLayerProps) {
             layerId.includes("lake") ||
             layerId.includes("river");
 
-          if (!isWaterLayer) {
-            try {
-              map.setPaintProperty(layer.id, "fill-color", landColor);
-              console.log(`✓ Modified fill layer: ${layer.id}`);
-            } catch (error) {
-              // Some layers might not support this property
-            }
+          if (isWaterLayer) return;
+
+          // Determine which color to use based on layer purpose
+          let targetColor = colorPalette.base; // default
+
+          if (layerId.includes("landcover")) {
+            targetColor = colorPalette.vegetation;
+          } else if (layerId.includes("park")) {
+            targetColor = colorPalette.parks;
+          } else if (layerId.includes("residential")) {
+            targetColor = colorPalette.residential;
+          } else if (layerId.includes("building")) {
+            targetColor = colorPalette.buildings;
+          } else if (layerId.includes("landuse")) {
+            targetColor = colorPalette.vegetation;
+          }
+
+          try {
+            map.setPaintProperty(layer.id, "fill-color", targetColor);
+          } catch {
+            // Some layers might not support this property
           }
         }
       });
-
-      console.log("✅ Land color update complete");
     };
 
     // Try immediately and also after style loads/changes
