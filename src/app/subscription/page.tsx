@@ -1402,6 +1402,9 @@ function SubscriptionPageContent() {
                     setSolanaPaymentError(error);
                     setSolanaPaymentStatus("error");
                   }}
+                  onEmailValidationError={(error) => {
+                    setEmailError(error);
+                  }}
                 />
                 
                 {/* Status and Error Display */}
@@ -1461,7 +1464,18 @@ function SubscriptionPageContent() {
                   </div>
                   <Button
                     variant="outline"
-                    onClick={handleNowPaymentsPayment}
+                    onClick={() => {
+                      // Проверяем email перед началом оплаты
+                      if (!email || !email.trim()) {
+                        setEmailError("Email is required. Please enter your email first.");
+                        return;
+                      }
+                      if (!validateEmail(email)) {
+                        setEmailError("Please enter a valid email address");
+                        return;
+                      }
+                      handleNowPaymentsPayment();
+                    }}
                     disabled={!email || !!emailError}
                   >
                     Select

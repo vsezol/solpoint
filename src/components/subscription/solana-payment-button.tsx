@@ -64,6 +64,7 @@ interface SolanaPaymentButtonProps {
   onStatusChange?: (status: string, message?: string) => void;
   onSuccess?: (intentId: string) => void;
   onError?: (error: string) => void;
+  onEmailValidationError?: (error: string) => void;
 }
 
 export function SolanaPaymentButton({ 
@@ -71,7 +72,8 @@ export function SolanaPaymentButton({
   email,
   onStatusChange,
   onSuccess, 
-  onError 
+  onError,
+  onEmailValidationError
 }: SolanaPaymentButtonProps) {
   const { connection } = useConnection();
   const { publicKey, sendTransaction, connected } = useWallet();
@@ -344,17 +346,35 @@ export function SolanaPaymentButton({
   }
 
   if (!connected) {
+    // Если email не введен, показываем кастомную кнопку с валидацией
+    if (!email || !email.trim()) {
+      return (
+        <div className="flex flex-col items-center gap-2">
+          <Button
+            variant="primary"
+            size="lg"
+            className="w-full"
+            onClick={() => {
+              onEmailValidationError?.("Please insert email.");
+            }}
+          >
+            <Wallet className="mr-2 h-4 w-4" />
+            Select Wallet
+          </Button>
+          <p className="text-sm text-muted-foreground">
+            Connect wallet to pay with Solana
+          </p>
+        </div>
+      );
+    }
+
+    // Если email введен, показываем настоящий WalletMultiButton
     return (
       <div className="flex flex-col items-center gap-2">
         <WalletMultiButton className="!bg-primary !text-primary-foreground hover:!bg-primary/90" />
         <p className="text-sm text-muted-foreground">
           Connect wallet to pay with Solana
         </p>
-        {!email && (
-          <p className="text-xs text-yellow-500 mt-1">
-            Please enter your email above first
-          </p>
-        )}
       </div>
     );
   }
