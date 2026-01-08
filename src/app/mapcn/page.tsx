@@ -12,7 +12,6 @@ import { useAuth } from "@/hooks/use-auth";
 import { trackEvent } from "@/lib/analytics";
 import { WaterLayer } from "./water-layer";
 import { CountriesLayer } from "./countries-layer";
-import { CitiesLayer } from "./cities-layer";
 import { MapMarkersLayer } from "./markers-layer";
 
 // Dynamic import for map component to avoid SSR issues with MapLibre GL
@@ -170,8 +169,7 @@ export default function MapCnPage() {
                       zoom={4}
                     >
                       <WaterLayer />
-                      <CountriesLayer />
-                      <CitiesLayer />
+                      <CountriesLayer landColor="#8B5CF6" />
                       <MapMarkersLayer
                         markers={markers}
                         isVip={isVip}
