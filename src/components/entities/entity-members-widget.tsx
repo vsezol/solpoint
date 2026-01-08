@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, Avatar, ProSubscriptionModal, AuthRequiredModal, Modal, ModalHeader, ModalTitle, ModalContent, UserListItem } from "@/components/ui";
 import { useAuth } from "@/hooks/use-auth";
 import { useChat } from "@/hooks/use-chat";
@@ -124,42 +124,59 @@ export function EntityMembersWidget({
 
   const texts = ENTITY_TEXTS[entityType];
 
+  // Функция загрузки данных
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const url = `/api/members?entityType=${entityType}&entityId=${entityId}`;
+      
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+        throw new Error(errorData.error || `Failed to load members: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log(`[EntityMembersWidget] Received data for ${entityType}:`, {
+        totalMembers: result.totalMembers,
+        totalFriends: result.totalFriends,
+        membersCount: result.members?.length || 0,
+        friendsCount: result.friends?.length || 0,
+        teamCount: result.team?.length || 0,
+        sampleMember: result.members?.[0] || null,
+        fullData: result,
+      });
+      setData(result);
+    } catch (err) {
+      console.error("Error loading members:", err);
+      setError(err instanceof Error ? err.message : "Failed to load members");
+    } finally {
+      setLoading(false);
+    }
+  }, [entityType, entityId]);
+
   // Загружаем данные при монтировании
   useEffect(() => {
-    async function loadData() {
-      try {
-        setLoading(true);
-        setError(null);
-        const url = `/api/members?entityType=${entityType}&entityId=${entityId}`;
-        
-        const response = await fetch(url);
-        
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
-          throw new Error(errorData.error || `Failed to load members: ${response.status}`);
-        }
-
-        const result = await response.json();
-        console.log(`[EntityMembersWidget] Received data for ${entityType}:`, {
-          totalMembers: result.totalMembers,
-          totalFriends: result.totalFriends,
-          membersCount: result.members?.length || 0,
-          friendsCount: result.friends?.length || 0,
-          teamCount: result.team?.length || 0,
-          sampleMember: result.members?.[0] || null,
-          fullData: result,
-        });
-        setData(result);
-      } catch (err) {
-        console.error("Error loading members:", err);
-        setError(err instanceof Error ? err.message : "Failed to load members");
-      } finally {
-        setLoading(false);
-      }
-    }
-
     loadData();
-  }, [entityType, entityId]);
+  }, [loadData]);
+
+  // Слушаем событие обновления участников события
+  useEffect(() => {
+    if (entityType !== "event") return;
+
+    const handleMemberUpdate = () => {
+      // Обновляем данные при обновлении участников события
+      loadData();
+    };
+
+    window.addEventListener("event-member-updated", handleMemberUpdate);
+
+    return () => {
+      window.removeEventListener("event-member-updated", handleMemberUpdate);
+    };
+  }, [entityType, loadData]);
 
   // Открываем модальное окно с уже загруженными данными
   const loadFullList = async (isFriends: boolean) => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button, Modal, ModalHeader, ModalTitle, ModalDescription, ModalContent, ModalFooter } from "@/components/ui";
 import { useRouter } from "next/navigation";
 
@@ -28,6 +28,7 @@ export function LumaAttendButton({
 
   const storageKey = `event_clicked_${eventSlug}`;
   const sessionKey = `event_luma_redirect_${eventSlug}`;
+  const wasBlurredRef = useRef(false);
 
   // Проверяем, нажимал ли пользователь кнопку ранее
   const [hasClickedBefore, setHasClickedBefore] = useState(false);
@@ -38,7 +39,56 @@ export function LumaAttendButton({
     }
   }, [storageKey]);
 
-  // Проверяем, вернулся ли пользователь с Loom
+  // Отслеживаем потерю фокуса вкладки (переход на другую вкладку)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handleBlur = () => {
+      const wasRedirected = sessionStorage.getItem(sessionKey) === "true";
+      const hasClicked = localStorage.getItem(storageKey) === "true";
+      
+      // Если пользователь нажал кнопку и был перенаправлен на Luma, отмечаем что вкладка потеряла фокус
+      if (wasRedirected && hasClicked) {
+        wasBlurredRef.current = true;
+      }
+    };
+
+    const handleFocus = () => {
+      // Если вкладка вернулась в фокус и была потеря фокуса после перехода на Luma
+      if (wasBlurredRef.current) {
+        const wasRedirected = sessionStorage.getItem(sessionKey) === "true";
+        const hasClicked = localStorage.getItem(storageKey) === "true";
+        
+        // Если пользователь был перенаправлен на Luma и вернулся, показываем модальное окно
+        if (wasRedirected && hasClicked && !isRegistered && !isGoing) {
+          setShowReturnModal(true);
+          // Очищаем sessionStorage
+          sessionStorage.removeItem(sessionKey);
+          wasBlurredRef.current = false;
+        }
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        handleBlur();
+      } else if (document.visibilityState === "visible") {
+        handleFocus();
+      }
+    };
+
+    window.addEventListener("blur", handleBlur);
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("blur", handleBlur);
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [storageKey, sessionKey, isRegistered, isGoing]);
+
+  // Проверяем, вернулся ли пользователь с Loom (старая логика для совместимости)
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -46,12 +96,17 @@ export function LumaAttendButton({
     const hasClicked = localStorage.getItem(storageKey) === "true";
 
     // Если пользователь был перенаправлен на Loom и вернулся, показываем модальное окно
-    if (wasRedirected && hasClicked && !isRegistered) {
-      setShowReturnModal(true);
-      // Очищаем sessionStorage
-      sessionStorage.removeItem(sessionKey);
+    if (wasRedirected && hasClicked && !isRegistered && !isGoing && document.visibilityState === "visible") {
+      // Небольшая задержка, чтобы убедиться, что страница полностью загружена
+      const timer = setTimeout(() => {
+        setShowReturnModal(true);
+        // Очищаем sessionStorage
+        sessionStorage.removeItem(sessionKey);
+      }, 100);
+      
+      return () => clearTimeout(timer);
     }
-  }, [storageKey, sessionKey, isRegistered]);
+  }, [storageKey, sessionKey, isRegistered, isGoing]);
 
   // Если пользователь уже зарегистрирован или ответил "да", показываем disabled кнопку "Going"
   if (isRegistered || isGoing) {
@@ -116,6 +171,13 @@ export function LumaAttendButton({
       // Устанавливаем состояние, что пользователь идет
       setIsGoing(true);
       
+      // Отправляем кастомное событие для обновления виджета участников
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("event-member-updated", {
+          detail: { eventSlug }
+        }));
+      }
+      
       // Обновляем страницу для отображения изменений
       router.refresh();
     } catch (err) {
@@ -174,7 +236,11 @@ export function LumaAttendButton({
       </Modal>
 
       {/* Модальное окно при возврате с Loom */}
-      <Modal isOpen={showReturnModal} onClose={() => setShowReturnModal(false)} size="md">
+      <Modal 
+        isOpen={showReturnModal} 
+        onClose={() => !isLoading && setShowReturnModal(false)} 
+        size="md"
+      >
         <ModalHeader>
           <ModalTitle>Are you going to this event?</ModalTitle>
           <ModalDescription>

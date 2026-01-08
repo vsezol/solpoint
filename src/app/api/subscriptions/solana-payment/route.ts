@@ -10,9 +10,6 @@ const SOLANA_RPC_URL = process.env.SOLANA_RPC_URL || "https://solana-rpc.publicn
 export async function POST(request: Request) {
   const supabase = await createClient();
 
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'solana-payment:10',message:'API endpoint called',data:{timestamp:new Date().toISOString()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-  // #endregion
 
   if (!RECIPIENT_ADDRESS) {
     return NextResponse.json(
@@ -25,9 +22,6 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { signature, payer, intent_id } = body;
 
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'solana-payment:22',message:'Request body parsed',data:{signature:signature?.substring(0,10)+'***',payer,intent_id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-    // #endregion
 
     if (!signature || !payer) {
       return NextResponse.json(
@@ -50,9 +44,6 @@ export async function POST(request: Request) {
       .eq("intent_id", intent_id)
       .single();
 
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'solana-payment:39',message:'Intent fetched',data:{intentFound:!!intent,intentError:intentError?.message,intentId:intent?.id,intentSignature:intent?.tx_signature?.substring(0,10)+'***'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-    // #endregion
 
     if (intentError || !intent) {
       return NextResponse.json(
@@ -63,9 +54,6 @@ export async function POST(request: Request) {
 
     // Проверяем, что signature в запросе совпадает с signature в intent
     if (intent.tx_signature !== signature) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'solana-payment:53',message:'Signature mismatch',data:{intentSignature:intent.tx_signature?.substring(0,10)+'***',requestSignature:signature?.substring(0,10)+'***'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-      // #endregion
       return NextResponse.json(
         { error: "Transaction signature does not match the intent. Please use the correct transaction." },
         { status: 400 }
@@ -129,14 +117,8 @@ export async function POST(request: Request) {
       .neq("id", intent.id) // ИСКЛЮЧАЕМ текущий intent из проверки!
       .single();
 
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'solana-payment:109',message:'Checking for duplicate signature',data:{existingIntentFound:!!existingIntent,currentIntentId:intent.id,existingIntentId:existingIntent?.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-    // #endregion
 
     if (existingIntent) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'solana-payment:116',message:'Duplicate signature found in another intent',data:{currentIntentId:intent.id,existingIntentId:existingIntent.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-      // #endregion
       return NextResponse.json(
         { error: "This transaction signature has already been used in another intent" },
         { status: 400 }
@@ -146,9 +128,6 @@ export async function POST(request: Request) {
     // Подключаемся к Solana RPC
     const connection = new Connection(SOLANA_RPC_URL, "finalized");
 
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'solana-payment:147',message:'Fetching transaction from Solana',data:{signature:signature?.substring(0,10)+'***',rpcUrl:SOLANA_RPC_URL},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
-    // #endregion
 
     // Получаем транзакцию - сначала пробуем confirmed, потом finalized
     let transaction = null;
@@ -166,14 +145,8 @@ export async function POST(request: Request) {
         )
       ]);
       
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'solana-payment:160',message:'Transaction found with confirmed commitment',data:{txFound:!!transaction,txSlot:transaction?.slot},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
-      // #endregion
     } catch (error) {
       transactionError = error;
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'solana-payment:167',message:'Failed to fetch with confirmed, trying finalized',data:{error:error instanceof Error ? error.message : String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
-      // #endregion
       
       // Если не получилось с confirmed, пробуем finalized
       try {
@@ -187,13 +160,7 @@ export async function POST(request: Request) {
           )
         ]);
         
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'solana-payment:180',message:'Transaction found with finalized commitment',data:{txFound:!!transaction,txSlot:transaction?.slot},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
-        // #endregion
       } catch (finalizedError) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'solana-payment:186',message:'Failed to fetch transaction with both commitments',data:{confirmedError:transactionError instanceof Error ? transactionError.message : String(transactionError),finalizedError:finalizedError instanceof Error ? finalizedError.message : String(finalizedError)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
-        // #endregion
         console.error("Error fetching transaction:", finalizedError);
         // Если intent уже создан, возвращаем специальный ответ для активации
         return NextResponse.json(
@@ -210,9 +177,6 @@ export async function POST(request: Request) {
 
     // Проверка 1: Транзакция существует
     if (!transaction) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'solana-payment:201',message:'Transaction is null',data:{intentId:intent.intent_id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
-      // #endregion
       // Если intent уже создан, возвращаем специальный ответ для активации
       return NextResponse.json(
         { 

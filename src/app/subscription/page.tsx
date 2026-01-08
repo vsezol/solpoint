@@ -76,6 +76,7 @@ import type { Plan, Subscription } from "@/types";
 import { SolanaPaymentButton } from "@/components/subscription/solana-payment-button";
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 
 const freePlanFeatures = [
   { text: "See users on map by country", included: true },
@@ -177,6 +178,7 @@ const faqItems = [
 function SubscriptionPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -213,6 +215,7 @@ function SubscriptionPageContent() {
   useEffect(() => {
     const success = searchParams.get("success");
     const cancelled = searchParams.get("cancelled");
+    const activated = searchParams.get("activated");
     
     if (success) {
       // Обновляем подписку после успешной оплаты
@@ -224,8 +227,15 @@ function SubscriptionPageContent() {
       trackEvent("subscription_payment_cancelled", {
         event_category: "Subscription",
       });
+    } else if (activated) {
+      // После активации обновляем профиль, чтобы subscription_tier обновился
+      queryClient.invalidateQueries({ queryKey: ["auth", "profile"] });
+      fetchCurrentSubscription();
+      trackEvent("subscription_activated_view", {
+        event_category: "Subscription",
+      });
     }
-  }, [searchParams]);
+  }, [searchParams, queryClient]);
 
   // Загружаем планы и текущую подписку параллельно
   useEffect(() => {

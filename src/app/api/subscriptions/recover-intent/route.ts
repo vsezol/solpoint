@@ -9,9 +9,6 @@ import { randomBytes } from "crypto";
 export async function POST(request: Request) {
   const supabase = await createClient();
 
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'recover-intent:8',message:'Recovery endpoint called',data:{timestamp:new Date().toISOString()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-  // #endregion
 
   try {
     const body = await request.json();
@@ -32,9 +29,6 @@ export async function POST(request: Request) {
       .single();
 
     if (existingIntent) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'recover-intent:30',message:'Intent already exists',data:{intent_id:existingIntent.intent_id,status:existingIntent.status},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
       return NextResponse.json({
         intent_id: existingIntent.intent_id,
         recovered: true,
@@ -105,9 +99,6 @@ export async function POST(request: Request) {
 
     // Если колонка отсутствует, создаем без неё
     if (intentError && intentError.code === 'PGRST204' && intentError.message?.includes('expected_amount_lamports')) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'recover-intent:95',message:'Column expected_amount_lamports not found, retrying without it',data:{error:intentError},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
       
       const retryResult = await supabase
         .from("subscription_intents")
@@ -120,18 +111,12 @@ export async function POST(request: Request) {
     }
 
     if (intentError || !intent) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'recover-intent:110',message:'Recovery failed',data:{error:intentError},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
       return NextResponse.json(
         { error: "Failed to recover intent", details: intentError },
         { status: 500 }
       );
     }
 
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'recover-intent:118',message:'Intent recovered successfully',data:{intent_id:intent.intent_id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-    // #endregion
 
     return NextResponse.json({
       intent_id: intent.intent_id,
