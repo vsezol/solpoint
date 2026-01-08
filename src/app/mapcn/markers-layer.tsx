@@ -194,24 +194,36 @@ function clusterMarkers(
 // Компонент для отображения иконки маркера
 const MarkerIcon = ({ type }: { type: MapMarker["type"] }) => {
   let imgSrc = "";
-  let filterStyle = "drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))";
+  let filterStyle = "drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4))";
 
   switch (type) {
     case "user":
       imgSrc = "/free-user-pin.svg";
-      filterStyle = "drop-shadow(0 2px 4px rgba(239, 68, 68, 0.4))";
+      filterStyle = "drop-shadow(0 4px 8px rgba(239, 68, 68, 0.5))";
       break;
     case "pro_user":
       imgSrc = "/pro-user-pin.svg";
-      filterStyle = "drop-shadow(0 2px 4px rgba(251, 191, 36, 0.4))";
+      filterStyle = "drop-shadow(0 4px 8px rgba(251, 191, 36, 0.5))";
       break;
     case "event":
-      imgSrc = "/event-icon.svg";
+      imgSrc = "/event-pin.svg";
+      filterStyle = "drop-shadow(0 4px 8px rgba(20, 241, 149, 0.4))";
       break;
     case "hub":
+      imgSrc = "/hub-pin.svg";
+      filterStyle = "drop-shadow(0 4px 8px rgba(20, 241, 149, 0.4))";
+      break;
     case "workspace":
+      imgSrc = "/workspace-pin.svg";
+      filterStyle = "drop-shadow(0 4px 8px rgba(20, 241, 149, 0.4))";
+      break;
     case "community":
-      imgSrc = "/community-hubs.svg";
+      imgSrc = "/community-pin.svg";
+      filterStyle = "drop-shadow(0 4px 8px rgba(20, 241, 149, 0.4))";
+      break;
+    case "project":
+      imgSrc = "/project-pin.svg";
+      filterStyle = "drop-shadow(0 4px 8px rgba(20, 241, 149, 0.4))";
       break;
     default:
       imgSrc = "/free-user-pin.svg";
@@ -224,6 +236,19 @@ const MarkerIcon = ({ type }: { type: MapMarker["type"] }) => {
         height: "54px",
         cursor: "pointer",
         filter: filterStyle,
+        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+        animation: "cluster-appear 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = "scale(1.15) translateY(-2px)";
+        e.currentTarget.style.filter = filterStyle.replace(/rgba\(([^)]+)\)/g, (match, rgba) => {
+          const [r, g, b] = rgba.split(',').slice(0, 3);
+          return `rgba(${r}, ${g}, ${b}, 0.7)`;
+        });
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = "scale(1) translateY(0)";
+        e.currentTarget.style.filter = filterStyle;
       }}
     >
       <img
@@ -242,61 +267,119 @@ const MarkerIcon = ({ type }: { type: MapMarker["type"] }) => {
 // Компонент для отображения кластера
 const ClusterIcon = ({ count, type }: { count: number; type: MapMarker["type"] }) => {
   // Определяем размер кластера в зависимости от количества маркеров
-  const size = count < 10 ? 50 : count < 100 ? 60 : 70;
+  const size = count < 10 ? 52 : count < 100 ? 62 : 72;
   const fontSize = count < 10 ? 14 : count < 100 ? 16 : 18;
-  const iconSize = count < 10 ? 20 : count < 100 ? 24 : 28;
+  const iconSize = count < 10 ? 18 : count < 100 ? 22 : 26;
   
-  // Определяем цвет кластера в зависимости от типа
-  let backgroundColor = "#3b82f6"; // По умолчанию синий
+  // Определяем цвет и иконку кластера в зависимости от типа (используем зеленый Solana для всех)
+  const borderColor = "#14f195"; // Зеленый Solana
   let iconSrc = "";
   
   switch (type) {
     case "user":
     case "pro_user":
-      backgroundColor = "#ef4444"; // Красный для пользователей
-      iconSrc = "/free-user-pin.svg";
+      iconSrc = "/users-cluster.svg"; // Специальная иконка людей в круге
       break;
     case "event":
-      backgroundColor = "#10b981"; // Зеленый для событий
-      iconSrc = "/event-icon.svg";
+      iconSrc = "/event-pin.svg";
       break;
     case "hub":
+      iconSrc = "/hub-pin.svg";
+      break;
     case "workspace":
+      iconSrc = "/workspace-pin.svg";
+      break;
     case "community":
-      backgroundColor = "#8b5cf6"; // Фиолетовый для хабов
-      iconSrc = "/community-hubs.svg";
+      iconSrc = "/community-pin.svg";
+      break;
+    case "project":
+      iconSrc = "/project-pin.svg";
       break;
     default:
-      backgroundColor = "#3b82f6"; // Синий по умолчанию
+      break;
   }
   
   return (
     <div
       style={{
+        position: "relative",
         width: `${size}px`,
         height: `${size}px`,
-        borderRadius: "50%",
-        backgroundColor: backgroundColor,
-        border: "3px solid white",
-        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.3)",
-        cursor: "pointer",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        color: "white",
-        fontWeight: "bold",
-        fontSize: `${fontSize}px`,
-        transition: "transform 0.2s ease",
-        position: "relative",
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.transform = "scale(1.1)";
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = "scale(1)";
+        animation: "cluster-appear 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
       }}
     >
+      {/* Пульсирующее кольцо */}
+      <div
+        style={{
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          width: `${size + 8}px`,
+          height: `${size + 8}px`,
+          borderRadius: "50%",
+          border: `2px solid ${borderColor}`,
+          animation: "cluster-pulse 2s ease-in-out infinite",
+          pointerEvents: "none",
+        }}
+      />
+      
+      {/* Основной кластер */}
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          borderRadius: "50%",
+          background: `linear-gradient(135deg, #111820 0%, #182028 100%)`,
+          border: `2px solid ${borderColor}`,
+          boxShadow: `
+            0 4px 12px rgba(0, 0, 0, 0.5),
+            0 0 0 3px ${borderColor}20,
+            inset 0 1px 0 ${borderColor}40
+          `,
+          cursor: "pointer",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "#14f195",
+          fontWeight: "bold",
+          fontSize: `${fontSize}px`,
+          transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+          position: "relative",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = "scale(1.1)";
+          e.currentTarget.style.boxShadow = `
+            0 6px 20px rgba(0, 0, 0, 0.6),
+            0 0 0 4px ${borderColor}30,
+            0 0 20px ${borderColor}60,
+            inset 0 1px 0 ${borderColor}60
+          `;
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = "scale(1)";
+          e.currentTarget.style.boxShadow = `
+            0 4px 12px rgba(0, 0, 0, 0.5),
+            0 0 0 3px ${borderColor}20,
+            inset 0 1px 0 ${borderColor}40
+          `;
+        }}
+      >
+      {/* Внутреннее свечение */}
+      <div
+        style={{
+          position: "absolute",
+          top: "10%",
+          left: "10%",
+          right: "10%",
+          bottom: "10%",
+          borderRadius: "50%",
+          background: `radial-gradient(circle at 30% 30%, ${borderColor}15 0%, transparent 70%)`,
+          pointerEvents: "none",
+        }}
+      />
+      
       {/* Иконка типа маркера */}
       {iconSrc && (
         <img
@@ -306,13 +389,26 @@ const ClusterIcon = ({ count, type }: { count: number; type: MapMarker["type"] }
             width: `${iconSize}px`,
             height: `${iconSize}px`,
             marginBottom: "2px",
-            filter: "brightness(0) invert(1)", // Делаем иконку белой
+            filter: `drop-shadow(0 0 4px ${borderColor}60)`,
+            position: "relative",
+            zIndex: 1,
+            opacity: 0.9,
           }}
         />
       )}
+      
       {/* Количество маркеров */}
-      <div style={{ lineHeight: 1, marginTop: iconSrc ? "2px" : "0" }}>
+      <div 
+        style={{ 
+          lineHeight: 1, 
+          marginTop: iconSrc ? "2px" : "0",
+          position: "relative",
+          zIndex: 1,
+          textShadow: `0 0 8px ${borderColor}80, 0 1px 2px rgba(0,0,0,0.5)`,
+        }}
+      >
         {count}
+      </div>
       </div>
     </div>
   );
@@ -719,7 +815,7 @@ export function MapMarkersLayer({
         title="This feature is available only with PRO subscription"
         description="Viewing user profiles is available only with PRO subscription. Upgrade to PRO to unlock this feature."
       />
-      {/* Custom styles for popups */}
+      {/* Custom styles for popups and animations */}
       <style jsx global>{`
         /* Remove default Tailwind styles from MarkerPopup */
         .solpoint-popup-maplibre {
@@ -749,6 +845,43 @@ export function MapMarkersLayer({
         /* Popup tip styling */
         .maplibregl-popup-tip {
           display: none !important;
+        }
+        
+        /* Cluster pulse animation - пульсирующее кольцо */
+        @keyframes cluster-pulse {
+          0%, 100% {
+            opacity: 0.6;
+            transform: translate(-50%, -50%) scale(1);
+          }
+          50% {
+            opacity: 0.2;
+            transform: translate(-50%, -50%) scale(1.3);
+          }
+        }
+        
+        /* Появление маркеров и кластеров */
+        @keyframes cluster-appear {
+          0% {
+            opacity: 0;
+            transform: scale(0.5) translateY(20px);
+          }
+          60% {
+            transform: scale(1.05) translateY(-2px);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+          }
+        }
+        
+        /* Hover эффект со свечением */
+        @keyframes marker-glow {
+          0%, 100% {
+            filter: drop-shadow(0 4px 8px rgba(20, 241, 149, 0.3));
+          }
+          50% {
+            filter: drop-shadow(0 6px 12px rgba(20, 241, 149, 0.6));
+          }
         }
       `}</style>
     </>

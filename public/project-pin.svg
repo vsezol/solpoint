@@ -1,0 +1,14 @@
+<svg width="46" height="54" viewBox="0 0 46 54" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Pin shape with dark background -->
+  <path d="M23 0C10.85 0 1 9.85 1 22C1 31.5 8.5 41.5 23 54C37.5 41.5 45 31.5 45 22C45 9.85 35.15 0 23 0Z" fill="#111820" stroke="#14f195" stroke-width="2"/>
+  
+  <!-- Code/Project icon -->
+  <g transform="translate(11, 11)">
+    <!-- Code brackets -->
+    <path d="M6 4L2 10L6 16" stroke="#14f195" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <path d="M18 4L22 10L18 16" stroke="#14f195" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <!-- Slash in middle -->
+    <line x1="14" y1="4" x2="10" y2="16" stroke="#14f195" stroke-width="2.5" stroke-linecap="round"/>
+  </g>
+</svg>
+

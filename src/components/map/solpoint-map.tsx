@@ -57,10 +57,10 @@ const createCustomIcon = (type: MapMarker["type"]) => {
   });
 };
 
-// Hub marker using community-hubs.svg
+// Hub marker using hub-pin.svg
 const createHubIcon = () => {
   return L.divIcon({
-    html: `<img src="/community-hubs.svg" alt="Hub" style="width: 46px; height: 54px;" />`,
+    html: `<img src="/hub-pin.svg" alt="Hub" style="width: 46px; height: 54px;" />`,
     className: "custom-marker hub-marker",
     iconSize: [46, 54],
     iconAnchor: [23, 54],
@@ -68,11 +68,44 @@ const createHubIcon = () => {
   });
 };
 
-// Event marker using event-icon.svg
+// Event marker using event-pin.svg
 const createEventIcon = () => {
   return L.divIcon({
-    html: `<img src="/event-icon.svg" alt="Event" style="width: 46px; height: 54px;" />`,
+    html: `<img src="/event-pin.svg" alt="Event" style="width: 46px; height: 54px;" />`,
     className: "custom-marker event-marker",
+    iconSize: [46, 54],
+    iconAnchor: [23, 54],
+    popupAnchor: [0, -50],
+  });
+};
+
+// Community marker using community-pin.svg
+const createCommunityIcon = () => {
+  return L.divIcon({
+    html: `<img src="/community-pin.svg" alt="Community" style="width: 46px; height: 54px;" />`,
+    className: "custom-marker community-marker",
+    iconSize: [46, 54],
+    iconAnchor: [23, 54],
+    popupAnchor: [0, -50],
+  });
+};
+
+// Workspace marker using workspace-pin.svg
+const createWorkspaceIcon = () => {
+  return L.divIcon({
+    html: `<img src="/workspace-pin.svg" alt="Workspace" style="width: 46px; height: 54px;" />`,
+    className: "custom-marker workspace-marker",
+    iconSize: [46, 54],
+    iconAnchor: [23, 54],
+    popupAnchor: [0, -50],
+  });
+};
+
+// Project marker using project-pin.svg
+const createProjectIcon = () => {
+  return L.divIcon({
+    html: `<img src="/project-pin.svg" alt="Project" style="width: 46px; height: 54px;" />`,
+    className: "custom-marker project-marker",
     iconSize: [46, 54],
     iconAnchor: [23, 54],
     popupAnchor: [0, -50],
@@ -377,9 +410,13 @@ export function SolPointMap({
   const getIcon = (marker: MapMarker) => {
     switch (marker.type) {
       case "hub":
-      case "workspace":
-      case "community":
         return createHubIcon();
+      case "workspace":
+        return createWorkspaceIcon();
+      case "community":
+        return createCommunityIcon();
+      case "project":
+        return createProjectIcon();
       case "event":
         return createEventIcon();
       default:

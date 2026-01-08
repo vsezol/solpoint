@@ -1,0 +1,21 @@
+<svg width="46" height="54" viewBox="0 0 46 54" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Pin shape with dark background -->
+  <path d="M23 0C10.85 0 1 9.85 1 22C1 31.5 8.5 41.5 23 54C37.5 41.5 45 31.5 45 22C45 9.85 35.15 0 23 0Z" fill="#111820" stroke="#14f195" stroke-width="2"/>
+  
+  <!-- Building/Office icon -->
+  <g transform="translate(13, 9)">
+    <!-- Building outline -->
+    <rect x="2" y="4" width="16" height="18" rx="1" stroke="#14f195" stroke-width="2" fill="none"/>
+    <!-- Roof -->
+    <path d="M1 4L10 0L19 4" stroke="#14f195" stroke-width="2" fill="none" stroke-linejoin="round"/>
+    <!-- Windows row 1 -->
+    <rect x="5" y="8" width="3" height="3" fill="#14f195"/>
+    <rect x="12" y="8" width="3" height="3" fill="#14f195"/>
+    <!-- Windows row 2 -->
+    <rect x="5" y="13" width="3" height="3" fill="#14f195"/>
+    <rect x="12" y="13" width="3" height="3" fill="#14f195"/>
+    <!-- Door -->
+    <rect x="8" y="17" width="4" height="5" fill="#14f195"/>
+  </g>
+</svg>
+

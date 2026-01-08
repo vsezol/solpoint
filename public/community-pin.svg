@@ -1,0 +1,20 @@
+<svg width="46" height="54" viewBox="0 0 46 54" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Pin shape with dark background -->
+  <path d="M23 0C10.85 0 1 9.85 1 22C1 31.5 8.5 41.5 23 54C37.5 41.5 45 31.5 45 22C45 9.85 35.15 0 23 0Z" fill="#111820" stroke="#14f195" stroke-width="2"/>
+  
+  <!-- Community/People icon - group of people -->
+  <g transform="translate(10, 10)">
+    <!-- Person 1 (left) -->
+    <circle cx="6" cy="5" r="3" stroke="#14f195" stroke-width="1.5" fill="none"/>
+    <path d="M2 18C2 15 3.5 13 6 13C8.5 13 10 15 10 18" stroke="#14f195" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    
+    <!-- Person 2 (center) -->
+    <circle cx="13" cy="4" r="3.5" stroke="#14f195" stroke-width="2" fill="none"/>
+    <path d="M8 20C8 16.5 10 14 13 14C16 14 18 16.5 18 20" stroke="#14f195" stroke-width="2" fill="none" stroke-linecap="round"/>
+    
+    <!-- Person 3 (right) -->
+    <circle cx="20" cy="5" r="3" stroke="#14f195" stroke-width="1.5" fill="none"/>
+    <path d="M16 18C16 15 17.5 13 20 13C22.5 13 24 15 24 18" stroke="#14f195" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+  </g>
+</svg>
+
