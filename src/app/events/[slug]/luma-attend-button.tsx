@@ -111,14 +111,16 @@ export function LumaAttendButton({
   // Если пользователь уже зарегистрирован или ответил "да", показываем disabled кнопку "Going"
   if (isRegistered || isGoing) {
     return (
-      <Button
-        variant="primary"
-        className="w-full"
-        size="lg"
-        disabled
-      >
-        Going
-      </Button>
+      <div className="flex justify-center">
+        <Button
+          variant="primary"
+          className="w-full max-w-[350px] sm:w-[350px]"
+          size="lg"
+          disabled
+        >
+          Going
+        </Button>
+      </div>
     );
   }
 
@@ -198,14 +200,16 @@ export function LumaAttendButton({
 
   return (
     <>
-      <Button
-        variant="primary"
-        className="w-full"
-        size="lg"
-        onClick={handleAttendClick}
-      >
-        {isPaid ? `Buy Tickets - ${priceSol || 0} SOL` : "Attend"}
-      </Button>
+      <div className="flex justify-center">
+        <Button
+          variant="primary"
+          className="w-full max-w-[350px] sm:w-[350px]"
+          size="lg"
+          onClick={handleAttendClick}
+        >
+          {isPaid ? `Buy Tickets - ${priceSol || 0} SOL` : "Attend"}
+        </Button>
+      </div>
 
       {/* Модальное окно при повторном нажатии на кнопку */}
       <Modal isOpen={showAttendModal} onClose={() => setShowAttendModal(false)} size="md">
