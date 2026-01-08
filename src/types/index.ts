@@ -87,6 +87,7 @@ export interface Event {
     instagram?: string;
     facebook?: string;
     website?: string;
+    luma?: string;
   };
   luma_link: string; // Ссылка на событие в Luma
   contacts?: {
@@ -149,6 +150,7 @@ export interface Hub {
     instagram?: string;
     facebook?: string;
     website?: string;
+    luma?: string;
   };
   // Унифицированное поле
   owner_id: string;
@@ -177,6 +179,7 @@ export interface Community {
     instagram?: string;
     facebook?: string;
     website?: string;
+    luma?: string;
   };
   // Унифицированное поле
   owner_id?: string;
@@ -205,6 +208,7 @@ export interface Project {
     instagram?: string;
     facebook?: string;
     website?: string;
+    luma?: string;
   };
   // Унифицированное поле
   owner_id: string; // Проект должен иметь владельца
@@ -234,6 +238,7 @@ export interface Workspace {
     instagram?: string;
     facebook?: string;
     website?: string;
+    luma?: string;
   };
   owner_id: string;
   created_at: string;

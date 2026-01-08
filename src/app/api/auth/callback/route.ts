@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { cookies } from "next/headers";
+import { getAppOrigin } from "@/lib/utils";
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
@@ -20,9 +21,9 @@ export async function GET(request: NextRequest) {
     cookieStore.delete("oauth_redirect_to");
   }
 
-  // Всегда используем origin из запроса для правильного определения localhost
+  // Автоматически определяем origin в зависимости от окружения
   const requestUrl = new URL(request.url);
-  const origin = requestUrl.origin;
+  const origin = getAppOrigin(requestUrl.origin);
 
   if (code) {
     // Обмениваем код на сессию через Supabase

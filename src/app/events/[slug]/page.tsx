@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { Header, Footer } from "@/components/layout";
-import { Button, EventBadges, Card } from "@/components/ui";
+import { EventBadges, Card } from "@/components/ui";
 import { EntityMembersWidget } from "@/components/entities/entity-members-widget";
 import { Calendar, MapPin, Globe, Ticket, Link as LinkIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
@@ -12,6 +12,7 @@ import { getAppUrl, isUUID } from "@/lib/utils";
 import { EventViewTracker } from "@/components/analytics/event-view-tracker";
 import { EventShareButton } from "@/components/analytics/event-share-button";
 import { EventSocialLink } from "@/components/analytics/event-social-link";
+import { LumaAttendButtonWrapper } from "./luma-attend-button-wrapper";
 
 interface EventPageProps {
   params: Promise<{ slug: string }>;
@@ -460,7 +461,7 @@ export default async function EventPage({ params }: EventPageProps) {
                   </div>
 
                   {/* Social Links */}
-                  {(event.socials?.twitter || event.socials?.instagram || event.socials?.facebook || event.socials?.website) && (
+                  {(event.socials?.twitter || event.socials?.instagram || event.socials?.facebook || event.socials?.website || event.socials?.luma) && (
                     <div className="flex items-start gap-3">
                       <LinkIcon className="w-5 h-5 text-[var(--color-primary)] mt-0.5 flex-shrink-0" />
                       <div>
@@ -494,6 +495,13 @@ export default async function EventPage({ params }: EventPageProps) {
                               href={event.socials.website}
                             />
                           )}
+                          {event.socials?.luma && (
+                            <EventSocialLink
+                              event={event}
+                              platform="luma"
+                              href={event.socials.luma}
+                            />
+                          )}
                         </div>
                       </div>
                     </div>
@@ -502,20 +510,13 @@ export default async function EventPage({ params }: EventPageProps) {
 
                 {/* Attend/Buy Tickets Button */}
                 <div className="mt-6">
-                  <Button
-                    variant="primary"
-                    className="w-full"
-                    size="lg"
-                    asChild
-                  >
-                    <a
-                      href={event.luma_link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {event.is_paid ? "Buy Tickets" : "Attend"}
-                    </a>
-                  </Button>
+                  <LumaAttendButtonWrapper
+                    eventSlug={event.slug || slug}
+                    lumaLink={event.luma_link}
+                    isPaid={event.is_paid || false}
+                    isRegistered={isUserRegistered}
+                    priceSol={event.price_sol}
+                  />
                 </div>
               </Card>
 

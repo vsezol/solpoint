@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { getEntityIdByIdentifier } from "@/lib/utils/entity-identifier";
 
 /**
  * GET /api/events/[id]/members
@@ -12,7 +13,13 @@ export async function GET(
   { params }: { params: Promise<{ identifier: string }> }
 ) {
   const supabase = await createClient();
-  const { identifier: id } = await params;
+  const { identifier } = await params;
+  
+  // Преобразуем identifier в ID
+  const id = await getEntityIdByIdentifier("event", identifier);
+  if (!id) {
+    return NextResponse.json({ error: "Event not found" }, { status: 404 });
+  }
   const { searchParams } = new URL(request.url);
 
   // Проверяем аутентификацию
@@ -98,7 +105,13 @@ export async function POST(
   { params }: { params: Promise<{ identifier: string }> }
 ) {
   const supabase = await createClient();
-  const { identifier: id } = await params;
+  const { identifier } = await params;
+  
+  // Преобразуем identifier в ID
+  const id = await getEntityIdByIdentifier("event", identifier);
+  if (!id) {
+    return NextResponse.json({ error: "Event not found" }, { status: 404 });
+  }
 
   // Проверяем аутентификацию
   const {
@@ -125,7 +138,7 @@ export async function POST(
     // Проверяем существование ивента и доступ
     const { data: event, error: eventError } = await supabase
       .from("events")
-      .select("id, visibility, max_attendees, attendees_count, registration_deadline")
+      .select("id, visibility, max_attendees, attendees_count, registration_deadline, luma_link, socials")
       .eq("id", id)
       .single();
 
@@ -209,6 +222,32 @@ export async function POST(
         { error: insertError.message || "Failed to register for event" },
         { status: 500 }
       );
+    }
+
+    // Если пользователь регистрируется со статусом "going" и у ивента есть luma_link,
+    // добавляем его в socials, если его там еще нет
+    if (status === "going" && event.luma_link) {
+      const currentSocials = (event.socials as Record<string, string>) || {};
+      
+      // Проверяем, есть ли уже luma_link в socials
+      if (!currentSocials.luma && !currentSocials.website) {
+        // Добавляем luma_link в socials как "luma"
+        const updatedSocials = {
+          ...currentSocials,
+          luma: event.luma_link,
+        };
+
+        // Обновляем socials в базе данных
+        const { error: updateError } = await supabase
+          .from("events")
+          .update({ socials: updatedSocials })
+          .eq("id", id);
+
+        if (updateError) {
+          console.error("Error updating event socials:", updateError);
+          // Не возвращаем ошибку, так как регистрация уже прошла успешно
+        }
+      }
     }
 
     return NextResponse.json({ member }, { status: 201 });
