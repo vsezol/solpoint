@@ -22,6 +22,7 @@ interface Cluster {
   longitude: number;
   markers: MapMarker[];
   count: number;
+  type: MapMarker["type"]; // Тип маркеров в кластере
 }
 
 // Функция для вычисления расстояния между двумя точками в пикселях на карте
@@ -55,47 +56,34 @@ function getPixelDistance(
   return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
 }
 
-// Функция кластеризации маркеров
-function clusterMarkers(
+// Функция кластеризации маркеров одного типа
+function clusterMarkersByType(
   markers: MapMarker[],
   zoom: number,
-  clusterRadius: number = 60
+  clusterRadius: number = 60,
+  clusterType?: MapMarker["type"] // Тип для кластера (может отличаться от типа маркеров, если мы объединяем типы)
 ): (MapMarker | Cluster)[] {
   if (markers.length === 0) return [];
-  
-  // При большом зуме (близко) не кластеризуем
-  if (zoom >= 12) {
-    return markers;
-  }
   
   const clusters: Cluster[] = [];
   const processed = new Set<string>();
   
-  // Фильтруем только маркеры с валидными координатами
-  const validMarkers = markers.filter((marker) => {
-    return (
-      marker.latitude != null &&
-      marker.longitude != null &&
-      !isNaN(marker.latitude) &&
-      !isNaN(marker.longitude) &&
-      marker.latitude >= -90 &&
-      marker.latitude <= 90 &&
-      marker.longitude >= -180 &&
-      marker.longitude <= 180
-    );
-  });
-  
-  validMarkers.forEach((marker, index) => {
+  markers.forEach((marker, index) => {
     if (processed.has(marker.id)) return;
     
-    // Ищем близкие маркеры для кластеризации
+    // Ищем близкие маркеры ТОГО ЖЕ ТИПА для кластеризации
+    // Если передан clusterType, используем его для всех маркеров в этой группе
     const nearbyMarkers: MapMarker[] = [marker];
     const clusterLatitudes: number[] = [marker.latitude];
     const clusterLongitudes: number[] = [marker.longitude];
     
-    for (let i = index + 1; i < validMarkers.length; i++) {
-      const otherMarker = validMarkers[i];
+    for (let i = index + 1; i < markers.length; i++) {
+      const otherMarker = markers[i];
       if (processed.has(otherMarker.id)) continue;
+      
+      // Если передан clusterType, не проверяем тип (все маркеры уже одного типа группы)
+      // Иначе проверяем точное совпадение типа
+      if (!clusterType && marker.type !== otherMarker.type) continue;
       
       const distance = getPixelDistance(
         marker.latitude,
@@ -120,11 +108,12 @@ function clusterMarkers(
       const avgLng = clusterLongitudes.reduce((a, b) => a + b, 0) / clusterLongitudes.length;
       
       clusters.push({
-        id: `cluster-${marker.id}`,
+        id: `cluster-${clusterType || marker.type}-${marker.id}`,
         latitude: avgLat,
         longitude: avgLng,
         markers: nearbyMarkers,
         count: nearbyMarkers.length,
+        type: clusterType || marker.type, // Используем clusterType, если он передан
       });
       processed.add(marker.id);
     } else {
@@ -142,10 +131,61 @@ function clusterMarkers(
     cluster.markers.forEach((m) => clusteredMarkerIds.add(m.id));
   });
   
-  validMarkers.forEach((marker) => {
+  markers.forEach((marker) => {
     if (!clusteredMarkerIds.has(marker.id)) {
       result.push(marker);
     }
+  });
+  
+  return result;
+}
+
+// Функция кластеризации маркеров (группирует по типам)
+function clusterMarkers(
+  markers: MapMarker[],
+  zoom: number,
+  clusterRadius: number = 60
+): (MapMarker | Cluster)[] {
+  if (markers.length === 0) return [];
+  
+  // При большом зуме (близко) не кластеризуем
+  if (zoom >= 12) {
+    return markers;
+  }
+  
+  // Фильтруем только маркеры с валидными координатами
+  const validMarkers = markers.filter((marker) => {
+    return (
+      marker.latitude != null &&
+      marker.longitude != null &&
+      !isNaN(marker.latitude) &&
+      !isNaN(marker.longitude) &&
+      marker.latitude >= -90 &&
+      marker.latitude <= 90 &&
+      marker.longitude >= -180 &&
+      marker.longitude <= 180
+    );
+  });
+  
+  // Группируем маркеры по типам
+  const markersByType = new Map<MapMarker["type"], { markers: MapMarker[]; clusterType: MapMarker["type"] }>();
+  
+  validMarkers.forEach((marker) => {
+    // Объединяем user и pro_user в одну группу "user" для кластеризации
+    const clusterType = marker.type === "pro_user" ? "user" : marker.type;
+    
+    if (!markersByType.has(clusterType)) {
+      markersByType.set(clusterType, { markers: [], clusterType });
+    }
+    markersByType.get(clusterType)!.markers.push(marker);
+  });
+  
+  // Кластеризуем каждый тип отдельно
+  const result: (MapMarker | Cluster)[] = [];
+  
+  markersByType.forEach(({ markers: typeMarkers, clusterType }) => {
+    const clustered = clusterMarkersByType(typeMarkers, zoom, clusterRadius, clusterType);
+    result.push(...clustered);
   });
   
   return result;
@@ -200,10 +240,35 @@ const MarkerIcon = ({ type }: { type: MapMarker["type"] }) => {
 };
 
 // Компонент для отображения кластера
-const ClusterIcon = ({ count }: { count: number }) => {
+const ClusterIcon = ({ count, type }: { count: number; type: MapMarker["type"] }) => {
   // Определяем размер кластера в зависимости от количества маркеров
   const size = count < 10 ? 50 : count < 100 ? 60 : 70;
   const fontSize = count < 10 ? 14 : count < 100 ? 16 : 18;
+  const iconSize = count < 10 ? 20 : count < 100 ? 24 : 28;
+  
+  // Определяем цвет кластера в зависимости от типа
+  let backgroundColor = "#3b82f6"; // По умолчанию синий
+  let iconSrc = "";
+  
+  switch (type) {
+    case "user":
+    case "pro_user":
+      backgroundColor = "#ef4444"; // Красный для пользователей
+      iconSrc = "/free-user-pin.svg";
+      break;
+    case "event":
+      backgroundColor = "#10b981"; // Зеленый для событий
+      iconSrc = "/event-icon.svg";
+      break;
+    case "hub":
+    case "workspace":
+    case "community":
+      backgroundColor = "#8b5cf6"; // Фиолетовый для хабов
+      iconSrc = "/community-hubs.svg";
+      break;
+    default:
+      backgroundColor = "#3b82f6"; // Синий по умолчанию
+  }
   
   return (
     <div
@@ -211,17 +276,19 @@ const ClusterIcon = ({ count }: { count: number }) => {
         width: `${size}px`,
         height: `${size}px`,
         borderRadius: "50%",
-        backgroundColor: "#3b82f6",
+        backgroundColor: backgroundColor,
         border: "3px solid white",
         boxShadow: "0 2px 8px rgba(0, 0, 0, 0.3)",
         cursor: "pointer",
         display: "flex",
+        flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
         color: "white",
         fontWeight: "bold",
         fontSize: `${fontSize}px`,
         transition: "transform 0.2s ease",
+        position: "relative",
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = "scale(1.1)";
@@ -230,7 +297,23 @@ const ClusterIcon = ({ count }: { count: number }) => {
         e.currentTarget.style.transform = "scale(1)";
       }}
     >
-      {count}
+      {/* Иконка типа маркера */}
+      {iconSrc && (
+        <img
+          src={iconSrc}
+          alt={type}
+          style={{
+            width: `${iconSize}px`,
+            height: `${iconSize}px`,
+            marginBottom: "2px",
+            filter: "brightness(0) invert(1)", // Делаем иконку белой
+          }}
+        />
+      )}
+      {/* Количество маркеров */}
+      <div style={{ lineHeight: 1, marginTop: iconSrc ? "2px" : "0" }}>
+        {count}
+      </div>
     </div>
   );
 };
@@ -601,7 +684,7 @@ export function MapMarkersLayer({
               anchor="center"
             >
               <MarkerContent>
-                <ClusterIcon count={cluster.count} />
+                <ClusterIcon count={cluster.count} type={cluster.type} />
               </MarkerContent>
             </MapMarkerComponent>
           );
