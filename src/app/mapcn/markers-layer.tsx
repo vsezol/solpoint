@@ -192,19 +192,63 @@ function clusterMarkers(
 }
 
 // Компонент для отображения иконки маркера
-const MarkerIcon = ({ type }: { type: MapMarker["type"] }) => {
+const MarkerIcon = ({ type, user }: { type: MapMarker["type"]; user?: User }) => {
   let imgSrc = "";
   let filterStyle = "drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4))";
 
+  // For user markers, create SVG with avatar
+  if (type === "user" || type === "pro_user") {
+    const avatarUrl = user?.avatar_url || "";
+    const clipId = user?.id ? `avatar-clip-${user.id.replace(/[^a-zA-Z0-9]/g, '-')}` : 'avatar-clip-default';
+    const escapedAvatarUrl = avatarUrl ? avatarUrl.replace(/"/g, '&quot;') : '';
+    
+    filterStyle = "drop-shadow(0 4px 8px rgba(20, 241, 149, 0.4))";
+    
+    const svg = `
+      <svg width="46" height="54" viewBox="0 0 46 54" fill="none" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+        <path d="M23 0C10.85 0 1 9.85 1 22C1 31.5 8.5 41.5 23 54C37.5 41.5 45 31.5 45 22C45 9.85 35.15 0 23 0Z" fill="#111820" stroke="#14f195" stroke-width="2"/>
+        <circle cx="23" cy="22" r="12.6" fill="none" stroke="#14f195" stroke-width="1.5"/>
+        ${avatarUrl ? `
+          <defs>
+            <clipPath id="${clipId}">
+              <circle cx="23" cy="22" r="12"/>
+            </clipPath>
+          </defs>
+          <image xlink:href="${escapedAvatarUrl}" x="11" y="10" width="24" height="24" clip-path="url(#${clipId})" preserveAspectRatio="xMidYMid slice"/>
+        ` : `
+          <circle cx="23" cy="22" r="12" fill="#14f195" fill-opacity="0.3"/>
+        `}
+      </svg>
+    `;
+
+    return (
+      <div
+        style={{
+          width: "46px",
+          height: "54px",
+          cursor: "pointer",
+          filter: filterStyle,
+          transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+          animation: "cluster-appear 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = "scale(1.15) translateY(-2px)";
+          e.currentTarget.style.filter = filterStyle.replace(/rgba\(([^)]+)\)/g, (match, rgba) => {
+            const [r, g, b] = rgba.split(',').slice(0, 3);
+            return `rgba(${r}, ${g}, ${b}, 0.7)`;
+          });
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = "scale(1) translateY(0)";
+          e.currentTarget.style.filter = filterStyle;
+        }}
+        dangerouslySetInnerHTML={{ __html: svg }}
+      />
+    );
+  }
+
+  // For other marker types, use existing images
   switch (type) {
-    case "user":
-      imgSrc = "/free-user-pin.svg";
-      filterStyle = "drop-shadow(0 4px 8px rgba(239, 68, 68, 0.5))";
-      break;
-    case "pro_user":
-      imgSrc = "/pro-user-pin.svg";
-      filterStyle = "drop-shadow(0 4px 8px rgba(251, 191, 36, 0.5))";
-      break;
     case "event":
       imgSrc = "/event-pin.svg";
       filterStyle = "drop-shadow(0 4px 8px rgba(20, 241, 149, 0.4))";
@@ -796,7 +840,10 @@ export function MapMarkersLayer({
               anchor="bottom"
             >
               <MarkerContent>
-                <MarkerIcon type={marker.type} />
+                <MarkerIcon 
+                  type={marker.type} 
+                  user={(marker.type === "user" || marker.type === "pro_user") ? (marker.data as User) : undefined}
+                />
               </MarkerContent>
               <MarkerPopup
                 closeButton={false}
