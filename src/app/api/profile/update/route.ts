@@ -46,13 +46,13 @@ export async function PATCH(request: Request) {
 
     // Валидация bio
     if (bio !== undefined) {
-      if (typeof bio !== "string") {
+      if (bio !== null && typeof bio !== "string") {
         return NextResponse.json(
           { error: "Bio must be a string" },
           { status: 400 }
         );
       }
-      if (bio.length > 150) {
+      if (bio && bio.length > 150) {
         return NextResponse.json(
           { error: "Bio must be 150 characters or less" },
           { status: 400 }
