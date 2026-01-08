@@ -151,7 +151,7 @@ export function LumaAttendButton({
   const handleRegister = async () => {
     setIsLoading(true);
     setError(null);
-    setShowReturnModal(false);
+    // НЕ закрываем модальное окно сразу - оставляем его открытым, чтобы показать индикатор загрузки
 
     try {
       const response = await fetch(`/api/events/${eventSlug}/members`, {
@@ -171,6 +171,9 @@ export function LumaAttendButton({
       // Устанавливаем состояние, что пользователь идет
       setIsGoing(true);
       
+      // Закрываем модальное окно только после успешной регистрации
+      setShowReturnModal(false);
+      
       // Отправляем кастомное событие для обновления виджета участников
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("event-member-updated", {
@@ -182,7 +185,7 @@ export function LumaAttendButton({
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unexpected error occurred");
-      setShowReturnModal(true); // Показываем модальное окно снова, если была ошибка
+      // Модальное окно остается открытым при ошибке
     } finally {
       setIsLoading(false);
     }
