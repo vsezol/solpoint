@@ -207,6 +207,7 @@ function SubscriptionPageContent() {
   const [currentIntentId, setCurrentIntentId] = useState<string | null>(null);
   const [solanaPaymentStatus, setSolanaPaymentStatus] = useState<string>("");
   const [solanaPaymentError, setSolanaPaymentError] = useState<string>("");
+  const [solanaPaymentIntentId, setSolanaPaymentIntentId] = useState<string | null>(null);
 
   // Проверяем параметры URL для успешной/отмененной оплаты
   useEffect(() => {
@@ -1398,9 +1399,12 @@ function SubscriptionPageContent() {
                       payment_method: "solana",
                     });
                   }}
-                  onError={(error) => {
+                  onError={(error, intentId) => {
                     setSolanaPaymentError(error);
                     setSolanaPaymentStatus("error");
+                    if (intentId) {
+                      setSolanaPaymentIntentId(intentId);
+                    }
                   }}
                   onEmailValidationError={(error) => {
                     setEmailError(error);
@@ -1429,22 +1433,52 @@ function SubscriptionPageContent() {
                       <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-red-500 mb-1">
-                          Payment Error
+                          {solanaPaymentIntentId ? "Payment Intent Created" : "Payment Error"}
                         </p>
                         <div className="text-sm text-red-400 mb-3 break-words">
                           {solanaPaymentError}
                         </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSolanaPaymentError("");
-                            setSolanaPaymentStatus("");
-                          }}
-                          className="w-auto min-w-[120px]"
-                        >
-                          Try Again
-                        </Button>
+                        <div className="flex gap-2">
+                          {solanaPaymentIntentId ? (
+                            <>
+                              <Button
+                                variant="primary"
+                                size="sm"
+                                onClick={() => {
+                                  window.location.href = `/activate?code=${solanaPaymentIntentId}`;
+                                }}
+                                className="w-auto min-w-[120px]"
+                              >
+                                Activate Subscription
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSolanaPaymentError("");
+                                  setSolanaPaymentStatus("");
+                                  setSolanaPaymentIntentId(null);
+                                }}
+                                className="w-auto min-w-[120px]"
+                              >
+                                Dismiss
+                              </Button>
+                            </>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSolanaPaymentError("");
+                                setSolanaPaymentStatus("");
+                                setSolanaPaymentIntentId(null);
+                              }}
+                              className="w-auto min-w-[120px]"
+                            >
+                              Try Again
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>

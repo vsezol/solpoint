@@ -63,7 +63,7 @@ interface SolanaPaymentButtonProps {
   email?: string;
   onStatusChange?: (status: string, message?: string) => void;
   onSuccess?: (intentId: string) => void;
-  onError?: (error: string) => void;
+  onError?: (error: string, intentId?: string) => void;
   onEmailValidationError?: (error: string) => void;
 }
 
@@ -170,12 +170,25 @@ export function SolanaPaymentButton({
 
       // Отправляем транзакцию
       updateStatus("sending", "Sending transaction to your wallet...");
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'solana-payment-button:173',message:'Before sending transaction',data:{amountInLamports,publicKey:publicKey?.toString()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
+      
       const signature = await sendTransaction(transaction, connection, {
         skipPreflight: false,
       });
 
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'solana-payment-button:177',message:'Transaction sent, got signature',data:{signature:signature?.substring(0,10)+'***'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
+
       // Создаем intent ПОСЛЕ отправки транзакции (когда есть signature)
       updateStatus("creating_intent", "Creating payment record...");
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'solana-payment-button:182',message:'Before creating intent',data:{signature:signature?.substring(0,10)+'***',plan_id:plan.id,email:email?.substring(0,5)+'***'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
       const intentResponse = await fetch("/api/subscriptions/create-intent-with-signature", {
         method: "POST",
         headers: {
@@ -188,13 +201,104 @@ export function SolanaPaymentButton({
         }),
       });
 
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'solana-payment-button:191',message:'Intent response received',data:{ok:intentResponse.ok,status:intentResponse.status},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
+
       if (!intentResponse.ok) {
         const errorData = await intentResponse.json().catch(() => ({}));
-        throw new Error(errorData.error || "Failed to create payment record. Please contact support with your transaction signature.");
+        
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'solana-payment-button:194',message:'Intent creation failed - CRITICAL: transaction already sent',data:{error:errorData,signature:signature?.substring(0,10)+'***',status:intentResponse.status},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
+        
+        // КРИТИЧНО: Транзакция уже отправлена, но intent не создан
+        // Сохраняем информацию о транзакции для восстановления
+        if (typeof window !== "undefined") {
+          localStorage.setItem("failed_payment_recovery", JSON.stringify({
+            signature,
+            plan_id: plan.id,
+            email: email.trim(),
+            amount_lamports: amountInLamports,
+            timestamp: Date.now(),
+            error: errorData.error || "Failed to create payment record"
+          }));
+        }
+        
+        // Пробуем восстановить intent через альтернативный endpoint
+        try {
+          const recoveryResponse = await fetch("/api/subscriptions/recover-intent", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              plan_id: plan.id,
+              email: email.trim(),
+              tx_signature: signature,
+            }),
+          });
+          
+          if (recoveryResponse.ok) {
+            const recoveryData = await recoveryResponse.json();
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'solana-payment-button:215',message:'Intent recovered successfully',data:{intentId:recoveryData.intent_id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+            // #endregion
+            // Продолжаем с восстановленным intent
+            const intentId = recoveryData.intent_id;
+            if (typeof window !== "undefined") {
+              localStorage.setItem("subscription_intent_id", intentId);
+              localStorage.setItem("subscription_intent_status", "pending");
+            }
+            // Продолжаем процесс верификации
+            updateStatus("verifying", "Verifying payment...");
+            const response = await fetch("/api/subscriptions/solana-payment", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                signature,
+                payer: publicKey.toString(),
+                intent_id: intentId,
+              }),
+            });
+            if (response.ok) {
+              const data = await response.json();
+              if (data.success) {
+                updateStatus("success", "Payment verified successfully!");
+                if (typeof window !== "undefined") {
+                  localStorage.setItem("subscription_intent_status", "paid");
+                }
+                if (data.redirect_url) {
+                  setTimeout(() => {
+                    window.location.href = data.redirect_url;
+                  }, 1000);
+                } else {
+                  onSuccess?.(data.intent_id || intentId);
+                }
+                return;
+              }
+            }
+          }
+        } catch (recoveryError) {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'solana-payment-button:250',message:'Recovery failed',data:{error:recoveryError},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+          // #endregion
+        }
+        
+        throw new Error(
+          errorData.error || 
+          `Failed to create payment record. Your transaction signature: ${signature}. Please contact support with this signature to recover your payment.`
+        );
       }
 
       const intentData = await intentResponse.json();
       const intentId = intentData.intent_id;
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'solana-payment-button:203',message:'Intent created successfully',data:{intentId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
 
       // Сохраняем intent_id и статус в localStorage
       if (typeof window !== "undefined") {
@@ -204,79 +308,122 @@ export function SolanaPaymentButton({
 
       updateStatus("confirming", "Waiting for transaction confirmation...");
 
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'solana-payment-button:309',message:'Starting transaction confirmation loop',data:{signature:signature?.substring(0,10)+'***'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
+
       // Ждем подтверждения транзакции с увеличенным таймаутом и retry логикой
       // Используем getTransaction вместо confirmTransaction для более надежной проверки
       let confirmed = false;
-      const maxWaitTime = 180000; // 180 секунд (3 минуты)
-      const checkInterval = 3000; // Проверяем каждые 3 секунды
+      const maxWaitTime = 60000; // 60 секунд (уменьшено с 180)
+      const checkInterval = 2000; // Проверяем каждые 2 секунды (уменьшено с 3)
       const startTime = Date.now();
+      let iterationCount = 0;
 
       while (!confirmed && (Date.now() - startTime) < maxWaitTime) {
+        iterationCount++;
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'solana-payment-button:320',message:'Confirmation loop iteration',data:{iteration:iterationCount,elapsed,confirmed},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+        // #endregion
+
         try {
-          // Пробуем confirmTransaction с коротким таймаутом
-          try {
-            await Promise.race([
-              connection.confirmTransaction(signature, "finalized"),
-              new Promise((_, reject) => 
-                setTimeout(() => reject(new Error("timeout")), 10000)
-              )
-            ]);
-            confirmed = true;
-            break;
-          } catch (confirmError: any) {
-            // Если таймаут, проверяем транзакцию напрямую
-            if (confirmError?.message?.includes("timeout") || confirmError?.message?.includes("not confirmed")) {
-              const tx = await connection.getTransaction(signature, {
-                commitment: "finalized",
-                maxSupportedTransactionVersion: 0,
-              });
-              
-              if (tx && tx.meta?.err === null) {
+          // Сразу проверяем транзакцию через getTransaction (более надежно)
+          // confirmTransaction может зависнуть, поэтому используем прямой запрос
+          const tx = await Promise.race([
+            connection.getTransaction(signature, {
+              commitment: "confirmed", // Используем confirmed вместо finalized для более быстрой проверки
+              maxSupportedTransactionVersion: 0,
+            }),
+            new Promise<null>((_, reject) => 
+              setTimeout(() => reject(new Error("timeout")), 5000)
+            )
+          ]);
+          
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'solana-payment-button:335',message:'Transaction check result',data:{txFound:!!tx,txError:tx?.meta?.err,txSlot:tx?.slot},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+          // #endregion
+          
+          if (tx && tx.meta && tx.meta.err === null) {
                 // Транзакция подтверждена
                 confirmed = true;
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'solana-payment-button:342',message:'Transaction confirmed!',data:{elapsed,iteration:iterationCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+            // #endregion
                 break;
-              }
-            } else {
-              // Другая ошибка, пробрасываем дальше
-              throw confirmError;
-            }
+          } else if (tx && tx.meta && tx.meta.err !== null) {
+            // Транзакция выполнена, но с ошибкой
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'solana-payment-button:348',message:'Transaction failed with error',data:{error:tx.meta.err},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+            // #endregion
+            throw new Error(`Transaction failed: ${JSON.stringify(tx.meta.err)}`);
           }
+          // Если tx === null, транзакция еще не подтверждена, продолжаем ждать
 
           // Ждем перед следующей проверкой
           await new Promise(resolve => setTimeout(resolve, checkInterval));
           
-          // Обновляем статус каждые 10 секунд
-          const elapsed = Math.floor((Date.now() - startTime) / 1000);
-          if (elapsed % 10 === 0) {
+          // Обновляем статус каждые 5 секунд
+          if (elapsed % 5 === 0 && elapsed > 0) {
             updateStatus("confirming", `Waiting for confirmation... (${elapsed}s)`);
           }
         } catch (error: any) {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'solana-payment-button:361',message:'Error in confirmation loop',data:{error:error?.message,elapsed,iteration:iterationCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+          // #endregion
+          
           // Если это не таймаут, выбрасываем ошибку
           if (!error?.message?.includes("timeout") && !error?.message?.includes("not confirmed")) {
             throw error;
           }
+          
+          // При таймауте продолжаем цикл
+          await new Promise(resolve => setTimeout(resolve, checkInterval));
         }
       }
 
       // Если не подтвердилось за отведенное время, проверяем последний раз
       if (!confirmed) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'solana-payment-button:375',message:'Final confirmation check',data:{elapsed:Math.floor((Date.now() - startTime) / 1000)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+        // #endregion
+        
         try {
-          const tx = await connection.getTransaction(signature, {
-            commitment: "finalized",
-            maxSupportedTransactionVersion: 0,
-          });
+          const tx = await Promise.race([
+            connection.getTransaction(signature, {
+              commitment: "confirmed",
+              maxSupportedTransactionVersion: 0,
+            }),
+            new Promise<null>((_, reject) => 
+              setTimeout(() => reject(new Error("timeout")), 5000)
+            )
+          ]);
           
           if (tx && tx.meta?.err === null) {
             confirmed = true;
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'solana-payment-button:388',message:'Transaction confirmed in final check',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+            // #endregion
+          } else {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'solana-payment-button:393',message:'Transaction not found in final check, proceeding anyway',data:{txFound:!!tx},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+            // #endregion
           }
         } catch (checkError) {
-          // Игнорируем ошибку проверки
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'solana-payment-button:397',message:'Final check error, proceeding anyway',data:{error:checkError},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+          // #endregion
+          // Игнорируем ошибку проверки - продолжаем верификацию на backend
         }
       }
 
       if (!confirmed) {
         // Не выбрасываем ошибку, а продолжаем - транзакция может подтвердиться позже
         // Backend проверит транзакцию при верификации
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'solana-payment-button:405',message:'Proceeding to verification without confirmation',data:{elapsed:Math.floor((Date.now() - startTime) / 1000)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+        // #endregion
         updateStatus("verifying", "Transaction sent. Verifying payment (this may take a moment)...");
       }
 
@@ -297,6 +444,19 @@ export function SolanaPaymentButton({
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'solana-payment-button:445',message:'Payment verification failed',data:{status:response.status,error:errorData.error,canActivate:errorData.can_activate,intentId:errorData.intent_id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
+        // #endregion
+        
+        // Если intent создан и можно активировать, передаем intent_id в onError
+        if (errorData.can_activate && errorData.intent_id) {
+          updateStatus("pending_activation", errorData.message || "Your payment intent has been created. You can activate your subscription now.");
+          // Передаем intent_id в onError, чтобы родительский компонент мог показать кнопку активации
+          onError?.(errorData.message || errorData.error || "Payment intent created. You can activate your subscription.", errorData.intent_id);
+          return;
+        }
+        
         throw new Error(errorData.error || "Failed to verify payment. Please contact support with your transaction signature.");
       }
 
@@ -325,7 +485,14 @@ export function SolanaPaymentButton({
       console.error("Payment error:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
       updateStatus("error", errorMessage);
-      onError?.(errorMessage);
+      
+      // Проверяем, есть ли сохраненный intent_id в localStorage
+      let savedIntentId: string | null = null;
+      if (typeof window !== "undefined") {
+        savedIntentId = localStorage.getItem("subscription_intent_id");
+      }
+      
+      onError?.(errorMessage, savedIntentId || undefined);
     } finally {
       setIsProcessing(false);
     }
