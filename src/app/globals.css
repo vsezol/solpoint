@@ -309,3 +309,15 @@ input::selection {
     @apply hidden!;
   }
 }
+/* MapCN map styling - matching SolPoint map colors */
+.mapcn-map-container {
+  background: #18E3C5 !important; /* Cyan color for water */
+}
+
+.mapcn-map-container .maplibregl-canvas-container {
+  background: #18E3C5 !important; /* Cyan color for water */
+}
+
+.mapcn-map-container .maplibregl-map {
+  background: #18E3C5 !important; /* Cyan color for water */
+}

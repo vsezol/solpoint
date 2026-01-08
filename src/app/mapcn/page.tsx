@@ -3,6 +3,8 @@
 import dynamic from "next/dynamic";
 import { Header, Footer } from "@/components/layout";
 import { Card } from "@/components/ui";
+import { CountriesLayer } from "./countries-layer";
+import { CitiesLayer } from "./cities-layer";
 
 // Dynamic import for map component to avoid SSR issues with MapLibre GL
 const Map = dynamic(
@@ -74,11 +76,43 @@ export default function MapCnPage() {
         {/* Map section */}
         <section className="max-w-[90rem] mx-auto px-4 sm:px-6 lg:px-8 pb-16">
           <div className="h-[500px] lg:h-[720px] rounded-xl overflow-hidden border border-[var(--color-surface-border)]">
-            <Card className="h-full p-0 overflow-hidden">
+            <Card className="h-full p-0 overflow-hidden mapcn-map-container" style={{ background: "#18E3C5" }}>
               <Map 
                 center={[55, 35]} 
                 zoom={4}
+                styles={{
+                  dark: {
+                    version: 8,
+                    sources: {},
+                    layers: [
+                      {
+                        id: "background",
+                        type: "background",
+                        paint: {
+                          "background-color": "#18E3C5", // Cyan color for water
+                        },
+                      },
+                    ],
+                    glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
+                  },
+                  light: {
+                    version: 8,
+                    sources: {},
+                    layers: [
+                      {
+                        id: "background",
+                        type: "background",
+                        paint: {
+                          "background-color": "#18E3C5", // Cyan color for water
+                        },
+                      },
+                    ],
+                    glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
+                  },
+                }}
               >
+                <CountriesLayer />
+                <CitiesLayer />
                 <MapControls 
                   showZoom={true}
                   showCompass={true}
