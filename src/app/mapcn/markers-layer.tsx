@@ -367,7 +367,7 @@ export function MapMarkersLayer({
                 <MarkerIcon type={marker.type} />
               </MarkerContent>
               <MarkerPopup
-                closeButton={true}
+                closeButton={false}
                 maxWidth="350px"
                 className="solpoint-popup-maplibre"
               >
@@ -382,8 +382,38 @@ export function MapMarkersLayer({
         title="This feature is available only with PRO subscription"
         description="Viewing user profiles is available only with PRO subscription. Upgrade to PRO to unlock this feature."
       />
-      {/* Custom styles for popups - EXACT match to Leaflet popup style */}
- 
+      {/* Custom styles for popups */}
+      <style jsx global>{`
+        /* Remove default Tailwind styles from MarkerPopup */
+        .solpoint-popup-maplibre {
+          background: transparent !important;
+          padding: 0 !important;
+          margin: 0 !important;
+          border: none !important;
+          border-radius: 0 !important;
+          box-shadow: none !important;
+        }
+        
+        /* Remove border from wrapper - cards have their own borders */
+        .maplibregl-popup-content {
+          background: transparent !important;
+          border: none !important;
+          box-shadow: none !important;
+          padding: 0 !important;
+          margin: 0 !important;
+          min-width: 280px !important;
+        }
+        
+        /* Hide close button */
+        .maplibregl-popup-close-button {
+          display: none !important;
+        }
+        
+        /* Popup tip styling */
+        .maplibregl-popup-tip {
+          display: none !important;
+        }
+      `}</style>
     </>
   );
 }
