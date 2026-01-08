@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useMap, MapMarker as MapMarkerComponent, MarkerContent, MarkerPopup } from "@/components/ui/map";
 import type { MapMarker, User, Event, Hub, Community, Workspace } from "@/types";
 import { UserCard } from "@/components/cards/user-card";
@@ -14,6 +14,141 @@ interface MapMarkersLayerProps {
   isVip?: boolean;
   isAuthenticated?: boolean;
   currentUserId?: string;
+}
+
+interface Cluster {
+  id: string;
+  latitude: number;
+  longitude: number;
+  markers: MapMarker[];
+  count: number;
+}
+
+// Функция для вычисления расстояния между двумя точками в пикселях на карте
+// Использует проекцию Web Mercator для более точных вычислений
+function getPixelDistance(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number,
+  zoom: number
+): number {
+  // Проекция Web Mercator для преобразования географических координат в пиксели
+  function latToY(lat: number, zoom: number): number {
+    const n = Math.pow(2, zoom);
+    const latRad = (lat * Math.PI) / 180;
+    const y = n * (1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2;
+    return y * 256;
+  }
+
+  function lngToX(lng: number, zoom: number): number {
+    const n = Math.pow(2, zoom);
+    const x = n * ((lng + 180) / 360);
+    return x * 256;
+  }
+
+  const x1 = lngToX(lng1, zoom);
+  const y1 = latToY(lat1, zoom);
+  const x2 = lngToX(lng2, zoom);
+  const y2 = latToY(lat2, zoom);
+
+  return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+}
+
+// Функция кластеризации маркеров
+function clusterMarkers(
+  markers: MapMarker[],
+  zoom: number,
+  clusterRadius: number = 60
+): (MapMarker | Cluster)[] {
+  if (markers.length === 0) return [];
+  
+  // При большом зуме (близко) не кластеризуем
+  if (zoom >= 12) {
+    return markers;
+  }
+  
+  const clusters: Cluster[] = [];
+  const processed = new Set<string>();
+  
+  // Фильтруем только маркеры с валидными координатами
+  const validMarkers = markers.filter((marker) => {
+    return (
+      marker.latitude != null &&
+      marker.longitude != null &&
+      !isNaN(marker.latitude) &&
+      !isNaN(marker.longitude) &&
+      marker.latitude >= -90 &&
+      marker.latitude <= 90 &&
+      marker.longitude >= -180 &&
+      marker.longitude <= 180
+    );
+  });
+  
+  validMarkers.forEach((marker, index) => {
+    if (processed.has(marker.id)) return;
+    
+    // Ищем близкие маркеры для кластеризации
+    const nearbyMarkers: MapMarker[] = [marker];
+    const clusterLatitudes: number[] = [marker.latitude];
+    const clusterLongitudes: number[] = [marker.longitude];
+    
+    for (let i = index + 1; i < validMarkers.length; i++) {
+      const otherMarker = validMarkers[i];
+      if (processed.has(otherMarker.id)) continue;
+      
+      const distance = getPixelDistance(
+        marker.latitude,
+        marker.longitude,
+        otherMarker.latitude,
+        otherMarker.longitude,
+        zoom
+      );
+      
+      if (distance <= clusterRadius) {
+        nearbyMarkers.push(otherMarker);
+        clusterLatitudes.push(otherMarker.latitude);
+        clusterLongitudes.push(otherMarker.longitude);
+        processed.add(otherMarker.id);
+      }
+    }
+    
+    // Если найдено больше одного маркера, создаем кластер
+    if (nearbyMarkers.length > 1) {
+      // Вычисляем центр кластера как среднее арифметическое координат
+      const avgLat = clusterLatitudes.reduce((a, b) => a + b, 0) / clusterLatitudes.length;
+      const avgLng = clusterLongitudes.reduce((a, b) => a + b, 0) / clusterLongitudes.length;
+      
+      clusters.push({
+        id: `cluster-${marker.id}`,
+        latitude: avgLat,
+        longitude: avgLng,
+        markers: nearbyMarkers,
+        count: nearbyMarkers.length,
+      });
+      processed.add(marker.id);
+    } else {
+      // Одиночный маркер не попадает в кластер
+      processed.add(marker.id);
+    }
+  });
+  
+  // Собираем результат: кластеры + одиночные маркеры
+  const result: (MapMarker | Cluster)[] = [];
+  const clusteredMarkerIds = new Set<string>();
+  
+  clusters.forEach((cluster) => {
+    result.push(cluster);
+    cluster.markers.forEach((m) => clusteredMarkerIds.add(m.id));
+  });
+  
+  validMarkers.forEach((marker) => {
+    if (!clusteredMarkerIds.has(marker.id)) {
+      result.push(marker);
+    }
+  });
+  
+  return result;
 }
 
 // Компонент для отображения иконки маркера
@@ -64,6 +199,42 @@ const MarkerIcon = ({ type }: { type: MapMarker["type"] }) => {
   );
 };
 
+// Компонент для отображения кластера
+const ClusterIcon = ({ count }: { count: number }) => {
+  // Определяем размер кластера в зависимости от количества маркеров
+  const size = count < 10 ? 50 : count < 100 ? 60 : 70;
+  const fontSize = count < 10 ? 14 : count < 100 ? 16 : 18;
+  
+  return (
+    <div
+      style={{
+        width: `${size}px`,
+        height: `${size}px`,
+        borderRadius: "50%",
+        backgroundColor: "#3b82f6",
+        border: "3px solid white",
+        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.3)",
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        color: "white",
+        fontWeight: "bold",
+        fontSize: `${fontSize}px`,
+        transition: "transform 0.2s ease",
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = "scale(1.1)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = "scale(1)";
+      }}
+    >
+      {count}
+    </div>
+  );
+};
+
 export function MapMarkersLayer({
   markers,
   isVip = false,
@@ -75,6 +246,30 @@ export function MapMarkersLayer({
     Record<string, "none" | "following" | "mutual">
   >({});
   const [showProModal, setShowProModal] = useState(false);
+  const [currentZoom, setCurrentZoom] = useState(4);
+
+  // Отслеживаем зум карты для кластеризации
+  useEffect(() => {
+    if (!map || !isLoaded) return;
+
+    const updateZoom = () => {
+      setCurrentZoom(map.getZoom());
+    };
+
+    updateZoom();
+    map.on("zoom", updateZoom);
+    map.on("moveend", updateZoom);
+
+    return () => {
+      map.off("zoom", updateZoom);
+      map.off("moveend", updateZoom);
+    };
+  }, [map, isLoaded]);
+
+  // Кластеризуем маркеры на основе текущего зума
+  const clusteredItems = useMemo(() => {
+    return clusterMarkers(markers, currentZoom);
+  }, [markers, currentZoom]);
 
   // Проверяем статус дружбы для пользователей
   useEffect(() => {
@@ -199,6 +394,51 @@ export function MapMarkersLayer({
       });
     },
     []
+  );
+
+  const handleClusterClick = useCallback(
+    (cluster: Cluster) => {
+      if (!map) return;
+
+      trackEvent("map_cluster_click", {
+        event_category: "Map",
+        cluster_id: cluster.id,
+        marker_count: cluster.count,
+      });
+
+      // Вычисляем bounding box для всех маркеров в кластере
+      const lats = cluster.markers.map((m) => m.latitude);
+      const lngs = cluster.markers.map((m) => m.longitude);
+      const minLat = Math.min(...lats);
+      const maxLat = Math.max(...lats);
+      const minLng = Math.min(...lngs);
+      const maxLng = Math.max(...lngs);
+
+      // Вычисляем центр и зум для кластера
+      const centerLat = (minLat + maxLat) / 2;
+      const centerLng = (minLng + maxLng) / 2;
+
+      // Вычисляем оптимальный зум на основе размера кластера
+      const latRange = maxLat - minLat;
+      const lngRange = maxLng - minLng;
+      const maxRange = Math.max(latRange, lngRange);
+
+      let targetZoom = currentZoom + 2;
+      if (maxRange > 0.5) targetZoom = currentZoom + 1;
+      if (maxRange > 1) targetZoom = currentZoom + 0.5;
+      if (maxRange > 2) targetZoom = currentZoom;
+
+      // Ограничиваем зум
+      targetZoom = Math.min(Math.max(targetZoom, currentZoom + 1), 16);
+
+      // Плавно зумим к кластеру
+      map.flyTo({
+        center: [centerLng, centerLat],
+        zoom: targetZoom,
+        duration: 500,
+      });
+    },
+    [map, currentZoom]
   );
 
   const renderPopupContent = (marker: MapMarker) => {
@@ -340,21 +580,34 @@ export function MapMarkersLayer({
 
   return (
     <>
-      {markers
-        .filter((marker) => {
-          // Фильтруем маркеры с валидными координатами
+      {clusteredItems.map((item) => {
+        // Проверяем, является ли элемент кластером
+        // Используем type guard для более точной проверки
+        const isCluster = 
+          typeof item === "object" &&
+          item !== null &&
+          "count" in item &&
+          "markers" in item &&
+          Array.isArray((item as Cluster).markers);
+        
+        if (isCluster) {
+          const cluster = item as Cluster;
           return (
-            marker.latitude != null &&
-            marker.longitude != null &&
-            !isNaN(marker.latitude) &&
-            !isNaN(marker.longitude) &&
-            marker.latitude >= -90 &&
-            marker.latitude <= 90 &&
-            marker.longitude >= -180 &&
-            marker.longitude <= 180
+            <MapMarkerComponent
+              key={cluster.id}
+              longitude={cluster.longitude}
+              latitude={cluster.latitude}
+              onClick={() => handleClusterClick(cluster)}
+              anchor="center"
+            >
+              <MarkerContent>
+                <ClusterIcon count={cluster.count} />
+              </MarkerContent>
+            </MapMarkerComponent>
           );
-        })
-        .map((marker) => {
+        } else {
+          // Обычный маркер
+          const marker = item as MapMarker;
           return (
             <MapMarkerComponent
               key={marker.id}
@@ -375,7 +628,8 @@ export function MapMarkersLayer({
               </MarkerPopup>
             </MapMarkerComponent>
           );
-        })}
+        }
+      })}
       <ProSubscriptionModal
         isOpen={showProModal}
         onClose={() => setShowProModal(false)}
