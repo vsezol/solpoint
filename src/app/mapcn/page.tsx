@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { Header, Footer } from "@/components/layout";
 import { Card } from "@/components/ui";
+import { WaterLayer } from "./water-layer";
 import { CountriesLayer } from "./countries-layer";
 import { CitiesLayer } from "./cities-layer";
 
@@ -81,6 +82,7 @@ export default function MapCnPage() {
                 center={[55, 35]} 
                 zoom={4}
               >
+                <WaterLayer />
                 <CountriesLayer />
                 <CitiesLayer />
                 <MapControls 
