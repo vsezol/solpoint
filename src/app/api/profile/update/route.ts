@@ -41,7 +41,7 @@ export async function PATCH(request: Request) {
         linkedin?: string | null;
         medium?: string | null;
         substack?: string | null;
-      };
+      } | null;
     } = {};
 
     // Валидация bio
@@ -309,7 +309,8 @@ export async function PATCH(request: Request) {
         }
         // Если socialsObj пустой, не обновляем socials
       } else {
-        updates.socials = null;
+        // Если socials передан как null, устанавливаем пустой объект (база данных не поддерживает null для JSONB)
+        updates.socials = {};
       }
     }
 

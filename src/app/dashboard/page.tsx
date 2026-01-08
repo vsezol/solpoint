@@ -66,73 +66,77 @@ export default async function DashboardPage() {
 
   if (hubs.length > 0) {
     entityEventsPromises.push(
-      supabase
-        .from("events")
-        .select("*")
-        .eq("owner_type", "hub")
-        .in("owner_id", hubs.map((h) => h.id))
-        .order("created_at", { ascending: false })
-        .then(({ data, error }) => {
-          if (error) {
-            console.error("Error fetching hub events:", error);
-            return [];
-          }
-          return data || [];
-        })
+      Promise.resolve(
+        supabase
+          .from("events")
+          .select("*")
+          .eq("owner_type", "hub")
+          .in("owner_id", hubs.map((h) => h.id))
+          .order("created_at", { ascending: false })
+      ).then(({ data, error }) => {
+        if (error) {
+          console.error("Error fetching hub events:", error);
+          return [];
+        }
+        return data || [];
+      })
     );
   }
 
   if (projects.length > 0) {
     entityEventsPromises.push(
-      supabase
-        .from("events")
-        .select("*")
-        .eq("owner_type", "project")
-        .in("owner_id", projects.map((p) => p.id))
-        .order("created_at", { ascending: false })
-        .then(({ data, error }) => {
-          if (error) {
-            console.error("Error fetching project events:", error);
-            return [];
-          }
-          return data || [];
-        })
+      Promise.resolve(
+        supabase
+          .from("events")
+          .select("*")
+          .eq("owner_type", "project")
+          .in("owner_id", projects.map((p) => p.id))
+          .order("created_at", { ascending: false })
+      ).then(({ data, error }) => {
+        if (error) {
+          console.error("Error fetching project events:", error);
+          return [];
+        }
+        return data || [];
+      })
     );
   }
 
   if (communities.length > 0) {
     entityEventsPromises.push(
-      supabase
-        .from("events")
-        .select("*")
-        .eq("owner_type", "community")
-        .in("owner_id", communities.map((c) => c.id))
-        .order("created_at", { ascending: false })
-        .then(({ data, error }) => {
-          if (error) {
-            console.error("Error fetching community events:", error);
-            return [];
-          }
-          return data || [];
-        })
+      Promise.resolve(
+        supabase
+          .from("events")
+          .select("*")
+          .eq("owner_type", "community")
+          .in("owner_id", communities.map((c) => c.id))
+          .order("created_at", { ascending: false })
+      ).then(({ data, error }) => {
+        if (error) {
+          console.error("Error fetching community events:", error);
+          return [];
+        }
+        return data || [];
+      })
     );
   }
 
   if (workspaces.length > 0) {
     entityEventsPromises.push(
-      supabase
-        .from("events")
-        .select("*")
-        .eq("owner_type", "workspace")
-        .in("owner_id", workspaces.map((w) => w.id))
-        .order("created_at", { ascending: false })
-        .then(({ data, error }) => {
-          if (error) {
-            console.error("Error fetching workspace events:", error);
-            return [];
-          }
-          return data || [];
-        })
+      Promise.resolve(
+        supabase
+          .from("events")
+          .select("*")
+          .eq("owner_type", "workspace")
+          .in("owner_id", workspaces.map((w) => w.id))
+          .order("created_at", { ascending: false })
+      ).then(({ data, error }) => {
+        if (error) {
+          console.error("Error fetching workspace events:", error);
+          return [];
+        }
+        return data || [];
+      })
     );
   }
 

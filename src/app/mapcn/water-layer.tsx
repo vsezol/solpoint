@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect } from "react";
-import MapLibreGL from "maplibre-gl";
 import { useMap } from "@/components/ui/map";
 
 /**

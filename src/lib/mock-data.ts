@@ -315,8 +315,8 @@ export function createMapMarkers(
     const latOffset = (Math.random() - 0.5) * 2;
     const lngOffset = (Math.random() - 0.5) * 2;
 
-    // Определяем тип маркера: pro_user для VIP/Pro пользователей, user для остальных
-    const isProUser = user.subscription_tier === "vip" || user.subscription_tier === "pro";
+    // Определяем тип маркера: pro_user для VIP пользователей, user для остальных
+    const isProUser = user.subscription_tier === "vip";
     
     markers.push({
       id: `user-${user.id}`,

@@ -10,9 +10,21 @@ import type { MapFilters, MapMarker } from "@/types";
 import { getMapMarkers } from "@/lib/api/map";
 import { useAuth } from "@/hooks/use-auth";
 import { trackEvent } from "@/lib/analytics";
-import { WaterLayer } from "./water-layer";
-import { CountriesLayer } from "./countries-layer";
-import { MapMarkersLayer } from "./markers-layer";
+// Dynamic imports to avoid SSR issues with maplibre-gl
+const WaterLayer = dynamic(
+  () => import("./water-layer").then((mod) => ({ default: mod.WaterLayer })),
+  { ssr: false }
+);
+
+const CountriesLayer = dynamic(
+  () => import("./countries-layer").then((mod) => ({ default: mod.CountriesLayer })),
+  { ssr: false }
+);
+
+const MapMarkersLayer = dynamic(
+  () => import("./markers-layer").then((mod) => ({ default: mod.MapMarkersLayer })),
+  { ssr: false }
+);
 
 // Dynamic import for map component to avoid SSR issues with MapLibre GL
 const Map = dynamic(

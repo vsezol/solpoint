@@ -9,6 +9,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getAppUrl } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
+import { useChat } from "@/hooks/use-chat";
 import type { User, Event, Invite } from "@/types";
 
 interface ProfileSidebarProps {
