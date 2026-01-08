@@ -111,7 +111,7 @@ export function LumaAttendButton({
   // Если пользователь уже зарегистрирован или ответил "да", показываем disabled кнопку "Going"
   if (isRegistered || isGoing) {
     return (
-      <div className="flex justify-center">
+      <div className="flex justify-center sm:justify-start sm:mr-auto">
         <Button
           variant="primary"
           className="w-full max-w-[350px] sm:w-[350px]"
@@ -200,7 +200,7 @@ export function LumaAttendButton({
 
   return (
     <>
-      <div className="flex justify-center">
+      <div className="flex justify-center sm:justify-start sm:mr-auto">
         <Button
           variant="primary"
           className="w-full max-w-[350px] sm:w-[350px]"
