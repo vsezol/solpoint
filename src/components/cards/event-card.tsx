@@ -104,7 +104,7 @@ export function EventCard({
 
   if (compact) {
     return (
-      <div className="p-4 min-w-[280px] border border-[var(--color-surface-border)] rounded-xl transition-all duration-200 hover:scale-[1.02] hover:border-white">
+      <div className="p-4 min-w-[280px] border border-[var(--color-surface-border)] rounded-xl transition-all duration-200 hover:scale-[1.02] hover:border-white ">
         {/* Image */}
         <div className="relative w-16 h-16 mx-auto mb-3 rounded-xl overflow-hidden bg-[var(--color-surface-hover)]">
           {event.image_url ? (

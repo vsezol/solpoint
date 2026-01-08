@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useMap } from "@/components/ui/map";
+import { useMap, MapMarker as MapMarkerComponent, MarkerContent, MarkerPopup } from "@/components/ui/map";
 import type { MapMarker, User, Event, Hub, Community, Workspace } from "@/types";
-import { MapMarker, MarkerContent, MarkerPopup } from "@/components/ui/map";
 import { UserCard } from "@/components/cards/user-card";
 import { EventCard } from "@/components/cards/event-card";
 import { HubCard } from "@/components/cards/hub-card";
@@ -203,6 +202,10 @@ export function MapMarkersLayer({
   );
 
   const renderPopupContent = (marker: MapMarker) => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'markers-layer.tsx:renderPopupContent',message:'Rendering popup content',data:{markerType:marker.type,markerId:marker.id},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+    
     switch (marker.type) {
       case "user":
       case "pro_user": {
@@ -248,6 +251,10 @@ export function MapMarkersLayer({
           cardFriendshipStatus = "pending_sent";
         }
 
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'markers-layer.tsx:renderPopupContent:user',message:'Rendering UserCard',data:{markerType:'user',hasBorder:false,hasBackground:false},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'B'})}).catch(()=>{});
+        // #endregion
+
         return (
           <UserCard
             user={user}
@@ -274,6 +281,9 @@ export function MapMarkersLayer({
         );
       }
       case "event":
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'markers-layer.tsx:renderPopupContent:event',message:'Rendering EventCard',data:{markerType:'event',hasBorder:true,hasBackground:false},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
         return (
           <EventCard
             event={marker.data as Event}
@@ -284,6 +294,9 @@ export function MapMarkersLayer({
           />
         );
       case "hub":
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'markers-layer.tsx:renderPopupContent:hub',message:'Rendering HubCard',data:{markerType:'hub',hasBorder:false,hasBackground:false},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'B'})}).catch(()=>{});
+        // #endregion
         return (
           <HubCard
             hub={marker.data as Hub}
@@ -293,6 +306,9 @@ export function MapMarkersLayer({
           />
         );
       case "workspace":
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'markers-layer.tsx:renderPopupContent:workspace',message:'Rendering Workspace HubCard',data:{markerType:'workspace',hasBorder:false,hasBackground:false},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'B'})}).catch(()=>{});
+        // #endregion
         return (
           <HubCard
             hub={marker.data as Workspace}
@@ -302,6 +318,9 @@ export function MapMarkersLayer({
           />
         );
       case "community":
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'markers-layer.tsx:renderPopupContent:community',message:'Rendering Community HubCard',data:{markerType:'community',hasBorder:false,hasBackground:false},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'B'})}).catch(()=>{});
+        // #endregion
         return (
           <HubCard
             hub={marker.data as Community}
@@ -337,7 +356,7 @@ export function MapMarkersLayer({
         })
         .map((marker) => {
           return (
-            <MapMarker
+            <MapMarkerComponent
               key={marker.id}
               longitude={marker.longitude}
               latitude={marker.latitude}
@@ -347,10 +366,14 @@ export function MapMarkersLayer({
               <MarkerContent>
                 <MarkerIcon type={marker.type} />
               </MarkerContent>
-              <MarkerPopup closeButton={true} maxWidth="350px" minWidth="280px">
+              <MarkerPopup
+                closeButton={true}
+                maxWidth="350px"
+                className="solpoint-popup-maplibre"
+              >
                 {renderPopupContent(marker)}
               </MarkerPopup>
-            </MapMarker>
+            </MapMarkerComponent>
           );
         })}
       <ProSubscriptionModal
@@ -359,6 +382,8 @@ export function MapMarkersLayer({
         title="This feature is available only with PRO subscription"
         description="Viewing user profiles is available only with PRO subscription. Upgrade to PRO to unlock this feature."
       />
+      {/* Custom styles for popups - EXACT match to Leaflet popup style */}
+ 
     </>
   );
 }

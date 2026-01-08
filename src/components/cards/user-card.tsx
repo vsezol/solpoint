@@ -69,7 +69,7 @@ export function UserCard({
 
   if (compact) {
     return (
-      <div className="p-4 min-w-[280px] w-fit">
+      <div className="p-4 min-w-[280px] w-fit bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-xl">
         {/* Content with blur if unauthorized */}
         <div className={cn(isUnauthorized && "blur-sm")}>
           {/* Header */}

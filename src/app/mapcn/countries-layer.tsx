@@ -16,7 +16,7 @@ interface CountriesLayerProps {
  * Component that renders countries GeoJSON layer with custom styling
  * matching the main SolPoint map colors:
  * - Water: #18E3C5 (cyan)
- * - Countries: #452D9F (purple) with 90% opacity
+ * - Countries: #8B5CF6 (purple) with 90% opacity
  * - Borders: #A4E3B4 (light green) at zoom < 5, #8B7EC8 (darker purple) at zoom >= 5
  */
 export function CountriesLayer({ dataUrl = "/world.geo.json", geoJsonData }: CountriesLayerProps) {
@@ -88,7 +88,7 @@ export function CountriesLayer({ dataUrl = "/world.geo.json", geoJsonData }: Cou
           type: "fill",
           source: sourceId,
           paint: {
-            "fill-color": "#452D9F", // Purple for continents
+            "fill-color": "#8B5CF6", // Purple for continents
             "fill-opacity": 0.5, // Lower opacity so borders and labels show through clearly
           },
         },
