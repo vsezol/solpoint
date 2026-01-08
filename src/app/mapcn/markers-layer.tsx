@@ -835,6 +835,7 @@ export function MapMarkersLayer({
           padding: 0 !important;
           margin: 0 !important;
           min-width: 280px !important;
+          max-width: 350px !important;
         }
         
         /* Hide close button */

@@ -104,7 +104,7 @@ export function EventCard({
 
   if (compact) {
     return (
-      <div className="p-4 min-w-[280px] bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-xl transition-all duration-200 hover:scale-[1.02] hover:border-white">
+      <div className="p-4 min-w-[280px] max-w-[350px] bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-xl transition-all duration-200 hover:scale-[1.02] hover:border-[var(--color-primary)]">
         {/* Image */}
         <div className="relative w-16 h-16 mx-auto mb-3 rounded-xl overflow-hidden bg-[var(--color-surface-hover)]">
           {event.image_url ? (
@@ -305,7 +305,7 @@ export function EventCard({
         }, 0);
       }}
     >
-      <div className="bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-xl overflow-hidden flex flex-col h-full transition-all duration-200 hover:scale-[1.02] hover:border-white cursor-pointer">
+      <div className="bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-xl overflow-hidden flex flex-col h-full transition-all duration-200 hover:scale-[1.02] hover:border-[var(--color-primary)] cursor-pointer">
       {/* Image/Icon Section */}
       <div className="relative h-48 bg-gradient-to-br from-[var(--color-primary)]/20 via-[var(--color-primary)]/10 to-[var(--color-secondary)]/20 flex-shrink-0">
         {event.image_url ? (

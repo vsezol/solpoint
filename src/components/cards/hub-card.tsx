@@ -121,7 +121,7 @@ export function HubCard({ hub, compact = false, entityType, isBlurred = false }:
     if (!hub.slug) {
       // Если нет slug, возвращаем карточку без ссылки
       return (
-        <div className="p-4 min-w-[280px] transition-all duration-300">
+        <div className="p-4 min-w-[280px] max-w-[350px] transition-all duration-300">
         {/* Image */}
         <div className="relative w-20 h-20 mx-auto mb-3 rounded-full overflow-hidden bg-[var(--color-surface-hover)]">
           {hub.image_url ? (
@@ -317,7 +317,7 @@ export function HubCard({ hub, compact = false, entityType, isBlurred = false }:
             });
           }, 0);
         }}
-        className="block p-4 min-w-[280px] bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-xl cursor-pointer transition-all duration-300 hover:scale-105 hover:border-white hover:shadow-lg"
+        className="block p-4 min-w-[280px] max-w-[350px] bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-xl cursor-pointer transition-all duration-300 hover:scale-105 hover:border-[var(--color-primary)] hover:shadow-lg"
       >
         {/* Image */}
         <div className="relative w-20 h-20 mx-auto mb-3 rounded-full overflow-hidden bg-[var(--color-surface-hover)]">
@@ -493,7 +493,7 @@ export function HubCard({ hub, compact = false, entityType, isBlurred = false }:
           source: "hub_card_full",
         });
       }}
-      className="block bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-xl p-5 flex flex-col h-full cursor-pointer transition-all duration-300 hover:scale-105 hover:border-white hover:shadow-lg"
+      className="block bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-xl p-5 flex flex-col h-full cursor-pointer transition-all duration-300 hover:scale-105 hover:border-[var(--color-primary)] hover:shadow-lg"
     >
       {/* Header */}
       <div className="flex items-start gap-4 mb-4">
