@@ -24,7 +24,6 @@ export function CountriesLayer({ dataUrl = "/world.geo.json", geoJsonData }: Cou
   const [geoJson, setGeoJson] = useState<GeoJSON.FeatureCollection | null>(
     geoJsonData || null
   );
-  const [currentZoom, setCurrentZoom] = useState(4);
 
   const sourceId = "countries-source";
   const fillLayerId = "countries-fill";
@@ -33,7 +32,8 @@ export function CountriesLayer({ dataUrl = "/world.geo.json", geoJsonData }: Cou
   // Load GeoJSON data
   useEffect(() => {
     if (geoJsonData) {
-      setGeoJson(geoJsonData);
+      // Use a timeout to avoid synchronous setState in effect
+      setTimeout(() => setGeoJson(geoJsonData), 0);
       return;
     }
 
@@ -46,23 +46,6 @@ export function CountriesLayer({ dataUrl = "/world.geo.json", geoJsonData }: Cou
         console.error("Error loading countries GeoJSON:", error);
       });
   }, [dataUrl, geoJsonData]);
-
-  // Track zoom level
-  useEffect(() => {
-    if (!isLoaded || !map) return;
-
-    const updateZoomEnd = () => {
-      const newZoom = map.getZoom();
-      setCurrentZoom(newZoom);
-    };
-
-    setCurrentZoom(map.getZoom());
-    map.on("zoomend", updateZoomEnd);
-
-    return () => {
-      map.off("zoomend", updateZoomEnd);
-    };
-  }, [isLoaded, map]);
 
   // Add GeoJSON source and layers
   useEffect(() => {
@@ -79,44 +62,83 @@ export function CountriesLayer({ dataUrl = "/world.geo.json", geoJsonData }: Cou
       source.setData(geoJson);
     }
 
-    // Add fill layer for countries - using lower opacity to let base map details show through
+    // Add fill layer for countries - insert BEFORE label layers so text appears above
+    // Use lower opacity to let base map details (borders, etc.) show through
     if (!map.getLayer(fillLayerId)) {
-      map.addLayer({
-        id: fillLayerId,
-        type: "fill",
-        source: sourceId,
-        paint: {
-          "fill-color": "#452D9F", // Purple for continents
-          "fill-opacity": 0.6, // Lower opacity to preserve base map details (cities, labels, etc.)
+      // Find first label layer in the style to insert our layer before it
+      // This ensures text labels appear above our purple fill layer
+      const style = map.getStyle();
+      const layers = style.layers || [];
+      const firstLabelLayer = layers.find((layer): layer is MapLibreGL.LayerSpecification => {
+        if (typeof layer === "string") return false;
+        const layerId = layer.id;
+        const layerType = layer.type;
+        // Label layers in CARTO basemaps typically have "label" in their name or are symbol layers
+        return (
+          layerType === "symbol" ||
+          layerId.toLowerCase().includes("label") ||
+          layerId.toLowerCase().includes("place")
+        );
+      });
+      const beforeId = firstLabelLayer?.id;
+
+      map.addLayer(
+        {
+          id: fillLayerId,
+          type: "fill",
+          source: sourceId,
+          paint: {
+            "fill-color": "#452D9F", // Purple for continents
+            "fill-opacity": 0.5, // Lower opacity so borders and labels show through clearly
+          },
         },
-      }); // Add after base map layers - will overlay but allow details to show through
+        beforeId // Insert before label layers so text appears above
+      );
     }
 
     // Add border layer with dynamic color based on zoom
+    // This layer should also be before labels to preserve base map border visibility
     if (!map.getLayer(borderLayerId)) {
-      map.addLayer({
-        id: borderLayerId,
-        type: "line",
-        source: sourceId,
-        paint: {
-          "line-color": [
-            "case",
-            [">=", ["zoom"], 5],
-            "#8B7EC8",
-            "#A4E3B4",
-          ],
-          "line-width": [
-            "interpolate",
-            ["linear"],
-            ["zoom"],
-            0, 1.5,
-            5, 1.5,
-            7, 1.2,
-            10, 1,
-          ],
-          "line-opacity": 0.8, // Slightly transparent to blend with base map
+      const style = map.getStyle();
+      const layers = style.layers || [];
+      const firstLabelLayer = layers.find((layer): layer is MapLibreGL.LayerSpecification => {
+        if (typeof layer === "string") return false;
+        const layerId = layer.id;
+        const layerType = layer.type;
+        return (
+          layerType === "symbol" ||
+          layerId.toLowerCase().includes("label") ||
+          layerId.toLowerCase().includes("place")
+        );
+      });
+      const beforeId = firstLabelLayer?.id || fillLayerId; // Fallback to after fill layer if no labels found
+
+      map.addLayer(
+        {
+          id: borderLayerId,
+          type: "line",
+          source: sourceId,
+          paint: {
+            "line-color": [
+              "case",
+              [">=", ["zoom"], 5],
+              "#8B7EC8",
+              "#A4E3B4",
+            ],
+            "line-width": [
+              "interpolate",
+              ["linear"],
+              ["zoom"],
+              0, 1.5,
+              5, 1.5,
+              7, 1.2,
+              10, 1,
+            ],
+            "line-opacity": 0.9, // Higher opacity for borders to be clearly visible
+          },
         },
-      }); // Add after fill layer
+        beforeId // Insert before label layers
+      );
     }
 
     // Update border properties with expressions that depend on zoom
@@ -163,8 +185,8 @@ export function CountriesLayer({ dataUrl = "/world.geo.json", geoJsonData }: Cou
       map.setPaintProperty(fillLayerId, "fill-opacity", [
         "case",
         ["boolean", ["feature-state", "hover"], false],
-        0.75, // Slightly more visible on hover
-        0.6,  // Base opacity to preserve base map details
+        0.7, // Slightly more visible on hover
+        0.5, // Base opacity - low to preserve visibility of borders and labels
       ]);
     }
 
