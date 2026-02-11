@@ -320,7 +320,7 @@ export function MapFiltersPanel({
         )}
 
         {/* User roles */}
-        {filters.contentType !== "hubs" && (
+        {filters.contentType !== "hubs" && filters.contentType !== "events" && (
           <div>
             <label className="block text-sm text-[var(--color-text-muted)] mb-3">
               User Types
@@ -348,7 +348,7 @@ export function MapFiltersPanel({
         )}
 
         {/* Toggle switches */}
-        {filters.contentType !== "hubs" && (
+        {filters.contentType !== "hubs" && filters.contentType !== "events" && (
           <div className="space-y-3">
             <label className="flex items-center justify-between cursor-pointer">
               <span className="text-sm text-[var(--color-text-secondary)]">
