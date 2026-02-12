@@ -101,6 +101,7 @@ function buildMetaPayload(meta, metaParseErrors) {
     description: meta.description || null,
     start_at: meta.start_at || null,
     end_at: meta.end_at || null,
+    raw_date_time_display: meta.raw_date_time_display || null,
     location: meta.location || null,
     address: meta.address || null,
     location_lat: meta.location_lat ?? null,
@@ -235,27 +236,117 @@ async function upsertOrganizers(supabase, eventUrl, organizers) {
   log("DB organizers: done.", ok, "linked.");
 }
 
-/** Try to parse Luma date + time strings into ISO timestamptz. Returns { start_at, end_at } or nulls. */
+/** Month name/abbreviation -> month number (1-12). RU (nom + gen) + EN so Luma dates parse in any locale. */
+const MONTH_MAP = {
+  января: 1,
+  январь: 1,
+  january: 1,
+  янв: 1,
+  jan: 1,
+  февраля: 2,
+  февраль: 2,
+  february: 2,
+  февр: 2,
+  фев: 2,
+  feb: 2,
+  марта: 3,
+  март: 3,
+  march: 3,
+  мар: 3,
+  mar: 3,
+  апреля: 4,
+  апрель: 4,
+  april: 4,
+  апр: 4,
+  apr: 4,
+  май: 5,
+  may: 5,
+  июня: 6,
+  июнь: 6,
+  june: 6,
+  июн: 6,
+  jun: 6,
+  июля: 7,
+  июль: 7,
+  july: 7,
+  июл: 7,
+  jul: 7,
+  августа: 8,
+  август: 8,
+  august: 8,
+  авг: 8,
+  aug: 8,
+  сентября: 9,
+  сентябрь: 9,
+  september: 9,
+  сен: 9,
+  сент: 9,
+  sep: 9,
+  sept: 9,
+  октября: 10,
+  октябрь: 10,
+  october: 10,
+  окт: 10,
+  oct: 10,
+  ноября: 11,
+  ноябрь: 11,
+  november: 11,
+  нояб: 11,
+  ноя: 11,
+  nov: 11,
+  декабря: 12,
+  декабрь: 12,
+  december: 12,
+  дек: 12,
+  dec: 12,
+};
+
+/** Try to parse Luma date + time strings into ISO timestamptz. Uses MONTH_MAP for RU/EN. Returns { start_at, end_at } or nulls. */
 function parseLumaDateTime(dateText, timeDesc) {
   let start_at = null;
   let end_at = null;
   if (!dateText || !timeDesc) return { start_at, end_at };
-  const tzMatch = timeDesc.match(/([A-Z]{3,4}[+-]\d+|[A-Z]{2,3}\s*[+-]\d+)/i);
-  const timezone = tzMatch ? tzMatch[1].replace(/\s/g, "") : "";
-  const rangeMatch = timeDesc.match(/(\d{1,2}:\d{2})\s*[-–]\s*(\d{1,2}:\d{2})/);
-  const startTime = rangeMatch ? rangeMatch[1] : null;
-  const endTime = rangeMatch ? rangeMatch[2] : null;
-  const datePart = dateText.replace(/\s+/g, " ").trim();
-  if (!datePart || !startTime) return { start_at, end_at };
+  const rangeMatch = timeDesc.match(/(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2}):(\d{2})/);
+  const startHour = rangeMatch ? parseInt(rangeMatch[1], 10) : null;
+  const startMin = rangeMatch ? parseInt(rangeMatch[2], 10) : null;
+  const endHour = rangeMatch ? parseInt(rangeMatch[3], 10) : null;
+  const endMin = rangeMatch ? parseInt(rangeMatch[4], 10) : null;
+  if (startHour == null || startMin == null) return { start_at, end_at };
+
+  const tzMatch = timeDesc.match(/GMT\s*([+-])\s*(\d+)/i) || timeDesc.match(/([+-])(\d+)\s*$/);
+  const tzSign = tzMatch ? (tzMatch[1] === "+" ? 1 : -1) : 0;
+  const tzHours = tzMatch ? tzSign * parseInt(tzMatch[2], 10) : 0;
+
+  const dayMatch = dateText.match(/\b(\d{1,2})\b/);
+  const day = dayMatch ? parseInt(dayMatch[1], 10) : null;
+  if (day == null || day < 1 || day > 31) return { start_at, end_at };
+
+  const lower = dateText.toLowerCase().replace(/\s+/g, " ");
+  let month = null;
+  const sortedKeys = Object.keys(MONTH_MAP).sort((a, b) => b.length - a.length);
+  for (const key of sortedKeys) {
+    if (lower.includes(key)) {
+      month = MONTH_MAP[key];
+      break;
+    }
+  }
+  if (month == null) return { start_at, end_at };
+
+  const year = new Date().getFullYear();
+  const monthIndex = month - 1;
   try {
-    const d = new Date(datePart + " " + startTime + " " + timezone);
+    const utcStartHour = startHour - tzHours;
+    const utcStartMin = startMin;
+    const d = new Date(Date.UTC(year, monthIndex, day, utcStartHour, utcStartMin, 0, 0));
     if (!Number.isNaN(d.getTime())) start_at = d.toISOString();
-    if (endTime) {
-      const dEnd = new Date(datePart + " " + endTime + " " + timezone);
+    if (endHour != null && endMin != null) {
+      const utcEndHour = endHour - tzHours;
+      const utcEndMin = endMin;
+      const dEnd = new Date(Date.UTC(year, monthIndex, day, utcEndHour, utcEndMin, 0, 0));
       if (!Number.isNaN(dEnd.getTime())) end_at = dEnd.toISOString();
     }
   } catch {
-    // ignore parse errors, return nulls
+    // ignore
   }
   return { start_at, end_at };
 }
@@ -308,6 +399,7 @@ async function parseMetadata(page, eventUrl, supabase) {
     imageUrl: null,
     start_at: null,
     end_at: null,
+    raw_date_time_display: null,
     description: null,
     location: null,
     address: null,
@@ -451,6 +543,8 @@ async function parseMetadata(page, eventUrl, supabase) {
     result.start_at = start_at;
     result.end_at = end_at;
     if (!result.start_at && (raw.dateText || raw.timeDesc)) metaParseErrors.start_at = "parse_failed";
+
+    result.raw_date_time_display = [raw.dateText, raw.timeDesc].filter(Boolean).join(", ") || null;
 
     result.location = raw.locationName || null;
     result.address = raw.locationAddress || null;
@@ -722,6 +816,7 @@ async function main() {
         imageUrl: meta.imageUrl,
         start_at: meta.start_at,
         end_at: meta.end_at,
+        raw_date_time_display: meta.raw_date_time_display,
         description: meta.description ? meta.description.slice(0, 200) + (meta.description.length > 200 ? "…" : "") : null,
         location: meta.location,
         address: meta.address,

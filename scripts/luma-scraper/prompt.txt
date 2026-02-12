@@ -1,0 +1,95 @@
+Так, давай сейчас попробуем настроить скрапер.
+Настраиваем скрапер на открытие попапа 
+
+в первую очередь ищем список ивентов:
+
+div class="timeline"
+div class="jsx-3835481602 timeline-section sticky-always"
+div class="jsx-2196349405 card-wrapper"
+
+карточки ивентов такие: <div style="padding:var(--card-padding)" role="button" tabindex="0" class="jsx-702bb7b3285aa34f jsx-3100912336 content-card rounded-card hoverable actionable"><a aria-label="Solana x AI Workshop, FUTO" tabindex="-1" class="event-link content-link" href="/g55kadpl">&nbsp;</a><div class="flex-column event-content gap-3"><div class="jsx-2596208928 flex info-and-cover"><div class="jsx-2596208928 cover-image"><div class="jsx-3092874786"><div style="background-color:var(--opacity-light);padding-bottom:100.0%" class="jsx-bf40f23d3e10e809 img-aspect-ratio event-card-cover rounded-squircle"><img src="https://images.lumacdn.com/cdn-cgi/image/format=auto,fit=cover,dpr=2,anim=false,background=white,quality=75,width=180,height=180/event-covers/ed/7637a956-f343-4455-9122-65856c86b8c2.jpg" alt="Обложка для Solana x AI Workshop, FUTO" fetchpriority="auto" loading="lazy" srcset="https://images.lumacdn.com/cdn-cgi/image/format=auto,fit=cover,dpr=1,anim=false,background=white,quality=75,width=80,height=80/event-covers/ed/7637a956-f343-4455-9122-65856c86b8c2.jpg 80w, https://images.lumacdn.com/cdn-cgi/image/format=auto,fit=cover,dpr=2,anim=false,background=white,quality=75,width=80,height=80/event-covers/ed/7637a956-f343-4455-9122-65856c86b8c2.jpg 160w, https://images.lumacdn.com/cdn-cgi/image/format=auto,fit=cover,dpr=1,anim=false,background=white,quality=75,width=120,height=120/event-covers/ed/7637a956-f343-4455-9122-65856c86b8c2.jpg 120w, https://images.lumacdn.com/cdn-cgi/image/format=auto,fit=cover,dpr=2,anim=false,background=white,quality=75,width=120,height=120/event-covers/ed/7637a956-f343-4455-9122-65856c86b8c2.jpg 240w, https://images.lumacdn.com/cdn-cgi/image/format=auto,fit=cover,dpr=1,anim=false,background=white,quality=75,width=180,height=180/event-covers/ed/7637a956-f343-4455-9122-65856c86b8c2.jpg 180w, https://images.lumacdn.com/cdn-cgi/image/format=auto,fit=cover,dpr=2,anim=false,background=white,quality=75,width=180,height=180/event-covers/ed/7637a956-f343-4455-9122-65856c86b8c2.jpg 360w" sizes="(max-width: 450px) 80px, (max-width: 1000px) 120px, 180px" class="jsx-bf40f23d3e10e809 "></div></div></div><div class="jsx-2596208928 info flex-1 flex-column"><div class="jsx-3570480901 event-time flex-center gap-2"><div class="jsx-227ee7e8b4108dd5"><div class="jsx-227ee7e8b4108dd5 live-badge fw-medium flex-center">LIVE</div></div><div class="jsx-3570480901 min-with-0 text-ellipses text-tertiary-alpha"><span class="jsx-3570480901">14:00</span><span class="jsx-3570480901"> · </span><span class="text-warning">10:00 GMT+1</span></div></div><div class="jsx-920441662 "><h3 class="jsx-920441662">Solana x AI Workshop, FUTO</h3></div><div class="flex-column gap-1"><div class="jsx-1364776505 attribute flex-start gap-2 min-width-0 text-tertiary-alpha auto"><div class="jsx-e74804ac03b83871 icon flex-center">​<div style="--size:1rem;--cutout-avatar-percentage-visible:0.5;--head-margin-percentage:0.1" class="jsx-2068774334 heads flex-center"><div class="jsx-2068774334 head flex-start"><div class="jsx-3300045840 avatar-wrapper small"><div style="background-image:url(&quot;https://cdn.lu.ma/cdn-cgi/image/format=auto,fit=cover,dpr=2,anim=false,background=white,quality=75,width=16,height=16/avatars-default/avatar_39.png&quot;)" class="jsx-3300045840 avatar"><div style="transform:scale(0)" class="jsx-1d284b39ba128971 online-indicator-wrapper animated"><div style="background-color:var(--orange)" class="jsx-1d284b39ba128971 online-indicator"></div></div></div></div><div class="lux-menu-trigger-wrapper jsx-2068774334 tooltip absolute-fill"></div></div></div></div><div class="jsx-e74804ac03b83871 text-ellipses"><div class="text-ellipses nowrap">От Ubadineke Prince</div></div></div><div class="jsx-1364776505 attribute flex-start gap-2 min-width-0 text-tertiary-alpha auto"><div class="jsx-e74804ac03b83871 icon flex-center">​<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><g fill="none" fill-rule="evenodd" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M2 6.854C2 11.02 7.04 15 8 15s6-3.98 6-8.146C14 3.621 11.314 1 8 1S2 3.62 2 6.854"></path><path d="M9.5 6.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0"></path></g></svg></div><div class="jsx-e74804ac03b83871 text-ellipses">Federal University of Technology - Owerri</div></div><div class="flex-center gap-1 flex-wrap pt-1"><div class="flex-center gap-1 flex-wrap"><div style="max-width:200px" class="jsx-16ad4d648c7a0666 pill light variant-color-green small rounded"><div class="jsx-16ad4d648c7a0666">​</div><div class="jsx-16ad4d648c7a0666 pill-label overflow">Nigeria</div></div></div></div></div></div></div><div class="jsx-80df8f47176a2233 event-bottom-bar flex-center spread"><div class="jsx-80df8f47176a2233 flex-center gap-2"><div class="jsx-80df8f47176a2233 status-or-price"><div class="jsx-16ad4d648c7a0666 pill solid variant-color-green tiny"><div class="jsx-16ad4d648c7a0666">​</div><div class="jsx-16ad4d648c7a0666 pill-label">Иду</div></div></div><div style="--size:1.125rem;--cutout-avatar-percentage-visible:0.5;--head-margin-percentage:0.1" class="jsx-2068774334 heads flex-center"><div class="jsx-2068774334 head flex-start"><div class="jsx-3830091536 avatar-wrapper small"><div style="background-image:url(&quot;https://images.lumacdn.com/cdn-cgi/image/format=auto,fit=cover,dpr=2,anim=false,background=white,quality=75,width=18,height=18/avatars/fa/ecc7a3f4-17ea-4b56-a486-83079610103c.jpg&quot;)" class="jsx-3830091536 avatar"><div style="transform:scale(0)" class="jsx-1d284b39ba128971 online-indicator-wrapper animated"><div style="background-color:var(--orange)" class="jsx-1d284b39ba128971 online-indicator"></div></div></div></div><div class="lux-menu-trigger-wrapper jsx-2068774334 tooltip absolute-fill"></div></div><div class="jsx-2068774334 head flex-start"><div class="jsx-3830091536 avatar-wrapper small"><div style="background-image:url(&quot;https://images.lumacdn.com/cdn-cgi/image/format=auto,fit=cover,dpr=2,anim=false,background=white,quality=75,width=18,height=18/avatars/vx/a3656740-5420-4f5f-8bc0-dea9928c5e9d.jpg&quot;)" class="jsx-3830091536 avatar"><div style="transform:scale(0)" class="jsx-1d284b39ba128971 online-indicator-wrapper animated"><div style="background-color:var(--orange)" class="jsx-1d284b39ba128971 online-indicator"></div></div></div></div><div class="lux-menu-trigger-wrapper jsx-2068774334 tooltip absolute-fill"></div></div><div class="jsx-2068774334 head flex-start"><div class="jsx-3830091536 avatar-wrapper small"><div style="background-image:url(&quot;https://images.lumacdn.com/cdn-cgi/image/format=auto,fit=cover,dpr=2,anim=false,background=white,quality=75,width=18,height=18/avatars/06/9a9b82ef-9b14-47e5-8b5a-12bb2a2b6a3c.jpg&quot;)" class="jsx-3830091536 avatar"><div style="transform:scale(0)" class="jsx-1d284b39ba128971 online-indicator-wrapper animated"><div style="background-color:var(--orange)" class="jsx-1d284b39ba128971 online-indicator"></div></div></div></div><div class="lux-menu-trigger-wrapper jsx-2068774334 tooltip absolute-fill"></div></div><div class="jsx-2068774334 head flex-start"><div class="jsx-3830091536 avatar-wrapper small"><div style="background-image:url(&quot;https://cdn.lu.ma/cdn-cgi/image/format=auto,fit=cover,dpr=2,anim=false,background=white,quality=75,width=18,height=18/avatars-default/avatar_10.png&quot;)" class="jsx-3830091536 avatar"><div style="transform:scale(0)" class="jsx-1d284b39ba128971 online-indicator-wrapper animated"><div style="background-color:var(--orange)" class="jsx-1d284b39ba128971 online-indicator"></div></div></div></div><div class="lux-menu-trigger-wrapper jsx-2068774334 tooltip absolute-fill"></div></div><div class="jsx-2068774334 head flex-start"><div class="jsx-3830091536 avatar-wrapper small"><div style="background-image:url(&quot;https://cdn.lu.ma/cdn-cgi/image/format=auto,fit=cover,dpr=2,anim=false,background=white,quality=75,width=18,height=18/avatars-default/avatar_43.png&quot;)" class="jsx-3830091536 avatar"><div style="transform:scale(0)" class="jsx-1d284b39ba128971 online-indicator-wrapper animated"><div style="background-color:var(--orange)" class="jsx-1d284b39ba128971 online-indicator"></div></div></div></div><div class="lux-menu-trigger-wrapper jsx-2068774334 tooltip absolute-fill"></div></div><div class="lux-menu-trigger-wrapper jsx-2068774334 head flex-center-center text-secondary-alpha fw-medium remaining-count">+48</div></div></div></div></div></div>
+
+короче, как ты видишь, вот эта карточка ивента, у нее дивка с рулью "Button".  
+при этом там есть дальше также тег "a". 
+
+в котором как раз таки у нас есть ссылки на наши ивенты. Так вот при клике получается либо на всю кнопку, либо на ссылку, 
+либо на целиком карту враппер мы в общем-то открываем поп-ап.  оставляю сейчас список классов, которые навешаны на блоке внутри этого попапа:
+
+class="lux-overlay panel"
+class="lux-modal panel"
+class="jsx-570d5041c1d097d8 event-panel flex-column gap-4 lux-panel"
+
+далее внутри попапа поиск вот этой вот кнопки.
+<div class="jsx-5b96bbb25927e633 cta-wrapper"><div class="jsx-5b96bbb25927e633 cta flex-center gap-2 mb-1"><button class="btn lux-button flex-center medium primary solid variant-color-primary full-width no-icon" type="button"><div class="label">Регистрация в один клик</div></button></div><div class="lux-collapse reg-card-footer" inert="" style="overflow: hidden; filter: opacity(0); height: 0px;"></div><div class="lux-collapse reg-card-footer" inert="" style="overflow: hidden; filter: opacity(0); height: 0px;"><div class="footer-content text-tinted"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><path fill="currentColor" d="M63.984 40.75 40 55.25l-24-14.5L40 0zM40 59.906l-24-14.5L40 80l24-34.594z"></path></svg><div>Вам будет предложено подтвердить владение токеном с помощью вашего кошелька.</div></div></div></div>
+ как видишь, у нас есть довольно-таки статичная информация, которая называется CTA в раппе, типа call to action. 
+
+
+текст кнопки может быть таким: 
+One-Click Apply - Подать заявку в один клик
+One-Click RSVP - Регистрация  в один клик
+
+далее после того как бот нажмет кнопку нам надо получить список гостей 
+там есть button type="button" class="jsx-e3338a5f18b9fdd0 guests-button button-reset"
+если ее ткнуть откроется еще один поп ап со списком гостей
+class="lux-modal menu-70dquv8wcan lux-alert"
+class="jsx-1366432064 lux-modal-body overflow-auto"
+class="lux-alert-top pt-05"
+class="flex-start spread"
+ вот этот вот по сути попап, я не уверен до конца, что является довольно статичным, чтобы его вот так вот парсить, но можно попробовать конечно. 
+далее идет ряд div блоков с типичными фразами верстки типа flex и тд, поэтому легче всего просто искать теги "a" наподобие href="/user/usr-aighk55dLciWnHQ" то есть мы можем же юзать href="/user/ как проверку?   то есть, по сути, когда мы находим сам popup, то внутри него можно просто игнорировать все, кроме того, что является тегом "a". 
+
+ кстати говоря, если у человека есть ссылки на социальные сети, то они автоматически в разметке появляются, так что их даже не нужно будет заходить на какой-то дополнительный там страницу конкретного пользователя.   я тебе сейчас вот пример показываю именно блока юзера. Как видишь тут ссылка на твиттер имеется. 
+<div class="flex-center gap-2 spread"><a class="" href="/user/usr-IsWBpAnUFGlJUqS"><div class="flex-center min-width-0 text-primary gap-25"><div class="avatar-wrapper flex"><img class="relative circle" width="32" height="32" alt="Фотография профиля Adeola Lasisi " title="Фотография профиля Adeola Lasisi " fetchpriority="auto" loading="lazy" src="https://cdn.lu.ma/cdn-cgi/image/format=auto,fit=cover,dpr=2,anim=false,background=white,quality=75,width=32,height=32/avatars-default/avatar_1.png" style="border: 0.5px solid var(--divider-color);"></div><div class="flex-center gap-1 min-width-0"><div class="name text-ellipses" title="Adeola Lasisi ">Adeola Lasisi </div></div></div></a><div class="jsx-9577fbf62c568ee1 social-links flex-center regular"><div class="jsx-c1476e59a1b29a96 social-link regular"><a href="https://x.com/adeolalasisi6" class="lux-menu-trigger-wrapper" target="_blank" rel="nofollow noopener"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" class="jsx-c1476e59a1b29a96"><path fill="currentColor" d="m108.783 107.652-38.24-55.748.066.053L105.087 12H93.565L65.478 44.522 43.174 12H12.957l35.7 52.048-.005-.005L11 107.653h11.522L53.748 71.47l24.817 36.182zM38.609 20.696l53.652 78.26h-9.13l-53.696-78.26z"></path></svg></a></div></div></div>
+ поэтому наша задача будет, тогда сразу открываем попап и ищем все юзеры и под каждого юзера мы получаем как ссылку на твиттер, ну и на все имеющиеся социальные сети, которые могут быть, так и никнейм и ссылку на его лума профиль. 
+
+ итак, в итоге полный путь нашего бота в этом workflow таков: он заходит на страницу, ищет список ивентов, открывает ивент через pop-up, внутри этого pop-up находит кнопку "зарегистрироваться на ивент". Если эта кнопка соответствует, что в ивент можно вступить без одобрения, то он на нее кликает и дальше ищет кнопку, которая открывает pop-up с юзерами. Дальше открывает список юзеров и парсит их имена, ссылки на страницу в Loom и прикрепленные social links, если они есть. 
+
+как только бот получает ссылку на ивент он сохраняет в бд этот ивент со статусом DISCOVERED
+ я предлагаю внедрить в наш процесс state-машину. 
+enum EventParseStatus {
+  DISCOVERED,      // нашли карточку, сохранили ссылку
+  META_PARSED,     // открыли popup, собрали title/date/location/cta
+  JOINED,          // успешно нажали One-Click RSVP / Apply
+  GUESTS_PARSED,   // собрали гостей
+  FAILED,          // что-то пошло не так
+}
+
+миграцию я применил но теперь ее надо обновить 
+и в ивент добавить event {
+  id
+  url (unique)
+  status
+  metaParsedAt
+  guestsParsedAt
+  lastAttemptAt
+}
+
+ важно: нужно поставить задержки, чтобы он не скакал по всем этим карточкам очень быстро. 
+
+ давай короче в данный момент сделаем бота, который имеет флаг типа parseGuests=boolean  чтобы можно было запускать скрапера с настройкой типа хотим ли мы сейчас запарсить юзеров или не хотим. 
+if (
+  parseGuests === true &&
+  ctaText.includes("One-Click")
+) {
+  clickCTA()
+  status = JOINED
+и далее поиск поп апа с гостями
+}
+
+юзеры {
+  lumaProfileUrl,
+  name,
+  avatar,
+  socials[] // вытаскиваешь из соседних <a target="_blank">
+}
+
+защита: await sleep(random(800, 1600)) // между кликами
+await sleep(random(1200, 2500)) // между ивентами
+
+вот это с фронта управлять для запуска:  parseGuests: boolean
+ короче, создай пока что отдельную функцию, которая пока что будет пустой, которая будет до момента проверки, нужно ли парсить гостей, запускаться. Функция parseMetadata 
+ это будет функция, которая занимается парсингом картинки, тайтла, даты, адреса, описания организатора. Я потом тебе предоставлю разметку, которая соответствует этой функции. И это будет как раз таки функция, которая будет выставлять статус, что типа мета парсед  
+
+ а пока что, пускай она  проставляет статус meta parsed если найдет картинку аватарку ивента и добавит ее в БД(если картинки ивента нет в БД полях - добавь в миграцию) 
+вот внутри поп апа с ивентом есть такая разметка для пикчи
+<div class="jsx-2eeccf9f0f2a1501 cover-image-wrapper rounded-card flex-center-center"><div class="jsx-bf40f23d3e10e809 img-aspect-ratio cover-image rectangle" style="background-color: var(--opacity-light); padding-bottom: 100%;"><img alt="Обложка для Talent Hub Friday's | Learn How to Launch Your AI Agent" fetchpriority="auto" loading="eager" sizes="(max-width: 820px) 280px, (max-width: 1000px) 300px, 400px" class="jsx-bf40f23d3e10e809 " srcset="https://images.lumacdn.com/cdn-cgi/image/format=auto,fit=cover,dpr=1,background=white,quality=75,width=280,height=280/event-covers/6j/30d3081e-273b-4315-b1ff-1ca8144fde34.png 280w, https://images.lumacdn.com/cdn-cgi/image/format=auto,fit=cover,dpr=2,background=white,quality=75,width=280,height=280/event-covers/6j/30d3081e-273b-4315-b1ff-1ca8144fde34.png 560w, https://images.lumacdn.com/cdn-cgi/image/format=auto,fit=cover,dpr=1,background=white,quality=75,width=300,height=300/event-covers/6j/30d3081e-273b-4315-b1ff-1ca8144fde34.png 300w, https://images.lumacdn.com/cdn-cgi/image/format=auto,fit=cover,dpr=2,background=white,quality=75,width=300,height=300/event-covers/6j/30d3081e-273b-4315-b1ff-1ca8144fde34.png 600w, https://images.lumacdn.com/cdn-cgi/image/format=auto,fit=cover,dpr=1,background=white,quality=75,width=400,height=400/event-covers/6j/30d3081e-273b-4315-b1ff-1ca8144fde34.png 400w, https://images.lumacdn.com/cdn-cgi/image/format=auto,fit=cover,dpr=2,background=white,quality=75,width=400,height=400/event-covers/6j/30d3081e-273b-4315-b1ff-1ca8144fde34.png 800w" src="https://images.lumacdn.com/cdn-cgi/image/format=auto,fit=cover,dpr=2,background=white,quality=75,width=400,height=400/event-covers/6j/30d3081e-273b-4315-b1ff-1ca8144fde34.png"></div></div>
