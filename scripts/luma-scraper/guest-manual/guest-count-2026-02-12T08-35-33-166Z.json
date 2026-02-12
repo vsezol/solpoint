@@ -1,0 +1,34 @@
+{
+  "run_at": "2026-02-12T08:35:33.159Z",
+  "summary": {
+    "events_count": 4,
+    "guests_by_counter": 91,
+    "guests_by_objects": 30
+  },
+  "events": [
+    {
+      "api_id": "evt-nLWuu8HSjLupkGz",
+      "name": "Co-Working Friday: Munich",
+      "guest_count": 0,
+      "featured_guests_count": 0
+    },
+    {
+      "api_id": "evt-8IjKuMuMuR2c3pJ",
+      "name": "kabhi cursor kabhi claude (showcase)",
+      "guest_count": 11,
+      "featured_guests_count": 10
+    },
+    {
+      "api_id": "evt-SE3tNjwbNcltG95",
+      "name": "Solana Mobile x AI Workshop {LAGOS}",
+      "guest_count": 26,
+      "featured_guests_count": 10
+    },
+    {
+      "api_id": "evt-2MH2sYNkaGtfOi3",
+      "name": "Solana x AI Workshop, FUTO",
+      "guest_count": 54,
+      "featured_guests_count": 10
+    }
+  ]
+}
