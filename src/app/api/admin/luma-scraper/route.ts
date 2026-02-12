@@ -95,6 +95,7 @@ export async function POST(request: NextRequest) {
   if (scraperId === "own") {
     const calendar = (body.calendarSlug as string) || (body.calendar as string) || "superteam";
     const maxEvents = typeof body.maxEvents === "number" ? body.maxEvents : 30;
+    const parseGuests = body.parseGuests === true;
     const scriptPath = path.join(process.cwd(), "scripts", "luma-scraper", "run.mjs");
     try {
       const result = spawnSync(
@@ -105,7 +106,12 @@ export async function POST(request: NextRequest) {
           encoding: "utf-8",
           timeout: 5 * 60 * 1000,
           maxBuffer: 10 * 1024 * 1024,
-          env: { ...process.env, LUMA_CALENDAR: calendar, LUMA_MAX_EVENTS: String(maxEvents) },
+          env: {
+            ...process.env,
+            LUMA_CALENDAR: calendar,
+            LUMA_MAX_EVENTS: String(maxEvents),
+            LUMA_PARSE_GUESTS: parseGuests ? "1" : "0",
+          },
         }
       );
       const stdout = result.stdout?.trim() || "";
