@@ -324,7 +324,7 @@ async function parseMetadata(page, eventUrl, supabase) {
 
     const raw = await page
       .evaluate(
-        (aboutLabels, venueLabels, hostLabels) => {
+        ({ aboutLabels, venueLabels, hostLabels }) => {
           const getText = (el) => (el ? (el.textContent || "").trim() : "");
           const data = {
             title: null,
@@ -426,11 +426,13 @@ async function parseMetadata(page, eventUrl, supabase) {
 
           return data;
         },
-        ABOUT_LABELS,
-        VENUE_LABELS,
-        HOST_LABELS
+        { aboutLabels: ABOUT_LABELS, venueLabels: VENUE_LABELS, hostLabels: HOST_LABELS }
       )
-      .catch(() => null);
+      .catch((err) => {
+        log("  parseMetadata evaluate error:", err?.message ?? String(err));
+        if (err?.stack) process.stderr.write(`[luma-scraper] ${err.stack}\n`);
+        return null;
+      });
 
     if (!raw) {
       metaParseErrors._parse = "evaluate_failed";
