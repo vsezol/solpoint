@@ -97,6 +97,9 @@ export async function POST(request: NextRequest) {
     const maxEvents = typeof body.maxEvents === "number" ? body.maxEvents : 30;
     const parseGuests = body.parseGuests === true;
     const scriptPath = path.join(process.cwd(), "scripts", "luma-scraper", "run.mjs");
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+    const supabaseServiceKey =
+      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_API_KEY;
     try {
       const result = spawnSync(
         process.execPath,
@@ -111,6 +114,9 @@ export async function POST(request: NextRequest) {
             LUMA_CALENDAR: calendar,
             LUMA_MAX_EVENTS: String(maxEvents),
             LUMA_PARSE_GUESTS: parseGuests ? "1" : "0",
+            NEXT_PUBLIC_SUPABASE_URL: supabaseUrl ?? "",
+            SUPABASE_URL: supabaseUrl ?? "",
+            SUPABASE_SERVICE_ROLE_KEY: supabaseServiceKey ?? "",
           },
         }
       );

@@ -51,7 +51,7 @@ function getArgs() {
 
 async function getSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_API_KEY;
   if (!url || !key) return null;
   try {
     const { createClient } = await import("@supabase/supabase-js");
@@ -64,81 +64,103 @@ async function getSupabase() {
 
 async function saveEventDiscovered(supabase, url, calendarSlug) {
   if (!supabase) return;
-  try {
-    await supabase.from("luma_events").upsert(
-      {
-        url,
-        calendar_slug: calendarSlug,
-        status: "DISCOVERED",
-        last_attempt_at: new Date().toISOString(),
-      },
-      { onConflict: "url" }
-    );
-  } catch (e) {
-    log("DB save DISCOVERED error:", e.message);
+  const { error } = await supabase.from("luma_events").upsert(
+    {
+      url,
+      calendar_slug: calendarSlug,
+      status: "DISCOVERED",
+      last_attempt_at: new Date().toISOString(),
+    },
+    { onConflict: "url" }
+  );
+  if (error) {
+    log("DB DISCOVERED error for", url, ":", error.message, error.details || "");
+  } else {
+    log("DB DISCOVERED ok for", url);
   }
 }
 
 async function updateEventMeta(supabase, url, payload) {
   if (!supabase) return;
-  try {
-    await supabase.from("luma_events").update(payload).eq("url", url);
-  } catch (e) {
-    log("DB update META error:", e.message);
+  const { error } = await supabase.from("luma_events").update(payload).eq("url", url);
+  if (error) {
+    log("DB META error for", url, ":", error.message, error.details || "");
+  } else {
+    log("DB META ok for", url);
   }
 }
 
 async function updateEventJoined(supabase, url) {
   if (!supabase) return;
-  try {
-    await supabase.from("luma_events").update({ status: "JOINED", last_attempt_at: new Date().toISOString() }).eq("url", url);
-  } catch (e) {
-    log("DB update JOINED error:", e.message);
+  const { error } = await supabase.from("luma_events").update({ status: "JOINED", last_attempt_at: new Date().toISOString() }).eq("url", url);
+  if (error) {
+    log("DB JOINED error for", url, ":", error.message);
+  } else {
+    log("DB JOINED ok for", url);
   }
 }
 
 async function updateEventGuestsParsed(supabase, url) {
   if (!supabase) return;
-  try {
-    await supabase
-      .from("luma_events")
-      .update({ status: "GUESTS_PARSED", guests_parsed_at: new Date().toISOString(), last_attempt_at: new Date().toISOString() })
-      .eq("url", url);
-  } catch (e) {
-    log("DB update GUESTS_PARSED error:", e.message);
+  const { error } = await supabase
+    .from("luma_events")
+    .update({ status: "GUESTS_PARSED", guests_parsed_at: new Date().toISOString(), last_attempt_at: new Date().toISOString() })
+    .eq("url", url);
+  if (error) {
+    log("DB GUESTS_PARSED error for", url, ":", error.message);
+  } else {
+    log("DB GUESTS_PARSED ok for", url);
   }
 }
 
 async function upsertGuests(supabase, eventUrl, guests) {
   if (!supabase || !guests.length) return;
-  try {
-    const { data: eventRow } = await supabase.from("luma_events").select("id").eq("url", eventUrl).single();
-    if (!eventRow) return;
-    const eventId = eventRow.id;
-    const origin = "https://luma.com";
-    for (const g of guests) {
-      const profileUrl = g.lumaProfileUrl.startsWith("http") ? g.lumaProfileUrl : origin + (g.lumaProfileUrl.startsWith("/") ? g.lumaProfileUrl : "/" + g.lumaProfileUrl);
-      await supabase.from("luma_users").upsert(
-        {
-          luma_profile_url: profileUrl,
-          name: g.name || null,
-          avatar: g.avatar || null,
-          social_links: g.socials || {},
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "luma_profile_url" }
+  const { data: eventRow, error: eventErr } = await supabase.from("luma_events").select("id").eq("url", eventUrl).single();
+  if (eventErr) {
+    log("DB guests: event lookup error for", eventUrl, ":", eventErr.message);
+    return;
+  }
+  if (!eventRow) {
+    log("DB guests: event not found for", eventUrl);
+    return;
+  }
+  const eventId = eventRow.id;
+  log("DB guests: upserting", guests.length, "users for event", eventUrl);
+  const origin = "https://luma.com";
+  let ok = 0;
+  let errCount = 0;
+  for (const g of guests) {
+    const profileUrl = g.lumaProfileUrl.startsWith("http") ? g.lumaProfileUrl : origin + (g.lumaProfileUrl.startsWith("/") ? g.lumaProfileUrl : "/" + g.lumaProfileUrl);
+    const { error: uErr } = await supabase.from("luma_users").upsert(
+      {
+        luma_profile_url: profileUrl,
+        name: g.name || null,
+        avatar: g.avatar || null,
+        social_links: g.socials || {},
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "luma_profile_url" }
+    );
+    if (uErr) {
+      errCount++;
+      if (errCount <= 2) log("DB guests: user upsert error", profileUrl, uErr.message);
+      continue;
+    }
+    const { data: userRow } = await supabase.from("luma_users").select("id").eq("luma_profile_url", profileUrl).single();
+    if (userRow) {
+      const { error: aErr } = await supabase.from("luma_event_attendees").upsert(
+        { event_id: eventId, user_id: userRow.id, scraped_at: new Date().toISOString() },
+        { onConflict: "event_id,user_id" }
       );
-      const { data: userRow } = await supabase.from("luma_users").select("id").eq("luma_profile_url", profileUrl).single();
-      if (userRow) {
-        await supabase.from("luma_event_attendees").upsert(
-          { event_id: eventId, user_id: userRow.id, scraped_at: new Date().toISOString() },
-          { onConflict: "event_id,user_id" }
-        );
+      if (aErr) {
+        if (errCount <= 2) log("DB guests: attendee upsert error", aErr.message);
+        errCount++;
+      } else {
+        ok++;
       }
     }
-  } catch (e) {
-    log("DB upsert guests error:", e.message);
   }
+  log("DB guests: done.", ok, "attendees linked.", errCount ? errCount + " errors" : "");
 }
 
 /**
@@ -259,6 +281,10 @@ async function main() {
   log("Auth state loaded from", AUTH_STATE_PATH);
 
   fs.mkdirSync(RESULTS_DIR, { recursive: true });
+  log("ENV check: NEXT_PUBLIC_SUPABASE_URL=", process.env.NEXT_PUBLIC_SUPABASE_URL ? "set" : "empty");
+  log("ENV check: SUPABASE_URL=", process.env.SUPABASE_URL ? "set" : "empty");
+  log("ENV check: SUPABASE_SERVICE_ROLE_KEY=", process.env.SUPABASE_SERVICE_ROLE_KEY ? "set" : "empty");
+  log("ENV check: SUPABASE_API_KEY=", process.env.SUPABASE_API_KEY ? "set" : "empty");
   const supabase = await getSupabase();
   if (supabase) log("DB: writing events/users/attendees");
   else log("DB: skip (no SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY)");
