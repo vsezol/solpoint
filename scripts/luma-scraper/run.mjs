@@ -1,7 +1,9 @@
 /**
  * Luma scraper (own): popup-based flow. Opens calendar, finds cards in .timeline .card-wrapper,
- * clicks each card to open event popup, parses metadata (cover image → META_PARSED), optionally
- * clicks One-Click CTA and parses guests. Writes to DB when SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY set.
+ * clicks each card to open event popup, parses full metadata (title, date/time, location, description,
+ * organizers, cover image). Status META_PARSED only when all required fields parsed; otherwise
+ * meta_parse_errors JSONB logs what failed. Optionally clicks One-Click CTA and parses guests.
+ * Writes to DB when SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY set.
  *
  * Run: npm run luma-scraper:run
  * Or: node scripts/luma-scraper/run.mjs [calendarSlug] [maxEvents]
@@ -32,6 +34,8 @@ const CTA_CLICK_PHRASES = [
   "Подать заявку в один клик",
 ];
 const CTA_SKIP_PHRASES = ["Запросить участие", "Request participation"];
+// Already registered — don't click CTA, but still open guests list
+const CTA_ALREADY_REGISTERED_PHRASES = ["My Ticket", "Мой билет"];
 
 function log(...args) {
   const msg = args.map((a) => (typeof a === "object" ? JSON.stringify(a) : String(a))).join(" ");
@@ -88,6 +92,31 @@ async function updateEventMeta(supabase, url, payload) {
   } else {
     log("DB META ok for", url);
   }
+}
+
+/** Set META_PARSED only when meta_parse_errors is empty (all required fields parsed). */
+function buildMetaPayload(meta, metaParseErrors) {
+  const payload = {
+    title: meta.title || null,
+    description: meta.description || null,
+    start_at: meta.start_at || null,
+    end_at: meta.end_at || null,
+    location: meta.location || null,
+    address: meta.address || null,
+    location_lat: meta.location_lat ?? null,
+    location_lng: meta.location_lng ?? null,
+    location_place_id: meta.location_place_id || null,
+    location_source: meta.location_source || null,
+    image_url: meta.imageUrl || null,
+    meta_parse_errors: metaParseErrors || {},
+    last_attempt_at: new Date().toISOString(),
+  };
+  const allParsed = Object.keys(metaParseErrors || {}).length === 0;
+  if (allParsed) {
+    payload.status = "META_PARSED";
+    payload.meta_parsed_at = new Date().toISOString();
+  }
+  return payload;
 }
 
 async function updateEventJoined(supabase, url) {
@@ -163,36 +192,300 @@ async function upsertGuests(supabase, eventUrl, guests) {
   log("DB guests: done.", ok, "attendees linked.", errCount ? errCount + " errors" : "");
 }
 
+async function upsertOrganizers(supabase, eventUrl, organizers) {
+  if (!supabase || !organizers.length) return;
+  const { data: eventRow, error: eventErr } = await supabase.from("luma_events").select("id").eq("url", eventUrl).single();
+  if (eventErr) {
+    log("DB organizers: event lookup error for", eventUrl, ":", eventErr.message);
+    return;
+  }
+  if (!eventRow) {
+    log("DB organizers: event not found for", eventUrl);
+    return;
+  }
+  const eventId = eventRow.id;
+  log("DB organizers: upserting", organizers.length, "hosts for event", eventUrl);
+  const origin = "https://luma.com";
+  let ok = 0;
+  for (const o of organizers) {
+    const profileUrl = o.lumaProfileUrl.startsWith("http") ? o.lumaProfileUrl : origin + (o.lumaProfileUrl.startsWith("/") ? o.lumaProfileUrl : "/" + o.lumaProfileUrl);
+    const { error: uErr } = await supabase.from("luma_users").upsert(
+      {
+        luma_profile_url: profileUrl,
+        name: o.name || null,
+        avatar: o.avatar || null,
+        social_links: o.socials || {},
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "luma_profile_url" }
+    );
+    if (uErr) {
+      log("DB organizers: user upsert error", profileUrl, uErr.message);
+      continue;
+    }
+    const { data: userRow } = await supabase.from("luma_users").select("id").eq("luma_profile_url", profileUrl).single();
+    if (userRow) {
+      const { error: oErr } = await supabase.from("luma_event_organizers").upsert(
+        { event_id: eventId, user_id: userRow.id, scraped_at: new Date().toISOString() },
+        { onConflict: "event_id,user_id" }
+      );
+      if (!oErr) ok++;
+    }
+  }
+  log("DB organizers: done.", ok, "linked.");
+}
+
+/** Try to parse Luma date + time strings into ISO timestamptz. Returns { start_at, end_at } or nulls. */
+function parseLumaDateTime(dateText, timeDesc) {
+  let start_at = null;
+  let end_at = null;
+  if (!dateText || !timeDesc) return { start_at, end_at };
+  const tzMatch = timeDesc.match(/([A-Z]{3,4}[+-]\d+|[A-Z]{2,3}\s*[+-]\d+)/i);
+  const timezone = tzMatch ? tzMatch[1].replace(/\s/g, "") : "";
+  const rangeMatch = timeDesc.match(/(\d{1,2}:\d{2})\s*[-–]\s*(\d{1,2}:\d{2})/);
+  const startTime = rangeMatch ? rangeMatch[1] : null;
+  const endTime = rangeMatch ? rangeMatch[2] : null;
+  const datePart = dateText.replace(/\s+/g, " ").trim();
+  if (!datePart || !startTime) return { start_at, end_at };
+  try {
+    const d = new Date(datePart + " " + startTime + " " + timezone);
+    if (!Number.isNaN(d.getTime())) start_at = d.toISOString();
+    if (endTime) {
+      const dEnd = new Date(datePart + " " + endTime + " " + timezone);
+      if (!Number.isNaN(dEnd.getTime())) end_at = dEnd.toISOString();
+    }
+  } catch {
+    // ignore parse errors, return nulls
+  }
+  return { start_at, end_at };
+}
+
+/** Extract lat, lng, place_id from iframe src or gmaps link. Returns { lat, lng, place_id, source }. */
+function parseLocationFromIframeOrLink(iframeSrc, gmapsHref) {
+  const result = { lat: null, lng: null, place_id: null, source: null };
+  if (iframeSrc) {
+    const centerMatch = iframeSrc.match(/center=([^&]+)/);
+    const placeMatch = iframeSrc.match(/place_id%3D([^&]+)/) || iframeSrc.match(/place_id=([^&]+)/);
+    if (centerMatch) {
+      const parts = decodeURIComponent(centerMatch[1]).split(",").map(Number);
+      if (parts.length >= 2 && !Number.isNaN(parts[0]) && !Number.isNaN(parts[1])) {
+        result.lat = parts[0];
+        result.lng = parts[1];
+        result.source = "embedded_map";
+      }
+    }
+    if (placeMatch) result.place_id = decodeURIComponent(placeMatch[1]);
+  }
+  if ((result.lat == null || result.lng == null) && gmapsHref) {
+    const queryMatch = gmapsHref.match(/query=([^&]+)/);
+    const placeMatch = gmapsHref.match(/query_place_id=([^&]+)/);
+    if (placeMatch) result.place_id = decodeURIComponent(placeMatch[1]);
+    if (queryMatch) {
+      const decoded = decodeURIComponent(queryMatch[1]);
+      const coords = decoded.split(",").map((s) => Number(s.trim()));
+      if (coords.length >= 2 && !Number.isNaN(coords[0]) && !Number.isNaN(coords[1])) {
+        result.lat = coords[0];
+        result.lng = coords[1];
+        if (!result.source) result.source = "gmaps_link";
+      }
+    }
+  }
+  return result;
+}
+
+const ABOUT_LABELS = ["О событии", "About Event", "About"];
+const VENUE_LABELS = ["Место проведения", "Venue", "Location", "Place"];
+const HOST_LABELS = ["Организатор", "Host", "Organizer"];
+
 /**
- * Parse metadata from event popup. For now: find cover image; later add title, date, location, etc.
- * Returns { imageUrl } and sets status META_PARSED in DB when image found.
+ * Parse full metadata from event popup: title, image, date/time, location, description, organizers.
+ * Returns { meta, meta_parse_errors, organizers }. META_PARSED is set only when meta_parse_errors is empty.
  */
 async function parseMetadata(page, eventUrl, supabase) {
-  const result = { imageUrl: null };
+  const metaParseErrors = {};
+  const result = {
+    title: null,
+    imageUrl: null,
+    start_at: null,
+    end_at: null,
+    description: null,
+    location: null,
+    address: null,
+    location_lat: null,
+    location_lng: null,
+    location_place_id: null,
+    location_source: null,
+    organizers: [],
+  };
+
   try {
     const panel = page.locator(".lux-overlay.panel .event-panel, .event-panel.flex-column, .cover-image-wrapper").first();
     await panel.waitFor({ state: "visible", timeout: 8000 }).catch(() => null);
-    const imageUrl = await page
-      .evaluate(() => {
-        const wrap = document.querySelector(".cover-image-wrapper img");
-        return wrap ? wrap.getAttribute("src") || wrap.src : null;
-      })
+
+    const raw = await page
+      .evaluate(
+        (aboutLabels, venueLabels, hostLabels) => {
+          const getText = (el) => (el ? (el.textContent || "").trim() : "");
+          const data = {
+            title: null,
+            imageUrl: null,
+            dateText: null,
+            timeDesc: null,
+            locationName: null,
+            locationAddress: null,
+            iframeSrc: null,
+            gmapsHref: null,
+            descriptionParagraphs: [],
+            organizers: [],
+          };
+
+          const titleEl = document.querySelector(".top-wrapper .title, .top-card-content h1.title, h1.title.text-primary");
+          if (titleEl) data.title = getText(titleEl);
+
+          const imgEl = document.querySelector(".cover-image-wrapper img");
+          if (imgEl) data.imageUrl = imgEl.getAttribute("src") || imgEl.src || null;
+
+          const iconRows = document.querySelectorAll(".icon-row");
+          for (const row of iconRows) {
+            const calendarCard = row.querySelector(".calendar-card");
+            if (calendarCard) {
+              const titleEl = row.querySelector(".title");
+              const descEl = row.querySelector(".desc");
+              if (titleEl) data.dateText = getText(titleEl);
+              if (descEl) data.timeDesc = getText(descEl);
+              break;
+            }
+          }
+
+          const locationRow = document.querySelector(".location-row");
+          if (locationRow) {
+            const titleEl = locationRow.querySelector(".title");
+            const descEl = locationRow.querySelector(".desc");
+            if (titleEl) data.locationName = getText(titleEl.querySelector(".text-ellipses") || titleEl);
+            if (descEl) data.locationAddress = getText(descEl);
+          }
+
+          const contentCards = document.querySelectorAll(".content-card");
+          for (const card of contentCards) {
+            const labelEl = card.querySelector(".card-title .title-label");
+            const label = labelEl ? getText(labelEl) : "";
+            if (venueLabels.some((l) => label.includes(l))) {
+              const content = card.querySelector(".content");
+              if (content) {
+                const fw = content.querySelector(".fw-medium");
+                const tinted = content.querySelector(".text-tinted.fs-sm, .fs-sm.text-tinted");
+                if (fw && !data.locationName) data.locationName = getText(fw);
+                if (tinted) data.locationAddress = getText(tinted);
+                const iframe = content.querySelector(".gmaps iframe[src], iframe[src*='google.com/maps']");
+                if (iframe) data.iframeSrc = iframe.getAttribute("src") || null;
+                const gmapsLink = content.querySelector(".gmaps a[href*='google.com/maps']");
+                if (gmapsLink) data.gmapsHref = gmapsLink.getAttribute("href") || null;
+              }
+            }
+            if (aboutLabels.some((l) => label.includes(l))) {
+              const spark = card.querySelector(".spark-content");
+              const container = spark || card.querySelector(".content");
+              if (container) {
+                const paras = container.querySelectorAll("p");
+                data.descriptionParagraphs = Array.from(paras).map((p) => getText(p)).filter(Boolean);
+              }
+            }
+            if (hostLabels.some((l) => label.includes(l))) {
+              const hosts = card.querySelectorAll(".hosts a[href^='/user/'], a[href^='/user/']");
+              const seen = new Set();
+              for (const a of hosts) {
+                const href = a.getAttribute("href");
+                if (!href || seen.has(href)) continue;
+                seen.add(href);
+                const row = a.closest(".host-row") || a.closest(".flex-center") || a.parentElement;
+                let name = "";
+                const nameEl = a.querySelector(".fw-medium") || a.querySelector("[class*='name']") || a;
+                if (nameEl) name = getText(nameEl);
+                let avatar = "";
+                const img = (row || a).querySelector(".avatar, img.avatar");
+                if (img) {
+                  const bg = img.style?.backgroundImage || (typeof getComputedStyle !== "undefined" ? getComputedStyle(img).backgroundImage : "");
+                  if (bg) avatar = bg.replace(/url\(["']?([^"')]+)["']?\)/, "$1").trim();
+                  else if (img.src) avatar = img.src;
+                }
+                const socials = {};
+                const socialContainer = row?.querySelector(".social-links") || row;
+                if (socialContainer) {
+                  const links = socialContainer.querySelectorAll('a[target="_blank"]');
+                  for (const s of links) {
+                    const u = s.getAttribute("href");
+                    if (u && (u.includes("twitter.com") || u.includes("x.com"))) socials.twitter = u;
+                    else if (u && u.includes("linkedin.com")) socials.linkedin = u;
+                    else if (u) socials.website = u;
+                  }
+                }
+                data.organizers.push({ href, name, avatar, socials });
+              }
+            }
+          }
+
+          return data;
+        },
+        ABOUT_LABELS,
+        VENUE_LABELS,
+        HOST_LABELS
+      )
       .catch(() => null);
-    if (imageUrl) {
-      result.imageUrl = imageUrl;
+
+    if (!raw) {
+      metaParseErrors._parse = "evaluate_failed";
       if (supabase) {
-        await updateEventMeta(supabase, eventUrl, {
-          status: "META_PARSED",
-          image_url: imageUrl,
-          meta_parsed_at: new Date().toISOString(),
-          last_attempt_at: new Date().toISOString(),
-        });
+        await updateEventMeta(supabase, eventUrl, buildMetaPayload(result, metaParseErrors));
       }
+      return { ...result, metaParseErrors, organizers: [] };
+    }
+
+    result.title = raw.title || null;
+    result.imageUrl = raw.imageUrl || null;
+    if (!result.title) metaParseErrors.title = "not_found";
+    if (!result.imageUrl) metaParseErrors.image_url = "not_found";
+
+    const { start_at, end_at } = parseLumaDateTime(raw.dateText, raw.timeDesc);
+    result.start_at = start_at;
+    result.end_at = end_at;
+    if (!result.start_at && (raw.dateText || raw.timeDesc)) metaParseErrors.start_at = "parse_failed";
+
+    result.location = raw.locationName || null;
+    result.address = raw.locationAddress || null;
+    if (!result.location) metaParseErrors.location = "not_found";
+    if (!result.address) metaParseErrors.address = "not_found";
+
+    const coords = parseLocationFromIframeOrLink(raw.iframeSrc, raw.gmapsHref);
+    result.location_lat = coords.lat;
+    result.location_lng = coords.lng;
+    result.location_place_id = coords.place_id || null;
+    result.location_source = coords.source || null;
+
+    result.description = raw.descriptionParagraphs && raw.descriptionParagraphs.length ? raw.descriptionParagraphs.join("\n\n") : null;
+    if (!result.description && raw.descriptionParagraphs && raw.descriptionParagraphs.length === 0) metaParseErrors.description = "not_found";
+
+    const origin = "https://luma.com";
+    result.organizers = (raw.organizers || []).map((o) => ({
+      lumaProfileUrl: o.href.startsWith("http") ? o.href : origin + (o.href.startsWith("/") ? o.href : "/" + o.href),
+      name: o.name || "",
+      avatar: o.avatar || "",
+      socials: o.socials || {},
+    }));
+
+    if (supabase) {
+      const payload = buildMetaPayload(result, metaParseErrors);
+      await updateEventMeta(supabase, eventUrl, payload);
+      if (result.organizers.length) await upsertOrganizers(supabase, eventUrl, result.organizers);
     }
   } catch (e) {
+    metaParseErrors._exception = e.message || String(e);
     log("  parseMetadata error:", e.message);
+    if (supabase) {
+      await updateEventMeta(supabase, eventUrl, buildMetaPayload(result, metaParseErrors));
+    }
   }
-  return result;
+
+  return { ...result, metaParseErrors, organizers: result.organizers };
 }
 
 /**
@@ -215,6 +508,11 @@ function shouldClickCta(ctaText) {
   return CTA_CLICK_PHRASES.some((p) => t.includes(p));
 }
 
+function shouldParseGuestsWithoutClick(ctaText) {
+  const t = (ctaText || "").trim();
+  return CTA_ALREADY_REGISTERED_PHRASES.some((p) => t.includes(p));
+}
+
 /**
  * Click One-Click CTA, then open guests popup and parse guests (profile url, name, avatar, socials).
  */
@@ -226,6 +524,52 @@ async function clickCtaAndParseGuests(page, eventUrl, supabase) {
   await randomDelay(...DELAY_BETWEEN_CLICKS_MS);
   if (supabase) await updateEventJoined(supabase, eventUrl);
 
+  const guestsBtn = page.locator('button.guests-button, button[class*="guests-button"]').first();
+  if (!(await guestsBtn.isVisible().catch(() => false))) return [];
+  await guestsBtn.click();
+  await randomDelay(...DELAY_BETWEEN_CLICKS_MS);
+
+  const guests = await page.evaluate((origin) => {
+    const list = [];
+    const userLinks = document.querySelectorAll('a[href^="/user/"]');
+    const seen = new Set();
+    for (const a of userLinks) {
+      const href = a.getAttribute("href");
+      if (!href || seen.has(href)) continue;
+      seen.add(href);
+      const profileUrl = href.startsWith("http") ? href : origin + (href.startsWith("/") ? href : "/" + href);
+      const row = a.closest(".flex-center.gap-2") || a.closest("[class*='spread']") || a.parentElement?.parentElement;
+      let name = "";
+      const nameEl = a.querySelector(".name") || a.querySelector("[class*='name']") || a;
+      if (nameEl) name = nameEl.textContent?.trim() || "";
+      let avatar = "";
+      const img = (row || a).querySelector("img.avatar, img[alt*='profile'], img[alt*='Фотография']");
+      if (img) avatar = img.getAttribute("src") || img.src || "";
+      const socials = {};
+      const socialContainer = row?.querySelector(".social-links, [class*='social']") || row;
+      if (socialContainer) {
+        const links = socialContainer.querySelectorAll('a[target="_blank"]');
+        for (const s of links) {
+          const u = s.getAttribute("href");
+          if (u && (u.includes("twitter.com") || u.includes("x.com"))) socials.twitter = u;
+          else if (u && u.includes("linkedin.com")) socials.linkedin = u;
+          else if (u) socials.website = u;
+        }
+      }
+      list.push({ lumaProfileUrl: profileUrl, name, avatar, socials });
+    }
+    return list;
+  }, "https://luma.com");
+
+  if (supabase) {
+    await updateEventGuestsParsed(supabase, eventUrl);
+    await upsertGuests(supabase, eventUrl, guests);
+  }
+  return guests;
+}
+
+/** Already registered (My Ticket / Мой билет): open guests list without clicking CTA. */
+async function openGuestsOnlyAndParse(page, eventUrl, supabase) {
   const guestsBtn = page.locator('button.guests-button, button[class*="guests-button"]').first();
   if (!(await guestsBtn.isVisible().catch(() => false))) return [];
   await guestsBtn.click();
@@ -353,6 +697,9 @@ async function main() {
       await popup.waitFor({ state: "visible", timeout: 10000 }).catch(() => null);
 
       const meta = await parseMetadata(page, fullUrl, supabase);
+      if (Object.keys(meta.metaParseErrors || {}).length > 0) {
+        log("  meta_parse_errors:", meta.metaParseErrors);
+      }
       const ctaText = await getCtaButtonText(page);
       log("  CTA text:", ctaText || "(none)");
 
@@ -360,13 +707,27 @@ async function main() {
       if (parseGuests && shouldClickCta(ctaText)) {
         guests = await clickCtaAndParseGuests(page, fullUrl, supabase);
         log("  guests:", guests.length);
+      } else if (parseGuests && shouldParseGuestsWithoutClick(ctaText)) {
+        guests = await openGuestsOnlyAndParse(page, fullUrl, supabase);
+        log("  guests (already registered):", guests.length);
       } else if (parseGuests) {
         log("  skip CTA (not one-click)");
       }
 
       items.push({
         url: fullUrl,
+        title: meta.title,
         imageUrl: meta.imageUrl,
+        start_at: meta.start_at,
+        end_at: meta.end_at,
+        description: meta.description ? meta.description.slice(0, 200) + (meta.description.length > 200 ? "…" : "") : null,
+        location: meta.location,
+        address: meta.address,
+        location_lat: meta.location_lat,
+        location_lng: meta.location_lng,
+        location_place_id: meta.location_place_id,
+        organizersCount: (meta.organizers || []).length,
+        meta_parse_errors: meta.metaParseErrors || {},
         ctaText: ctaText || null,
         guestsCount: guests.length,
         guests: guests.slice(0, 50),
