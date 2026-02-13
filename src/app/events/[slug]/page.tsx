@@ -4,7 +4,7 @@ import { EventBadges, Card } from "@/components/ui";
 import { EntityMembersWidget } from "@/components/entities/entity-members-widget";
 import { Calendar, MapPin, Globe, Ticket, Link as LinkIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import type { Event, User, EventMember } from "@/types";
+import type { Event, User, EventMember, ExternalUser } from "@/types";
 import Image from "next/image";
 import { EventHostCard } from "./event-host-card";
 import type { Metadata } from "next";
@@ -165,9 +165,83 @@ export default async function EventPage({ params }: EventPageProps) {
     notFound();
   }
 
-  // Опционально получаем organizer только если owner_type = 'user'
-  let organizer: User | undefined;
-  if (eventData.owner_type === "user" && eventData.owner_id) {
+  // Organizers from event_organizers (internal = profiles, external = luma_users)
+  let organizersInternal: User[] = [];
+  let organizersExternal: ExternalUser[] = [];
+
+  const { data: organizerRows } = await supabase
+    .from("event_organizers")
+    .select(`
+      profile_id,
+      luma_user_id,
+      position,
+      profile:profiles!event_organizers_profile_id_fkey(
+        id,
+        twitter_id,
+        twitter_handle,
+        twitter_name,
+        avatar_url,
+        bio,
+        country,
+        country_code,
+        city,
+        role,
+        is_open_to_meet,
+        subscription_tier,
+        is_verified,
+        wallet_address,
+        socials,
+        last_active_at,
+        created_at,
+        updated_at,
+        countries!fk_profiles_country_code ( name )
+      ),
+      luma_user:luma_users!event_organizers_luma_user_id_fkey(
+        id,
+        luma_profile_url,
+        name,
+        avatar,
+        social_links
+      )
+    `)
+    .eq("event_id", eventData.id)
+    .order("position", { ascending: true });
+
+  if (organizerRows?.length) {
+    for (const row of organizerRows as Array<{
+      profile_id: string | null;
+      luma_user_id: string | null;
+      profile: unknown;
+      luma_user: { id: string; luma_profile_url: string; name: string | null; avatar: string | null; social_links: unknown } | unknown[] | null;
+    }>) {
+      if (row.profile_id && row.profile) {
+        const p = Array.isArray(row.profile) ? row.profile[0] : row.profile;
+        const pr = p as { countries?: { name: string }[] | { name: string }; country?: string } & User;
+        if (pr) {
+          const countryName = Array.isArray(pr.countries) ? pr.countries[0]?.name : (pr.countries as { name: string })?.name;
+          organizersInternal.push({
+            ...pr,
+            country: countryName || pr.country,
+          } as User);
+        }
+      }
+      if (row.luma_user_id && row.luma_user) {
+        const u = Array.isArray(row.luma_user) ? row.luma_user[0] : row.luma_user;
+        const lu = u as { id: string; luma_profile_url: string; name: string | null; avatar: string | null; social_links: unknown };
+        if (lu)
+          organizersExternal.push({
+            id: lu.id,
+            name: lu.name ?? null,
+            avatar: lu.avatar ?? null,
+            profile_url: lu.luma_profile_url ?? "",
+            social_links: (lu.social_links as Record<string, string>) ?? {},
+          });
+      }
+    }
+  }
+
+  // Fallback: if no organizers but event has user owner, show owner as host
+  if (organizersInternal.length === 0 && organizersExternal.length === 0 && eventData.owner_type === "user" && eventData.owner_id) {
     const { data: ownerProfile } = await supabase
       .from("profiles")
       .select(`
@@ -189,26 +263,21 @@ export default async function EventPage({ params }: EventPageProps) {
         last_active_at,
         created_at,
         updated_at,
-        countries!fk_profiles_country_code (
-          name
-        )
+        countries!fk_profiles_country_code ( name )
       `)
       .eq("id", eventData.owner_id)
       .single();
-
     if (ownerProfile) {
-      const countryName = Array.isArray(ownerProfile.countries) 
-        ? ownerProfile.countries[0]?.name 
-        : (ownerProfile.countries as { name: string } | null | undefined)?.name;
-      
-      organizer = {
-        ...ownerProfile,
-        country: countryName || ownerProfile.country,
-      } as User;
+      const countryName = Array.isArray(ownerProfile.countries) ? ownerProfile.countries[0]?.name : (ownerProfile.countries as { name: string })?.name;
+      organizersInternal = [{ ...ownerProfile, country: countryName || ownerProfile.country } as User];
     }
   }
 
-  const event = eventData as Event;
+  const event: Event = {
+    ...eventData,
+    source: eventData.luma_event_id ? "external" : "solpoint",
+    organizers: { internal: organizersInternal, external: organizersExternal },
+  } as Event;
 
   // Получаем участников события (только если авторизован)
   let members: (EventMember & { user?: User })[] = [];
@@ -520,18 +589,31 @@ export default async function EventPage({ params }: EventPageProps) {
                 </div>
               </Card>
 
-              {/* Host Card */}
-              {organizer && (
+              {/* Hosts */}
+              {((event.organizers?.internal?.length ?? 0) + (event.organizers?.external?.length ?? 0)) > 0 && (
                 <div>
                   <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">
                     Hosts
                   </h2>
-                  <div className="w-fit max-w-md">
-                    <EventHostCard
-                      user={organizer}
-                      isVip={isVip}
-                      currentUserId={authUser?.id}
-                    />
+                  <div className="flex flex-wrap gap-4">
+                    {event.organizers?.internal?.map((user) => (
+                      <div key={user.id} className="w-fit max-w-md">
+                        <EventHostCard
+                          user={user}
+                          isVip={isVip}
+                          currentUserId={authUser?.id}
+                        />
+                      </div>
+                    ))}
+                    {event.organizers?.external?.map((ext) => (
+                      <div key={ext.id} className="w-fit max-w-md">
+                        <EventHostCard
+                          externalUser={ext}
+                          isVip={isVip}
+                          currentUserId={authUser?.id}
+                        />
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}

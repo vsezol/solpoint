@@ -32,10 +32,10 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Проверяем существование ивента
+  // Проверяем существование ивента и luma_event_id (для external attendees)
   const { data: event, error: eventError } = await supabase
     .from("events")
-    .select("id, visibility")
+    .select("id, visibility, luma_event_id")
     .eq("id", id)
     .single();
 
@@ -82,7 +82,7 @@ export async function GET(
     query = query.eq("status", status);
   }
 
-  const { data: members, error } = await query;
+  const { data: internalMembers, error } = await query;
 
   if (error) {
     console.error("Error fetching event members:", error);
@@ -92,7 +92,50 @@ export async function GET(
     );
   }
 
-  return NextResponse.json({ members: members || [] }, { status: 200 });
+  // Для external событий (luma_event_id задан) подтягиваем участников из luma_event_attendees
+  type ExternalAttendee = { id: string; name: string | null; avatar: string | null; luma_profile_url: string; social_links: Record<string, string> };
+  let external: ExternalAttendee[] = [];
+  if (event.luma_event_id) {
+    const { data: lumaAttendees } = await supabase
+      .from("luma_event_attendees")
+      .select(`
+        id,
+        user_id,
+        luma_users(
+          luma_profile_url,
+          name,
+          avatar,
+          social_links
+        )
+      `)
+      .eq("event_id", event.luma_event_id);
+
+    if (lumaAttendees) {
+      external = lumaAttendees.map((row: {
+        id: string;
+        user_id: string;
+        luma_users: { luma_profile_url: string; name: string | null; avatar: string | null; social_links: unknown } | { luma_profile_url: string; name: string | null; avatar: string | null; social_links: unknown }[] | null;
+      }) => {
+        const raw = row.luma_users;
+        const u = Array.isArray(raw) ? raw[0] : raw;
+        return {
+          id: row.id,
+          name: u?.name ?? null,
+          avatar: u?.avatar ?? null,
+          luma_profile_url: u?.luma_profile_url ?? "",
+          social_links: (u?.social_links as Record<string, string>) ?? {},
+        };
+      });
+    }
+  }
+
+  return NextResponse.json(
+    {
+      internal: internalMembers || [],
+      external,
+    },
+    { status: 200 }
+  );
 }
 
 /**

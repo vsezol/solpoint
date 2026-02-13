@@ -2,21 +2,61 @@
 
 import { useState } from "react";
 import { UserCard } from "@/components/cards/user-card";
-import { ProSubscriptionModal, AuthRequiredModal, Button } from "@/components/ui";
+import { ProSubscriptionModal, AuthRequiredModal, Button, Avatar } from "@/components/ui";
 import { useAuth } from "@/hooks/use-auth";
 import Link from "next/link";
-import type { User } from "@/types";
+import type { User, ExternalUser } from "@/types";
 
-interface EventHostCardProps {
-  user: User;
+interface EventHostCardPropsBase {
   isVip: boolean;
   currentUserId?: string;
 }
 
-export function EventHostCard({ user, isVip, currentUserId }: EventHostCardProps) {
+interface EventHostCardPropsUser extends EventHostCardPropsBase {
+  user: User;
+  externalUser?: never;
+}
+
+interface EventHostCardPropsExternal extends EventHostCardPropsBase {
+  user?: never;
+  externalUser: ExternalUser;
+}
+
+type EventHostCardProps = EventHostCardPropsUser | EventHostCardPropsExternal;
+
+export function EventHostCard({ user, externalUser, isVip, currentUserId }: EventHostCardProps) {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showProModal, setShowProModal] = useState(false);
   const { isAuthenticated } = useAuth();
+
+  if (externalUser) {
+    return (
+      <div className="p-4 min-w-[280px] max-w-[350px] bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-xl">
+        <div className="flex items-start gap-3">
+          <a
+            href={externalUser.profile_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-start gap-3 hover:opacity-80 transition-opacity"
+          >
+            <Avatar
+              src={externalUser.avatar ?? undefined}
+              alt={externalUser.name ?? "Host"}
+              size="lg"
+            />
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold text-[var(--color-text-primary)] truncate">
+                {externalUser.name ?? "Host"}
+              </p>
+              <p className="text-xs text-[var(--color-text-muted)]">External host</p>
+            </div>
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) return null;
 
   return (
     <>

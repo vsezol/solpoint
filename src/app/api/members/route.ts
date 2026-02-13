@@ -88,10 +88,15 @@ export async function GET(request: NextRequest) {
   console.log(`[API Members] Table name:`, config.tableName);
   console.log(`[API Members] Owner field:`, config.ownerIdField);
   
-  // Используем maybeSingle() вместо single() для более мягкой обработки ошибок
+  // Для event нужен ещё luma_event_id для external attendees
+  const entitySelect =
+    entityType === "event"
+      ? `id, ${config.ownerIdField}, luma_event_id`
+      : `id, ${config.ownerIdField}`;
+
   const { data: entity, error: entityError } = await supabase
     .from(config.tableName)
-    .select(`id, ${config.ownerIdField}`)
+    .select(entitySelect)
     .eq("id", entityId)
     .maybeSingle();
 
@@ -280,12 +285,53 @@ export async function GET(request: NextRequest) {
     ? regularMembers
     : allMembers; // Если все участники - владельцы, показываем их
 
+  // For events: load external attendees (Luma) when event has luma_event_id
+  let external: Array<{ id: string; name: string | null; avatar: string | null; profile_url: string; social_links: Record<string, string> }> = [];
+  if (entityType === "event") {
+    const lumaEventId = (entity as { luma_event_id?: string | null })?.luma_event_id;
+    if (lumaEventId) {
+      const { data: lumaAttendees } = await supabase
+        .from("luma_event_attendees")
+        .select(`
+          id,
+          user_id,
+          luma_users(
+            id,
+            luma_profile_url,
+            name,
+            avatar,
+            social_links
+          )
+        `)
+        .eq("event_id", lumaEventId);
+
+      if (lumaAttendees?.length) {
+        external = lumaAttendees.map((row: {
+          id: string;
+          user_id: string;
+          luma_users: { id: string; luma_profile_url: string; name: string | null; avatar: string | null; social_links: unknown } | { id: string; luma_profile_url: string; name: string | null; avatar: string | null; social_links: unknown }[] | null;
+        }) => {
+          const raw = row.luma_users;
+          const u = Array.isArray(raw) ? raw[0] : raw;
+          return {
+            id: u?.id ?? row.user_id,
+            name: u?.name ?? null,
+            avatar: u?.avatar ?? null,
+            profile_url: u?.luma_profile_url ?? "",
+            social_links: (u?.social_links as Record<string, string>) ?? {},
+          };
+        });
+      }
+    }
+  }
+
   const response = {
     totalMembers: allMembers.length,
     totalFriends: friends.length,
     members: allMembersList, // Все участники, не только превью
     friends: friends, // Все друзья, не только превью
     team: team,
+    ...(entityType === "event" ? { external } : {}),
   };
 
   console.log(`[API Members] Final response:`, {

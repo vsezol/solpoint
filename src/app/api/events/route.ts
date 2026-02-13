@@ -113,7 +113,12 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  return NextResponse.json({ events: events || [] }, { status: 200 });
+  const eventsWithSource = (events || []).map((event) => ({
+    ...event,
+    source: event.luma_event_id ? ("external" as const) : ("solpoint" as const),
+  }));
+
+  return NextResponse.json({ events: eventsWithSource }, { status: 200 });
 }
 
 /**
@@ -332,6 +337,15 @@ export async function POST(request: Request) {
         { error: createError.message || "Failed to create event" },
         { status: 500 }
       );
+    }
+
+    // При создании через наш API добавляем владельца в event_organizers
+    if (ownerType === "user" && event?.id) {
+      await supabase.from("event_organizers").insert({
+        event_id: event.id,
+        profile_id: ownerId,
+        position: 0,
+      });
     }
 
     return NextResponse.json({ event }, { status: 201 });

@@ -1,12 +1,27 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Header, Footer } from "@/components/layout";
 import { Button, Input, CheckBox } from "@/components/ui";
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
-import { Loader2, ArrowLeft, Save, Calendar } from "lucide-react";
+import Link from "next/link";
+import { Loader2, ArrowLeft, Save, Calendar, RefreshCw, AlertCircle, CheckCircle, MapPin } from "lucide-react";
 import type { ScraperId } from "@/app/api/admin/luma-scraper/route";
+
+type RequiredVerificationEvent = {
+  id: string;
+  name: string | null;
+  slug: string | null;
+  start_date: string | null;
+  description: string | null;
+  image_url: string | null;
+  country: string | null;
+  city: string | null;
+  address: string | null;
+  luma_link: string | null;
+  luma_event_id: string | null;
+};
 
 type ScraperParams = {
   searchKeywords: string;
@@ -61,6 +76,13 @@ export default function AdminLumaScraperPage() {
   const [ownParams, setOwnParams] = useState<OwnParams>(defaultOwnParams);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [transferLoading, setTransferLoading] = useState(false);
+  const [transferResult, setTransferResult] = useState<{ created: number; skipped: number; errors: number } | null>(null);
+  const [enrichLoading, setEnrichLoading] = useState(false);
+  const [enrichResult, setEnrichResult] = useState<{ updated: number; failed: number; total_processed: number; errors: string[] } | null>(null);
+  const [requiredList, setRequiredList] = useState<RequiredVerificationEvent[]>([]);
+  const [requiredLoading, setRequiredLoading] = useState(false);
+  const [dismissingId, setDismissingId] = useState<string | null>(null);
   const [result, setResult] = useState<{
     scraper: ScraperId;
     runId?: string | null;
@@ -75,6 +97,65 @@ export default function AdminLumaScraperPage() {
       router.push("/");
     }
   }, [user, authLoading, router]);
+
+  const fetchRequiredVerification = useCallback(async () => {
+    if (!user?.is_admin) return;
+    setRequiredLoading(true);
+    try {
+      const res = await fetch("/api/admin/luma/required-verification");
+      const data = await res.json();
+      if (res.ok) setRequiredList(data.events ?? []);
+    } finally {
+      setRequiredLoading(false);
+    }
+  }, [user?.is_admin]);
+
+  useEffect(() => {
+    if (user?.is_admin) fetchRequiredVerification();
+  }, [user?.is_admin, fetchRequiredVerification]);
+
+  const handleTransfer = async () => {
+    setTransferLoading(true);
+    setTransferResult(null);
+    try {
+      const res = await fetch("/api/admin/luma/transfer", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Transfer failed");
+      setTransferResult(data);
+      fetchRequiredVerification();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Transfer failed");
+    } finally {
+      setTransferLoading(false);
+    }
+  };
+
+  const handleEnrichLocations = async () => {
+    setEnrichLoading(true);
+    setEnrichResult(null);
+    try {
+      const res = await fetch("/api/admin/luma/enrich-locations", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Enrich failed");
+      setEnrichResult(data);
+      fetchRequiredVerification();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Enrich failed");
+    } finally {
+      setEnrichLoading(false);
+    }
+  };
+
+  const handleDismissVerification = async (eventId: string) => {
+    setDismissingId(eventId);
+    try {
+      const res = await fetch(`/api/admin/events/${eventId}/dismiss-verification`, { method: "POST" });
+      if (!res.ok) throw new Error("Dismiss failed");
+      setRequiredList((prev) => prev.filter((e) => e.id !== eventId));
+    } finally {
+      setDismissingId(null);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -392,6 +473,134 @@ export default function AdminLumaScraperPage() {
                 )}
               </Button>
             </form>
+
+            {/* Transfer Events */}
+            <div className="mt-8 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg p-6">
+              <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2 flex items-center gap-2">
+                <RefreshCw className="w-5 h-5" />
+                Transfer Events
+              </h2>
+              <p className="text-[var(--color-text-secondary)] text-sm mb-4">
+                Copy Luma events from <code className="bg-[var(--color-background)] px-1 rounded">luma_events</code> into internal <code className="bg-[var(--color-background)] px-1 rounded">events</code>. Already synced events (by luma_event_id or luma_link) are skipped.
+              </p>
+              <Button
+                variant="outline"
+                disabled={transferLoading}
+                onClick={handleTransfer}
+              >
+                {transferLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Transferring…
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Transfer Events
+                  </>
+                )}
+              </Button>
+              {transferResult && (
+                <p className="mt-3 text-sm text-[var(--color-text-primary)]">
+                  Created: <strong>{transferResult.created}</strong>, skipped: {transferResult.skipped}, errors: {transferResult.errors}
+                </p>
+              )}
+            </div>
+
+            {/* Enrich locations (country, city, country_code from coordinates) */}
+            <div className="mt-8 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg p-6">
+              <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2 flex items-center gap-2">
+                <MapPin className="w-5 h-5" />
+                Enrich locations
+              </h2>
+              <p className="text-[var(--color-text-secondary)] text-sm mb-4">
+                Run after transfer. Fills <code className="bg-[var(--color-background)] px-1 rounded">country</code>, <code className="bg-[var(--color-background)] px-1 rounded">city</code>, <code className="bg-[var(--color-background)] px-1 rounded">country_code</code> for transferred events using reverse geocoding (Nominatim, ~1 req/sec). Up to 30 events per run.
+              </p>
+              <Button
+                variant="outline"
+                disabled={enrichLoading}
+                onClick={handleEnrichLocations}
+              >
+                {enrichLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Enriching…
+                  </>
+                ) : (
+                  <>
+                    <MapPin className="w-4 h-4 mr-2" />
+                    Enrich locations
+                  </>
+                )}
+              </Button>
+              {enrichResult && (
+                <p className="mt-3 text-sm text-[var(--color-text-primary)]">
+                  Updated: <strong>{enrichResult.updated}</strong>, failed: {enrichResult.failed}, processed: {enrichResult.total_processed}
+                  {enrichResult.errors?.length > 0 && (
+                    <span className="block mt-1 text-[var(--color-text-muted)] text-xs">
+                      {enrichResult.errors.slice(0, 3).join("; ")}
+                    </span>
+                  )}
+                </p>
+              )}
+            </div>
+
+            {/* Required verification */}
+            <div className="mt-8 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg p-6">
+              <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2 flex items-center gap-2">
+                <AlertCircle className="w-5 h-5" />
+                Required verification
+              </h2>
+              <p className="text-[var(--color-text-secondary)] text-sm mb-4">
+                Events already in our table but missing name, date, description, image, country, city, address, or hosts. Dismiss when no longer needed.
+              </p>
+              {requiredLoading ? (
+                <p className="text-sm text-[var(--color-text-muted)]">Loading…</p>
+              ) : requiredList.length === 0 ? (
+                <p className="text-sm text-[var(--color-text-muted)]">No events require verification.</p>
+              ) : (
+                <ul className="space-y-3">
+                  {requiredList.map((ev) => (
+                    <li
+                      key={ev.id}
+                      className="flex items-center justify-between gap-4 py-2 border-b border-[var(--color-surface-border)] last:border-0"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <span className="font-medium text-[var(--color-text-primary)] truncate block">
+                          {ev.name || "(no name)"}
+                        </span>
+                        {ev.slug ? (
+                          <Link
+                            href={`/events/${ev.slug}`}
+                            className="text-xs text-[var(--color-primary)] hover:underline"
+                          >
+                            /events/{ev.slug}
+                          </Link>
+                        ) : (
+                          <span className="text-xs text-[var(--color-text-muted)]">{ev.id}</span>
+                        )}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={dismissingId === ev.id}
+                        onClick={() => handleDismissVerification(ev.id)}
+                        title="Exclude from this list (no longer require verification)"
+                      >
+                        {dismissingId === ev.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <>
+                            <CheckCircle className="w-4 h-4 mr-1" />
+                            Dismiss
+                          </>
+                        )}
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
 
             {result && (
               <div className="mt-6 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg p-6">

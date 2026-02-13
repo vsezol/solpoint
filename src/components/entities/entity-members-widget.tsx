@@ -4,6 +4,16 @@ import { useState, useEffect, useCallback } from "react";
 import { Card, Avatar, ProSubscriptionModal, AuthRequiredModal, Modal, ModalHeader, ModalTitle, ModalContent, UserListItem } from "@/components/ui";
 import { useAuth } from "@/hooks/use-auth";
 import { useChat } from "@/hooks/use-chat";
+import { Twitter, Linkedin, Instagram, Facebook, Globe } from "lucide-react";
+import type { ExternalUser } from "@/types";
+
+const EXTERNAL_SOCIAL_ICONS: Record<string, { Icon: React.ComponentType<{ className?: string; size?: number }>; label: string }> = {
+  twitter: { Icon: Twitter, label: "Twitter" },
+  linkedin: { Icon: Linkedin, label: "LinkedIn" },
+  instagram: { Icon: Instagram, label: "Instagram" },
+  facebook: { Icon: Facebook, label: "Facebook" },
+  website: { Icon: Globe, label: "Website" },
+};
 
 type EntityType = "hub" | "community" | "project" | "workspace" | "event";
 
@@ -110,6 +120,7 @@ export function EntityMembersWidget({
     members: Member[];
     friends: Member[];
     team: Member[];
+    external?: ExternalUser[];
   } | null>(null);
 
   const [showProModal, setShowProModal] = useState(false);
@@ -118,6 +129,7 @@ export function EntityMembersWidget({
   const [showFriendsModal, setShowFriendsModal] = useState(false);
   const [allMembers, setAllMembers] = useState<Member[]>([]);
   const [allFriends, setAllFriends] = useState<Member[]>([]);
+  const [allExternal, setAllExternal] = useState<ExternalUser[]>([]);
   const [friendStatuses, setFriendStatuses] = useState<Record<string, "none" | "pending_sent" | "pending_received" | "accepted" | "blocked">>({});
   const [sendingFriendRequest, setSendingFriendRequest] = useState<Record<string, boolean>>({});
   const [creatingChat, setCreatingChat] = useState<Record<string, boolean>>({});
@@ -198,6 +210,7 @@ export function EntityMembersWidget({
       setShowFriendsModal(true);
     } else {
       setAllMembers(data?.members || []);
+      setAllExternal(data?.external || []);
       setShowMembersModal(true);
     }
   };
@@ -345,6 +358,8 @@ export function EntityMembersWidget({
   // Показываем всех участников и друзей (без ограничений)
   const visibleMembers = data.members || [];
   const visibleFriends = data.friends || [];
+  const externalCount = data.external?.length ?? 0;
+  const isEvent = entityType === "event";
 
   return (
     <>
@@ -354,12 +369,15 @@ export function EntityMembersWidget({
         </h3>
         <div className="space-y-6">
           {/* All Members */}
-          {data.totalMembers > 0 ? (
+          {data.totalMembers > 0 || (isEvent && externalCount > 0) ? (
             <div className="space-y-2">
               <p className="text-sm text-[var(--color-text-secondary)] mb-2">
-                {texts.membersText(data.totalMembers)}
+                {data.totalMembers > 0 && texts.membersText(data.totalMembers)}
+                {isEvent && externalCount > 0 && (
+                  data.totalMembers > 0 ? ` · ${externalCount} external` : `${externalCount} external ${externalCount === 1 ? "attendee" : "attendees"}`
+                )}
               </p>
-              {visibleMembers.length > 0 ? (
+              {(visibleMembers.length > 0 || (isEvent && externalCount > 0)) ? (
                 <>
                   <div className="flex flex-wrap gap-2 mb-2">
                     {visibleMembers.map((member) => (
@@ -376,6 +394,21 @@ export function EntityMembersWidget({
                           isVerified={member.isVerified}
                         />
                       </div>
+                    ))}
+                    {isEvent && (data.external || []).slice(0, 5).map((ext) => (
+                      <a
+                        key={ext.id}
+                        href={ext.profile_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-block"
+                      >
+                        <Avatar
+                          src={ext.avatar ?? undefined}
+                          alt={ext.name ?? "Attendee"}
+                          size="sm"
+                        />
+                      </a>
                     ))}
                   </div>
                   <button
@@ -460,26 +493,90 @@ export function EntityMembersWidget({
           <ModalTitle>{texts.modalTitleMembers}</ModalTitle>
         </ModalHeader>
         <ModalContent>
-          <div className="space-y-3 max-h-[60vh] overflow-y-auto">
-            {allMembers.length === 0 ? (
-              <p className="text-sm text-[var(--color-text-secondary)] text-center py-4">
-                {texts.emptyMembers}
-              </p>
-            ) : (
-              allMembers.map((member) => {
-                const friendStatus = friendStatuses[member.id] || "none";
-
-                return (
-                  <UserListItem
-                    key={member.id}
-                    member={member}
-                    friendStatus={friendStatus}
-                    onAddFriend={handleAddFriend}
-                    sendingFriendRequest={sendingFriendRequest[member.id]}
-                    creatingChat={creatingChat[member.id]}
-                  />
-                );
-              })
+          <div className="space-y-6 max-h-[60vh] overflow-y-auto">
+            {/* Internal (SolPoint) */}
+            <div>
+              {isEvent && allMembers.length > 0 && (
+                <h4 className="text-sm font-semibold text-[var(--color-text-muted)] mb-2">Internal (SolPoint)</h4>
+              )}
+              {allMembers.length === 0 && allExternal.length === 0 ? (
+                <p className="text-sm text-[var(--color-text-secondary)] text-center py-4">
+                  {texts.emptyMembers}
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {allMembers.map((member) => {
+                    const friendStatus = friendStatuses[member.id] || "none";
+                    return (
+                      <UserListItem
+                        key={member.id}
+                        member={member}
+                        friendStatus={friendStatus}
+                        onAddFriend={handleAddFriend}
+                        sendingFriendRequest={sendingFriendRequest[member.id]}
+                        creatingChat={creatingChat[member.id]}
+                      />
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            {/* External (e.g. Luma) - only for events */}
+            {isEvent && allExternal.length > 0 && (
+              <div>
+                <h4 className="text-sm font-semibold text-[var(--color-text-muted)] mb-2">External</h4>
+                <div className="space-y-3">
+                  {allExternal.map((ext) => {
+                    const socialEntries = ext.social_links
+                      ? Object.entries(ext.social_links).filter(([, url]) => url && String(url).trim())
+                      : [];
+                    return (
+                      <div
+                        key={ext.id}
+                        className="flex items-center gap-3 p-2 rounded-lg hover:bg-[var(--color-surface-hover)] transition-colors"
+                      >
+                        <a
+                          href={ext.profile_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-3 min-w-0 flex-1"
+                        >
+                          <Avatar
+                            src={ext.avatar ?? undefined}
+                            alt={ext.name ?? "Attendee"}
+                            size="md"
+                          />
+                          <span className="text-[var(--color-text-primary)] font-medium truncate">
+                            {ext.name ?? "Attendee"}
+                          </span>
+                        </a>
+                        {socialEntries.length > 0 && (
+                          <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                            {socialEntries.map(([key, url]) => {
+                              const config = EXTERNAL_SOCIAL_ICONS[key.toLowerCase()];
+                              const Icon = config?.Icon ?? Globe;
+                              const label = config?.label ?? key;
+                              return (
+                                <a
+                                  key={key}
+                                  href={url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="p-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-surface)] transition-colors"
+                                  title={label}
+                                  aria-label={label}
+                                >
+                                  <Icon className="w-4 h-4" />
+                                </a>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             )}
           </div>
         </ModalContent>

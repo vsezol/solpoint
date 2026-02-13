@@ -98,15 +98,29 @@ export interface Event {
   };
   // Унифицированные поля
   owner_type: OwnerType;
-  owner_id: string;
+  owner_id: string | null; // null для external (unclaimed) событий
+  /** 'solpoint' = создано у нас, 'external' = импорт (напр. из Luma); для UI, не раскрывает источник */
+  source?: "solpoint" | "external";
+  luma_event_id?: string | null; // задано, когда событие синкано из Luma
   // Связанные данные (при загрузке с JOIN)
   owner_user?: User;
   owner_hub?: Hub;
   owner_community?: Community;
   owner_project?: Project;
   owner_workspace?: Workspace;
+  /** Organizers (hosts) from event_organizers: internal = our users, external = e.g. Luma */
+  organizers?: { internal: User[]; external: ExternalUser[] };
   created_at: string;
   updated_at?: string;
+}
+
+/** External user (e.g. from Luma); in future may include other sources */
+export interface ExternalUser {
+  id: string;
+  name: string | null;
+  avatar: string | null;
+  profile_url: string;
+  social_links: Record<string, string>;
 }
 
 // Участник ивента
