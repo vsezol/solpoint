@@ -6,7 +6,7 @@ import { Button, Input, CheckBox } from "@/components/ui";
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Loader2, ArrowLeft, Save, Calendar, RefreshCw, AlertCircle, CheckCircle, MapPin } from "lucide-react";
+import { Loader2, ArrowLeft, Save, Calendar, RefreshCw, AlertCircle, CheckCircle, MapPin, ImagePlus, Clock } from "lucide-react";
 import type { ScraperId } from "@/app/api/admin/luma-scraper/route";
 
 type RequiredVerificationEvent = {
@@ -60,11 +60,237 @@ const defaultLexisParams: LexisParams = {
 type OwnParams = { calendarSlug: string; maxEvents: number; tag: string; parseGuests: boolean };
 const defaultOwnParams: OwnParams = { calendarSlug: "superteam", maxEvents: 30, tag: "", parseGuests: false };
 
+type LumaWorkflowType = "full_pipeline" | "attendees_only";
+
+type LumaWorkflowConfig = {
+  id: string;
+  workflow_type: LumaWorkflowType;
+  schedule_type: string;
+  run_at_hour_utc: number | null;
+  run_at_minute: number | null;
+  cron_expression: string | null;
+  parse_guests: boolean | null;
+  max_events: number | null;
+  calendar_slug: string | null;
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
 function parseCommaList(s: string): string[] {
   return s
     .split(",")
     .map((x) => x.trim())
     .filter(Boolean);
+}
+
+function WorkflowConfigBlocks({
+  configs,
+  onSaved,
+}: {
+  configs: LumaWorkflowConfig[];
+  onSaved: () => void;
+}) {
+  const fullConfig = configs.find((c) => c.workflow_type === "full_pipeline");
+  const attendeesConfig = configs.find((c) => c.workflow_type === "attendees_only");
+
+  return (
+    <div className="space-y-6">
+      <WorkflowConfigForm
+        key={`full_pipeline-${fullConfig?.id ?? "new"}`}
+        title="Full pipeline"
+        description="Scrape → transfer → enrich → save images (cron runs transfer, enrich, save-images)."
+        workflowType="full_pipeline"
+        config={fullConfig ?? null}
+        onSaved={onSaved}
+        showParseGuests
+      />
+      <WorkflowConfigForm
+        key={`attendees_only-${attendeesConfig?.id ?? "new"}`}
+        title="Attendees only"
+        description="Update attendees for existing events (pipeline not implemented yet)."
+        workflowType="attendees_only"
+        config={attendeesConfig ?? null}
+        onSaved={onSaved}
+        showParseGuests={false}
+      />
+    </div>
+  );
+}
+
+function WorkflowConfigForm({
+  title,
+  description,
+  workflowType,
+  config,
+  onSaved,
+  showParseGuests,
+}: {
+  title: string;
+  description: string;
+  workflowType: LumaWorkflowType;
+  config: LumaWorkflowConfig | null;
+  onSaved: () => void;
+  showParseGuests: boolean;
+}) {
+  const [scheduleType, setScheduleType] = useState<"daily" | "cron">(config?.schedule_type === "cron" ? "cron" : "daily");
+  const [runAtHourUtc, setRunAtHourUtc] = useState<string>(config?.run_at_hour_utc != null ? String(config.run_at_hour_utc) : "3");
+  const [runAtMinute, setRunAtMinute] = useState<string>(config?.run_at_minute != null ? String(config.run_at_minute) : "0");
+  const [cronExpression, setCronExpression] = useState<string>(config?.cron_expression ?? "0 3 * * *");
+  const [parseGuests, setParseGuests] = useState<boolean>(config?.parse_guests ?? false);
+  const [maxEvents, setMaxEvents] = useState<string>(config?.max_events != null ? String(config.max_events) : "");
+  const [calendarSlug, setCalendarSlug] = useState<string>(config?.calendar_slug ?? "");
+  const [enabled, setEnabled] = useState<boolean>(config?.enabled ?? true);
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErr(null);
+    setSaving(true);
+    try {
+      const payload = {
+        schedule_type: scheduleType,
+        run_at_hour_utc: scheduleType === "daily" ? (runAtHourUtc === "" ? null : parseInt(runAtHourUtc, 10)) : null,
+        run_at_minute: runAtMinute === "" ? null : parseInt(runAtMinute, 10) || null,
+        cron_expression: scheduleType === "cron" ? cronExpression.trim() || null : null,
+        parse_guests: showParseGuests ? parseGuests : null,
+        max_events: maxEvents === "" ? null : parseInt(maxEvents, 10) || null,
+        calendar_slug: calendarSlug.trim() || null,
+        enabled,
+      };
+      if (config) {
+        const res = await fetch(`/api/admin/luma-config/${config.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Update failed");
+      } else {
+        const res = await fetch("/api/admin/luma-config", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ workflow_type: workflowType, ...payload }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Create failed");
+      }
+      onSaved();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Request failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="border border-[var(--color-surface-border)] rounded-lg p-4 bg-[var(--color-background)]">
+      <h3 className="text-base font-medium text-[var(--color-text-primary)] mb-1">{title}</h3>
+      <p className="text-[var(--color-text-secondary)] text-xs mb-3">{description}</p>
+      <form onSubmit={handleSubmit} className="space-y-3">
+        <div className="flex flex-wrap gap-4">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name={`schedule-${workflowType}`}
+              checked={scheduleType === "daily"}
+              onChange={() => setScheduleType("daily")}
+              className="rounded-full border-[var(--color-surface-border)]"
+            />
+            <span className="text-[var(--color-text-primary)] text-sm">Daily</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name={`schedule-${workflowType}`}
+              checked={scheduleType === "cron"}
+              onChange={() => setScheduleType("cron")}
+              className="rounded-full border-[var(--color-surface-border)]"
+            />
+            <span className="text-[var(--color-text-primary)] text-sm">Cron</span>
+          </label>
+        </div>
+        {scheduleType === "daily" ? (
+          <div className="flex gap-2 items-center flex-wrap">
+            <div>
+              <label className="block text-xs text-[var(--color-text-secondary)] mb-0.5">Hour (UTC)</label>
+              <Input
+                type="number"
+                min={0}
+                max={23}
+                value={runAtHourUtc}
+                onChange={(e) => setRunAtHourUtc(e.target.value)}
+                className="w-16"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-[var(--color-text-secondary)] mb-0.5">Minute</label>
+              <Input
+                type="number"
+                min={0}
+                max={59}
+                value={runAtMinute}
+                onChange={(e) => setRunAtMinute(e.target.value)}
+                className="w-16"
+              />
+            </div>
+          </div>
+        ) : (
+          <div>
+            <label className="block text-xs text-[var(--color-text-secondary)] mb-0.5">Cron expression</label>
+            <Input
+              value={cronExpression}
+              onChange={(e) => setCronExpression(e.target.value)}
+              placeholder="0 3 * * *"
+            />
+          </div>
+        )}
+        {showParseGuests && (
+          <CheckBox
+            id={`parse-guests-${workflowType}`}
+            label="Parse guests (full pipeline)"
+            checked={parseGuests}
+            onChange={(e) => setParseGuests(e.target.checked)}
+          />
+        )}
+        <div className="flex gap-4 flex-wrap">
+          <div>
+            <label className="block text-xs text-[var(--color-text-secondary)] mb-0.5">Max events (empty = default)</label>
+            <Input
+              type="number"
+              min={1}
+              value={maxEvents}
+              onChange={(e) => setMaxEvents(e.target.value)}
+              placeholder="30"
+              className="w-24"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-[var(--color-text-secondary)] mb-0.5">Calendar slug</label>
+            <Input
+              value={calendarSlug}
+              onChange={(e) => setCalendarSlug(e.target.value)}
+              placeholder="superteam"
+              className="w-32"
+            />
+          </div>
+        </div>
+        <div>
+          <CheckBox
+            id={`enabled-${workflowType}`}
+            label="Enabled"
+            checked={enabled}
+            onChange={(e) => setEnabled(e.target.checked)}
+          />
+        </div>
+        {err && <p className="text-sm text-[var(--color-error)]">{err}</p>}
+        <Button type="submit" disabled={saving} size="sm">
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : config ? "Save" : "Create config"}
+        </Button>
+      </form>
+    </div>
+  );
 }
 
 export default function AdminLumaScraperPage() {
@@ -80,9 +306,22 @@ export default function AdminLumaScraperPage() {
   const [transferResult, setTransferResult] = useState<{ created: number; skipped: number; errors: number } | null>(null);
   const [enrichLoading, setEnrichLoading] = useState(false);
   const [enrichResult, setEnrichResult] = useState<{ updated: number; failed: number; total_processed: number; errors: string[] } | null>(null);
+  const [saveImagesLoading, setSaveImagesLoading] = useState(false);
+  const [saveImagesResult, setSaveImagesResult] = useState<{ saved: number; failed: number; total_processed: number; errors: string[] } | null>(null);
   const [requiredList, setRequiredList] = useState<RequiredVerificationEvent[]>([]);
   const [requiredLoading, setRequiredLoading] = useState(false);
   const [dismissingId, setDismissingId] = useState<string | null>(null);
+  const [workflowConfigs, setWorkflowConfigs] = useState<LumaWorkflowConfig[]>([]);
+  const [workflowConfigLoading, setWorkflowConfigLoading] = useState(false);
+  const [workflowConfigError, setWorkflowConfigError] = useState<string | null>(null);
+  const [fullPipelineLoading, setFullPipelineLoading] = useState(false);
+  const [fullPipelineStep, setFullPipelineStep] = useState<string | null>(null);
+  const [fullPipelineResult, setFullPipelineResult] = useState<{
+    transfer: { created: number; skipped: number; errors: number };
+    enrich: { updated: number; failed: number; total_processed: number };
+    saveImages: { saved: number; failed: number; total_processed: number };
+  } | null>(null);
+  const [fullPipelineError, setFullPipelineError] = useState<string | null>(null);
   const [result, setResult] = useState<{
     scraper: ScraperId;
     runId?: string | null;
@@ -114,6 +353,26 @@ export default function AdminLumaScraperPage() {
     if (user?.is_admin) fetchRequiredVerification();
   }, [user?.is_admin, fetchRequiredVerification]);
 
+  const fetchWorkflowConfigs = useCallback(async () => {
+    if (!user?.is_admin) return;
+    setWorkflowConfigLoading(true);
+    setWorkflowConfigError(null);
+    try {
+      const res = await fetch("/api/admin/luma-config");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to load configs");
+      setWorkflowConfigs(data.configs ?? []);
+    } catch (err) {
+      setWorkflowConfigError(err instanceof Error ? err.message : "Failed");
+    } finally {
+      setWorkflowConfigLoading(false);
+    }
+  }, [user?.is_admin]);
+
+  useEffect(() => {
+    if (user?.is_admin) fetchWorkflowConfigs();
+  }, [user?.is_admin, fetchWorkflowConfigs]);
+
   const handleTransfer = async () => {
     setTransferLoading(true);
     setTransferResult(null);
@@ -130,6 +389,21 @@ export default function AdminLumaScraperPage() {
     }
   };
 
+  const handleSaveImages = async () => {
+    setSaveImagesLoading(true);
+    setSaveImagesResult(null);
+    try {
+      const res = await fetch("/api/admin/luma/save-images", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Save images failed");
+      setSaveImagesResult(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Save images failed");
+    } finally {
+      setSaveImagesLoading(false);
+    }
+  };
+
   const handleEnrichLocations = async () => {
     setEnrichLoading(true);
     setEnrichResult(null);
@@ -143,6 +417,41 @@ export default function AdminLumaScraperPage() {
       setError(err instanceof Error ? err.message : "Enrich failed");
     } finally {
       setEnrichLoading(false);
+    }
+  };
+
+  const handleRunFullPipeline = async () => {
+    setFullPipelineLoading(true);
+    setFullPipelineError(null);
+    setFullPipelineResult(null);
+    try {
+      setFullPipelineStep("Transfer");
+      const r1 = await fetch("/api/admin/luma/transfer", { method: "POST" });
+      const d1 = await r1.json();
+      if (!r1.ok) throw new Error(d1.error || "Transfer failed");
+
+      setFullPipelineStep("Enrich locations");
+      const r2 = await fetch("/api/admin/luma/enrich-locations", { method: "POST" });
+      const d2 = await r2.json();
+      if (!r2.ok) throw new Error(d2.error || "Enrich failed");
+
+      setFullPipelineStep("Save images");
+      const r3 = await fetch("/api/admin/luma/save-images", { method: "POST" });
+      const d3 = await r3.json();
+      if (!r3.ok) throw new Error(d3.error || "Save images failed");
+
+      setFullPipelineResult({
+        transfer: d1,
+        enrich: d2,
+        saveImages: d3,
+      });
+      setFullPipelineStep(null);
+      fetchRequiredVerification();
+    } catch (err) {
+      setFullPipelineError(err instanceof Error ? err.message : "Pipeline failed");
+      setFullPipelineStep(null);
+    } finally {
+      setFullPipelineLoading(false);
     }
   };
 
@@ -474,6 +783,65 @@ export default function AdminLumaScraperPage() {
               </Button>
             </form>
 
+            {/* Workflow config (Schedule) */}
+            <div className="mt-8 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg p-6">
+              <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2 flex items-center gap-2">
+                <Clock className="w-5 h-5" />
+                Workflow config (Schedule)
+              </h2>
+              <p className="text-[var(--color-text-secondary)] text-sm mb-4">
+                One enabled config per workflow. Cron hits <code className="bg-[var(--color-background)] px-1 rounded">/api/cron/luma-pipeline</code> every hour; runs that are due (daily hour or cron expression) execute the pipeline.
+              </p>
+              {workflowConfigLoading ? (
+                <p className="text-sm text-[var(--color-text-muted)]">Loading configs…</p>
+              ) : workflowConfigError ? (
+                <p className="text-sm text-[var(--color-error)]">{workflowConfigError}</p>
+              ) : (
+                <WorkflowConfigBlocks
+                  configs={workflowConfigs}
+                  onSaved={fetchWorkflowConfigs}
+                />
+              )}
+            </div>
+
+            {/* Run full pipeline (manual trigger) */}
+            <div className="mt-8 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg p-6">
+              <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2 flex items-center gap-2">
+                <RefreshCw className="w-5 h-5" />
+                Run full pipeline
+              </h2>
+              <p className="text-[var(--color-text-secondary)] text-sm mb-4">
+                Run transfer → enrich locations → save images in sequence (same as cron). Manual trigger.
+              </p>
+              <Button
+                variant="default"
+                disabled={fullPipelineLoading}
+                onClick={handleRunFullPipeline}
+              >
+                {fullPipelineLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    {fullPipelineStep ?? "Running…"}
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Run full pipeline
+                  </>
+                )}
+              </Button>
+              {fullPipelineError && (
+                <p className="mt-3 text-sm text-[var(--color-error)]">{fullPipelineError}</p>
+              )}
+              {fullPipelineResult && (
+                <div className="mt-3 text-sm text-[var(--color-text-primary)] space-y-1">
+                  <p>Transfer: created <strong>{fullPipelineResult.transfer.created}</strong>, skipped {fullPipelineResult.transfer.skipped}, errors {fullPipelineResult.transfer.errors}</p>
+                  <p>Enrich: updated <strong>{fullPipelineResult.enrich.updated}</strong>, failed {fullPipelineResult.enrich.failed}, processed {fullPipelineResult.enrich.total_processed}</p>
+                  <p>Save images: saved <strong>{fullPipelineResult.saveImages.saved}</strong>, failed {fullPipelineResult.saveImages.failed}, processed {fullPipelineResult.saveImages.total_processed}</p>
+                </div>
+              )}
+            </div>
+
             {/* Transfer Events */}
             <div className="mt-8 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg p-6">
               <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2 flex items-center gap-2">
@@ -503,6 +871,44 @@ export default function AdminLumaScraperPage() {
               {transferResult && (
                 <p className="mt-3 text-sm text-[var(--color-text-primary)]">
                   Created: <strong>{transferResult.created}</strong>, skipped: {transferResult.skipped}, errors: {transferResult.errors}
+                </p>
+              )}
+            </div>
+
+            {/* Save images (download from Luma CDN → our storage, update event.image_url) */}
+            <div className="mt-8 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg p-6">
+              <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2 flex items-center gap-2">
+                <ImagePlus className="w-5 h-5" />
+                Save images
+              </h2>
+              <p className="text-[var(--color-text-secondary)] text-sm mb-4">
+                Download event cover images from Luma CDN and upload to our storage (<code className="bg-[var(--color-background)] px-1 rounded">event-images</code>). Updates <code className="bg-[var(--color-background)] px-1 rounded">events.image_url</code> to our URL. Run after transfer. Up to 20 events per run.
+              </p>
+              <Button
+                variant="outline"
+                disabled={saveImagesLoading}
+                onClick={handleSaveImages}
+              >
+                {saveImagesLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Saving…
+                  </>
+                ) : (
+                  <>
+                    <ImagePlus className="w-4 h-4 mr-2" />
+                    Save images
+                  </>
+                )}
+              </Button>
+              {saveImagesResult && (
+                <p className="mt-3 text-sm text-[var(--color-text-primary)]">
+                  Saved: <strong>{saveImagesResult.saved}</strong>, failed: {saveImagesResult.failed}, processed: {saveImagesResult.total_processed}
+                  {saveImagesResult.errors?.length > 0 && (
+                    <span className="block mt-1 text-[var(--color-text-muted)] text-xs">
+                      {saveImagesResult.errors.slice(0, 3).join("; ")}
+                    </span>
+                  )}
                 </p>
               )}
             </div>

@@ -1,5 +1,6 @@
-import { createClient } from "@/lib/supabase/server";
-import { NextResponse } from "next/server";
+import { createClient, createServiceRoleClient } from "@/lib/supabase/server";
+import { isCronRequest } from "@/lib/cron-auth";
+import { NextRequest, NextResponse } from "next/server";
 
 const LIMIT = 500;
 
@@ -12,29 +13,32 @@ function slugFromTitleAndId(title: string | null, id: string): string {
   return `${base}-${shortId}`;
 }
 
-export async function POST() {
-  const supabase = await createClient();
+export async function POST(request: NextRequest) {
+  const useCron = isCronRequest(request);
+  const supabase = useCron ? createServiceRoleClient() : await createClient();
 
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
+  if (!useCron) {
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
 
-  if (authError || !user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+    if (authError || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("is_admin")
-    .eq("id", user.id)
-    .single();
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("is_admin")
+      .eq("id", user.id)
+      .single();
 
-  if (!profile?.is_admin) {
-    return NextResponse.json(
-      { error: "Forbidden: Admin access required" },
-      { status: 403 }
-    );
+    if (!profile?.is_admin) {
+      return NextResponse.json(
+        { error: "Forbidden: Admin access required" },
+        { status: 403 }
+      );
+    }
   }
 
   const { data: lumaEvents, error: fetchErr } = await supabase

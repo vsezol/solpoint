@@ -1,4 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 
 export async function createClient() {
@@ -25,6 +26,20 @@ export async function createClient() {
         },
       },
     }
+  );
+}
+
+/** Server-only. Use for cron or background jobs; bypasses RLS. */
+export function createServiceRoleClient() {
+  const key =
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_API_KEY;
+  if (!key) {
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY or SUPABASE_API_KEY required");
+  }
+  return createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    key,
+    { auth: { persistSession: false } }
   );
 }
 
