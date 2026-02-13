@@ -7,7 +7,7 @@
  *
  * Run: npm run luma-scraper:run
  * Or: node scripts/luma-scraper/run.mjs [calendarSlug] [maxEvents]
- * Env: LUMA_CALENDAR, LUMA_MAX_EVENTS, LUMA_PARSE_GUESTS=1, LUMA_HEADLESS=1, LUMA_SCROLL_STEPS
+ * Env: LUMA_CALENDAR, LUMA_MAX_EVENTS, LUMA_TAG (optional ?tag=), LUMA_PARSE_GUESTS=1, LUMA_HEADLESS=1, LUMA_SCROLL_STEPS
  *
  * Output: one JSON line to stdout. Logs to stderr.
  */
@@ -48,9 +48,10 @@ function getArgs() {
     parseInt(process.env.LUMA_MAX_EVENTS || process.argv[3] || "30", 10) || 30,
     100
   );
+  const tag = (process.env.LUMA_TAG || process.argv[4] || "").trim();
   const headless = process.env.LUMA_HEADLESS === "1" || process.env.LUMA_HEADLESS === "true";
   const parseGuests = process.env.LUMA_PARSE_GUESTS === "1" || process.env.LUMA_PARSE_GUESTS === "true";
-  return { calendar, maxEvents, headless, parseGuests };
+  return { calendar, maxEvents, tag, headless, parseGuests };
 }
 
 async function getSupabase() {
@@ -711,8 +712,8 @@ async function openGuestsOnlyAndParse(page, eventUrl, supabase) {
 }
 
 async function main() {
-  const { calendar, maxEvents, headless, parseGuests } = getArgs();
-  log("Start. calendar=", calendar, "maxEvents=", maxEvents, "headless=", headless, "parseGuests=", parseGuests);
+  const { calendar, maxEvents, tag, headless, parseGuests } = getArgs();
+  log("Start. calendar=", calendar, "maxEvents=", maxEvents, "tag=", tag || "(none)", "headless=", headless, "parseGuests=", parseGuests);
 
   if (!fs.existsSync(AUTH_STATE_PATH)) {
     process.stderr.write(`No auth state at ${AUTH_STATE_PATH}. Run: npm run luma-scraper:login\n`);
@@ -737,7 +738,10 @@ async function main() {
     viewport: { width: 1280, height: 720 },
   });
   const page = await context.newPage();
-  const baseUrl = `https://lu.ma/${calendar}`;
+  let baseUrl = `https://lu.ma/${calendar}`;
+  if (tag) {
+    baseUrl += `?tag=${encodeURIComponent(tag)}`;
+  }
   log("Opening calendar:", baseUrl);
 
   await page.goto(baseUrl, { waitUntil: "domcontentloaded", timeout: 45000 });

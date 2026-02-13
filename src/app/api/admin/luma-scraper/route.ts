@@ -95,11 +95,22 @@ export async function POST(request: NextRequest) {
   if (scraperId === "own") {
     const calendar = (body.calendarSlug as string) || (body.calendar as string) || "superteam";
     const maxEvents = typeof body.maxEvents === "number" ? body.maxEvents : 30;
+    const tag = typeof body.tag === "string" ? body.tag.trim() : "";
     const parseGuests = body.parseGuests === true;
     const scriptPath = path.join(process.cwd(), "scripts", "luma-scraper", "run.mjs");
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
     const supabaseServiceKey =
       process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_API_KEY;
+    const env = {
+      ...process.env,
+      LUMA_CALENDAR: calendar,
+      LUMA_MAX_EVENTS: String(maxEvents),
+      LUMA_PARSE_GUESTS: parseGuests ? "1" : "0",
+      NEXT_PUBLIC_SUPABASE_URL: supabaseUrl ?? "",
+      SUPABASE_URL: supabaseUrl ?? "",
+      SUPABASE_SERVICE_ROLE_KEY: supabaseServiceKey ?? "",
+      ...(tag ? { LUMA_TAG: tag } : {}),
+    };
     try {
       const result = spawnSync(
         process.execPath,
@@ -109,15 +120,7 @@ export async function POST(request: NextRequest) {
           encoding: "utf-8",
           timeout: 5 * 60 * 1000,
           maxBuffer: 10 * 1024 * 1024,
-          env: {
-            ...process.env,
-            LUMA_CALENDAR: calendar,
-            LUMA_MAX_EVENTS: String(maxEvents),
-            LUMA_PARSE_GUESTS: parseGuests ? "1" : "0",
-            NEXT_PUBLIC_SUPABASE_URL: supabaseUrl ?? "",
-            SUPABASE_URL: supabaseUrl ?? "",
-            SUPABASE_SERVICE_ROLE_KEY: supabaseServiceKey ?? "",
-          },
+          env,
         }
       );
       const stdout = result.stdout?.trim() || "";

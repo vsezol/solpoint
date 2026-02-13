@@ -42,8 +42,8 @@ const defaultLexisParams: LexisParams = {
   location: "",
 };
 
-type OwnParams = { calendarSlug: string; maxEvents: number; parseGuests: boolean };
-const defaultOwnParams: OwnParams = { calendarSlug: "superteam", maxEvents: 30, parseGuests: false };
+type OwnParams = { calendarSlug: string; maxEvents: number; tag: string; parseGuests: boolean };
+const defaultOwnParams: OwnParams = { calendarSlug: "superteam", maxEvents: 30, tag: "", parseGuests: false };
 
 function parseCommaList(s: string): string[] {
   return s
@@ -89,6 +89,7 @@ export default function AdminLumaScraperPage() {
               scraper: "own" as const,
               calendarSlug: ownParams.calendarSlug.trim() || "superteam",
               maxEvents: ownParams.maxEvents || 30,
+              tag: (ownParams.tag ?? "").trim() || undefined,
               parseGuests: ownParams.parseGuests,
             }
           : scraper === "lexis"
@@ -222,6 +223,16 @@ export default function AdminLumaScraperPage() {
                       min={1}
                       value={ownParams.maxEvents}
                       onChange={(e) => setOwnParams((p) => ({ ...p, maxEvents: Number(e.target.value) || 30 }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
+                      Tag (optional, e.g. spain → ?tag=spain)
+                    </label>
+                    <Input
+                      value={ownParams.tag}
+                      onChange={(e) => setOwnParams((p) => ({ ...p, tag: e.target.value }))}
+                      placeholder="spain"
                     />
                   </div>
                   <div>
