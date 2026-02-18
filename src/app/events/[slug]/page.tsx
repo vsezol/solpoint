@@ -461,7 +461,7 @@ export default async function EventPage({ params }: EventPageProps) {
                     {event.name}
                   </h1>
                   {event.description && (
-                    <p className="text-lg text-[var(--color-text-secondary)] leading-relaxed">
+                    <p className="text-lg text-[var(--color-text-secondary)] leading-relaxed whitespace-pre-line">
                       {event.description}
                     </p>
                   )}
@@ -664,6 +664,8 @@ export default async function EventPage({ params }: EventPageProps) {
               <EntityMembersWidget
                 entityType="event"
                 entityId={event.id}
+                eventTimezone={event.timezone ?? null}
+                eventLongitude={event.longitude ?? null}
               />
             </div>
           </div>
@@ -673,4 +675,3 @@ export default async function EventPage({ params }: EventPageProps) {
     </>
   );
 }
-

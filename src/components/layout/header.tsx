@@ -1,15 +1,17 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui";
+import { Button, ProSubscriptionModal } from "@/components/ui";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
-import { Menu, X, LogOut, User, MessageSquare } from "lucide-react";
+import { Menu, X, LogOut, User, MessageSquare, CalendarClock } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useAuth } from "@/hooks/use-auth";
 import { trackEvent } from "@/lib/analytics";
+import { getMeetingRequestCounts } from "@/lib/api/meeting-requests";
+import { isMeetingRequestsEnabled } from "@/lib/meeting-requests";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -26,8 +28,11 @@ export function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [hasEntities, setHasEntities] = useState<boolean | null>(null);
+  const [meetingActionNeededCount, setMeetingActionNeededCount] = useState(0);
+  const [showMeetingRequestsProModal, setShowMeetingRequestsProModal] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const { user, isAuthenticated, isLoading, logout } = useAuth();
+  const meetingRequestsEnabled = isMeetingRequestsEnabled();
 
   // Проверяем наличие сущностей для показа Dashboard на фронтенде
   useEffect(() => {
@@ -57,6 +62,42 @@ export function Header() {
 
     checkHasEntities();
   }, [isAuthenticated, user]);
+
+  useEffect(() => {
+    if (!meetingRequestsEnabled || !isAuthenticated || !user || user.subscription_tier !== "vip") {
+      setMeetingActionNeededCount(0);
+      return;
+    }
+
+    let mounted = true;
+    const loadCounts = async () => {
+      try {
+        const counts = await getMeetingRequestCounts();
+        if (mounted) {
+          setMeetingActionNeededCount(counts.action_needed_count || 0);
+        }
+      } catch (_error) {
+        if (mounted) {
+          setMeetingActionNeededCount(0);
+        }
+      }
+    };
+
+    loadCounts();
+    const intervalId = setInterval(loadCounts, 45000);
+
+    const onMeetingRequestsUpdated = () => {
+      loadCounts();
+    };
+
+    window.addEventListener("meeting-requests-updated", onMeetingRequestsUpdated);
+
+    return () => {
+      mounted = false;
+      clearInterval(intervalId);
+      window.removeEventListener("meeting-requests-updated", onMeetingRequestsUpdated);
+    };
+  }, [isAuthenticated, user, meetingRequestsEnabled]);
 
   // Формируем динамический список ссылок навигации
   const dynamicNavLinks = [...navLinks];
@@ -193,7 +234,7 @@ export function Header() {
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: -10, scale: 0.95 }}
                       transition={{ duration: 0.15 }}
-                      className="absolute right-0 top-full mt-2 w-48 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg shadow-lg overflow-hidden z-[1001]"
+                      className="absolute right-0 top-full mt-2 w-56 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg shadow-lg overflow-hidden z-[1001]"
                     >
                       <div className="py-1">
                         <button
@@ -216,6 +257,29 @@ export function Header() {
                           <MessageSquare className="w-4 h-4" />
                           Chats
                         </button>
+                        {meetingRequestsEnabled && (
+                          <button
+                            onClick={() => {
+                              setIsProfileMenuOpen(false);
+                              if (user.subscription_tier !== "vip") {
+                                setShowMeetingRequestsProModal(true);
+                                return;
+                              }
+                              router.push(`/profile/${user.twitter_handle}?meetingRequests=1`);
+                            }}
+                            className="w-full px-4 py-2 text-left text-sm text-[var(--color-text-primary)] hover:bg-[var(--color-surface-hover)] flex items-center justify-between gap-2 transition-colors"
+                          >
+                            <span className="flex items-center gap-2">
+                              <CalendarClock className="w-4 h-4" />
+                              Meeting requests
+                            </span>
+                            {meetingActionNeededCount > 0 && (
+                              <span className="min-w-5 h-5 px-1 rounded-full bg-red-500 text-white text-xs font-semibold flex items-center justify-center">
+                                {meetingActionNeededCount > 99 ? "99+" : meetingActionNeededCount}
+                              </span>
+                            )}
+                          </button>
+                        )}
                         <button
                           onClick={handleLogout}
                           className="w-full px-4 py-2 text-left text-sm text-[var(--color-text-primary)] hover:bg-[var(--color-surface-hover)] flex items-center gap-2 transition-colors"
@@ -320,7 +384,13 @@ export function Header() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <ProSubscriptionModal
+        isOpen={showMeetingRequestsProModal}
+        onClose={() => setShowMeetingRequestsProModal(false)}
+        title="Meeting requests are available only with PRO subscription"
+        description="Upgrade to PRO to send and respond to meeting requests."
+      />
     </header>
   );
 }
-

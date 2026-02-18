@@ -4,7 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button, ProSubscriptionModal } from "@/components/ui";
-import { MessageCircle, UserPlus, UserCheck } from "lucide-react";
+import { CalendarPlus, MessageCircle, UserPlus, UserCheck } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useChat } from "@/hooks/use-chat";
 
@@ -23,16 +23,22 @@ interface UserListItemProps {
   member: Member;
   friendStatus?: "none" | "pending_sent" | "pending_received" | "accepted" | "blocked";
   onAddFriend?: (userId: string) => void;
+  onRequestMeeting?: (userId: string) => void;
   sendingFriendRequest?: boolean;
+  sendingMeetingRequest?: boolean;
   creatingChat?: boolean;
+  showMeetingRequestButton?: boolean;
 }
 
 export function UserListItem({
   member,
   friendStatus = "none",
   onAddFriend,
+  onRequestMeeting,
   sendingFriendRequest = false,
+  sendingMeetingRequest = false,
   creatingChat = false,
+  showMeetingRequestButton = false,
 }: UserListItemProps) {
   const { user: currentUser, isAuthenticated } = useAuth();
   const { openChat } = useChat();
@@ -61,6 +67,12 @@ export function UserListItem({
   const handleAddFriend = (userId: string) => {
     if (onAddFriend) {
       onAddFriend(userId);
+    }
+  };
+
+  const handleRequestMeeting = (userId: string) => {
+    if (onRequestMeeting) {
+      onRequestMeeting(userId);
     }
   };
 
@@ -129,6 +141,17 @@ export function UserListItem({
               <UserCheck className="w-4 h-4 text-[var(--color-primary)]" />
             </Button>
           )}
+          {showMeetingRequestButton && onRequestMeeting && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleRequestMeeting(member.id)}
+              disabled={sendingMeetingRequest}
+              title="Request Meeting"
+            >
+              <CalendarPlus className="w-4 h-4" />
+            </Button>
+          )}
         </div>
       )}
       
@@ -142,4 +165,3 @@ export function UserListItem({
     </div>
   );
 }
-

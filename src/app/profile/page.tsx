@@ -1,8 +1,13 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
-export default async function ProfilePage() {
+interface ProfilePageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+export default async function ProfilePage({ searchParams }: ProfilePageProps) {
   const supabase = await createClient();
+  const params = await searchParams;
 
   // Получаем текущего пользователя
   const {
@@ -26,5 +31,12 @@ export default async function ProfilePage() {
   }
 
   // Редиректим на динамический роут с username пользователя
-  redirect(`/profile/${profile.twitter_handle}`);
+  const nextParams = new URLSearchParams();
+  const meetingRequests = params.meetingRequests;
+  if (meetingRequests === "1" || (Array.isArray(meetingRequests) && meetingRequests[0] === "1")) {
+    nextParams.set("meetingRequests", "1");
+  }
+
+  const queryString = nextParams.toString();
+  redirect(`/profile/${profile.twitter_handle}${queryString ? `?${queryString}` : ""}`);
 }

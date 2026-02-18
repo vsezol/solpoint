@@ -333,7 +333,7 @@ export function EventCard({
         </h3>
 
         {event.description && (
-          <p className="text-[var(--color-text-secondary)] mb-4 line-clamp-2 text-sm">
+          <p className="text-[var(--color-text-secondary)] mb-4 line-clamp-2 text-sm whitespace-pre-line">
             {event.description}
           </p>
         )}

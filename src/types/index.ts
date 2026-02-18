@@ -320,6 +320,57 @@ export interface Conversation {
   unread_count: number;
 }
 
+export type MeetingRequestStatus = "pending" | "approved" | "rejected";
+export type MeetingRequestEventType = "created" | "approved" | "rejected" | "rescheduled";
+
+export interface MeetingRequestProposal {
+  id: string;
+  meeting_request_id: string;
+  proposed_by_user_id: string;
+  start_at: string;
+  end_at: string;
+  timezone: string;
+  message?: string | null;
+  created_at: string;
+}
+
+export interface MeetingRequestEvent {
+  id: string;
+  meeting_request_id: string;
+  actor_id: string;
+  target_user_id: string;
+  event_type: MeetingRequestEventType;
+  proposal_id?: string | null;
+  is_read: boolean;
+  created_at: string;
+}
+
+export interface MeetingRequest {
+  id: string;
+  event_id: string;
+  requester_id: string;
+  responder_id: string;
+  status: MeetingRequestStatus;
+  current_proposal_id?: string | null;
+  awaiting_user_id: string;
+  last_action_by: string;
+  approved_at?: string | null;
+  rejected_at?: string | null;
+  created_at: string;
+  updated_at: string;
+  current_proposal?: MeetingRequestProposal | null;
+  counterparty?: Pick<User, "id" | "twitter_handle" | "twitter_name" | "avatar_url" | "is_verified">;
+  event?: Pick<Event, "id" | "name" | "slug" | "start_date" | "end_date" | "timezone" | "longitude">;
+  needs_action?: boolean;
+  unread_events_count?: number;
+}
+
+export interface MeetingRequestCounts {
+  action_needed_count: number;
+  incoming_pending_count: number;
+  incoming_reschedule_count: number;
+}
+
 // Auth types
 export interface AuthUser {
   id: string;
@@ -483,4 +534,3 @@ export interface CreatePaymentResponse {
   status: PaymentStatus;
   expires_at?: string;
 }
-

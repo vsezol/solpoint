@@ -28,18 +28,27 @@ import {
   X
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import type { User, Event, Invite } from "@/types";
+import { useRouter, useSearchParams } from "next/navigation";
+import type { User, Event, Invite, MeetingRequest, EntityType } from "@/types";
 import { getAppUrl } from "@/lib/utils";
 import { ProfileEditForm } from "./profile-edit-form";
 import { useProfileEdit } from "./profile-edit-provider";
 import { AddFriendButton } from "./add-friend-button";
 import { EditProfileButton } from "./edit-profile-button";
 import { trackEvent } from "@/lib/analytics";
-import { Modal, ModalHeader, ModalTitle, ModalContent, ProSubscriptionModal, AuthRequiredModal, UserListItem } from "@/components/ui";
+import { Modal, ModalHeader, ModalTitle, ModalContent, ProSubscriptionModal, AuthRequiredModal, UserListItem, Input, TimezoneSelect } from "@/components/ui";
 import { CreateEntityForm } from "@/components/hubs/create-entity-form";
-import type { EntityType } from "@/types";
 import { useAuth } from "@/hooks/use-auth";
+import {
+  approveMeetingRequest,
+  getMeetingRequestCounts,
+  getMeetingRequests,
+  markMeetingEventsRead,
+  rejectMeetingRequest,
+  rescheduleMeetingRequest,
+} from "@/lib/api/meeting-requests";
+import { isMeetingRequestsEnabled } from "@/lib/meeting-requests";
+import { isValidIanaTimezone, resolveMeetingTimezone } from "@/lib/utils/timezone";
 
 interface ProfileContentProps {
   user: User;
@@ -90,8 +99,27 @@ export function ProfileContent({
   const [friendRequestsList, setFriendRequestsList] = useState<User[]>([]);
   const [showProModal, setShowProModal] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user: currentAuthUser, isAuthenticated } = useAuth();
   const isVip = currentAuthUser?.subscription_tier === "vip";
+  const meetingRequestsEnabled = isMeetingRequestsEnabled();
+  const [meetingCounts, setMeetingCounts] = useState({
+    action_needed_count: 0,
+    incoming_pending_count: 0,
+    incoming_reschedule_count: 0,
+  });
+  const [isMeetingRequestsModalOpen, setIsMeetingRequestsModalOpen] = useState(false);
+  const [meetingRequests, setMeetingRequests] = useState<MeetingRequest[]>([]);
+  const [isLoadingMeetingRequests, setIsLoadingMeetingRequests] = useState(false);
+  const [meetingRequestsError, setMeetingRequestsError] = useState<string | null>(null);
+  const [actingMeetingRequest, setActingMeetingRequest] = useState<Record<string, boolean>>({});
+  const [rescheduleDrafts, setRescheduleDrafts] = useState<Record<string, {
+    open: boolean;
+    start_at: string;
+    end_at: string;
+    timezone: string;
+    message: string;
+  }>>({});
 
   // States for users list modals
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -160,7 +188,8 @@ export function ProfileContent({
         promises.push(
           fetchUserInvites(),
           fetchMutualFollowers(),
-          fetchFriendsStats()
+          fetchFriendsStats(),
+          fetchMeetingCounts()
         );
       }
 
@@ -170,6 +199,50 @@ export function ProfileContent({
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user.id, isOwnProfile]);
+
+  useEffect(() => {
+    if (!isOwnProfile || !meetingRequestsEnabled || !isAuthenticated || !isVip) {
+      return;
+    }
+
+    const refresh = () => {
+      fetchMeetingCounts();
+    };
+
+    refresh();
+    const intervalId = setInterval(refresh, 45000);
+    window.addEventListener("meeting-requests-updated", refresh);
+
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener("meeting-requests-updated", refresh);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOwnProfile, isAuthenticated, isVip, meetingRequestsEnabled]);
+
+  useEffect(() => {
+    if (!isOwnProfile || !meetingRequestsEnabled || !isAuthenticated || !isVip) {
+      return;
+    }
+
+    if (searchParams.get("meetingRequests") === "1") {
+      trackEvent("meeting_requests_open", {
+        event_category: "Meeting Requests",
+        event_label: "open_from_header",
+      });
+      setIsMeetingRequestsModalOpen(true);
+      fetchMeetingRequestsList();
+      markMeetingEventsRead({ mark_all: true }).catch((error) => {
+        console.error("Error marking meeting request events as read:", error);
+      });
+      fetchMeetingCounts();
+      window.dispatchEvent(new Event("meeting-requests-updated"));
+      const url = new URL(window.location.href);
+      url.searchParams.delete("meetingRequests");
+      window.history.replaceState({}, "", url.toString());
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOwnProfile, isAuthenticated, isVip, meetingRequestsEnabled, searchParams]);
 
   const fetchStatistics = async () => {
     try {
@@ -408,6 +481,43 @@ export function ProfileContent({
     }
   };
 
+  async function fetchMeetingCounts() {
+    if (!isOwnProfile || !meetingRequestsEnabled || !isAuthenticated || !isVip) {
+      setMeetingCounts({
+        action_needed_count: 0,
+        incoming_pending_count: 0,
+        incoming_reschedule_count: 0,
+      });
+      return;
+    }
+
+    try {
+      const counts = await getMeetingRequestCounts();
+      setMeetingCounts(counts);
+    } catch (error) {
+      console.error("Error fetching meeting request counts:", error);
+    }
+  }
+
+  async function fetchMeetingRequestsList() {
+    if (!meetingRequestsEnabled || !isAuthenticated || !isVip) {
+      setMeetingRequests([]);
+      return;
+    }
+
+    setIsLoadingMeetingRequests(true);
+    setMeetingRequestsError(null);
+    try {
+      const response = await getMeetingRequests({ scope: "all", status: "pending" });
+      setMeetingRequests(response.data || []);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to fetch meeting requests";
+      setMeetingRequestsError(message);
+    } finally {
+      setIsLoadingMeetingRequests(false);
+    }
+  }
+
   const fetchAffiliations = async () => {
     setIsLoadingAffiliations(true);
     try {
@@ -608,6 +718,131 @@ export function ProfileContent({
     } catch (error) {
       console.error("Error declining friend request:", error);
       alert("Failed to decline friend request");
+    }
+  };
+
+  const toLocalDateTimeInput = (isoValue: string) => {
+    const date = new Date(isoValue);
+    const offset = date.getTimezoneOffset() * 60000;
+    return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+  };
+
+  const getRequestTimezoneDefault = (meetingRequest: MeetingRequest): string => {
+    const proposalTimezone = meetingRequest.current_proposal?.timezone;
+    if (isValidIanaTimezone(proposalTimezone)) {
+      return proposalTimezone!;
+    }
+
+    return (
+      resolveMeetingTimezone({
+        eventTimezone: meetingRequest.event?.timezone,
+        eventLongitude: meetingRequest.event?.longitude ?? null,
+      }) || ""
+    );
+  };
+
+  const handleOpenMeetingRequestsModal = async () => {
+    if (!meetingRequestsEnabled || !isVip) {
+      setShowProModal(true);
+      return;
+    }
+
+    trackEvent("meeting_requests_open", {
+      event_category: "Meeting Requests",
+      event_label: "open_list",
+    });
+
+    setIsMeetingRequestsModalOpen(true);
+    await fetchMeetingRequestsList();
+    await markMeetingEventsRead({ mark_all: true }).catch((error) => {
+      console.error("Error marking meeting request events as read:", error);
+    });
+    await fetchMeetingCounts();
+    window.dispatchEvent(new Event("meeting-requests-updated"));
+  };
+
+  const handleApproveMeetingRequest = async (requestId: string) => {
+    setActingMeetingRequest((prev) => ({ ...prev, [requestId]: true }));
+    try {
+      await approveMeetingRequest(requestId);
+      trackEvent("meeting_request_approve", {
+        event_category: "Meeting Requests",
+        event_label: "approve",
+      });
+      await fetchMeetingRequestsList();
+      await fetchMeetingCounts();
+      window.dispatchEvent(new Event("meeting-requests-updated"));
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Failed to approve meeting request");
+    } finally {
+      setActingMeetingRequest((prev) => ({ ...prev, [requestId]: false }));
+    }
+  };
+
+  const handleRejectMeetingRequest = async (requestId: string) => {
+    setActingMeetingRequest((prev) => ({ ...prev, [requestId]: true }));
+    try {
+      await rejectMeetingRequest(requestId);
+      trackEvent("meeting_request_reject", {
+        event_category: "Meeting Requests",
+        event_label: "reject",
+      });
+      await fetchMeetingRequestsList();
+      await fetchMeetingCounts();
+      window.dispatchEvent(new Event("meeting-requests-updated"));
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Failed to reject meeting request");
+    } finally {
+      setActingMeetingRequest((prev) => ({ ...prev, [requestId]: false }));
+    }
+  };
+
+  const handleToggleReschedule = (meetingRequest: MeetingRequest) => {
+    const currentProposal = meetingRequest.current_proposal;
+    if (!currentProposal) return;
+
+    setRescheduleDrafts((prev) => ({
+      ...prev,
+      [meetingRequest.id]: {
+        open: !prev[meetingRequest.id]?.open,
+        start_at: prev[meetingRequest.id]?.start_at || toLocalDateTimeInput(currentProposal.start_at),
+        end_at: prev[meetingRequest.id]?.end_at || toLocalDateTimeInput(currentProposal.end_at),
+        timezone: prev[meetingRequest.id]?.timezone || getRequestTimezoneDefault(meetingRequest),
+        message: prev[meetingRequest.id]?.message || "",
+      },
+    }));
+  };
+
+  const handleSubmitReschedule = async (meetingRequest: MeetingRequest) => {
+    const draft = rescheduleDrafts[meetingRequest.id];
+    if (!draft) return;
+
+    setActingMeetingRequest((prev) => ({ ...prev, [meetingRequest.id]: true }));
+    try {
+      await rescheduleMeetingRequest(meetingRequest.id, {
+        start_at: new Date(draft.start_at).toISOString(),
+        end_at: new Date(draft.end_at).toISOString(),
+        timezone: draft.timezone.trim() || "UTC",
+        message: draft.message.trim() || undefined,
+      });
+
+      trackEvent("meeting_request_reschedule", {
+        event_category: "Meeting Requests",
+        event_label: "reschedule",
+      });
+
+      setRescheduleDrafts((prev) => ({
+        ...prev,
+        [meetingRequest.id]: { ...prev[meetingRequest.id], open: false },
+      }));
+
+      await fetchMeetingRequestsList();
+      await fetchMeetingCounts();
+      window.dispatchEvent(new Event("meeting-requests-updated"));
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Failed to propose a new time");
+    } finally {
+      setActingMeetingRequest((prev) => ({ ...prev, [meetingRequest.id]: false }));
     }
   };
 
@@ -1526,6 +1761,29 @@ export function ProfileContent({
             )}
           </Card>
 
+          {isOwnProfile && meetingRequestsEnabled && (
+            <Card variant="bordered" className="w-full">
+              <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
+                Your meetups
+              </h3>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm text-[var(--color-text-secondary)]">
+                  New requests:{" "}
+                  <span className="text-[var(--color-text-primary)] font-semibold">
+                    {meetingCounts.action_needed_count}
+                  </span>
+                </p>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={handleOpenMeetingRequestsModal}
+                >
+                  Check meeting requests
+                </Button>
+              </div>
+            </Card>
+          )}
+
           {/* Upgrade to PRO */}
           {user.subscription_tier === "free" && (
             <Card variant="bordered" className="w-full bg-gradient-to-r from-[var(--color-primary)]/10 to-[var(--color-secondary)]/10">
@@ -1884,6 +2142,205 @@ export function ProfileContent({
                   </div>
                 </div>
               ))
+            )}
+          </div>
+        </ModalContent>
+      </Modal>
+
+      <Modal
+        isOpen={isMeetingRequestsModalOpen}
+        onClose={() => setIsMeetingRequestsModalOpen(false)}
+        size="lg"
+        ariaLabel="Meeting requests list"
+      >
+        <ModalHeader>
+          <ModalTitle>Meeting Requests</ModalTitle>
+        </ModalHeader>
+        <ModalContent>
+          <div className="space-y-3 max-h-[65vh] overflow-y-auto">
+            {isLoadingMeetingRequests ? (
+              <p className="text-sm text-[var(--color-text-secondary)] text-center py-4">
+                Loading requests...
+              </p>
+            ) : meetingRequestsError ? (
+              <p className="text-sm text-[var(--color-error)] text-center py-4">
+                {meetingRequestsError}
+              </p>
+            ) : meetingRequests.length === 0 ? (
+              <p className="text-sm text-[var(--color-text-secondary)] text-center py-4">
+                No pending meeting requests
+              </p>
+            ) : (
+              meetingRequests.map((meetingRequest) => {
+                const proposal = meetingRequest.current_proposal;
+                const draft = rescheduleDrafts[meetingRequest.id];
+                const isActing = Boolean(actingMeetingRequest[meetingRequest.id]);
+                const canAct = meetingRequest.needs_action === true;
+                const eventLink = meetingRequest.event?.slug || meetingRequest.event?.id;
+
+                return (
+                  <div
+                    key={meetingRequest.id}
+                    className="p-4 rounded-lg border border-[var(--color-surface-border)] bg-[var(--color-background)]/40"
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div>
+                        <p className="text-sm text-[var(--color-text-primary)] font-medium">
+                          {meetingRequest.counterparty?.twitter_name || "Unknown user"}
+                        </p>
+                        {meetingRequest.counterparty?.twitter_handle && (
+                          <p className="text-xs text-[var(--color-text-secondary)]">
+                            @{meetingRequest.counterparty.twitter_handle}
+                          </p>
+                        )}
+                      </div>
+                      {meetingRequest.unread_events_count && meetingRequest.unread_events_count > 0 && (
+                        <span className="min-w-5 h-5 px-1 rounded-full bg-red-500 text-white text-xs font-semibold flex items-center justify-center">
+                          {meetingRequest.unread_events_count}
+                        </span>
+                      )}
+                    </div>
+
+                    {meetingRequest.event && (
+                      <p className="text-xs text-[var(--color-text-secondary)] mb-1">
+                        Event:{" "}
+                        {eventLink ? (
+                          <Link
+                            href={`/events/${eventLink}`}
+                            className="text-[var(--color-primary)] hover:underline"
+                          >
+                            {meetingRequest.event.name}
+                          </Link>
+                        ) : (
+                          meetingRequest.event.name
+                        )}
+                      </p>
+                    )}
+
+                    {proposal && (
+                      <div className="mb-3">
+                        <p className="text-xs text-[var(--color-text-secondary)]">
+                          Proposed time:{" "}
+                          <span className="text-[var(--color-text-primary)]">
+                            {new Date(proposal.start_at).toLocaleString()} - {new Date(proposal.end_at).toLocaleString()}
+                          </span>
+                        </p>
+                        <p className="text-xs text-[var(--color-text-secondary)]">
+                          Timezone: <span className="text-[var(--color-text-primary)]">{proposal.timezone}</span>
+                        </p>
+                        {proposal.message && (
+                          <p className="text-xs text-[var(--color-text-secondary)] mt-1">
+                            Note: <span className="text-[var(--color-text-primary)]">{proposal.message}</span>
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        disabled={!canAct || isActing}
+                        isLoading={isActing}
+                        onClick={() => handleApproveMeetingRequest(meetingRequest.id)}
+                      >
+                        Approve
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={!canAct || isActing}
+                        onClick={() => handleRejectMeetingRequest(meetingRequest.id)}
+                      >
+                        Reject
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={!canAct || isActing || !proposal}
+                        onClick={() => handleToggleReschedule(meetingRequest)}
+                      >
+                        Propose new time
+                      </Button>
+                    </div>
+
+                    {draft?.open && (
+                      <div className="mt-3 p-3 rounded-lg border border-[var(--color-surface-border)] bg-[var(--color-surface)]">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <Input
+                            type="datetime-local"
+                            value={draft.start_at}
+                            onChange={(e) =>
+                              setRescheduleDrafts((prev) => ({
+                                ...prev,
+                                [meetingRequest.id]: {
+                                  ...prev[meetingRequest.id],
+                                  start_at: e.target.value,
+                                },
+                              }))
+                            }
+                          />
+                          <Input
+                            type="datetime-local"
+                            value={draft.end_at}
+                            onChange={(e) =>
+                              setRescheduleDrafts((prev) => ({
+                                ...prev,
+                                [meetingRequest.id]: {
+                                  ...prev[meetingRequest.id],
+                                  end_at: e.target.value,
+                                },
+                              }))
+                            }
+                          />
+                        </div>
+                        <div className="mt-2">
+                          <TimezoneSelect
+                            value={draft.timezone}
+                            onChange={(value) =>
+                              setRescheduleDrafts((prev) => ({
+                                ...prev,
+                                [meetingRequest.id]: {
+                                  ...prev[meetingRequest.id],
+                                  timezone: value,
+                                },
+                              }))
+                            }
+                          />
+                        </div>
+                        <div className="mt-2">
+                          <textarea
+                            rows={2}
+                            value={draft.message}
+                            onChange={(e) =>
+                              setRescheduleDrafts((prev) => ({
+                                ...prev,
+                                [meetingRequest.id]: {
+                                  ...prev[meetingRequest.id],
+                                  message: e.target.value,
+                                },
+                              }))
+                            }
+                            className="w-full px-3 py-2 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)]"
+                            placeholder="Optional note"
+                          />
+                        </div>
+                        <div className="mt-2 flex justify-end">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => handleSubmitReschedule(meetingRequest)}
+                            disabled={!draft.start_at || !draft.end_at || !draft.timezone.trim() || isActing}
+                            isLoading={isActing}
+                          >
+                            Send new proposal
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
             )}
           </div>
         </ModalContent>
