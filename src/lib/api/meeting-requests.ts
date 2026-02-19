@@ -115,7 +115,18 @@ export async function markMeetingEventsRead(payload?: {
 
 export interface CanRequestMeetingResponse {
   canRequest: boolean;
-  sharedEvents: Array<{ id: string; name: string; slug: string | null; timezone: string | null }>;
+  sharedEvents: CanRequestMeetingSharedEvent[];
+}
+
+export interface CanRequestMeetingSharedEvent {
+  id: string;
+  name: string;
+  slug: string | null;
+  eventStartAt: string | null;
+  timezone: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  resolvedTimezone: string | null;
 }
 
 export async function getCanRequestMeeting(profileUserId: string): Promise<CanRequestMeetingResponse> {
@@ -123,8 +134,25 @@ export async function getCanRequestMeeting(profileUserId: string): Promise<CanRe
     cache: "no-store",
   });
   const data = await parseJsonOrThrow(response);
+
+  const sharedEvents: CanRequestMeetingSharedEvent[] = Array.isArray(data.sharedEvents)
+    ? data.sharedEvents.map((event: unknown) => {
+        const item = event as Partial<CanRequestMeetingSharedEvent>;
+        return {
+          id: String(item.id || ""),
+          name: String(item.name || ""),
+          slug: typeof item.slug === "string" ? item.slug : null,
+          eventStartAt: typeof item.eventStartAt === "string" ? item.eventStartAt : null,
+          timezone: typeof item.timezone === "string" ? item.timezone : null,
+          latitude: typeof item.latitude === "number" ? item.latitude : null,
+          longitude: typeof item.longitude === "number" ? item.longitude : null,
+          resolvedTimezone: typeof item.resolvedTimezone === "string" ? item.resolvedTimezone : null,
+        };
+      })
+    : [];
+
   return {
     canRequest: Boolean(data.canRequest),
-    sharedEvents: Array.isArray(data.sharedEvents) ? data.sharedEvents : [],
+    sharedEvents,
   };
 }

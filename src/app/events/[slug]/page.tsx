@@ -167,7 +167,7 @@ export default async function EventPage({ params }: EventPageProps) {
 
   // Organizers from event_organizers (internal = profiles, external = luma_users)
   let organizersInternal: User[] = [];
-  let organizersExternal: ExternalUser[] = [];
+  const organizersExternal: ExternalUser[] = [];
 
   const { data: organizerRows } = await supabase
     .from("event_organizers")
@@ -454,24 +454,17 @@ export default async function EventPage({ params }: EventPageProps) {
           <div className="grid lg:grid-cols-3 gap-8">
             {/* Main Content */}
             <div className="lg:col-span-2 space-y-6">
-              {/* Title */}
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1">
-                  <h1 className="text-4xl font-bold text-[var(--color-text-primary)] mb-4">
-                    {event.name}
-                  </h1>
-                  {event.description && (
-                    <p className="text-lg text-[var(--color-text-secondary)] leading-relaxed whitespace-pre-line">
-                      {event.description}
-                    </p>
-                  )}
-                </div>
-                <EventShareButton event={event} />
+              {/* Title + Share */}
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                <h1 className="text-3xl sm:text-4xl font-bold text-[var(--color-text-primary)]">
+                  {event.name}
+                </h1>
+                <EventShareButton event={event} className="flex-shrink-0" />
               </div>
 
-                 {/* Details Card */}
-                 <Card variant="bordered">
-                <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">
+              {/* Event Details — above description */}
+              <Card variant="bordered">
+                <h2 className="text-lg sm:text-xl font-semibold text-[var(--color-text-primary)] mb-4">
                   Event Details
                 </h2>
                 <div className="space-y-4">
@@ -589,6 +582,18 @@ export default async function EventPage({ params }: EventPageProps) {
                 </div>
               </Card>
 
+              {/* Description — below Event Details */}
+              {event.description && (
+                <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 sm:p-6">
+                  <h2 className="text-lg sm:text-xl font-semibold text-[var(--color-text-primary)] mb-3 sm:mb-4">
+                    About
+                  </h2>
+                  <p className="text-base sm:text-lg text-[var(--color-text-secondary)] leading-relaxed whitespace-pre-line">
+                    {event.description}
+                  </p>
+                </div>
+              )}
+
               {/* Hosts */}
               {((event.organizers?.internal?.length ?? 0) + (event.organizers?.external?.length ?? 0)) > 0 && (
                 <div>
@@ -664,8 +669,11 @@ export default async function EventPage({ params }: EventPageProps) {
               <EntityMembersWidget
                 entityType="event"
                 entityId={event.id}
+                eventStartAt={event.start_date ?? null}
                 eventTimezone={event.timezone ?? null}
+                eventLatitude={event.latitude ?? null}
                 eventLongitude={event.longitude ?? null}
+                isUserRegistered={isUserRegistered}
               />
             </div>
           </div>

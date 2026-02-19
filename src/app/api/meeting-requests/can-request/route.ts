@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthContext } from "@/app/api/meeting-requests/helpers";
+import { isValidIanaTimezone } from "@/lib/luma/timezone";
+import {
+  normalizeValidCoordinates,
+  resolveTimezoneFromCoordinates,
+} from "@/lib/timezone-from-coords";
 
 /**
  * GET /api/meeting-requests/can-request?userId=<profile_user_id>
@@ -51,17 +56,35 @@ export async function GET(request: NextRequest) {
     // Load upcoming filter: only include events that are still upcoming
     const { data: events } = await supabase
       .from("events")
-      .select("id, name, slug, timezone")
+      .select("id, name, slug, start_date, timezone, latitude, longitude")
       .in("id", sharedEventIds)
       .gte("start_date", now)
       .order("start_date", { ascending: true });
 
-    const sharedEvents = (events || []).map((e) => ({
-      id: e.id,
-      name: e.name,
-      slug: e.slug ?? null,
-      timezone: e.timezone ?? null,
-    }));
+    const sharedEvents = (events || []).map((e) => {
+      const timezone = typeof e.timezone === "string" ? e.timezone : null;
+      const coordinates = normalizeValidCoordinates({
+        latitude: e.latitude,
+        longitude: e.longitude,
+      });
+
+      const resolvedTimezone = isValidIanaTimezone(timezone)
+        ? timezone
+        : coordinates
+          ? resolveTimezoneFromCoordinates(coordinates)
+          : null;
+
+      return {
+        id: e.id,
+        name: e.name,
+        slug: e.slug ?? null,
+        eventStartAt: e.start_date ?? null,
+        timezone,
+        latitude: coordinates?.latitude ?? null,
+        longitude: coordinates?.longitude ?? null,
+        resolvedTimezone,
+      };
+    });
 
     return NextResponse.json({
       canRequest: sharedEvents.length > 0,

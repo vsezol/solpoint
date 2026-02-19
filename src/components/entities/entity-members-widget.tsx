@@ -1,15 +1,14 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Card, Avatar, ProSubscriptionModal, AuthRequiredModal, Modal, ModalHeader, ModalTitle, ModalContent, UserListItem, Button, Input, TimezoneSelect } from "@/components/ui";
+import { Card, Avatar, ProSubscriptionModal, AuthRequiredModal, Modal, ModalHeader, ModalTitle, ModalDescription, ModalContent, ModalFooter, Button, UserListItem } from "@/components/ui";
 import { useAuth } from "@/hooks/use-auth";
-import { useChat } from "@/hooks/use-chat";
+import { useRouter } from "next/navigation";
 import { Twitter, Linkedin, Instagram, Facebook, Globe } from "lucide-react";
 import type { ExternalUser } from "@/types";
-import { createMeetingRequest } from "@/lib/api/meeting-requests";
 import { isMeetingRequestsEnabled } from "@/lib/meeting-requests";
 import { trackEvent } from "@/lib/analytics";
-import { resolveMeetingTimezone } from "@/lib/utils/timezone";
+import { MeetingRequestForm } from "@/components/meeting-request-form";
 
 const EXTERNAL_SOCIAL_ICONS: Record<string, { Icon: React.ComponentType<{ className?: string; size?: number }>; label: string }> = {
   twitter: { Icon: Twitter, label: "Twitter" },
@@ -36,8 +35,12 @@ interface EntityMembersWidgetProps {
   entityType: EntityType;
   entityId: string; // UUID of the entity
   className?: string;
+  eventStartAt?: string | null;
   eventTimezone?: string | null;
+  eventLatitude?: number | null;
   eventLongitude?: number | null;
+  /** When entityType is "event": whether the current user is registered (going) for this event */
+  isUserRegistered?: boolean;
 }
 
 // Тексты для разных типов сущностей
@@ -113,12 +116,15 @@ export function EntityMembersWidget({
   entityType,
   entityId,
   className,
+  eventStartAt = null,
   eventTimezone = null,
+  eventLatitude = null,
   eventLongitude = null,
+  isUserRegistered = true,
 }: EntityMembersWidgetProps) {
   const { user, isAuthenticated } = useAuth();
+  const router = useRouter();
   const isVip = user?.subscription_tier === "vip";
-  const { openChat } = useChat();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -140,17 +146,13 @@ export function EntityMembersWidget({
   const [allExternal, setAllExternal] = useState<ExternalUser[]>([]);
   const [friendStatuses, setFriendStatuses] = useState<Record<string, "none" | "pending_sent" | "pending_received" | "accepted" | "blocked">>({});
   const [sendingFriendRequest, setSendingFriendRequest] = useState<Record<string, boolean>>({});
-  const [sendingMeetingRequest, setSendingMeetingRequest] = useState<Record<string, boolean>>({});
-  const [creatingChat, setCreatingChat] = useState<Record<string, boolean>>({});
+  const [creatingChat] = useState<Record<string, boolean>>({});
   const [isMeetingModalOpen, setIsMeetingModalOpen] = useState(false);
   const [meetingTarget, setMeetingTarget] = useState<Member | null>(null);
-  const [meetingStartAt, setMeetingStartAt] = useState("");
-  const [meetingDurationMinutes, setMeetingDurationMinutes] = useState<10 | 20 | 30>(30);
-  const [meetingTimezone, setMeetingTimezone] = useState("UTC");
-  const [meetingTimezoneNeedsManualSelect, setMeetingTimezoneNeedsManualSelect] = useState(false);
-  const [meetingPlace, setMeetingPlace] = useState("");
-  const [meetingMessage, setMeetingMessage] = useState("");
-  const [meetingSubmitError, setMeetingSubmitError] = useState<string | null>(null);
+  const [showAttendRequiredModal, setShowAttendRequiredModal] = useState(false);
+  const [attendRequiredTarget, setAttendRequiredTarget] = useState<Member | null>(null);
+  const [attendLoading, setAttendLoading] = useState(false);
+  const [attendError, setAttendError] = useState<string | null>(null);
 
   const texts = ENTITY_TEXTS[entityType];
   const meetingRequestsEnabled = isMeetingRequestsEnabled();
@@ -290,29 +292,6 @@ export function EntityMembersWidget({
     }
   };
 
-  // Создание чата
-  const handleSendMessage = async (userId: string) => {
-    if (!isAuthenticated) {
-      setShowAuthModal(true);
-      return;
-    }
-
-    // Check if user has PRO subscription
-    if (!isVip) {
-      setShowProModal(true);
-      return;
-    }
-
-    setCreatingChat((prev) => ({ ...prev, [userId]: true }));
-    try {
-      await openChat(userId);
-    } catch (error) {
-      console.error("Error creating chat:", error);
-    } finally {
-      setCreatingChat((prev) => ({ ...prev, [userId]: false }));
-    }
-  };
-
   // Обработчик клика по аватару пользователя
   const handleAvatarClick = (e: React.MouseEvent, twitterHandle?: string) => {
     e.preventDefault();
@@ -349,63 +328,46 @@ export function EntityMembersWidget({
     const target = allMembers.find((member) => member.id === userId) || data?.members?.find((member) => member.id === userId) || null;
     if (!target) return;
 
-    const now = new Date();
-    const start = new Date(now.getTime() + 60 * 60 * 1000);
-    const toLocalInput = (value: Date) => {
-      const offset = value.getTimezoneOffset() * 60000;
-      return new Date(value.getTime() - offset).toISOString().slice(0, 16);
-    };
-
-    const resolvedTimezone = resolveMeetingTimezone({
-      eventTimezone,
-      eventLongitude,
-    });
+    if (entityType === "event" && !isUserRegistered) {
+      setAttendRequiredTarget(target);
+      setShowMembersModal(false);
+      setShowAttendRequiredModal(true);
+      setAttendError(null);
+      return;
+    }
 
     setMeetingTarget(target);
-    setMeetingStartAt(toLocalInput(start));
-    setMeetingDurationMinutes(30);
-    setMeetingTimezone(resolvedTimezone || "");
-    setMeetingTimezoneNeedsManualSelect(!resolvedTimezone);
-    setMeetingPlace("");
-    setMeetingMessage("");
-    setMeetingSubmitError(null);
     setIsMeetingModalOpen(true);
   };
 
-  const handleSubmitMeetingRequest = async () => {
-    if (!meetingTarget) return;
-
-    const startDate = new Date(meetingStartAt);
-    const endDate = new Date(startDate.getTime() + meetingDurationMinutes * 60 * 1000);
-
-    setMeetingSubmitError(null);
-    setSendingMeetingRequest((prev) => ({ ...prev, [meetingTarget.id]: true }));
-
+  const handleAttendForMeeting = async () => {
+    setAttendLoading(true);
+    setAttendError(null);
     try {
-      await createMeetingRequest({
-        event_id: entityId,
-        responder_id: meetingTarget.id,
-        start_at: startDate.toISOString(),
-        end_at: endDate.toISOString(),
-        timezone: meetingTimezone.trim() || "UTC",
-        message: meetingMessage.trim() || undefined,
-        place: meetingPlace.trim() || undefined,
+      const response = await fetch(`/api/events/${entityId}/members`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "going" }),
       });
-
-      trackEvent("meeting_request_create", {
-        event_category: "Meeting Requests",
-        event_label: "create",
-        event_id: entityId,
-      });
-
-      setIsMeetingModalOpen(false);
-      setMeetingTarget(null);
-      window.dispatchEvent(new Event("meeting-requests-updated"));
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to create meeting request";
-      setMeetingSubmitError(message);
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to attend event");
+      }
+      setShowAttendRequiredModal(false);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("event-member-updated", { detail: { eventSlug: entityId } }));
+      }
+      router.refresh();
+      const target = attendRequiredTarget;
+      setAttendRequiredTarget(null);
+      if (target) {
+        setMeetingTarget(target);
+        setIsMeetingModalOpen(true);
+      }
+    } catch (err) {
+      setAttendError(err instanceof Error ? err.message : "Failed to attend event");
     } finally {
-      setSendingMeetingRequest((prev) => ({ ...prev, [meetingTarget.id]: false }));
+      setAttendLoading(false);
     }
   };
 
@@ -575,6 +537,45 @@ export function EntityMembersWidget({
         description={`Viewing all ${entityType} members is available only with PRO subscription. Upgrade to PRO to unlock this feature.`}
       />
 
+      {/* Attend required to book meeting (event, user not registered) */}
+      {isEvent && (
+        <Modal
+          isOpen={showAttendRequiredModal}
+          onClose={() => {
+            if (!attendLoading) {
+              setShowAttendRequiredModal(false);
+              setAttendRequiredTarget(null);
+              setAttendError(null);
+              setShowMembersModal(true);
+            }
+          }}
+          size="md"
+          ariaLabel="Attend event to book meeting"
+        >
+          <ModalHeader>
+            <ModalTitle>Attend the event first</ModalTitle>
+            <ModalDescription>
+              To book a meeting you need to attend this event. Click Attend below to register, then you can send a meeting request.
+            </ModalDescription>
+          </ModalHeader>
+          <ModalContent>
+            {attendError && (
+              <p className="text-sm text-red-500 mt-2">{attendError}</p>
+            )}
+          </ModalContent>
+          <ModalFooter>
+            <Button
+              variant="primary"
+              onClick={handleAttendForMeeting}
+              disabled={attendLoading}
+              isLoading={attendLoading}
+            >
+              Attend
+            </Button>
+          </ModalFooter>
+        </Modal>
+      )}
+
       {/* Members Modal */}
       <Modal
         isOpen={showMembersModal}
@@ -609,7 +610,6 @@ export function EntityMembersWidget({
                         sendingFriendRequest={sendingFriendRequest[member.id]}
                         creatingChat={creatingChat[member.id]}
                         onRequestMeeting={entityType === "event" && meetingRequestsEnabled ? handleOpenMeetingRequest : undefined}
-                        sendingMeetingRequest={sendingMeetingRequest[member.id]}
                         showMeetingRequestButton={entityType === "event" && meetingRequestsEnabled}
                       />
                     );
@@ -678,111 +678,35 @@ export function EntityMembersWidget({
         </ModalContent>
       </Modal>
 
-      <Modal
-        isOpen={isMeetingModalOpen}
-        onClose={() => setIsMeetingModalOpen(false)}
-        size="md"
-        ariaLabel="Meeting request form"
-      >
-        <ModalHeader>
-          <ModalTitle>Request Meeting</ModalTitle>
-        </ModalHeader>
-        <ModalContent>
-          <div className="space-y-4">
-            <p className="text-sm text-[var(--color-text-secondary)]">
-              Send a meeting request to{" "}
-              <span className="text-[var(--color-text-primary)] font-medium">
-                {meetingTarget?.name || "user"}
-              </span>
-              .
-            </p>
-
-            <div className="space-y-2">
-              <label className="text-sm text-[var(--color-text-secondary)]">Start time</label>
-              <Input
-                type="datetime-local"
-                value={meetingStartAt}
-                onChange={(e) => setMeetingStartAt(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm text-[var(--color-text-secondary)]">Duration</label>
-              <div className="flex gap-2">
-                {([10, 20, 30] as const).map((mins) => (
-                  <Button
-                    key={mins}
-                    type="button"
-                    variant={meetingDurationMinutes === mins ? "primary" : "outline"}
-                    size="sm"
-                    onClick={() => setMeetingDurationMinutes(mins)}
-                  >
-                    {mins} min
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm text-[var(--color-text-secondary)]">Timezone</label>
-              <TimezoneSelect
-                value={meetingTimezone}
-                onChange={setMeetingTimezone}
-              />
-              <p className="text-xs text-[var(--color-text-secondary)]">
-                {meetingTimezoneNeedsManualSelect
-                  ? "Select a timezone for this meeting."
-                  : "Timezone is preselected from event settings."}
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm text-[var(--color-text-secondary)]">Place (optional)</label>
-              <Input
-                type="text"
-                value={meetingPlace}
-                onChange={(e) => setMeetingPlace(e.target.value)}
-                placeholder="e.g. Main entrance, lobby"
-                className="w-full"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm text-[var(--color-text-secondary)]">Agenda (optional)</label>
-              <textarea
-                value={meetingMessage}
-                onChange={(e) => setMeetingMessage(e.target.value)}
-                rows={3}
-                className="w-full px-3 py-2 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)]"
-                placeholder="What do you want to discuss?"
-              />
-            </div>
-
-            {meetingSubmitError && (
-              <p className="text-sm text-[var(--color-error)]">{meetingSubmitError}</p>
-            )}
-
-            <div className="flex items-center justify-end gap-2 pt-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsMeetingModalOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={handleSubmitMeetingRequest}
-                isLoading={Boolean(meetingTarget && sendingMeetingRequest[meetingTarget.id])}
-                disabled={!meetingStartAt || !meetingTimezone.trim()}
-              >
-                Send request
-              </Button>
-            </div>
-          </div>
-        </ModalContent>
-      </Modal>
+      {meetingTarget && (
+        <MeetingRequestForm
+          isOpen={isMeetingModalOpen}
+          onClose={() => {
+            setIsMeetingModalOpen(false);
+            setMeetingTarget(null);
+          }}
+          targetUser={{
+            id: meetingTarget.id,
+            name: meetingTarget.name || "user",
+          }}
+          eventId={entityId}
+          eventContext={{
+            eventStartAt,
+            timezone: eventTimezone,
+            latitude: eventLatitude,
+            longitude: eventLongitude,
+          }}
+          onSuccess={({ eventId }) => {
+            trackEvent("meeting_request_create", {
+              event_category: "Meeting Requests",
+              event_label: "create",
+              event_id: eventId,
+            });
+            setIsMeetingModalOpen(false);
+            setMeetingTarget(null);
+          }}
+        />
+      )}
 
       {/* Friends Modal */}
       <Modal

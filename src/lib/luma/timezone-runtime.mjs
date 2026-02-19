@@ -1,4 +1,6 @@
-import tzLookup from "tz-lookup";
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+const tzLookup = require("tz-lookup");
 
 export function isValidIanaTimezone(value) {
   if (!value || typeof value !== "string") return false;

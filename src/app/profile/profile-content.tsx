@@ -36,13 +36,14 @@ import { useProfileEdit } from "./profile-edit-provider";
 import { AddFriendButton } from "./add-friend-button";
 import { EditProfileButton } from "./edit-profile-button";
 import { trackEvent } from "@/lib/analytics";
+import { MeetingRequestForm } from "@/components/meeting-request-form";
 import { Modal, ModalHeader, ModalTitle, ModalContent, ProSubscriptionModal, AuthRequiredModal, UserListItem, Input, TimezoneSelect } from "@/components/ui";
 import { CreateEntityForm } from "@/components/hubs/create-entity-form";
 import { useAuth } from "@/hooks/use-auth";
 import {
   approveMeetingRequest,
-  createMeetingRequest,
   getCanRequestMeeting,
+  type CanRequestMeetingSharedEvent,
   getMeetingRequestCounts,
   getMeetingRequests,
   markMeetingEventsRead,
@@ -152,16 +153,8 @@ export function ProfileContent({
 
   // Can request meeting from profile (other user): loading | can request with shared events
   const [canRequestMeeting, setCanRequestMeeting] = useState<boolean | null>(null);
-  const [sharedEventsForMeeting, setSharedEventsForMeeting] = useState<Array<{ id: string; name: string; slug: string | null; timezone: string | null }>>([]);
+  const [sharedEventsForMeeting, setSharedEventsForMeeting] = useState<CanRequestMeetingSharedEvent[]>([]);
   const [isProfileMeetingModalOpen, setIsProfileMeetingModalOpen] = useState(false);
-  const [profileMeetingSelectedEventId, setProfileMeetingSelectedEventId] = useState<string | null>(null);
-  const [profileMeetingStartAt, setProfileMeetingStartAt] = useState("");
-  const [profileMeetingDurationMinutes, setProfileMeetingDurationMinutes] = useState<10 | 20 | 30>(30);
-  const [profileMeetingTimezone, setProfileMeetingTimezone] = useState("UTC");
-  const [profileMeetingPlace, setProfileMeetingPlace] = useState("");
-  const [profileMeetingMessage, setProfileMeetingMessage] = useState("");
-  const [profileMeetingSubmitError, setProfileMeetingSubmitError] = useState<string | null>(null);
-  const [isSubmittingProfileMeeting, setIsSubmittingProfileMeeting] = useState(false);
   const [showProfileMeetingProModal, setShowProfileMeetingProModal] = useState(false);
   const [showProfileMeetingAuthModal, setShowProfileMeetingAuthModal] = useState(false);
 
@@ -819,52 +812,7 @@ export function ProfileContent({
     }
     const first = sharedEventsForMeeting[0];
     if (!first) return;
-    setProfileMeetingSelectedEventId(first.id);
-    const now = new Date();
-    const start = new Date(now.getTime() + 60 * 60 * 1000);
-    const end = new Date(start.getTime() + 30 * 60 * 1000);
-    const toLocalInput = (d: Date) => {
-      const offset = d.getTimezoneOffset() * 60000;
-      return new Date(d.getTime() - offset).toISOString().slice(0, 16);
-    };
-    const tz = first.timezone && isValidIanaTimezone(first.timezone) ? first.timezone : "UTC";
-    setProfileMeetingStartAt(toLocalInput(start));
-    setProfileMeetingDurationMinutes(30);
-    setProfileMeetingTimezone(tz);
-    setProfileMeetingPlace("");
-    setProfileMeetingMessage("");
-    setProfileMeetingSubmitError(null);
     setIsProfileMeetingModalOpen(true);
-  };
-
-  const handleSubmitProfileMeetingRequest = async () => {
-    if (!profileMeetingSelectedEventId || !user.id) return;
-    const startDate = new Date(profileMeetingStartAt);
-    const endDate = new Date(startDate.getTime() + profileMeetingDurationMinutes * 60 * 1000);
-    setIsSubmittingProfileMeeting(true);
-    setProfileMeetingSubmitError(null);
-    try {
-      await createMeetingRequest({
-        event_id: profileMeetingSelectedEventId,
-        responder_id: user.id,
-        start_at: startDate.toISOString(),
-        end_at: endDate.toISOString(),
-        timezone: profileMeetingTimezone.trim() || "UTC",
-        message: profileMeetingMessage.trim() || undefined,
-        place: profileMeetingPlace.trim() || undefined,
-      });
-      trackEvent("meeting_request_create", {
-        event_category: "Meeting Requests",
-        event_label: "from_profile",
-        event_id: profileMeetingSelectedEventId,
-      });
-      setIsProfileMeetingModalOpen(false);
-      window.dispatchEvent(new Event("meeting-requests-updated"));
-    } catch (error) {
-      setProfileMeetingSubmitError(error instanceof Error ? error.message : "Failed to create meeting request");
-    } finally {
-      setIsSubmittingProfileMeeting(false);
-    }
   };
 
   const handleApproveMeetingRequest = async (requestId: string) => {
@@ -2287,130 +2235,24 @@ export function ProfileContent({
         </ModalContent>
       </Modal>
 
-      {/* Profile: Request meeting modal */}
-      <Modal
+      <MeetingRequestForm
         isOpen={isProfileMeetingModalOpen}
         onClose={() => setIsProfileMeetingModalOpen(false)}
-        size="md"
-        ariaLabel="Request meeting"
-      >
-        <ModalHeader>
-          <ModalTitle>Request Meeting</ModalTitle>
-        </ModalHeader>
-        <ModalContent>
-          <div className="space-y-4">
-            <p className="text-sm text-[var(--color-text-secondary)]">
-              Send a meeting request to{" "}
-              <span className="text-[var(--color-text-primary)] font-medium">
-                {currentUser.twitter_name || currentUser.name || "user"}
-              </span>
-              .
-            </p>
-
-            {/* Event: always show which event the meeting is for; dropdown when multiple shared events */}
-            <div className="space-y-2">
-              <label className="text-sm text-[var(--color-text-secondary)]">Event</label>
-              {sharedEventsForMeeting.length > 1 ? (
-                <select
-                  value={profileMeetingSelectedEventId ?? ""}
-                  onChange={(e) => {
-                    const id = e.target.value;
-                    setProfileMeetingSelectedEventId(id);
-                    const ev = sharedEventsForMeeting.find((x) => x.id === id);
-                    if (ev?.timezone && isValidIanaTimezone(ev.timezone)) {
-                      setProfileMeetingTimezone(ev.timezone);
-                    }
-                  }}
-                  className="w-full px-3 py-2 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg text-[var(--color-text-primary)]"
-                >
-                  {sharedEventsForMeeting.map((ev) => (
-                    <option key={ev.id} value={ev.id}>
-                      {ev.name}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <div className="px-3 py-2 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg text-[var(--color-text-primary)]">
-                  {sharedEventsForMeeting[0]?.name ?? "—"}
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm text-[var(--color-text-secondary)]">Start time</label>
-              <Input
-                type="datetime-local"
-                value={profileMeetingStartAt}
-                onChange={(e) => setProfileMeetingStartAt(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm text-[var(--color-text-secondary)]">Duration</label>
-              <div className="flex gap-2">
-                {([10, 20, 30] as const).map((mins) => (
-                  <Button
-                    key={mins}
-                    type="button"
-                    variant={profileMeetingDurationMinutes === mins ? "primary" : "outline"}
-                    size="sm"
-                    onClick={() => setProfileMeetingDurationMinutes(mins)}
-                  >
-                    {mins} min
-                  </Button>
-                ))}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm text-[var(--color-text-secondary)]">Timezone</label>
-              <TimezoneSelect
-                value={profileMeetingTimezone}
-                onChange={setProfileMeetingTimezone}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm text-[var(--color-text-secondary)]">Place (optional)</label>
-              <Input
-                type="text"
-                value={profileMeetingPlace}
-                onChange={(e) => setProfileMeetingPlace(e.target.value)}
-                placeholder="e.g. Main entrance, lobby"
-                className="w-full"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm text-[var(--color-text-secondary)]">Agenda (optional)</label>
-              <textarea
-                value={profileMeetingMessage}
-                onChange={(e) => setProfileMeetingMessage(e.target.value)}
-                rows={3}
-                className="w-full px-3 py-2 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)]"
-                placeholder="What do you want to discuss?"
-              />
-            </div>
-            {profileMeetingSubmitError && (
-              <p className="text-sm text-[var(--color-error)]">{profileMeetingSubmitError}</p>
-            )}
-            <div className="flex items-center justify-end gap-2 pt-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsProfileMeetingModalOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={handleSubmitProfileMeetingRequest}
-                isLoading={isSubmittingProfileMeeting}
-                disabled={!profileMeetingStartAt || !profileMeetingTimezone.trim() || !profileMeetingSelectedEventId}
-              >
-                Send request
-              </Button>
-            </div>
-          </div>
-        </ModalContent>
-      </Modal>
+        targetUser={{
+          id: user.id,
+          name: currentUser.twitter_name || "user",
+        }}
+        sharedEvents={sharedEventsForMeeting}
+        defaultEventId={sharedEventsForMeeting[0]?.id ?? null}
+        onSuccess={({ eventId }) => {
+          trackEvent("meeting_request_create", {
+            event_category: "Meeting Requests",
+            event_label: "from_profile",
+            event_id: eventId,
+          });
+          setIsProfileMeetingModalOpen(false);
+        }}
+      />
 
       <ProSubscriptionModal
         isOpen={showProfileMeetingProModal}
