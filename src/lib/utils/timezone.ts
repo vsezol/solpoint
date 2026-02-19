@@ -73,3 +73,24 @@ export function getIanaTimezones(): string[] {
 
   return [...FALLBACK_TIMEZONES];
 }
+
+/**
+ * Format meeting proposal time as "21:15 GMT+5" (time in given timezone + short offset).
+ */
+export function formatMeetingTimeGmt(startAt: string, timezone: string): string {
+  const d = new Date(startAt);
+  if (Number.isNaN(d.getTime())) return startAt;
+  const tz = isValidIanaTimezone(timezone) ? timezone : "UTC";
+  const timeStr = new Intl.DateTimeFormat("en-GB", {
+    timeZone: tz,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(d);
+  const tzParts = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz,
+    timeZoneName: "longOffset",
+  }).formatToParts(d);
+  const tzName = tzParts.find((p) => p.type === "timeZoneName")?.value ?? "GMT";
+  return `${timeStr} ${tzName}`;
+}

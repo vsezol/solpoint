@@ -41,6 +41,8 @@ import { CreateEntityForm } from "@/components/hubs/create-entity-form";
 import { useAuth } from "@/hooks/use-auth";
 import {
   approveMeetingRequest,
+  createMeetingRequest,
+  getCanRequestMeeting,
   getMeetingRequestCounts,
   getMeetingRequests,
   markMeetingEventsRead,
@@ -48,7 +50,7 @@ import {
   rescheduleMeetingRequest,
 } from "@/lib/api/meeting-requests";
 import { isMeetingRequestsEnabled } from "@/lib/meeting-requests";
-import { isValidIanaTimezone, resolveMeetingTimezone } from "@/lib/utils/timezone";
+import { isValidIanaTimezone, resolveMeetingTimezone, formatMeetingTimeGmt } from "@/lib/utils/timezone";
 
 interface ProfileContentProps {
   user: User;
@@ -119,6 +121,7 @@ export function ProfileContent({
     end_at: string;
     timezone: string;
     message: string;
+    place: string;
   }>>({});
 
   // States for users list modals
@@ -146,6 +149,21 @@ export function ProfileContent({
   const [userFriendsStatuses, setUserFriendsStatuses] = useState<Record<string, "none" | "pending_sent" | "pending_received" | "accepted" | "blocked">>({});
   const [sendingFriendRequest, setSendingFriendRequest] = useState<Record<string, boolean>>({});
   const [creatingChat, setCreatingChat] = useState<Record<string, boolean>>({});
+
+  // Can request meeting from profile (other user): loading | can request with shared events
+  const [canRequestMeeting, setCanRequestMeeting] = useState<boolean | null>(null);
+  const [sharedEventsForMeeting, setSharedEventsForMeeting] = useState<Array<{ id: string; name: string; slug: string | null; timezone: string | null }>>([]);
+  const [isProfileMeetingModalOpen, setIsProfileMeetingModalOpen] = useState(false);
+  const [profileMeetingSelectedEventId, setProfileMeetingSelectedEventId] = useState<string | null>(null);
+  const [profileMeetingStartAt, setProfileMeetingStartAt] = useState("");
+  const [profileMeetingDurationMinutes, setProfileMeetingDurationMinutes] = useState<10 | 20 | 30>(30);
+  const [profileMeetingTimezone, setProfileMeetingTimezone] = useState("UTC");
+  const [profileMeetingPlace, setProfileMeetingPlace] = useState("");
+  const [profileMeetingMessage, setProfileMeetingMessage] = useState("");
+  const [profileMeetingSubmitError, setProfileMeetingSubmitError] = useState<string | null>(null);
+  const [isSubmittingProfileMeeting, setIsSubmittingProfileMeeting] = useState(false);
+  const [showProfileMeetingProModal, setShowProfileMeetingProModal] = useState(false);
+  const [showProfileMeetingAuthModal, setShowProfileMeetingAuthModal] = useState(false);
 
   // Обновляем локальное состояние при изменении user prop
   useEffect(() => {
@@ -219,6 +237,35 @@ export function ProfileContent({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOwnProfile, isAuthenticated, isVip, meetingRequestsEnabled]);
+
+  // Fetch can-request meeting when viewing another user's profile (non-blocking)
+  useEffect(() => {
+    if (isOwnProfile || !meetingRequestsEnabled || !user.id || !isAuthenticated) {
+      if (!isOwnProfile) {
+        setCanRequestMeeting(false);
+        setSharedEventsForMeeting([]);
+      }
+      return;
+    }
+    let cancelled = false;
+    setCanRequestMeeting(null);
+    getCanRequestMeeting(user.id)
+      .then((res) => {
+        if (!cancelled) {
+          setCanRequestMeeting(res.canRequest);
+          setSharedEventsForMeeting(res.sharedEvents || []);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCanRequestMeeting(false);
+          setSharedEventsForMeeting([]);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOwnProfile, meetingRequestsEnabled, user.id, isAuthenticated]);
 
   useEffect(() => {
     if (!isOwnProfile || !meetingRequestsEnabled || !isAuthenticated || !isVip) {
@@ -761,6 +808,65 @@ export function ProfileContent({
     window.dispatchEvent(new Event("meeting-requests-updated"));
   };
 
+  const handleOpenProfileMeetingRequest = () => {
+    if (!isAuthenticated) {
+      setShowProfileMeetingAuthModal(true);
+      return;
+    }
+    if (!isVip) {
+      setShowProfileMeetingProModal(true);
+      return;
+    }
+    const first = sharedEventsForMeeting[0];
+    if (!first) return;
+    setProfileMeetingSelectedEventId(first.id);
+    const now = new Date();
+    const start = new Date(now.getTime() + 60 * 60 * 1000);
+    const end = new Date(start.getTime() + 30 * 60 * 1000);
+    const toLocalInput = (d: Date) => {
+      const offset = d.getTimezoneOffset() * 60000;
+      return new Date(d.getTime() - offset).toISOString().slice(0, 16);
+    };
+    const tz = first.timezone && isValidIanaTimezone(first.timezone) ? first.timezone : "UTC";
+    setProfileMeetingStartAt(toLocalInput(start));
+    setProfileMeetingDurationMinutes(30);
+    setProfileMeetingTimezone(tz);
+    setProfileMeetingPlace("");
+    setProfileMeetingMessage("");
+    setProfileMeetingSubmitError(null);
+    setIsProfileMeetingModalOpen(true);
+  };
+
+  const handleSubmitProfileMeetingRequest = async () => {
+    if (!profileMeetingSelectedEventId || !user.id) return;
+    const startDate = new Date(profileMeetingStartAt);
+    const endDate = new Date(startDate.getTime() + profileMeetingDurationMinutes * 60 * 1000);
+    setIsSubmittingProfileMeeting(true);
+    setProfileMeetingSubmitError(null);
+    try {
+      await createMeetingRequest({
+        event_id: profileMeetingSelectedEventId,
+        responder_id: user.id,
+        start_at: startDate.toISOString(),
+        end_at: endDate.toISOString(),
+        timezone: profileMeetingTimezone.trim() || "UTC",
+        message: profileMeetingMessage.trim() || undefined,
+        place: profileMeetingPlace.trim() || undefined,
+      });
+      trackEvent("meeting_request_create", {
+        event_category: "Meeting Requests",
+        event_label: "from_profile",
+        event_id: profileMeetingSelectedEventId,
+      });
+      setIsProfileMeetingModalOpen(false);
+      window.dispatchEvent(new Event("meeting-requests-updated"));
+    } catch (error) {
+      setProfileMeetingSubmitError(error instanceof Error ? error.message : "Failed to create meeting request");
+    } finally {
+      setIsSubmittingProfileMeeting(false);
+    }
+  };
+
   const handleApproveMeetingRequest = async (requestId: string) => {
     setActingMeetingRequest((prev) => ({ ...prev, [requestId]: true }));
     try {
@@ -808,7 +914,8 @@ export function ProfileContent({
         start_at: prev[meetingRequest.id]?.start_at || toLocalDateTimeInput(currentProposal.start_at),
         end_at: prev[meetingRequest.id]?.end_at || toLocalDateTimeInput(currentProposal.end_at),
         timezone: prev[meetingRequest.id]?.timezone || getRequestTimezoneDefault(meetingRequest),
-        message: prev[meetingRequest.id]?.message || "",
+        message: prev[meetingRequest.id]?.message ?? currentProposal.message ?? "",
+        place: prev[meetingRequest.id]?.place ?? currentProposal.place ?? "",
       },
     }));
   };
@@ -824,6 +931,7 @@ export function ProfileContent({
         end_at: new Date(draft.end_at).toISOString(),
         timezone: draft.timezone.trim() || "UTC",
         message: draft.message.trim() || undefined,
+        place: draft.place.trim() || undefined,
       });
 
       trackEvent("meeting_request_reschedule", {
@@ -1761,6 +1869,38 @@ export function ProfileContent({
             )}
           </Card>
 
+          {/* Request meeting (other user's profile): skeleton while loading, then button if we share an upcoming event */}
+          {!isOwnProfile && meetingRequestsEnabled && (
+            <>
+              {canRequestMeeting === null ? (
+                <Card variant="bordered" className="w-full">
+                  <div className="animate-pulse space-y-3">
+                    <div className="h-5 bg-[var(--color-surface-hover)] rounded w-2/3" />
+                    <div className="h-4 bg-[var(--color-surface-hover)] rounded w-full" />
+                    <div className="h-9 bg-[var(--color-surface-hover)] rounded w-full" />
+                  </div>
+                </Card>
+              ) : canRequestMeeting && sharedEventsForMeeting.length > 0 ? (
+                <Card variant="bordered" className="w-full">
+                  <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
+                    Invite to meet
+                  </h3>
+                  <p className="text-sm text-[var(--color-text-secondary)] mb-4">
+                    You&apos;re both attending the same upcoming event{sharedEventsForMeeting.length > 1 ? "s" : ""}. Request a meeting.
+                  </p>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={handleOpenProfileMeetingRequest}
+                  >
+                    <Calendar className="w-4 h-4 mr-2" />
+                    Request meeting
+                  </Button>
+                </Card>
+              ) : null}
+            </>
+          )}
+
           {isOwnProfile && meetingRequestsEnabled && (
             <Card variant="bordered" className="w-full">
               <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
@@ -2147,6 +2287,144 @@ export function ProfileContent({
         </ModalContent>
       </Modal>
 
+      {/* Profile: Request meeting modal */}
+      <Modal
+        isOpen={isProfileMeetingModalOpen}
+        onClose={() => setIsProfileMeetingModalOpen(false)}
+        size="md"
+        ariaLabel="Request meeting"
+      >
+        <ModalHeader>
+          <ModalTitle>Request Meeting</ModalTitle>
+        </ModalHeader>
+        <ModalContent>
+          <div className="space-y-4">
+            <p className="text-sm text-[var(--color-text-secondary)]">
+              Send a meeting request to{" "}
+              <span className="text-[var(--color-text-primary)] font-medium">
+                {currentUser.twitter_name || currentUser.name || "user"}
+              </span>
+              .
+            </p>
+
+            {/* Event: always show which event the meeting is for; dropdown when multiple shared events */}
+            <div className="space-y-2">
+              <label className="text-sm text-[var(--color-text-secondary)]">Event</label>
+              {sharedEventsForMeeting.length > 1 ? (
+                <select
+                  value={profileMeetingSelectedEventId ?? ""}
+                  onChange={(e) => {
+                    const id = e.target.value;
+                    setProfileMeetingSelectedEventId(id);
+                    const ev = sharedEventsForMeeting.find((x) => x.id === id);
+                    if (ev?.timezone && isValidIanaTimezone(ev.timezone)) {
+                      setProfileMeetingTimezone(ev.timezone);
+                    }
+                  }}
+                  className="w-full px-3 py-2 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg text-[var(--color-text-primary)]"
+                >
+                  {sharedEventsForMeeting.map((ev) => (
+                    <option key={ev.id} value={ev.id}>
+                      {ev.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <div className="px-3 py-2 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg text-[var(--color-text-primary)]">
+                  {sharedEventsForMeeting[0]?.name ?? "—"}
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm text-[var(--color-text-secondary)]">Start time</label>
+              <Input
+                type="datetime-local"
+                value={profileMeetingStartAt}
+                onChange={(e) => setProfileMeetingStartAt(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm text-[var(--color-text-secondary)]">Duration</label>
+              <div className="flex gap-2">
+                {([10, 20, 30] as const).map((mins) => (
+                  <Button
+                    key={mins}
+                    type="button"
+                    variant={profileMeetingDurationMinutes === mins ? "primary" : "outline"}
+                    size="sm"
+                    onClick={() => setProfileMeetingDurationMinutes(mins)}
+                  >
+                    {mins} min
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm text-[var(--color-text-secondary)]">Timezone</label>
+              <TimezoneSelect
+                value={profileMeetingTimezone}
+                onChange={setProfileMeetingTimezone}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm text-[var(--color-text-secondary)]">Place (optional)</label>
+              <Input
+                type="text"
+                value={profileMeetingPlace}
+                onChange={(e) => setProfileMeetingPlace(e.target.value)}
+                placeholder="e.g. Main entrance, lobby"
+                className="w-full"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm text-[var(--color-text-secondary)]">Agenda (optional)</label>
+              <textarea
+                value={profileMeetingMessage}
+                onChange={(e) => setProfileMeetingMessage(e.target.value)}
+                rows={3}
+                className="w-full px-3 py-2 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)]"
+                placeholder="What do you want to discuss?"
+              />
+            </div>
+            {profileMeetingSubmitError && (
+              <p className="text-sm text-[var(--color-error)]">{profileMeetingSubmitError}</p>
+            )}
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsProfileMeetingModalOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleSubmitProfileMeetingRequest}
+                isLoading={isSubmittingProfileMeeting}
+                disabled={!profileMeetingStartAt || !profileMeetingTimezone.trim() || !profileMeetingSelectedEventId}
+              >
+                Send request
+              </Button>
+            </div>
+          </div>
+        </ModalContent>
+      </Modal>
+
+      <ProSubscriptionModal
+        isOpen={showProfileMeetingProModal}
+        onClose={() => setShowProfileMeetingProModal(false)}
+        title="Meeting requests are available with PRO subscription"
+        description="Upgrade to PRO to send meeting requests to other attendees."
+      />
+      <AuthRequiredModal
+        isOpen={showProfileMeetingAuthModal}
+        onClose={() => setShowProfileMeetingAuthModal(false)}
+        title="Sign in to request a meeting"
+        description="You need to be signed in to send a meeting request."
+      />
+
       <Modal
         isOpen={isMeetingRequestsModalOpen}
         onClose={() => setIsMeetingRequestsModalOpen(false)}
@@ -2222,15 +2500,17 @@ export function ProfileContent({
                         <p className="text-xs text-[var(--color-text-secondary)]">
                           Proposed time:{" "}
                           <span className="text-[var(--color-text-primary)]">
-                            {new Date(proposal.start_at).toLocaleString()} - {new Date(proposal.end_at).toLocaleString()}
+                            {formatMeetingTimeGmt(proposal.start_at, proposal.timezone)}
                           </span>
                         </p>
-                        <p className="text-xs text-[var(--color-text-secondary)]">
-                          Timezone: <span className="text-[var(--color-text-primary)]">{proposal.timezone}</span>
-                        </p>
+                        {proposal.place && (
+                          <p className="text-xs text-[var(--color-text-secondary)]">
+                            Place: <span className="text-[var(--color-text-primary)]">{proposal.place}</span>
+                          </p>
+                        )}
                         {proposal.message && (
                           <p className="text-xs text-[var(--color-text-secondary)] mt-1">
-                            Note: <span className="text-[var(--color-text-primary)]">{proposal.message}</span>
+                            Agenda: <span className="text-[var(--color-text-primary)]">{proposal.message}</span>
                           </p>
                         )}
                       </div>
@@ -2309,6 +2589,25 @@ export function ProfileContent({
                           />
                         </div>
                         <div className="mt-2">
+                          <label className="text-xs text-[var(--color-text-secondary)]">Place (optional)</label>
+                          <Input
+                            type="text"
+                            value={draft.place}
+                            onChange={(e) =>
+                              setRescheduleDrafts((prev) => ({
+                                ...prev,
+                                [meetingRequest.id]: {
+                                  ...prev[meetingRequest.id],
+                                  place: e.target.value,
+                                },
+                              }))
+                            }
+                            placeholder="e.g. Main entrance"
+                            className="mt-1 w-full"
+                          />
+                        </div>
+                        <div className="mt-2">
+                          <label className="text-xs text-[var(--color-text-secondary)]">Agenda (optional)</label>
                           <textarea
                             rows={2}
                             value={draft.message}
@@ -2321,8 +2620,8 @@ export function ProfileContent({
                                 },
                               }))
                             }
-                            className="w-full px-3 py-2 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)]"
-                            placeholder="Optional note"
+                            className="mt-1 w-full px-3 py-2 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)]"
+                            placeholder="What do you want to discuss?"
                           />
                         </div>
                         <div className="mt-2 flex justify-end">

@@ -2,11 +2,15 @@ import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getAppOrigin } from "@/lib/utils";
+import { normalizeOAuthRedirectTarget } from "@/lib/auth/oauth-redirect";
 
 export async function GET(request: Request) {
   const supabase = await createClient();
   const { searchParams } = new URL(request.url);
-  const redirectTo = searchParams.get("redirect_to") || "/profile";
+  const redirectTarget = normalizeOAuthRedirectTarget(
+    searchParams.get("redirect_to")
+  );
+  const redirectTo = redirectTarget.value;
 
   // Автоматически определяем origin в зависимости от окружения
   const requestUrl = new URL(request.url);

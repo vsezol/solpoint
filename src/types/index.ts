@@ -331,6 +331,7 @@ export interface MeetingRequestProposal {
   end_at: string;
   timezone: string;
   message?: string | null;
+  place?: string | null;
   created_at: string;
 }
 

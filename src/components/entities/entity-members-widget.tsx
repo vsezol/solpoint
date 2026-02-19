@@ -145,9 +145,10 @@ export function EntityMembersWidget({
   const [isMeetingModalOpen, setIsMeetingModalOpen] = useState(false);
   const [meetingTarget, setMeetingTarget] = useState<Member | null>(null);
   const [meetingStartAt, setMeetingStartAt] = useState("");
-  const [meetingEndAt, setMeetingEndAt] = useState("");
+  const [meetingDurationMinutes, setMeetingDurationMinutes] = useState<10 | 20 | 30>(30);
   const [meetingTimezone, setMeetingTimezone] = useState("UTC");
   const [meetingTimezoneNeedsManualSelect, setMeetingTimezoneNeedsManualSelect] = useState(false);
+  const [meetingPlace, setMeetingPlace] = useState("");
   const [meetingMessage, setMeetingMessage] = useState("");
   const [meetingSubmitError, setMeetingSubmitError] = useState<string | null>(null);
 
@@ -350,7 +351,6 @@ export function EntityMembersWidget({
 
     const now = new Date();
     const start = new Date(now.getTime() + 60 * 60 * 1000);
-    const end = new Date(start.getTime() + 30 * 60 * 1000);
     const toLocalInput = (value: Date) => {
       const offset = value.getTimezoneOffset() * 60000;
       return new Date(value.getTime() - offset).toISOString().slice(0, 16);
@@ -363,9 +363,10 @@ export function EntityMembersWidget({
 
     setMeetingTarget(target);
     setMeetingStartAt(toLocalInput(start));
-    setMeetingEndAt(toLocalInput(end));
+    setMeetingDurationMinutes(30);
     setMeetingTimezone(resolvedTimezone || "");
     setMeetingTimezoneNeedsManualSelect(!resolvedTimezone);
+    setMeetingPlace("");
     setMeetingMessage("");
     setMeetingSubmitError(null);
     setIsMeetingModalOpen(true);
@@ -374,6 +375,9 @@ export function EntityMembersWidget({
   const handleSubmitMeetingRequest = async () => {
     if (!meetingTarget) return;
 
+    const startDate = new Date(meetingStartAt);
+    const endDate = new Date(startDate.getTime() + meetingDurationMinutes * 60 * 1000);
+
     setMeetingSubmitError(null);
     setSendingMeetingRequest((prev) => ({ ...prev, [meetingTarget.id]: true }));
 
@@ -381,10 +385,11 @@ export function EntityMembersWidget({
       await createMeetingRequest({
         event_id: entityId,
         responder_id: meetingTarget.id,
-        start_at: new Date(meetingStartAt).toISOString(),
-        end_at: new Date(meetingEndAt).toISOString(),
+        start_at: startDate.toISOString(),
+        end_at: endDate.toISOString(),
         timezone: meetingTimezone.trim() || "UTC",
         message: meetingMessage.trim() || undefined,
+        place: meetingPlace.trim() || undefined,
       });
 
       trackEvent("meeting_request_create", {
@@ -702,12 +707,20 @@ export function EntityMembersWidget({
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm text-[var(--color-text-secondary)]">End time</label>
-              <Input
-                type="datetime-local"
-                value={meetingEndAt}
-                onChange={(e) => setMeetingEndAt(e.target.value)}
-              />
+              <label className="text-sm text-[var(--color-text-secondary)]">Duration</label>
+              <div className="flex gap-2">
+                {([10, 20, 30] as const).map((mins) => (
+                  <Button
+                    key={mins}
+                    type="button"
+                    variant={meetingDurationMinutes === mins ? "primary" : "outline"}
+                    size="sm"
+                    onClick={() => setMeetingDurationMinutes(mins)}
+                  >
+                    {mins} min
+                  </Button>
+                ))}
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -724,13 +737,24 @@ export function EntityMembersWidget({
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm text-[var(--color-text-secondary)]">Message (optional)</label>
+              <label className="text-sm text-[var(--color-text-secondary)]">Place (optional)</label>
+              <Input
+                type="text"
+                value={meetingPlace}
+                onChange={(e) => setMeetingPlace(e.target.value)}
+                placeholder="e.g. Main entrance, lobby"
+                className="w-full"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm text-[var(--color-text-secondary)]">Agenda (optional)</label>
               <textarea
                 value={meetingMessage}
                 onChange={(e) => setMeetingMessage(e.target.value)}
                 rows={3}
                 className="w-full px-3 py-2 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)]"
-                placeholder="Let's meet near the venue."
+                placeholder="What do you want to discuss?"
               />
             </div>
 
@@ -751,7 +775,7 @@ export function EntityMembersWidget({
                 size="sm"
                 onClick={handleSubmitMeetingRequest}
                 isLoading={Boolean(meetingTarget && sendingMeetingRequest[meetingTarget.id])}
-                disabled={!meetingStartAt || !meetingEndAt || !meetingTimezone.trim()}
+                disabled={!meetingStartAt || !meetingTimezone.trim()}
               >
                 Send request
               </Button>

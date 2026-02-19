@@ -99,7 +99,7 @@ function WorkflowConfigBlocks({
       <WorkflowConfigForm
         key={`full_pipeline-${fullConfig?.id ?? "new"}`}
         title="Full pipeline"
-        description="Scrape → transfer → enrich → save images (cron runs transfer, enrich, save-images)."
+        description="Scrape → transfer → enrich locations → enrich timezones → save images (cron runs transfer, enrich-locations, enrich-timezones, save-images)."
         workflowType="full_pipeline"
         config={fullConfig ?? null}
         onSaved={onSaved}
@@ -303,9 +303,26 @@ export default function AdminLumaScraperPage() {
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [transferLoading, setTransferLoading] = useState(false);
-  const [transferResult, setTransferResult] = useState<{ created: number; skipped: number; errors: number } | null>(null);
+  const [transferResult, setTransferResult] = useState<{
+    created: number;
+    skipped: number;
+    errors: number;
+    timezone_resolved?: number;
+    timezone_fallback_offset?: number;
+    timezone_missing?: number;
+    coords_nullified_zero_zero?: number;
+  } | null>(null);
   const [enrichLoading, setEnrichLoading] = useState(false);
   const [enrichResult, setEnrichResult] = useState<{ updated: number; failed: number; total_processed: number; errors: string[] } | null>(null);
+  const [enrichTimezonesLoading, setEnrichTimezonesLoading] = useState(false);
+  const [enrichTimezonesResult, setEnrichTimezonesResult] = useState<{
+    processed: number;
+    updated_timezone: number;
+    left_null: number;
+    coords_cleaned: number;
+    failed: number;
+    errors: string[];
+  } | null>(null);
   const [saveImagesLoading, setSaveImagesLoading] = useState(false);
   const [saveImagesResult, setSaveImagesResult] = useState<{ saved: number; failed: number; total_processed: number; errors: string[] } | null>(null);
   const [requiredList, setRequiredList] = useState<RequiredVerificationEvent[]>([]);
@@ -317,8 +334,23 @@ export default function AdminLumaScraperPage() {
   const [fullPipelineLoading, setFullPipelineLoading] = useState(false);
   const [fullPipelineStep, setFullPipelineStep] = useState<string | null>(null);
   const [fullPipelineResult, setFullPipelineResult] = useState<{
-    transfer: { created: number; skipped: number; errors: number };
+    transfer: {
+      created: number;
+      skipped: number;
+      errors: number;
+      timezone_resolved?: number;
+      timezone_fallback_offset?: number;
+      timezone_missing?: number;
+      coords_nullified_zero_zero?: number;
+    };
     enrich: { updated: number; failed: number; total_processed: number };
+    enrichTimezones: {
+      processed: number;
+      updated_timezone: number;
+      left_null: number;
+      coords_cleaned: number;
+      failed: number;
+    };
     saveImages: { saved: number; failed: number; total_processed: number };
   } | null>(null);
   const [fullPipelineError, setFullPipelineError] = useState<string | null>(null);
@@ -420,6 +452,26 @@ export default function AdminLumaScraperPage() {
     }
   };
 
+  const handleEnrichTimezones = async () => {
+    setEnrichTimezonesLoading(true);
+    setEnrichTimezonesResult(null);
+    try {
+      const res = await fetch("/api/admin/luma/enrich-timezones", {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Enrich timezones failed");
+      setEnrichTimezonesResult(data);
+      fetchRequiredVerification();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Enrich timezones failed"
+      );
+    } finally {
+      setEnrichTimezonesLoading(false);
+    }
+  };
+
   const handleRunFullPipeline = async () => {
     setFullPipelineLoading(true);
     setFullPipelineError(null);
@@ -435,15 +487,23 @@ export default function AdminLumaScraperPage() {
       const d2 = await r2.json();
       if (!r2.ok) throw new Error(d2.error || "Enrich failed");
 
-      setFullPipelineStep("Save images");
-      const r3 = await fetch("/api/admin/luma/save-images", { method: "POST" });
+      setFullPipelineStep("Enrich timezones");
+      const r3 = await fetch("/api/admin/luma/enrich-timezones", {
+        method: "POST",
+      });
       const d3 = await r3.json();
-      if (!r3.ok) throw new Error(d3.error || "Save images failed");
+      if (!r3.ok) throw new Error(d3.error || "Enrich timezones failed");
+
+      setFullPipelineStep("Save images");
+      const r4 = await fetch("/api/admin/luma/save-images", { method: "POST" });
+      const d4 = await r4.json();
+      if (!r4.ok) throw new Error(d4.error || "Save images failed");
 
       setFullPipelineResult({
         transfer: d1,
         enrich: d2,
-        saveImages: d3,
+        enrichTimezones: d3,
+        saveImages: d4,
       });
       setFullPipelineStep(null);
       fetchRequiredVerification();
@@ -811,7 +871,7 @@ export default function AdminLumaScraperPage() {
                 Run full pipeline
               </h2>
               <p className="text-[var(--color-text-secondary)] text-sm mb-4">
-                Run transfer → enrich locations → save images in sequence (same as cron). Manual trigger.
+                Run transfer → enrich locations → enrich timezones → save images in sequence (same as cron). Manual trigger.
               </p>
               <Button
                 variant="default"
@@ -836,7 +896,11 @@ export default function AdminLumaScraperPage() {
               {fullPipelineResult && (
                 <div className="mt-3 text-sm text-[var(--color-text-primary)] space-y-1">
                   <p>Transfer: created <strong>{fullPipelineResult.transfer.created}</strong>, skipped {fullPipelineResult.transfer.skipped}, errors {fullPipelineResult.transfer.errors}</p>
+                  <p className="text-xs text-[var(--color-text-muted)]">
+                    Transfer timezone stats: resolved {fullPipelineResult.transfer.timezone_resolved ?? 0}, fallback offset {fullPipelineResult.transfer.timezone_fallback_offset ?? 0}, missing {fullPipelineResult.transfer.timezone_missing ?? 0}, zero-zero cleaned {fullPipelineResult.transfer.coords_nullified_zero_zero ?? 0}
+                  </p>
                   <p>Enrich: updated <strong>{fullPipelineResult.enrich.updated}</strong>, failed {fullPipelineResult.enrich.failed}, processed {fullPipelineResult.enrich.total_processed}</p>
+                  <p>Enrich timezones: updated <strong>{fullPipelineResult.enrichTimezones.updated_timezone}</strong>, left null {fullPipelineResult.enrichTimezones.left_null}, coords cleaned {fullPipelineResult.enrichTimezones.coords_cleaned}, failed {fullPipelineResult.enrichTimezones.failed}, processed {fullPipelineResult.enrichTimezones.processed}</p>
                   <p>Save images: saved <strong>{fullPipelineResult.saveImages.saved}</strong>, failed {fullPipelineResult.saveImages.failed}, processed {fullPipelineResult.saveImages.total_processed}</p>
                 </div>
               )}
@@ -869,9 +933,14 @@ export default function AdminLumaScraperPage() {
                 )}
               </Button>
               {transferResult && (
-                <p className="mt-3 text-sm text-[var(--color-text-primary)]">
-                  Created: <strong>{transferResult.created}</strong>, skipped: {transferResult.skipped}, errors: {transferResult.errors}
-                </p>
+                <div className="mt-3 text-sm text-[var(--color-text-primary)] space-y-1">
+                  <p>
+                    Created: <strong>{transferResult.created}</strong>, skipped: {transferResult.skipped}, errors: {transferResult.errors}
+                  </p>
+                  <p className="text-xs text-[var(--color-text-muted)]">
+                    Timezone stats: resolved {transferResult.timezone_resolved ?? 0}, fallback offset {transferResult.timezone_fallback_offset ?? 0}, missing {transferResult.timezone_missing ?? 0}, zero-zero cleaned {transferResult.coords_nullified_zero_zero ?? 0}
+                  </p>
+                </div>
               )}
             </div>
 
@@ -945,6 +1014,44 @@ export default function AdminLumaScraperPage() {
                   {enrichResult.errors?.length > 0 && (
                     <span className="block mt-1 text-[var(--color-text-muted)] text-xs">
                       {enrichResult.errors.slice(0, 3).join("; ")}
+                    </span>
+                  )}
+                </p>
+              )}
+            </div>
+
+            {/* Enrich timezones (timezone from coordinates, fallback to GMT offset) */}
+            <div className="mt-8 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg p-6">
+              <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2 flex items-center gap-2">
+                <Clock className="w-5 h-5" />
+                Enrich timezones
+              </h2>
+              <p className="text-[var(--color-text-secondary)] text-sm mb-4">
+                Run after transfer/enrich locations. Fills <code className="bg-[var(--color-background)] px-1 rounded">events.timezone</code> with IANA value using coordinates, falls back to <code className="bg-[var(--color-background)] px-1 rounded">Etc/GMT±N</code> parsed from Luma raw datetime text, and cleans placeholder coordinates <code className="bg-[var(--color-background)] px-1 rounded">(0,0)</code>.
+              </p>
+              <Button
+                variant="outline"
+                disabled={enrichTimezonesLoading}
+                onClick={handleEnrichTimezones}
+              >
+                {enrichTimezonesLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Enriching timezones…
+                  </>
+                ) : (
+                  <>
+                    <Clock className="w-4 h-4 mr-2" />
+                    Enrich timezones
+                  </>
+                )}
+              </Button>
+              {enrichTimezonesResult && (
+                <p className="mt-3 text-sm text-[var(--color-text-primary)]">
+                  Updated timezone: <strong>{enrichTimezonesResult.updated_timezone}</strong>, left null: {enrichTimezonesResult.left_null}, coords cleaned: {enrichTimezonesResult.coords_cleaned}, failed: {enrichTimezonesResult.failed}, processed: {enrichTimezonesResult.processed}
+                  {enrichTimezonesResult.errors?.length > 0 && (
+                    <span className="block mt-1 text-[var(--color-text-muted)] text-xs">
+                      {enrichTimezonesResult.errors.slice(0, 3).join("; ")}
                     </span>
                   )}
                 </p>

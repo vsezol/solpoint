@@ -1,6 +1,10 @@
 import { createClient, createServiceRoleClient } from "@/lib/supabase/server";
 import { isCronRequest } from "@/lib/cron-auth";
 import { NextRequest, NextResponse } from "next/server";
+import {
+  normalizeCoordinates,
+  resolveTimezoneWithSource,
+} from "@/lib/luma/timezone";
 
 const LIMIT = 500;
 
@@ -58,6 +62,10 @@ export async function POST(request: NextRequest) {
   let created = 0;
   let skipped = 0;
   let errors = 0;
+  let timezoneResolved = 0;
+  let timezoneFallbackOffset = 0;
+  let timezoneMissing = 0;
+  let coordsNullifiedZeroZero = 0;
 
   for (const le of lumaEvents || []) {
     const { data: byLumaId } = await supabase
@@ -90,6 +98,28 @@ export async function POST(request: NextRequest) {
       slug = `${slugFromTitleAndId(le.title, le.id)}-${n}`;
     }
 
+    const normalizedCoords = normalizeCoordinates(
+      le.location_lat,
+      le.location_lng
+    );
+    const timezoneResolution = resolveTimezoneWithSource({
+      lat: normalizedCoords.lat,
+      lng: normalizedCoords.lng,
+      rawDateTimeDisplay: le.raw_date_time_display ?? null,
+    });
+
+    if (normalizedCoords.wasZeroZero) {
+      coordsNullifiedZeroZero += 1;
+    }
+
+    if (timezoneResolution.source === "coords") {
+      timezoneResolved += 1;
+    } else if (timezoneResolution.source === "gmt_offset") {
+      timezoneFallbackOffset += 1;
+    } else {
+      timezoneMissing += 1;
+    }
+
     const eventRow = {
       name: le.title || "Untitled Event",
       description: le.description ?? null,
@@ -100,11 +130,11 @@ export async function POST(request: NextRequest) {
       city: null,
       address: le.address ?? null,
       venue_name: le.location ?? null,
-      latitude: le.location_lat ?? 0,
-      longitude: le.location_lng ?? 0,
+      latitude: normalizedCoords.lat,
+      longitude: normalizedCoords.lng,
       start_date: le.start_at ?? new Date().toISOString(),
       end_date: le.end_at ?? null,
-      timezone: le.raw_date_time_display ?? null,
+      timezone: timezoneResolution.timezone,
       event_type: "official",
       visibility: "public",
       is_paid: false,
@@ -147,5 +177,16 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ created, skipped, errors }, { status: 200 });
+  return NextResponse.json(
+    {
+      created,
+      skipped,
+      errors,
+      timezone_resolved: timezoneResolved,
+      timezone_fallback_offset: timezoneFallbackOffset,
+      timezone_missing: timezoneMissing,
+      coords_nullified_zero_zero: coordsNullifiedZeroZero,
+    },
+    { status: 200 }
+  );
 }

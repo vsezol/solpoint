@@ -22,7 +22,7 @@ export async function POST(
     const { id } = await params;
 
     const body = await request.json();
-    const { start_at, end_at, timezone, message } = body;
+    const { start_at, end_at, timezone, message, place } = body;
 
     if (!start_at || !end_at || !timezone) {
       return NextResponse.json({ error: "start_at, end_at and timezone are required" }, { status: 400 });
@@ -64,6 +64,7 @@ export async function POST(
         end_at: endDate.toISOString(),
         timezone,
         message: message?.trim() || null,
+        place: place?.trim() || null,
       })
       .select("id")
       .single();

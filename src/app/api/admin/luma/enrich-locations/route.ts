@@ -72,6 +72,11 @@ export async function POST(request: NextRequest) {
       errors.push(`Event ${ev.id}: invalid coordinates`);
       continue;
     }
+    if (lat === 0 && lng === 0) {
+      errors.push(`Event ${ev.id}: placeholder coordinates (0,0)`);
+      await delayMs(NOMINATIM_DELAY_MS);
+      continue;
+    }
 
     const result = await reverseGeocodeFromNominatim(lat, lng);
 

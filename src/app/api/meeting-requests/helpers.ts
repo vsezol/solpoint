@@ -178,7 +178,7 @@ export async function serializeMeetingRequests(
     proposalIds.length
       ? supabase
           .from("meeting_request_proposals")
-          .select("id, meeting_request_id, proposed_by_user_id, start_at, end_at, timezone, message, created_at")
+          .select("id, meeting_request_id, proposed_by_user_id, start_at, end_at, timezone, message, place, created_at")
           .in("id", proposalIds)
       : Promise.resolve({ data: [], error: null }),
     supabase
@@ -213,6 +213,7 @@ export async function serializeMeetingRequests(
         end_at: proposal.end_at,
         timezone: proposal.timezone,
         message: proposal.message,
+        place: proposal.place ?? null,
         created_at: proposal.created_at,
       } as MeetingRequestProposal,
     ])

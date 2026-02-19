@@ -95,14 +95,23 @@ async function run(request: NextRequest) {
           status: r2.status,
           ok: r2.ok,
         });
-        const r3 = await fetch(`${base}/api/admin/luma/save-images`, {
+        const r3 = await fetch(`${base}/api/admin/luma/enrich-timezones`, {
+          method: "POST",
+          headers,
+        });
+        results.push({
+          workflow_type: "full_pipeline:enrich-timezones",
+          status: r3.status,
+          ok: r3.ok,
+        });
+        const r4 = await fetch(`${base}/api/admin/luma/save-images`, {
           method: "POST",
           headers,
         });
         results.push({
           workflow_type: "full_pipeline:save-images",
-          status: r3.status,
-          ok: r3.ok,
+          status: r4.status,
+          ok: r4.ok,
         });
       } catch (e) {
         results.push({

@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     if (vipCheck) return vipCheck;
 
     const body = await request.json();
-    const { event_id, responder_id, start_at, end_at, timezone, message } = body;
+    const { event_id, responder_id, start_at, end_at, timezone, message, place } = body;
 
     if (!event_id || !responder_id || !start_at || !end_at || !timezone) {
       return NextResponse.json({ error: "event_id, responder_id, start_at, end_at, timezone are required" }, { status: 400 });
@@ -85,6 +85,7 @@ export async function POST(request: NextRequest) {
         end_at: endDate.toISOString(),
         timezone,
         message: message?.trim() || null,
+        place: place?.trim() || null,
       })
       .select("id")
       .single();

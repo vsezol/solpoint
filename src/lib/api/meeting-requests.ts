@@ -15,6 +15,7 @@ interface CreateMeetingRequestPayload {
   end_at: string;
   timezone: string;
   message?: string;
+  place?: string;
 }
 
 interface RescheduleMeetingRequestPayload {
@@ -22,6 +23,7 @@ interface RescheduleMeetingRequestPayload {
   end_at: string;
   timezone: string;
   message?: string;
+  place?: string;
 }
 
 async function parseJsonOrThrow(response: Response) {
@@ -109,4 +111,20 @@ export async function markMeetingEventsRead(payload?: {
   });
 
   await parseJsonOrThrow(response);
+}
+
+export interface CanRequestMeetingResponse {
+  canRequest: boolean;
+  sharedEvents: Array<{ id: string; name: string; slug: string | null; timezone: string | null }>;
+}
+
+export async function getCanRequestMeeting(profileUserId: string): Promise<CanRequestMeetingResponse> {
+  const response = await fetch(`/api/meeting-requests/can-request?userId=${encodeURIComponent(profileUserId)}`, {
+    cache: "no-store",
+  });
+  const data = await parseJsonOrThrow(response);
+  return {
+    canRequest: Boolean(data.canRequest),
+    sharedEvents: Array.isArray(data.sharedEvents) ? data.sharedEvents : [],
+  };
 }
