@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import Image from "next/image";
 import { Card, Badge, Button, Avatar } from "@/components/ui";
 import { 
@@ -44,7 +44,6 @@ import {
   approveMeetingRequest,
   getCanRequestMeeting,
   type CanRequestMeetingSharedEvent,
-  getMeetingRequestCounts,
   getMeetingRequests,
   markMeetingEventsRead,
   rejectMeetingRequest,
@@ -106,15 +105,11 @@ export function ProfileContent({
   const { user: currentAuthUser, isAuthenticated } = useAuth();
   const isVip = currentAuthUser?.subscription_tier === "vip";
   const meetingRequestsEnabled = isMeetingRequestsEnabled();
-  const [meetingCounts, setMeetingCounts] = useState({
-    action_needed_count: 0,
-    incoming_pending_count: 0,
-    incoming_reschedule_count: 0,
-  });
   const [isMeetingRequestsModalOpen, setIsMeetingRequestsModalOpen] = useState(false);
   const [meetingRequests, setMeetingRequests] = useState<MeetingRequest[]>([]);
   const [isLoadingMeetingRequests, setIsLoadingMeetingRequests] = useState(false);
   const [meetingRequestsError, setMeetingRequestsError] = useState<string | null>(null);
+  const meetingRequestsFetchRef = useRef<Promise<void> | null>(null);
   const [actingMeetingRequest, setActingMeetingRequest] = useState<Record<string, boolean>>({});
   const [rescheduleDrafts, setRescheduleDrafts] = useState<Record<string, {
     open: boolean;
@@ -157,6 +152,14 @@ export function ProfileContent({
   const [isProfileMeetingModalOpen, setIsProfileMeetingModalOpen] = useState(false);
   const [showProfileMeetingProModal, setShowProfileMeetingProModal] = useState(false);
   const [showProfileMeetingAuthModal, setShowProfileMeetingAuthModal] = useState(false);
+  const actionNeededMeetingRequestsCount = useMemo(
+    () => meetingRequests.filter((request) => request.status === "pending" && request.needs_action === true).length,
+    [meetingRequests]
+  );
+  const upcomingMeetingRequestsCount = useMemo(
+    () => meetingRequests.filter((request) => request.status === "approved").length,
+    [meetingRequests]
+  );
 
   // Обновляем локальное состояние при изменении user prop
   useEffect(() => {
@@ -200,7 +203,7 @@ export function ProfileContent({
           fetchUserInvites(),
           fetchMutualFollowers(),
           fetchFriendsStats(),
-          fetchMeetingCounts()
+          fetchMeetingRequestsList()
         );
       }
 
@@ -213,20 +216,23 @@ export function ProfileContent({
 
   useEffect(() => {
     if (!isOwnProfile || !meetingRequestsEnabled || !isAuthenticated || !isVip) {
+      setMeetingRequests([]);
+      setMeetingRequestsError(null);
+      setIsLoadingMeetingRequests(false);
       return;
     }
 
-    const refresh = () => {
-      fetchMeetingCounts();
+    const refreshCounts = () => {
+      fetchMeetingRequestsList({ silent: true });
     };
 
-    refresh();
-    const intervalId = setInterval(refresh, 45000);
-    window.addEventListener("meeting-requests-updated", refresh);
+    refreshCounts();
+    const intervalId = setInterval(refreshCounts, 45000);
+    window.addEventListener("meeting-requests-updated", refreshCounts);
 
     return () => {
       clearInterval(intervalId);
-      window.removeEventListener("meeting-requests-updated", refresh);
+      window.removeEventListener("meeting-requests-updated", refreshCounts);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOwnProfile, isAuthenticated, isVip, meetingRequestsEnabled]);
@@ -271,17 +277,13 @@ export function ProfileContent({
         event_label: "open_from_header",
       });
       setIsMeetingRequestsModalOpen(true);
-      fetchMeetingRequestsList();
       markMeetingEventsRead({ mark_all: true }).catch((error) => {
         console.error("Error marking meeting request events as read:", error);
       });
-      fetchMeetingCounts();
-      window.dispatchEvent(new Event("meeting-requests-updated"));
       const url = new URL(window.location.href);
       url.searchParams.delete("meetingRequests");
       window.history.replaceState({}, "", url.toString());
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOwnProfile, isAuthenticated, isVip, meetingRequestsEnabled, searchParams]);
 
   const fetchStatistics = async () => {
@@ -521,41 +523,40 @@ export function ProfileContent({
     }
   };
 
-  async function fetchMeetingCounts() {
-    if (!isOwnProfile || !meetingRequestsEnabled || !isAuthenticated || !isVip) {
-      setMeetingCounts({
-        action_needed_count: 0,
-        incoming_pending_count: 0,
-        incoming_reschedule_count: 0,
-      });
-      return;
-    }
-
-    try {
-      const counts = await getMeetingRequestCounts();
-      setMeetingCounts(counts);
-    } catch (error) {
-      console.error("Error fetching meeting request counts:", error);
-    }
-  }
-
-  async function fetchMeetingRequestsList() {
+  async function fetchMeetingRequestsList(options?: { silent?: boolean }) {
     if (!meetingRequestsEnabled || !isAuthenticated || !isVip) {
       setMeetingRequests([]);
+      setMeetingRequestsError(null);
       return;
     }
 
-    setIsLoadingMeetingRequests(true);
-    setMeetingRequestsError(null);
-    try {
-      const response = await getMeetingRequests({ scope: "all", status: "pending" });
-      setMeetingRequests(response.data || []);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to fetch meeting requests";
-      setMeetingRequestsError(message);
-    } finally {
-      setIsLoadingMeetingRequests(false);
+    if (meetingRequestsFetchRef.current) {
+      return meetingRequestsFetchRef.current;
     }
+
+    const shouldShowLoading = options?.silent !== true;
+    if (shouldShowLoading) {
+      setIsLoadingMeetingRequests(true);
+    }
+    setMeetingRequestsError(null);
+
+    const pendingFetch = (async () => {
+      try {
+        const response = await getMeetingRequests({ scope: "all" });
+        setMeetingRequests(response.data || []);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to fetch meeting requests";
+        setMeetingRequestsError(message);
+      } finally {
+        if (shouldShowLoading) {
+          setIsLoadingMeetingRequests(false);
+        }
+        meetingRequestsFetchRef.current = null;
+      }
+    })();
+
+    meetingRequestsFetchRef.current = pendingFetch;
+    return pendingFetch;
   }
 
   const fetchAffiliations = async () => {
@@ -793,12 +794,10 @@ export function ProfileContent({
     });
 
     setIsMeetingRequestsModalOpen(true);
-    await fetchMeetingRequestsList();
+    setMeetingRequests((prev) => prev.map((request) => ({ ...request, unread_events_count: 0 })));
     await markMeetingEventsRead({ mark_all: true }).catch((error) => {
       console.error("Error marking meeting request events as read:", error);
     });
-    await fetchMeetingCounts();
-    window.dispatchEvent(new Event("meeting-requests-updated"));
   };
 
   const handleOpenProfileMeetingRequest = () => {
@@ -823,8 +822,7 @@ export function ProfileContent({
         event_category: "Meeting Requests",
         event_label: "approve",
       });
-      await fetchMeetingRequestsList();
-      await fetchMeetingCounts();
+      await fetchMeetingRequestsList({ silent: true });
       window.dispatchEvent(new Event("meeting-requests-updated"));
     } catch (error) {
       alert(error instanceof Error ? error.message : "Failed to approve meeting request");
@@ -841,8 +839,7 @@ export function ProfileContent({
         event_category: "Meeting Requests",
         event_label: "reject",
       });
-      await fetchMeetingRequestsList();
-      await fetchMeetingCounts();
+      await fetchMeetingRequestsList({ silent: true });
       window.dispatchEvent(new Event("meeting-requests-updated"));
     } catch (error) {
       alert(error instanceof Error ? error.message : "Failed to reject meeting request");
@@ -892,8 +889,7 @@ export function ProfileContent({
         [meetingRequest.id]: { ...prev[meetingRequest.id], open: false },
       }));
 
-      await fetchMeetingRequestsList();
-      await fetchMeetingCounts();
+      await fetchMeetingRequestsList({ silent: true });
       window.dispatchEvent(new Event("meeting-requests-updated"));
     } catch (error) {
       alert(error instanceof Error ? error.message : "Failed to propose a new time");
@@ -1855,12 +1851,20 @@ export function ProfileContent({
                 Your meetups
               </h3>
               <div className="flex items-center justify-between gap-3">
-                <p className="text-sm text-[var(--color-text-secondary)]">
-                  New requests:{" "}
-                  <span className="text-[var(--color-text-primary)] font-semibold">
-                    {meetingCounts.action_needed_count}
-                  </span>
-                </p>
+                <div className="space-y-1">
+                  <p className="text-sm text-[var(--color-text-secondary)]">
+                    New requests:{" "}
+                    <span className="text-[var(--color-text-primary)] font-semibold inline-flex items-center min-w-4">
+                      {isLoadingMeetingRequests ? <Loader2 className="w-4 h-4 animate-spin" /> : actionNeededMeetingRequestsCount}
+                    </span>
+                  </p>
+                  <p className="text-sm text-[var(--color-text-secondary)]">
+                    Upcoming meetups:{" "}
+                    <span className="text-[var(--color-text-primary)] font-semibold inline-flex items-center min-w-4">
+                      {isLoadingMeetingRequests ? <Loader2 className="w-4 h-4 animate-spin" /> : upcomingMeetingRequestsCount}
+                    </span>
+                  </p>
+                </div>
                 <Button
                   variant="primary"
                   size="sm"
@@ -2277,7 +2281,7 @@ export function ProfileContent({
           <ModalTitle>Meeting Requests</ModalTitle>
         </ModalHeader>
         <ModalContent>
-          <div className="space-y-3 max-h-[65vh] overflow-y-auto">
+          <div className="space-y-4 max-h-[65vh] overflow-y-auto">
             {isLoadingMeetingRequests ? (
               <p className="text-sm text-[var(--color-text-secondary)] text-center py-4">
                 Loading requests...
@@ -2286,20 +2290,33 @@ export function ProfileContent({
               <p className="text-sm text-[var(--color-error)] text-center py-4">
                 {meetingRequestsError}
               </p>
-            ) : meetingRequests.length === 0 ? (
-              <p className="text-sm text-[var(--color-text-secondary)] text-center py-4">
-                No pending meeting requests
-              </p>
             ) : (
-              meetingRequests.map((meetingRequest) => {
-                const proposal = meetingRequest.current_proposal;
-                const draft = rescheduleDrafts[meetingRequest.id];
-                const isActing = Boolean(actingMeetingRequest[meetingRequest.id]);
-                const canAct = meetingRequest.needs_action === true;
-                const eventLink = meetingRequest.event?.slug || meetingRequest.event?.id;
-
-                return (
-                  <div
+              <>
+                {(() => {
+                  const pendingRequests = meetingRequests.filter((r) => r.status === "pending");
+                  const upcomingMeetups = meetingRequests.filter((r) => r.status === "approved");
+                  return (
+                    <>
+                      <section className="space-y-2">
+                        <h4 className="text-sm font-semibold text-[var(--color-text-primary)]">
+                          Pending requests
+                        </h4>
+                        {pendingRequests.length === 0 ? (
+                          <p className="text-sm text-[var(--color-text-secondary)] py-2">
+                            No pending requests
+                          </p>
+                        ) : (
+                          (pendingRequests.map((meetingRequest) => {
+                            const proposal = meetingRequest.current_proposal;
+                            const draft = rescheduleDrafts[meetingRequest.id];
+                            const isActing = Boolean(actingMeetingRequest[meetingRequest.id]);
+                            const canAct = meetingRequest.needs_action === true;
+                            const currentUserId = currentAuthUser?.id ?? null;
+                            const isInitiator = currentUserId !== null && meetingRequest.requester_id === currentUserId;
+                            const initiatorWaiting = isInitiator && !canAct;
+                            const eventLink = meetingRequest.event?.slug || meetingRequest.event?.id;
+                            return (
+                              <div
                     key={meetingRequest.id}
                     className="p-4 rounded-lg border border-[var(--color-surface-border)] bg-[var(--color-background)]/40"
                   >
@@ -2359,31 +2376,37 @@ export function ProfileContent({
                     )}
 
                     <div className="flex flex-wrap items-center gap-2">
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        disabled={!canAct || isActing}
-                        isLoading={isActing}
-                        onClick={() => handleApproveMeetingRequest(meetingRequest.id)}
-                      >
-                        Approve
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={!canAct || isActing}
-                        onClick={() => handleRejectMeetingRequest(meetingRequest.id)}
-                      >
-                        Reject
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        disabled={!canAct || isActing || !proposal}
-                        onClick={() => handleToggleReschedule(meetingRequest)}
-                      >
-                        Propose new time
-                      </Button>
+                      {canAct && (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          disabled={isActing}
+                          isLoading={isActing}
+                          onClick={() => handleApproveMeetingRequest(meetingRequest.id)}
+                        >
+                          Approve
+                        </Button>
+                      )}
+                      {(canAct || initiatorWaiting) && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={isActing}
+                          onClick={() => handleRejectMeetingRequest(meetingRequest.id)}
+                        >
+                          {initiatorWaiting ? "Cancel meeting" : "Reject"}
+                        </Button>
+                      )}
+                      {(canAct || initiatorWaiting) && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={isActing}
+                          onClick={() => handleToggleReschedule(meetingRequest)}
+                        >
+                          {initiatorWaiting ? "Change time" : "Propose new time"}
+                        </Button>
+                      )}
                     </div>
 
                     {draft?.open && (
@@ -2480,8 +2503,83 @@ export function ProfileContent({
                       </div>
                     )}
                   </div>
-                );
-              })
+                            );
+                          }))
+                        )}
+                      </section>
+                      <section className="space-y-2">
+                        <h4 className="text-sm font-semibold text-[var(--color-text-primary)]">
+                          Upcoming meetups
+                        </h4>
+                        {upcomingMeetups.length === 0 ? (
+                          <p className="text-sm text-[var(--color-text-secondary)] py-2">
+                            No upcoming meetups
+                          </p>
+                        ) : (
+                          upcomingMeetups.map((meetingRequest) => {
+                            const proposal = meetingRequest.current_proposal;
+                            const eventLink = meetingRequest.event?.slug || meetingRequest.event?.id;
+                            return (
+                              <div
+                                key={meetingRequest.id}
+                                className="p-4 rounded-lg border border-[var(--color-surface-border)] bg-[var(--color-background)]/40"
+                              >
+                                <div className="flex items-start justify-between gap-2 mb-2">
+                                  <div>
+                                    <p className="text-sm font-medium text-[var(--color-text-primary)]">
+                                      {meetingRequest.counterparty?.twitter_name || "Unknown user"}
+                                    </p>
+                                    {meetingRequest.counterparty?.twitter_handle && (
+                                      <p className="text-xs text-[var(--color-text-secondary)]">
+                                        @{meetingRequest.counterparty.twitter_handle}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                                {meetingRequest.event && (
+                                  <p className="text-xs text-[var(--color-text-secondary)] mb-1">
+                                    Event:{" "}
+                                    {eventLink ? (
+                                      <Link
+                                        href={`/events/${eventLink}`}
+                                        className="text-[var(--color-primary)] hover:underline"
+                                      >
+                                        {meetingRequest.event.name}
+                                      </Link>
+                                    ) : (
+                                      meetingRequest.event.name
+                                    )}
+                                  </p>
+                                )}
+                                {proposal && (
+                                  <div className="mt-2">
+                                    <p className="text-xs text-[var(--color-text-secondary)]">
+                                      Time:{" "}
+                                      <span className="text-[var(--color-text-primary)]">
+                                        {formatMeetingTimeGmt(proposal.start_at, proposal.timezone)}
+                                      </span>
+                                    </p>
+                                    {proposal.place && (
+                                      <p className="text-xs text-[var(--color-text-secondary)]">
+                                        Place: <span className="text-[var(--color-text-primary)]">{proposal.place}</span>
+                                      </p>
+                                    )}
+                                    {proposal.message && (
+                                      <p className="text-xs text-[var(--color-text-secondary)] mt-1">
+                                        Agenda: <span className="text-[var(--color-text-primary)]">{proposal.message}</span>
+                                      </p>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })
+                        )}
+                      </section>
+                    </>
+                  );
+                })()}
+              </>
             )}
           </div>
         </ModalContent>
