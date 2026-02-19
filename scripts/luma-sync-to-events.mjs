@@ -7,6 +7,10 @@
 
 import "dotenv/config";
 import { createClient } from "@supabase/supabase-js";
+import {
+  normalizeCoordinates,
+  resolveTimezoneWithSource,
+} from "../src/lib/luma/timezone-runtime.mjs";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_API_KEY;
@@ -62,6 +66,10 @@ async function main() {
   let created = 0;
   let skipped = 0;
   let errors = 0;
+  let timezoneResolved = 0;
+  let timezoneFallbackOffset = 0;
+  let timezoneMissing = 0;
+  let coordsNullifiedZeroZero = 0;
 
   for (const le of lumaEvents || []) {
     const { data: byLumaId } = await supabase.from("events").select("id").eq("luma_event_id", le.id).maybeSingle();
@@ -76,6 +84,28 @@ async function main() {
     const baseSlug = slugFromTitleAndId(le.title, le.id);
     const slug = await getUniqueEventSlug(baseSlug);
 
+    const normalizedCoords = normalizeCoordinates(
+      le.location_lat,
+      le.location_lng
+    );
+    const timezoneResolution = resolveTimezoneWithSource({
+      lat: normalizedCoords.lat,
+      lng: normalizedCoords.lng,
+      rawDateTimeDisplay: le.raw_date_time_display ?? null,
+    });
+
+    if (normalizedCoords.wasZeroZero) {
+      coordsNullifiedZeroZero += 1;
+    }
+
+    if (timezoneResolution.source === "coords") {
+      timezoneResolved += 1;
+    } else if (timezoneResolution.source === "gmt_offset") {
+      timezoneFallbackOffset += 1;
+    } else {
+      timezoneMissing += 1;
+    }
+
     const eventRow = {
       name: le.title || "Untitled Event",
       description: le.description ?? null,
@@ -86,11 +116,11 @@ async function main() {
       city: null,
       address: le.address ?? null,
       venue_name: le.location ?? null,
-      latitude: le.location_lat ?? 0,
-      longitude: le.location_lng ?? 0,
+      latitude: normalizedCoords.lat,
+      longitude: normalizedCoords.lng,
       start_date: le.start_at ?? new Date().toISOString(),
       end_date: le.end_at ?? null,
-      timezone: le.raw_date_time_display ?? null,
+      timezone: timezoneResolution.timezone,
       event_type: "official",
       visibility: "public",
       is_paid: false,
@@ -142,7 +172,17 @@ async function main() {
   }
 
   console.error("[luma-sync] Done. created=%d skipped=%d errors=%d", created, skipped, errors);
-  process.stdout.write(JSON.stringify({ created, skipped, errors }) + "\n");
+  process.stdout.write(
+    JSON.stringify({
+      created,
+      skipped,
+      errors,
+      timezone_resolved: timezoneResolved,
+      timezone_fallback_offset: timezoneFallbackOffset,
+      timezone_missing: timezoneMissing,
+      coords_nullified_zero_zero: coordsNullifiedZeroZero,
+    }) + "\n"
+  );
 }
 
 main().catch((e) => {
