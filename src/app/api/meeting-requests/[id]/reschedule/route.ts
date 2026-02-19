@@ -22,21 +22,15 @@ export async function POST(
     const { id } = await params;
 
     const body = await request.json();
-    const { start_at, end_at, timezone, message, place } = body;
+    const { start_at } = body;
 
-    if (!start_at || !end_at || !timezone) {
-      return NextResponse.json({ error: "start_at, end_at and timezone are required" }, { status: 400 });
+    if (!start_at) {
+      return NextResponse.json({ error: "start_at is required" }, { status: 400 });
     }
 
     const startDate = new Date(start_at);
-    const endDate = new Date(end_at);
-
-    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
-      return NextResponse.json({ error: "Invalid datetime values" }, { status: 400 });
-    }
-
-    if (endDate <= startDate) {
-      return NextResponse.json({ error: "end_at must be after start_at" }, { status: 400 });
+    if (Number.isNaN(startDate.getTime())) {
+      return NextResponse.json({ error: "Invalid start_at value" }, { status: 400 });
     }
 
     const meetingRequest = await getMeetingRequestForUser(supabase, id, authUser.id);
@@ -53,6 +47,25 @@ export async function POST(
       return NextResponse.json({ error: "Only the awaiting user can reschedule this request" }, { status: 403 });
     }
 
+    if (!meetingRequest.current_proposal_id) {
+      return NextResponse.json({ error: "No current proposal to reschedule" }, { status: 400 });
+    }
+
+    const { data: currentProposal, error: fetchProposalError } = await supabase
+      .from("meeting_request_proposals")
+      .select("start_at, end_at, timezone, message, place")
+      .eq("id", meetingRequest.current_proposal_id)
+      .single();
+
+    if (fetchProposalError || !currentProposal) {
+      return NextResponse.json({ error: "Current proposal not found" }, { status: 400 });
+    }
+
+    const currentStart = new Date(currentProposal.start_at).getTime();
+    const currentEnd = new Date(currentProposal.end_at).getTime();
+    const durationMs = currentEnd - currentStart;
+    const endDate = new Date(startDate.getTime() + durationMs);
+
     const counterpartyId = getCounterpartyId(meetingRequest, authUser.id);
 
     const { data: proposal, error: proposalError } = await supabase
@@ -62,9 +75,9 @@ export async function POST(
         proposed_by_user_id: authUser.id,
         start_at: startDate.toISOString(),
         end_at: endDate.toISOString(),
-        timezone,
-        message: message?.trim() || null,
-        place: place?.trim() || null,
+        timezone: currentProposal.timezone,
+        message: currentProposal.message ?? null,
+        place: currentProposal.place ?? null,
       })
       .select("id")
       .single();

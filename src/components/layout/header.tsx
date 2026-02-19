@@ -210,7 +210,7 @@ export function Header() {
                   variant="ghost"
                   size="sm"
                   onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-                  className="flex items-center gap-2"
+                  className="relative flex items-center gap-2"
                 >
                   <div className="w-8 h-8 rounded-full overflow-hidden bg-[var(--color-surface-border)]">
                     {user.avatar_url && (
@@ -226,6 +226,11 @@ export function Header() {
                   <span className="text-sm text-[var(--color-text-secondary)]">
                     @{user.twitter_handle}
                   </span>
+                  {meetingActionNeededCount > 0 && (
+                    <span className="absolute -top-1.5 -right-2 min-w-4 h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-semibold flex items-center justify-center pointer-events-none leading-none">
+                      {meetingActionNeededCount > 99 ? "99+" : meetingActionNeededCount}
+                    </span>
+                  )}
                 </Button>
                 <AnimatePresence>
                   {isProfileMenuOpen && (

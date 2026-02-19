@@ -20,10 +20,6 @@ interface CreateMeetingRequestPayload {
 
 interface RescheduleMeetingRequestPayload {
   start_at: string;
-  end_at: string;
-  timezone: string;
-  message?: string;
-  place?: string;
 }
 
 async function parseJsonOrThrow(response: Response) {

@@ -37,7 +37,7 @@ import { AddFriendButton } from "./add-friend-button";
 import { EditProfileButton } from "./edit-profile-button";
 import { trackEvent } from "@/lib/analytics";
 import { MeetingRequestForm } from "@/components/meeting-request-form";
-import { Modal, ModalHeader, ModalTitle, ModalContent, ProSubscriptionModal, AuthRequiredModal, UserListItem, Input, TimezoneSelect } from "@/components/ui";
+import { Modal, ModalHeader, ModalTitle, ModalContent, ProSubscriptionModal, AuthRequiredModal, UserListItem, Input } from "@/components/ui";
 import { CreateEntityForm } from "@/components/hubs/create-entity-form";
 import { useAuth } from "@/hooks/use-auth";
 import {
@@ -50,7 +50,7 @@ import {
   rescheduleMeetingRequest,
 } from "@/lib/api/meeting-requests";
 import { isMeetingRequestsEnabled } from "@/lib/meeting-requests";
-import { isValidIanaTimezone, resolveMeetingTimezone, formatMeetingTimeGmt } from "@/lib/utils/timezone";
+import { formatMeetingTimeGmt } from "@/lib/utils/timezone";
 
 interface ProfileContentProps {
   user: User;
@@ -114,10 +114,6 @@ export function ProfileContent({
   const [rescheduleDrafts, setRescheduleDrafts] = useState<Record<string, {
     open: boolean;
     start_at: string;
-    end_at: string;
-    timezone: string;
-    message: string;
-    place: string;
   }>>({});
 
   // States for users list modals
@@ -768,20 +764,6 @@ export function ProfileContent({
     return new Date(date.getTime() - offset).toISOString().slice(0, 16);
   };
 
-  const getRequestTimezoneDefault = (meetingRequest: MeetingRequest): string => {
-    const proposalTimezone = meetingRequest.current_proposal?.timezone;
-    if (isValidIanaTimezone(proposalTimezone)) {
-      return proposalTimezone!;
-    }
-
-    return (
-      resolveMeetingTimezone({
-        eventTimezone: meetingRequest.event?.timezone,
-        eventLongitude: meetingRequest.event?.longitude ?? null,
-      }) || ""
-    );
-  };
-
   const handleOpenMeetingRequestsModal = async () => {
     if (!meetingRequestsEnabled || !isVip) {
       setShowProModal(true);
@@ -857,10 +839,6 @@ export function ProfileContent({
       [meetingRequest.id]: {
         open: !prev[meetingRequest.id]?.open,
         start_at: prev[meetingRequest.id]?.start_at || toLocalDateTimeInput(currentProposal.start_at),
-        end_at: prev[meetingRequest.id]?.end_at || toLocalDateTimeInput(currentProposal.end_at),
-        timezone: prev[meetingRequest.id]?.timezone || getRequestTimezoneDefault(meetingRequest),
-        message: prev[meetingRequest.id]?.message ?? currentProposal.message ?? "",
-        place: prev[meetingRequest.id]?.place ?? currentProposal.place ?? "",
       },
     }));
   };
@@ -873,10 +851,6 @@ export function ProfileContent({
     try {
       await rescheduleMeetingRequest(meetingRequest.id, {
         start_at: new Date(draft.start_at).toISOString(),
-        end_at: new Date(draft.end_at).toISOString(),
-        timezone: draft.timezone.trim() || "UTC",
-        message: draft.message.trim() || undefined,
-        place: draft.place.trim() || undefined,
       });
 
       trackEvent("meeting_request_reschedule", {
@@ -2411,90 +2385,33 @@ export function ProfileContent({
 
                     {draft?.open && (
                       <div className="mt-3 p-3 rounded-lg border border-[var(--color-surface-border)] bg-[var(--color-surface)]">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          <Input
-                            type="datetime-local"
-                            value={draft.start_at}
-                            onChange={(e) =>
-                              setRescheduleDrafts((prev) => ({
-                                ...prev,
-                                [meetingRequest.id]: {
-                                  ...prev[meetingRequest.id],
-                                  start_at: e.target.value,
-                                },
-                              }))
+                        <label className="text-xs text-[var(--color-text-secondary)] block mb-1">New start time</label>
+                        <Input
+                          type="datetime-local"
+                          value={draft.start_at}
+                          onFocus={(e) => {
+                            const input = e.target as HTMLInputElement;
+                            if (typeof input.showPicker === "function") {
+                              input.showPicker();
                             }
-                          />
-                          <Input
-                            type="datetime-local"
-                            value={draft.end_at}
-                            onChange={(e) =>
-                              setRescheduleDrafts((prev) => ({
-                                ...prev,
-                                [meetingRequest.id]: {
-                                  ...prev[meetingRequest.id],
-                                  end_at: e.target.value,
-                                },
-                              }))
-                            }
-                          />
-                        </div>
-                        <div className="mt-2">
-                          <TimezoneSelect
-                            value={draft.timezone}
-                            onChange={(value) =>
-                              setRescheduleDrafts((prev) => ({
-                                ...prev,
-                                [meetingRequest.id]: {
-                                  ...prev[meetingRequest.id],
-                                  timezone: value,
-                                },
-                              }))
-                            }
-                          />
-                        </div>
-                        <div className="mt-2">
-                          <label className="text-xs text-[var(--color-text-secondary)]">Place (optional)</label>
-                          <Input
-                            type="text"
-                            value={draft.place}
-                            onChange={(e) =>
-                              setRescheduleDrafts((prev) => ({
-                                ...prev,
-                                [meetingRequest.id]: {
-                                  ...prev[meetingRequest.id],
-                                  place: e.target.value,
-                                },
-                              }))
-                            }
-                            placeholder="e.g. Main entrance"
-                            className="mt-1 w-full"
-                          />
-                        </div>
-                        <div className="mt-2">
-                          <label className="text-xs text-[var(--color-text-secondary)]">Agenda (optional)</label>
-                          <textarea
-                            rows={2}
-                            value={draft.message}
-                            onChange={(e) =>
-                              setRescheduleDrafts((prev) => ({
-                                ...prev,
-                                [meetingRequest.id]: {
-                                  ...prev[meetingRequest.id],
-                                  message: e.target.value,
-                                },
-                              }))
-                            }
-                            className="mt-1 w-full px-3 py-2 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)]"
-                            placeholder="What do you want to discuss?"
-                          />
-                        </div>
+                          }}
+                          onChange={(e) =>
+                            setRescheduleDrafts((prev) => ({
+                              ...prev,
+                              [meetingRequest.id]: {
+                                ...prev[meetingRequest.id],
+                                start_at: e.target.value,
+                              },
+                            }))
+                          }
+                          className="w-full"
+                        />
                         <div className="mt-2 flex justify-end">
                           <Button
                             variant="secondary"
                             size="sm"
                             onClick={() => handleSubmitReschedule(meetingRequest)}
-                            disabled={!draft.start_at || !draft.end_at || !draft.timezone.trim() || isActing}
+                            disabled={!draft.start_at || isActing}
                             isLoading={isActing}
                           >
                             Send new proposal
