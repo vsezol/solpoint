@@ -435,3 +435,12 @@ input::selection {
 .solpoint-meeting-calendar [data-testid="ilamy-calendar"] .text-blue-600 {
   color: var(--color-primary);
 }
+
+/* Cell hover: purple instead of blue */
+.solpoint-meeting-calendar [data-testid="ilamy-calendar"] [data-testid="calendar-body"] [role="gridcell"]:hover {
+  background-color: rgb(147 51 234 / 0.2);
+}
+/* Fallback: library may use hover:bg-blue-50 on wrapper/child */
+.solpoint-meeting-calendar [data-testid="ilamy-calendar"] [data-testid="calendar-body"] .hover\:bg-blue-50:hover {
+  background-color: rgb(147 51 234 / 0.2);
+}

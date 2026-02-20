@@ -135,6 +135,7 @@ export function ProfileContent({
   const [isLoadingMeetingRequests, setIsLoadingMeetingRequests] = useState(false);
   const [meetingRequestsError, setMeetingRequestsError] = useState<string | null>(null);
   const meetingRequestsFetchRef = useRef<Promise<void> | null>(null);
+  const meetingCalendarContainerRef = useRef<HTMLDivElement | null>(null);
   const [actingMeetingRequest, setActingMeetingRequest] = useState<Record<string, boolean>>({});
   const [rescheduleDrafts, setRescheduleDrafts] = useState<Record<string, {
     open: boolean;
@@ -217,6 +218,39 @@ export function ProfileContent({
       .filter((event): event is MeetingCalendarEvent => event !== null)
       .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
   }, [meetingRequests]);
+
+  // Auto-scroll week calendar to first meetup so it's visible on open
+  useEffect(() => {
+    if (!isMeetingCalendarModalOpen || approvedMeetingCalendarEvents.length === 0) return;
+    const container = meetingCalendarContainerRef.current;
+    if (!container) return;
+
+    const d = new Date(approvedMeetingCalendarEvents[0].start);
+    const targetMinutesFromMidnight = d.getHours() * 60 + d.getMinutes();
+
+    const run = () => {
+      const root = container.querySelector("[data-testid='ilamy-calendar']") ?? container;
+      const scrollable =
+        root.querySelector<HTMLElement>("[data-testid='calendar-body']") ??
+        Array.from(root.querySelectorAll<HTMLElement>("*")).find(
+          (el) =>
+            el.scrollHeight > el.clientHeight &&
+            (getComputedStyle(el).overflowY === "auto" || getComputedStyle(el).overflow === "auto")
+        );
+      if (!scrollable || scrollable.scrollHeight <= scrollable.clientHeight) return;
+
+      const pxPerHour = 60;
+      const scrollTop = Math.max(0, (targetMinutesFromMidnight / 60) * pxPerHour - 40);
+      scrollable.scrollTop = Math.min(scrollTop, scrollable.scrollHeight - scrollable.clientHeight);
+    };
+
+    const t1 = window.setTimeout(run, 150);
+    const t2 = window.setTimeout(run, 500);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
+  }, [isMeetingCalendarModalOpen, approvedMeetingCalendarEvents]);
 
   // Обновляем локальное состояние при изменении user prop
   useEffect(() => {
@@ -2463,9 +2497,10 @@ export function ProfileContent({
         </ModalHeader>
         <ModalContent>
           {isLoadingMeetingRequests ? (
-            <p className="text-sm text-[var(--color-text-secondary)] text-center py-4">
-              Loading calendar...
-            </p>
+            <div className="flex flex-col items-center justify-center gap-3 py-12">
+              <Loader2 className="w-10 h-10 text-[var(--color-primary)] animate-spin" aria-hidden />
+              <p className="text-sm text-[var(--color-text-secondary)]">Loading calendar...</p>
+            </div>
           ) : meetingRequestsError ? (
             <p className="text-sm text-[var(--color-error)] text-center py-4">
               {meetingRequestsError}
@@ -2475,7 +2510,10 @@ export function ProfileContent({
               No approved meetups with date and time yet.
             </p>
           ) : (
-            <div className="solpoint-meeting-calendar h-[min(72vh,760px)] overflow-hidden rounded-xl border border-[var(--color-surface-border)] bg-[var(--color-surface)]">
+            <div
+              ref={meetingCalendarContainerRef}
+              className="solpoint-meeting-calendar h-[min(72vh,760px)] overflow-hidden rounded-xl border border-[var(--color-surface-border)] bg-[var(--color-surface)]"
+            >
               <IlamyCalendar
                 events={approvedMeetingCalendarEvents}
                 initialView="week"
@@ -2516,7 +2554,7 @@ export function ProfileContent({
         size="md"
         showCloseButton={false}
         preventBodyScroll={false}
-        className="w-[min(420px,calc(100vw-1.5rem))] max-h-[min(560px,calc(100vh-1.5rem))] !rounded-2xl p-0 overflow-hidden flex flex-col"
+        className="w-[min(360px,calc(100vw-1.5rem))] max-h-[min(560px,calc(100vh-1.5rem))] !rounded-2xl p-0 overflow-hidden flex flex-col"
         ariaLabel="Meeting details"
       >
         <div className="bg-[var(--color-background)] flex flex-col min-h-0 max-h-[min(560px,calc(100vh-1.5rem))]">
@@ -2524,7 +2562,7 @@ export function ProfileContent({
             <button
               type="button"
               onClick={handleCloseMeetingDetailsModal}
-              className="text-base leading-none font-normal text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+              className="text-[18px] leading-none font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
             >
               Close
             </button>
@@ -2571,7 +2609,7 @@ export function ProfileContent({
                     </h3>
                   </div>
 
-                  <div className="border-t border-[var(--color-surface-border)] px-4 py-4 flex-1 flex flex-col min-h-0 overflow-y-auto">
+                  <div className="border-t border-[var(--color-surface-border)] p-[30px] flex-1 flex flex-col min-h-0 overflow-y-auto">
                     <div className="space-y-3">
                       <div className="grid grid-cols-[56px_1fr] gap-x-3 items-start">
                         <div className="text-left">
@@ -2620,15 +2658,16 @@ export function ProfileContent({
                       )}
                     </div>
 
-                    <div className="mt-4 pt-4 text-center flex-shrink-0">
-                      <p className="text-lg leading-snug font-normal text-[var(--color-text-primary)] mb-2">Need to chat?</p>
+                    <div className="mt-4 pt-4 flex flex-col items-center flex-shrink-0">
+                      <p className="text-[18px] leading-snug font-medium text-[var(--color-text-primary)] mb-2">Need to chat?</p>
                       <Button
                         variant="primary"
                         size="md"
                         onClick={handleOpenMeetingDetailsChat}
                         isLoading={isOpeningMeetingChat}
                         disabled={isOpeningMeetingChat || !counterparty?.id}
-                        className="h-10 px-4 text-sm font-normal w-full max-w-full rounded-xl"
+                        className="w-[223px] h-[41px] px-6 text-[15px] font-medium rounded-[12px] border border-[#000000]"
+                        style={{ backgroundColor: "#00F68B", color: "#000000" }}
                       >
                         Message {counterpartyName}
                       </Button>
