@@ -76,6 +76,12 @@ interface MeetingCalendarEvent {
   data: MeetingCalendarEventData;
 }
 
+type MeetingCalendarAutoScrollTarget = {
+  id: string;
+  start: string;
+  end: string;
+};
+
 export function ProfileContent({
   user,
   isOwnProfile,
@@ -136,6 +142,7 @@ export function ProfileContent({
   const [meetingRequestsError, setMeetingRequestsError] = useState<string | null>(null);
   const meetingRequestsFetchRef = useRef<Promise<void> | null>(null);
   const meetingCalendarContainerRef = useRef<HTMLDivElement | null>(null);
+  const targetMeetingEventRef = useRef<HTMLDivElement | null>(null);
   const [actingMeetingRequest, setActingMeetingRequest] = useState<Record<string, boolean>>({});
   const [rescheduleDrafts, setRescheduleDrafts] = useState<Record<string, {
     open: boolean;
@@ -219,69 +226,122 @@ export function ProfileContent({
       .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
   }, [meetingRequests]);
 
-  // Auto-scroll week calendar after grid has rendered: to first meetup or default 10 AM
+  const meetingCalendarAutoScrollTarget = useMemo<MeetingCalendarAutoScrollTarget | null>(() => {
+    const now = Date.now();
+    const validEvents = approvedMeetingCalendarEvents
+      .map((event) => {
+        const startAt = new Date(event.start);
+        const endAt = new Date(event.end);
+        if (Number.isNaN(startAt.getTime()) || Number.isNaN(endAt.getTime()) || endAt <= startAt) {
+          return null;
+        }
+
+        return {
+          id: event.id,
+          start: event.start,
+          end: event.end,
+          startMs: startAt.getTime(),
+          endMs: endAt.getTime(),
+        };
+      })
+      .filter((event): event is MeetingCalendarAutoScrollTarget & { startMs: number; endMs: number } => event !== null);
+
+    const active = validEvents
+      .filter((event) => event.startMs <= now && now < event.endMs)
+      .sort((a, b) => b.startMs - a.startMs)[0];
+    if (active) {
+      return { id: active.id, start: active.start, end: active.end };
+    }
+
+    const next = validEvents
+      .filter((event) => event.startMs > now)
+      .sort((a, b) => a.startMs - b.startMs)[0];
+    if (next) {
+      return { id: next.id, start: next.start, end: next.end };
+    }
+
+    return null;
+  }, [approvedMeetingCalendarEvents]);
+
+  const meetingCalendarInitialDate = meetingCalendarAutoScrollTarget?.start ?? undefined;
+
+  // Auto-scroll week calendar after grid has rendered:
+  // prefers the nearest event anchor and falls back to 10:00.
   useEffect(() => {
-    if (!isMeetingCalendarModalOpen || approvedMeetingCalendarEvents.length === 0) return;
+    if (!isMeetingCalendarModalOpen || approvedMeetingCalendarEvents.length === 0) {
+      return;
+    }
+
     const container = meetingCalendarContainerRef.current;
-    if (!container) return;
+    if (!container) {
+      return;
+    }
 
-    const targetMinutesFromMidnight =
-      approvedMeetingCalendarEvents.length > 0
-        ? (() => {
-            const d = new Date(approvedMeetingCalendarEvents[0].start);
-            return d.getHours() * 60 + d.getMinutes();
-          })()
-        : 10 * 60; // 10 AM when no events / default so user doesn't see midnight first
+    targetMeetingEventRef.current = null;
 
-    const MIN_SCROLL_HEIGHT = 800; // grid must be rendered (many rows) before we scroll
+    const findScrollable = (rootContainer: HTMLDivElement) => {
+      const root = rootContainer.querySelector("[data-testid='ilamy-calendar']") ?? rootContainer;
+      const selectors = [
+        "[data-testid='vertical-grid-scroll']",
+        "[data-testid='horizontal-grid-scroll']",
+        ".overflow-y-auto, .overflow-auto",
+      ];
 
-    const run = () => {
-      const root = container.querySelector("[data-testid='ilamy-calendar']") ?? container;
-      let scrollable: HTMLElement | null =
-        root.querySelector<HTMLElement>("[data-testid='calendar-body']");
-      if (!scrollable) {
-        scrollable = root.querySelector<HTMLElement>(".overflow-y-auto, .overflow-auto");
-      }
-      if (!scrollable && container.firstElementChild instanceof HTMLElement) {
-        const first = container.firstElementChild;
-        if (
-          first.scrollHeight > first.clientHeight &&
-          (getComputedStyle(first).overflowY === "auto" || getComputedStyle(first).overflow === "auto")
-        ) {
-          scrollable = first;
+      for (const selector of selectors) {
+        const candidate = root.querySelector<HTMLElement>(selector);
+        if (candidate && candidate.scrollHeight > candidate.clientHeight) {
+          return candidate;
         }
       }
-      if (!scrollable) {
-        const candidates = Array.from(root.querySelectorAll<HTMLElement>("*")).filter(
-          (el) =>
-            el.scrollHeight > el.clientHeight &&
-            (getComputedStyle(el).overflowY === "auto" || getComputedStyle(el).overflow === "auto")
-        );
-        scrollable =
-          candidates.length > 0
-            ? candidates.reduce((a, b) => (a.scrollHeight > b.scrollHeight ? a : b))
-            : null;
-      }
-      if (
-        !scrollable ||
-        scrollable.scrollHeight <= scrollable.clientHeight ||
-        scrollable.scrollHeight < MIN_SCROLL_HEIGHT
-      ) {
+
+      return null;
+    };
+
+    const targetMinutesFromMidnight = meetingCalendarAutoScrollTarget
+      ? (() => {
+          const date = new Date(meetingCalendarAutoScrollTarget.start);
+          if (Number.isNaN(date.getTime())) {
+            return 10 * 60;
+          }
+          return date.getHours() * 60 + date.getMinutes();
+        })()
+      : 10 * 60;
+
+    const MAX_ATTEMPTS = 120;
+    let rafId: number | null = null;
+    let attempts = 0;
+
+    const tick = () => {
+      attempts += 1;
+
+      if (meetingCalendarAutoScrollTarget && targetMeetingEventRef.current) {
+        targetMeetingEventRef.current.scrollIntoView({
+          block: "center",
+          inline: "nearest",
+        });
         return;
       }
 
-      const pxPerHour = 60;
-      const scrollTop = Math.max(0, (targetMinutesFromMidnight / 60) * pxPerHour - 40);
-      scrollable.scrollTop = Math.min(
-        scrollTop,
-        scrollable.scrollHeight - scrollable.clientHeight
-      );
+      const scrollable = findScrollable(container);
+      if (scrollable) {
+        const pxPerHour = 60;
+        const scrollTop = Math.max(0, (targetMinutesFromMidnight / 60) * pxPerHour - 40);
+        scrollable.scrollTop = Math.min(scrollTop, scrollable.scrollHeight - scrollable.clientHeight);
+        return;
+      }
+
+      if (attempts < MAX_ATTEMPTS) {
+        rafId = window.requestAnimationFrame(tick);
+      }
     };
 
-    const delays = [400, 800, 1200, 1800, 2500];
-    const timers = delays.map((delay) => window.setTimeout(run, delay));
-    return () => timers.forEach((t) => window.clearTimeout(t));
-  }, [isMeetingCalendarModalOpen, approvedMeetingCalendarEvents]);
+    rafId = window.requestAnimationFrame(tick);
+    return () => {
+      if (rafId !== null) {
+        window.cancelAnimationFrame(rafId);
+      }
+    };
+  }, [isMeetingCalendarModalOpen, approvedMeetingCalendarEvents, meetingCalendarAutoScrollTarget]);
 
   // Обновляем локальное состояние при изменении user prop
   useEffect(() => {
@@ -2549,20 +2609,28 @@ export function ProfileContent({
               <IlamyCalendar
                 events={approvedMeetingCalendarEvents}
                 initialView="week"
+                initialDate={meetingCalendarInitialDate}
                 firstDayOfWeek="monday"
                 timeFormat="24-hour"
                 disableCellClick
                 disableDragAndDrop
                 dayMaxEvents={4}
                 eventSpacing={2}
+                renderCurrentTimeIndicator={() => null}
                 classesOverride={{
                   disabledCell: "bg-[var(--color-surface-hover)]/50 text-[var(--color-text-muted)] pointer-events-none",
                 }}
                 onEventClick={handleOpenMeetingDetailsFromCalendar}
                 renderEvent={(event: CalendarEvent) => {
+                  const eventId = String(event.id);
+                  const isTargetEvent = meetingCalendarAutoScrollTarget?.id === eventId;
                   const timeStr = `${event.start.format("HH:mm")}–${event.end.format("HH:mm")}`;
                   return (
-                    <div className="h-full min-h-0 w-full rounded-md border border-[var(--color-primary)]/40 bg-[var(--color-primary)]/90 px-1.5 py-1 flex items-center justify-center cursor-pointer overflow-hidden">
+                    <div
+                      ref={isTargetEvent ? targetMeetingEventRef : null}
+                      data-meeting-event-id={eventId}
+                      className="h-full min-h-0 w-full rounded-md border border-[var(--color-primary)]/40 bg-[var(--color-primary)]/90 px-1.5 py-1 flex items-center justify-center cursor-pointer overflow-hidden"
+                    >
                       <p className="text-[11px] sm:text-xs font-medium text-black leading-tight truncate">
                         {timeStr}
                       </p>
