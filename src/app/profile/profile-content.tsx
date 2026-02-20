@@ -219,37 +219,68 @@ export function ProfileContent({
       .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
   }, [meetingRequests]);
 
-  // Auto-scroll week calendar to first meetup so it's visible on open
+  // Auto-scroll week calendar after grid has rendered: to first meetup or default 10 AM
   useEffect(() => {
     if (!isMeetingCalendarModalOpen || approvedMeetingCalendarEvents.length === 0) return;
     const container = meetingCalendarContainerRef.current;
     if (!container) return;
 
-    const d = new Date(approvedMeetingCalendarEvents[0].start);
-    const targetMinutesFromMidnight = d.getHours() * 60 + d.getMinutes();
+    const targetMinutesFromMidnight =
+      approvedMeetingCalendarEvents.length > 0
+        ? (() => {
+            const d = new Date(approvedMeetingCalendarEvents[0].start);
+            return d.getHours() * 60 + d.getMinutes();
+          })()
+        : 10 * 60; // 10 AM when no events / default so user doesn't see midnight first
+
+    const MIN_SCROLL_HEIGHT = 800; // grid must be rendered (many rows) before we scroll
 
     const run = () => {
       const root = container.querySelector("[data-testid='ilamy-calendar']") ?? container;
-      const scrollable =
-        root.querySelector<HTMLElement>("[data-testid='calendar-body']") ??
-        Array.from(root.querySelectorAll<HTMLElement>("*")).find(
+      let scrollable: HTMLElement | null =
+        root.querySelector<HTMLElement>("[data-testid='calendar-body']");
+      if (!scrollable) {
+        scrollable = root.querySelector<HTMLElement>(".overflow-y-auto, .overflow-auto");
+      }
+      if (!scrollable && container.firstElementChild instanceof HTMLElement) {
+        const first = container.firstElementChild;
+        if (
+          first.scrollHeight > first.clientHeight &&
+          (getComputedStyle(first).overflowY === "auto" || getComputedStyle(first).overflow === "auto")
+        ) {
+          scrollable = first;
+        }
+      }
+      if (!scrollable) {
+        const candidates = Array.from(root.querySelectorAll<HTMLElement>("*")).filter(
           (el) =>
             el.scrollHeight > el.clientHeight &&
             (getComputedStyle(el).overflowY === "auto" || getComputedStyle(el).overflow === "auto")
         );
-      if (!scrollable || scrollable.scrollHeight <= scrollable.clientHeight) return;
+        scrollable =
+          candidates.length > 0
+            ? candidates.reduce((a, b) => (a.scrollHeight > b.scrollHeight ? a : b))
+            : null;
+      }
+      if (
+        !scrollable ||
+        scrollable.scrollHeight <= scrollable.clientHeight ||
+        scrollable.scrollHeight < MIN_SCROLL_HEIGHT
+      ) {
+        return;
+      }
 
       const pxPerHour = 60;
       const scrollTop = Math.max(0, (targetMinutesFromMidnight / 60) * pxPerHour - 40);
-      scrollable.scrollTop = Math.min(scrollTop, scrollable.scrollHeight - scrollable.clientHeight);
+      scrollable.scrollTop = Math.min(
+        scrollTop,
+        scrollable.scrollHeight - scrollable.clientHeight
+      );
     };
 
-    const t1 = window.setTimeout(run, 150);
-    const t2 = window.setTimeout(run, 500);
-    return () => {
-      window.clearTimeout(t1);
-      window.clearTimeout(t2);
-    };
+    const delays = [400, 800, 1200, 1800, 2500];
+    const timers = delays.map((delay) => window.setTimeout(run, delay));
+    return () => timers.forEach((t) => window.clearTimeout(t));
   }, [isMeetingCalendarModalOpen, approvedMeetingCalendarEvents]);
 
   // Обновляем локальное состояние при изменении user prop
@@ -2490,6 +2521,7 @@ export function ProfileContent({
         onClose={() => setIsMeetingCalendarModalOpen(false)}
         size="full"
         className="w-[min(1200px,calc(100vw-2rem))]"
+        closeButtonClassName="p-1 [&_svg]:w-4 [&_svg]:h-4"
         ariaLabel="Meeting requests calendar"
       >
         <ModalHeader>
@@ -2529,7 +2561,7 @@ export function ProfileContent({
                 onEventClick={handleOpenMeetingDetailsFromCalendar}
                 renderEvent={(event: CalendarEvent) => {
                   return (
-                    <div className="h-full w-full rounded-md border border-[var(--color-primary)]/40 bg-[var(--color-primary)]/90 px-2 py-1 text-[10px] text-[var(--color-background)] sm:text-xs cursor-pointer">
+                    <div className="h-full min-h-[52px] w-full rounded-md border border-[var(--color-primary)]/40 bg-[var(--color-primary)]/90 px-2 py-2 text-[10px] text-[var(--color-background)] sm:text-xs cursor-pointer flex flex-col justify-center">
                       <p className="truncate font-semibold">{event.title}</p>
                       <p className="truncate opacity-80">
                         {event.start.format("HH:mm")} - {event.end.format("HH:mm")}
