@@ -1,79 +1,56 @@
 "use client";
 
 import { Button } from "@/components/ui";
-import Image from "next/image";
+import dynamic from "next/dynamic";
 import Link from "next/link";
-import { motion } from "motion/react";
+
+const RotatingPlanetCanvas = dynamic(
+  () => import("./rotating-planet-canvas-branching").then((mod) => mod.RotatingPlanetCanvas),
+  {
+    ssr: false,
+    loading: () => <div className="h-full w-full" aria-hidden />,
+  }
+);
 
 export function HeroSection() {
   return (
-    <section className="relative min-h-screen flex items-center pt-16 overflow-hidden">
+    <section className="relative min-h-screen pt-16 overflow-hidden">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_36%,rgba(143,100,255,0.18),transparent_52%),radial-gradient(circle_at_74%_60%,rgba(20,241,149,0.15),transparent_56%)]" />
+        <div className="absolute inset-x-0 top-[8vh] flex justify-center md:left-auto md:right-0 md:top-1/2 md:-translate-y-1/2 md:justify-end md:pr-1 lg:pr-4 xl:pr-6">
+          <div className="pointer-events-auto h-[360px] w-[360px] sm:h-[520px] sm:w-[520px] md:h-[520px] md:w-[520px] lg:h-[620px] lg:w-[620px] xl:h-[700px] xl:w-[700px] 2xl:h-[760px] 2xl:w-[760px] opacity-80 sm:opacity-86 lg:opacity-92">
+            <RotatingPlanetCanvas />
+          </div>
+        </div>
+      </div>
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 sm:pt-16 md:pt-20 pb-0">
-        <div className="grid lg:grid-cols-2 gap-8 sm:gap-10 lg:gap-12 items-center">
-          {/* Content */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="space-y-6"
+      <div className="relative z-20 mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-7xl flex-col justify-end px-4 pb-8 sm:px-6 sm:pb-10 md:justify-center md:px-8 md:pb-0 md:pt-20">
+        <div className="max-w-2xl space-y-5 lg:max-w-3xl lg:pr-16">
+          <h1
+            className="max-w-2xl text-4xl font-bold leading-[120%] tracking-normal text-(--color-text-primary) sm:text-5xl md:text-[44px]"
+            style={{ fontFamily: "var(--font-inter)" }}
           >
-            <h1 
-              className="text-3xl sm:text-4xl md:text-[40px] font-bold leading-[130%] tracking-normal text-[var(--color-text-primary)] max-w-2xl"
-              style={{ fontFamily: 'var(--font-inter)' }}
-            >
-              Connect, Network, Attend:
-              <br />
-              <span className="whitespace-normal sm:whitespace-nowrap">The Global Solana Community Map.</span>
-            </h1>
+            Connect, Network, Attend:
+            <br />
+            <span className="whitespace-normal sm:whitespace-nowrap">Join the Global Community</span>
+          </h1>
 
-            <p 
-              className="text-base sm:text-lg md:text-[18px] font-normal leading-[1.6] sm:leading-[30px] tracking-normal text-[var(--color-text-secondary)] max-w-xl"
-              style={{ fontFamily: 'var(--font-inter)' }}
-            >
-              Landing in a new country and looking to connect with the local Solana
-              community?
-            </p>
-
-            <p 
-              className="text-base sm:text-lg md:text-[18px] font-normal leading-[1.6] sm:leading-[30px] tracking-normal text-[var(--color-text-secondary)] max-w-xl"
-              style={{ fontFamily: 'var(--font-inter)' }}
-            >
-              <span className="font-semibold text-[var(--color-text-primary)]">
-                SolPoint
-              </span>{" "}
-              is the global interactive map that instantly reveals all Solana
-              enthusiasts, local hubs, and active events, wherever your journey
-              takes you.
-            </p>
-
-            <div className="flex flex-col sm:flex-row flex-wrap gap-4 pt-4">
-              <Button size="lg" className="glow-primary w-full sm:w-auto" asChild>
-                <Link href="/map">Explore The Map</Link>
-              </Button>
-              <Button variant="outline" size="lg" className="w-full sm:w-auto" asChild>
-                <Link href="/about">Learn More</Link>
-              </Button>
-            </div>
-          </motion.div>
-
-          {/* Globe illustration */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            className="relative hidden lg:block"
+          <p
+            className="max-w-xl text-base font-normal leading-[1.6] tracking-normal text-(--color-text-secondary) sm:text-lg sm:leading-[1.8]"
+            style={{ fontFamily: "var(--font-inter)" }}
           >
-            <div className="relative w-full aspect-square max-w-2xl mx-auto animate-float">
-              <Image
-                src="/hero-globe.svg"
-                alt="Global Solana Community"
-                fill
-                className="object-contain"
-                priority
-              />
-            </div>
-          </motion.div>
+            A live map of builders, communities, and events. Open any city, find
+            your people, and plug in instantly.
+          </p>
+
+          <div className="flex flex-col sm:flex-row flex-wrap gap-4 pt-4">
+            <Button size="lg" className="glow-primary w-full sm:w-auto" asChild>
+              <Link href="/map">Open SolPoint Map</Link>
+            </Button>
+            <Button variant="outline" size="lg" className="w-full sm:w-auto" asChild>
+              <Link href="/about">See How It Works</Link>
+            </Button>
+          </div>
         </div>
       </div>
     </section>
