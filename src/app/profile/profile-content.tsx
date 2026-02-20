@@ -2544,7 +2544,7 @@ export function ProfileContent({
           ) : (
             <div
               ref={meetingCalendarContainerRef}
-              className="solpoint-meeting-calendar h-[min(72vh,760px)] overflow-hidden rounded-xl border border-[var(--color-surface-border)] bg-[var(--color-surface)]"
+              className="solpoint-meeting-calendar h-[min(72vh,760px)] rounded-xl border border-[var(--color-surface-border)] bg-[var(--color-surface)]"
             >
               <IlamyCalendar
                 events={approvedMeetingCalendarEvents}
@@ -2560,17 +2560,12 @@ export function ProfileContent({
                 }}
                 onEventClick={handleOpenMeetingDetailsFromCalendar}
                 renderEvent={(event: CalendarEvent) => {
+                  const timeStr = `${event.start.format("HH:mm")}–${event.end.format("HH:mm")}`;
                   return (
-                    <div className="h-full min-h-[52px] w-full rounded-md border border-[var(--color-primary)]/40 bg-[var(--color-primary)]/90 px-2 py-2 text-[10px] text-[var(--color-background)] sm:text-xs cursor-pointer flex flex-col justify-center">
-                      <p className="truncate font-semibold">{event.title}</p>
-                      <p className="truncate opacity-80">
-                        {event.start.format("HH:mm")} - {event.end.format("HH:mm")}
+                    <div className="h-full min-h-0 w-full rounded-md border border-[var(--color-primary)]/40 bg-[var(--color-primary)]/90 px-1.5 py-1 flex items-center justify-center cursor-pointer overflow-hidden">
+                      <p className="text-[11px] sm:text-xs font-medium text-black leading-tight truncate">
+                        {timeStr}
                       </p>
-                      {event.location && (
-                        <p className="truncate opacity-70">
-                          {event.location}
-                        </p>
-                      )}
                     </div>
                   );
                 }}
