@@ -24,6 +24,11 @@ const HOVER_WOBBLE_MS = 140;
 const HOVER_OFF_DELAY_MS = 120;
 const HIT_PADDING = 8;
 
+const PULSE_ANIMATION_NAME = "map-interactive-pulse";
+const PULSE_DURATION_MS = 2500;
+const PULSE_SCALE_MIN = 1;
+const PULSE_SCALE_MAX = 1.08;
+
 function getFillableDescendants(el: SVGElement, excludeHitArea = false): SVGElement[] {
   const tagNames = ["path", "rect", "circle", "ellipse", "polygon", "polyline"];
   const list = Array.from(el.querySelectorAll<SVGElement>(tagNames.join(",")));
@@ -74,7 +79,109 @@ function ensureHitArea(zone: SVGElement): SVGElement {
   return zone;
 }
 
-function makeInteractive(svg: SVGSVGElement, onZoneClick: (zoneId: string) => void) {
+function injectPulseKeyframes(svg: SVGSVGElement) {
+  if (svg.querySelector(`[data-map-pulse-style="true"]`)) return;
+  const defs = svg.querySelector("defs") || svg.appendChild(svg.ownerDocument.createElementNS("http://www.w3.org/2000/svg", "defs"));
+  const style = svg.ownerDocument.createElementNS("http://www.w3.org/2000/svg", "style");
+  style.setAttribute("data-map-pulse-style", "true");
+  style.textContent = `
+    @keyframes ${PULSE_ANIMATION_NAME} {
+      0%, 100% { transform: scale(${PULSE_SCALE_MIN}); }
+      50% { transform: scale(${PULSE_SCALE_MAX}); }
+    }
+  `;
+  defs.appendChild(style);
+}
+
+function applyPulseToZone(zone: SVGElement) {
+  zone.style.transformOrigin = "50% 50%";
+  zone.style.animation = `${PULSE_ANIMATION_NAME} ${PULSE_DURATION_MS}ms ease-in-out infinite`;
+}
+
+type MakeInteractiveOptions = {
+  mapVariant: "local" | "full";
+  onSwitchToLocalMap?: () => void;
+};
+
+function makeInteractive(
+  svg: SVGSVGElement,
+  onZoneClick: (zoneId: string) => void,
+  options: MakeInteractiveOptions
+) {
+  const { mapVariant, onSwitchToLocalMap } = options;
+
+  if (mapVariant === "full" && onSwitchToLocalMap) {
+    injectPulseKeyframes(svg);
+    const pin41Labels = svg.querySelectorAll<SVGElement>('[aria-label="41"]');
+    const processed = new Set<SVGElement>();
+    pin41Labels.forEach((labelEl) => {
+      const first = labelEl.previousElementSibling?.previousElementSibling as SVGElement | null;
+      const start = first || labelEl;
+      if (processed.has(start)) return;
+      const nodesToWrap: SVGElement[] =
+        first
+          ? [first, first.nextElementSibling as SVGElement, labelEl]
+          : [labelEl];
+      const g = svg.ownerDocument.createElementNS("http://www.w3.org/2000/svg", "g");
+      g.setAttribute("data-zone-id", "pin-41");
+      g.setAttribute("data-pin-41", "true");
+      const parent = start.parentNode;
+      if (!parent) return;
+      parent.insertBefore(g, start);
+      nodesToWrap.forEach((n) => g.appendChild(n));
+      processed.add(start);
+      const zone = ensureHitArea(g);
+      zone.style.cursor = "pointer";
+      zone.style.transition = TRANSITION;
+      zone.style.transformOrigin = "50% 50%";
+
+      const stopPulse = () => {
+        zone.style.animation = "none";
+        zone.style.transform = "scale(1)";
+      };
+      const startPulse = () => {
+        zone.style.animation = `${PULSE_ANIMATION_NAME} ${PULSE_DURATION_MS}ms ease-in-out infinite`;
+      };
+
+      zone.addEventListener("mouseover", stopPulse);
+      zone.addEventListener("mouseout", startPulse);
+      zone.addEventListener("touchstart", () => stopPulse(), { passive: true });
+      zone.addEventListener("touchend", () => startPulse(), { passive: true });
+
+      zone.style.animation = `${PULSE_ANIMATION_NAME} ${PULSE_DURATION_MS}ms ease-in-out infinite`;
+
+      zone.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onSwitchToLocalMap();
+      });
+
+      const zoneWithTouch = zone as SVGElement & { _pinTouchStart?: { x: number; y: number } };
+      const TAP_MOVE_THRESHOLD = 24;
+      zone.addEventListener("touchstart", (e: TouchEvent) => {
+        if (e.touches.length === 1) {
+          zoneWithTouch._pinTouchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        }
+      }, { passive: true });
+      zone.addEventListener("touchend", (e: TouchEvent) => {
+        if (zoneWithTouch._pinTouchStart && e.changedTouches.length === 1) {
+          const t = e.changedTouches[0];
+          const dx = t.clientX - zoneWithTouch._pinTouchStart.x;
+          const dy = t.clientY - zoneWithTouch._pinTouchStart.y;
+          if (Math.hypot(dx, dy) < TAP_MOVE_THRESHOLD) {
+            e.preventDefault();
+            onSwitchToLocalMap();
+          }
+        }
+        zoneWithTouch._pinTouchStart = undefined;
+      }, { passive: false });
+    });
+  }
+
+  if (mapVariant !== "local") return;
+
+  injectPulseKeyframes(svg);
+
   const interactiveSelectors = [
     '[id="reception"]',
     '[id="reception-g"]',
@@ -88,6 +195,7 @@ function makeInteractive(svg: SVGSVGElement, onZoneClick: (zoneId: string) => vo
       zone.style.cursor = "pointer";
       zone.style.transition = TRANSITION;
       zone.style.transformOrigin = "center center";
+      applyPulseToZone(zone);
 
       let targets = getFillableDescendants(zone, true);
       if (targets.length === 0) {
@@ -137,6 +245,7 @@ function makeInteractive(svg: SVGSVGElement, onZoneClick: (zoneId: string) => vo
       let wobbleSettleTimer: ReturnType<typeof setTimeout> | null = null;
 
       zone.addEventListener("mouseover", () => {
+        zone.style.animation = "none";
         if (hoverOffTimer !== null) {
           clearTimeout(hoverOffTimer);
           hoverOffTimer = null;
@@ -168,6 +277,7 @@ function makeInteractive(svg: SVGSVGElement, onZoneClick: (zoneId: string) => vo
         hoverOffTimer = setTimeout(() => {
           hoverOffTimer = null;
           applyHover(false);
+          zone.style.animation = `${PULSE_ANIMATION_NAME} ${PULSE_DURATION_MS}ms ease-in-out infinite`;
         }, HOVER_OFF_DELAY_MS);
       });
       zone.addEventListener("click", (e) => {
@@ -202,6 +312,7 @@ function makeInteractive(svg: SVGSVGElement, onZoneClick: (zoneId: string) => vo
 
       zone.addEventListener("touchcancel", () => {
         applyHover(false);
+        zone.style.animation = `${PULSE_ANIMATION_NAME} ${PULSE_DURATION_MS}ms ease-in-out infinite`;
         zoneWithTouch._zoneTouchStart = undefined;
       }, { passive: true });
     });
@@ -313,7 +424,10 @@ export function Token2049Map() {
   const onInjection = (svg: SVGSVGElement) => {
     svg.setAttribute("style", "width: 100%; height: 100%;");
     svg.style.display = "block";
-    makeInteractive(svg as unknown as SVGSVGElement, handleZoneClick);
+    makeInteractive(svg as unknown as SVGSVGElement, handleZoneClick, {
+      mapVariant,
+      onSwitchToLocalMap: () => switchMap("local"),
+    });
   };
 
   useEffect(() => {
