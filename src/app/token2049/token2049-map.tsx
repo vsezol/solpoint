@@ -296,6 +296,9 @@ export function Token2049Map() {
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (e.button !== 0) return;
+    const el = e.target as Element;
+    const isClickableZone = el.closest?.('[id="reception"], [id="reception-g"], [id="conference-office"], [data-zone-id]');
+    if (isClickableZone) return;
     setIsPanning(true);
     panStartRef.current = { x: e.clientX, y: e.clientY, translateX: translate.x, translateY: translate.y };
   };
@@ -380,7 +383,7 @@ export function Token2049Map() {
     <>
       <div
         ref={containerRef}
-        className="relative w-full h-full min-h-[60vh] rounded-lg overflow-hidden border border-[var(--color-surface-border)] bg-[var(--color-surface)] select-none"
+        className="relative w-full h-full min-h-[calc(60vh+300px)] rounded-lg overflow-hidden border border-[var(--color-surface-border)] bg-[var(--color-surface)] select-none"
         style={{ touchAction: "none" }}
       >
         <div
