@@ -16,6 +16,7 @@ import { isMeetingRequestsEnabled } from "@/lib/meeting-requests";
 const navLinks = [
   { href: "/", label: "Home" },
   { href: "/map", label: "Map" },
+  { href: "/token2049", label: "Token2049" },
   { href: "/events", label: "Events" },
   { href: "/hubs", label: "Hubs" },
   { href: "/subscription", label: "Subscription" },

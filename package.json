@@ -41,6 +41,7 @@
     "react": "19.2.1",
     "react-dom": "19.2.1",
     "react-leaflet": "^5.0.0",
+    "react-svg": "^17.2.1",
     "tailwind-merge": "^3.4.0",
     "three": "^0.183.1",
     "tz-lookup": "^6.1.0",
