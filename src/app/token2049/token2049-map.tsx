@@ -12,10 +12,11 @@ import {
   Avatar,
 } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { Loader2 } from "lucide-react";
 
 type AttendeeItem = { id: string; name: string; avatar_url: string | null };
 
-const HOVER_FILL = "#3b82f6";
+const HOVER_FILL = "#9945ff";
 const TRANSITION = "fill 0.25s ease, stroke 0.25s ease, transform 0.35s ease-out";
 const HOVER_SCALE_SETTLE = 1.03;
 const HOVER_SCALE_OVERSHOOT = 1.045;
@@ -306,14 +307,18 @@ export function Token2049Map() {
         size="sm"
       >
         <ModalHeader>
-          <ModalTitle>{popupZone ? formatZoneTitle(popupZone) : ""}</ModalTitle>
+          <ModalTitle>
+            {popupZone ? `Booking the meeting at ${formatZoneTitle(popupZone)}` : ""}
+          </ModalTitle>
         </ModalHeader>
         <ModalContent>
           <p className="text-sm text-[var(--color-text-secondary)] mb-3">
             You can book the meeting.
           </p>
           {attendeesLoading ? (
-            <p className="text-sm text-[var(--color-text-muted)]">Loading attendees…</p>
+            <div className="flex justify-center py-4">
+              <Loader2 className="w-8 h-8 animate-spin text-[var(--color-primary)]" aria-hidden />
+            </div>
           ) : attendees.length === 0 ? (
             <p className="text-sm text-[var(--color-text-muted)]">No attendees for this event yet.</p>
           ) : (
