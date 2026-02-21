@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { ReactSVG } from "react-svg";
 import {
   Modal,
@@ -9,11 +9,17 @@ import {
   ModalContent,
   ModalFooter,
   Button,
+  Avatar,
 } from "@/components/ui";
+import { cn } from "@/lib/utils";
+
+type AttendeeItem = { id: string; name: string; avatar_url: string | null };
 
 const HOVER_FILL = "#3b82f6";
-const TRANSITION = "fill 0.25s ease, stroke 0.25s ease, transform 0.25s ease";
-const HOVER_SCALE = 1.06;
+const TRANSITION = "fill 0.25s ease, stroke 0.25s ease, transform 0.35s ease-out";
+const HOVER_SCALE_SETTLE = 1.03;
+const HOVER_SCALE_OVERSHOOT = 1.045;
+const HOVER_WOBBLE_MS = 140;
 const HOVER_OFF_DELAY_MS = 120;
 const HIT_PADDING = 8;
 
@@ -105,8 +111,12 @@ function makeInteractive(svg: SVGSVGElement, onZoneClick: (zoneId: string) => vo
         }
       });
 
+      const setScale = (s: number) => {
+        zone.style.transform = `scale(${s})`;
+      };
+
       const applyHover = (hover: boolean) => {
-        zone.style.transform = hover ? `scale(${HOVER_SCALE})` : "scale(1)";
+        setScale(hover ? HOVER_SCALE_SETTLE : 1);
         targets.forEach((t) => {
           if (t.hasAttribute("data-hit-area")) return;
           const origFill = t.getAttribute("data-original-fill") ?? "#000000";
@@ -123,15 +133,36 @@ function makeInteractive(svg: SVGSVGElement, onZoneClick: (zoneId: string) => vo
 
       const zoneId = zone.getAttribute("data-zone-id") || zone.getAttribute("id") || "zone";
       let hoverOffTimer: ReturnType<typeof setTimeout> | null = null;
+      let wobbleSettleTimer: ReturnType<typeof setTimeout> | null = null;
 
       zone.addEventListener("mouseover", () => {
         if (hoverOffTimer !== null) {
           clearTimeout(hoverOffTimer);
           hoverOffTimer = null;
         }
-        applyHover(true);
+        if (wobbleSettleTimer !== null) {
+          clearTimeout(wobbleSettleTimer);
+          wobbleSettleTimer = null;
+        }
+        setScale(HOVER_SCALE_OVERSHOOT);
+        targets.forEach((t) => {
+          if (t.hasAttribute("data-hit-area")) return;
+          const origFill = t.getAttribute("data-original-fill") ?? "#000000";
+          const origStroke = t.getAttribute("data-original-stroke");
+          t.style.transition = TRANSITION;
+          t.style.fill = HOVER_FILL;
+          if (origStroke !== null) t.style.stroke = HOVER_FILL;
+        });
+        wobbleSettleTimer = setTimeout(() => {
+          wobbleSettleTimer = null;
+          setScale(HOVER_SCALE_SETTLE);
+        }, HOVER_WOBBLE_MS);
       });
       zone.addEventListener("mouseout", () => {
+        if (wobbleSettleTimer !== null) {
+          clearTimeout(wobbleSettleTimer);
+          wobbleSettleTimer = null;
+        }
         if (hoverOffTimer !== null) clearTimeout(hoverOffTimer);
         hoverOffTimer = setTimeout(() => {
           hoverOffTimer = null;
@@ -156,7 +187,63 @@ function formatZoneTitle(zoneId: string): string {
 
 export function Token2049Map() {
   const [popupZone, setPopupZone] = useState<string | null>(null);
+  const [attendees, setAttendees] = useState<AttendeeItem[]>([]);
+  const [attendeesLoading, setAttendeesLoading] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [bookedMessage, setBookedMessage] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!popupZone) {
+      setAttendees([]);
+      setSelectedId(null);
+      setBookedMessage(null);
+      return;
+    }
+    let cancelled = false;
+    setAttendeesLoading(true);
+    setAttendees([]);
+    (async () => {
+      try {
+        const eventsRes = await fetch("/api/events?upcoming=true&limit=1");
+        if (!eventsRes.ok || cancelled) return;
+        const { events } = await eventsRes.json();
+        const event = events?.[0];
+        if (!event?.slug || cancelled) {
+          setAttendeesLoading(false);
+          return;
+        }
+        const membersRes = await fetch(`/api/events/${event.slug}/members`);
+        if (!membersRes.ok || cancelled) {
+          setAttendeesLoading(false);
+          return;
+        }
+        const { internal = [], external = [] } = await membersRes.json();
+        const list: AttendeeItem[] = [
+          ...(internal || [])
+            .filter((m: { user?: unknown }) => m.user)
+            .map((m: { user: { id: string; twitter_name?: string; twitter_handle?: string; avatar_url?: string | null } }) => ({
+              id: m.user.id,
+              name: m.user.twitter_name || m.user.twitter_handle || "Unknown",
+              avatar_url: m.user.avatar_url ?? null,
+            })),
+          ...(external || []).map((e: { id: string; name?: string | null; avatar?: string | null }) => ({
+            id: e.id,
+            name: e.name || "Unknown",
+            avatar_url: e.avatar ?? null,
+          })),
+        ];
+        if (!cancelled) setAttendees(list);
+      } catch (_) {
+        if (!cancelled) setAttendees([]);
+      } finally {
+        if (!cancelled) setAttendeesLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [popupZone]);
 
   const handleZoneClick = (zoneId: string) => {
     containerRef.current?.dispatchEvent(
@@ -170,7 +257,7 @@ export function Token2049Map() {
     makeInteractive(svg as unknown as SVGSVGElement, handleZoneClick);
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
     const handler = (e: CustomEvent<{ zoneId: string }>) => {
@@ -179,6 +266,21 @@ export function Token2049Map() {
     el.addEventListener("mapzoneclick", handler as EventListener);
     return () => el.removeEventListener("mapzoneclick", handler as EventListener);
   }, []);
+
+  const selectedAttendee = selectedId ? attendees.find((a) => a.id === selectedId) : null;
+
+  const handleBook = () => {
+    if (selectedAttendee) {
+      setBookedMessage(`Meeting with ${selectedAttendee.name} was booked.`);
+    }
+  };
+
+  const handleCloseModal = () => {
+    setPopupZone(null);
+    setAttendees([]);
+    setSelectedId(null);
+    setBookedMessage(null);
+  };
 
   return (
     <>
@@ -198,7 +300,7 @@ export function Token2049Map() {
 
       <Modal
         isOpen={popupZone !== null}
-        onClose={() => setPopupZone(null)}
+        onClose={handleCloseModal}
         closeOnOverlayClick
         showCloseButton
         size="sm"
@@ -207,12 +309,45 @@ export function Token2049Map() {
           <ModalTitle>{popupZone ? formatZoneTitle(popupZone) : ""}</ModalTitle>
         </ModalHeader>
         <ModalContent>
-          <p className="text-sm text-[var(--color-text-secondary)]">
-            Book a meeting or use this space.
+          <p className="text-sm text-[var(--color-text-secondary)] mb-3">
+            You can book the meeting.
           </p>
+          {attendeesLoading ? (
+            <p className="text-sm text-[var(--color-text-muted)]">Loading attendees…</p>
+          ) : attendees.length === 0 ? (
+            <p className="text-sm text-[var(--color-text-muted)]">No attendees for this event yet.</p>
+          ) : (
+            <div className="flex flex-wrap gap-3">
+              {attendees.map((a) => (
+                <button
+                  key={a.id}
+                  type="button"
+                  onClick={() => setSelectedId(selectedId === a.id ? null : a.id)}
+                  className={cn(
+                    "flex items-center gap-2 rounded-lg px-2 py-1.5 border transition-colors",
+                    selectedId === a.id
+                      ? "border-[var(--color-primary)] bg-[var(--color-surface-hover)]"
+                      : "border-[var(--color-surface-border)] hover:bg-[var(--color-surface-hover)]"
+                  )}
+                >
+                  <Avatar src={a.avatar_url} alt={a.name} size="sm" />
+                  <span className="text-sm text-[var(--color-text-primary)] truncate max-w-[120px]">
+                    {a.name}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+          {bookedMessage && (
+            <p className="mt-3 text-sm text-[var(--color-primary)] font-medium">{bookedMessage}</p>
+          )}
         </ModalContent>
         <ModalFooter>
-          <Button variant="primary" onClick={() => {}}>
+          <Button
+            variant="primary"
+            onClick={handleBook}
+            disabled={!selectedId}
+          >
             Book
           </Button>
         </ModalFooter>
