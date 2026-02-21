@@ -24,10 +24,9 @@ const HOVER_WOBBLE_MS = 140;
 const HOVER_OFF_DELAY_MS = 120;
 const HIT_PADDING = 8;
 
-const PULSE_ANIMATION_NAME = "map-interactive-pulse";
 const PULSE_DURATION_MS = 2500;
 const PULSE_SCALE_MIN = 1;
-const PULSE_SCALE_MAX = 1.025;
+const PULSE_SCALE_MAX = 1.0075;
 
 function getFillableDescendants(el: SVGElement, excludeHitArea = false): SVGElement[] {
   const tagNames = ["path", "rect", "circle", "ellipse", "polygon", "polyline"];
@@ -79,23 +78,39 @@ function ensureHitArea(zone: SVGElement): SVGElement {
   return zone;
 }
 
-function injectPulseKeyframes(svg: SVGSVGElement) {
-  if (svg.querySelector(`[data-map-pulse-style="true"]`)) return;
-  const defs = svg.querySelector("defs") || svg.appendChild(svg.ownerDocument.createElementNS("http://www.w3.org/2000/svg", "defs"));
-  const style = svg.ownerDocument.createElementNS("http://www.w3.org/2000/svg", "style");
-  style.setAttribute("data-map-pulse-style", "true");
-  style.textContent = `
-    @keyframes ${PULSE_ANIMATION_NAME} {
-      0%, 100% { transform: scale(${PULSE_SCALE_MIN}); }
-      50% { transform: scale(${PULSE_SCALE_MAX}); }
-    }
-  `;
-  defs.appendChild(style);
-}
+/** Wraps zone content so scale is applied from geometric center (element grows/shrinks in place, no drift). */
+function wrapZoneContentForCenterScale(zone: SVGElement): { pulseScaleGroup: SVGGElement; pulseAnim: SVGAnimateElement } {
+  const doc = zone.ownerDocument;
+  const ns = "http://www.w3.org/2000/svg";
+  const bbox = (zone as SVGGraphicsElement).getBBox();
+  const cx = bbox.x + bbox.width / 2;
+  const cy = bbox.y + bbox.height / 2;
 
-function applyPulseToZone(zone: SVGElement) {
-  zone.style.transformOrigin = "50% 50%";
-  zone.style.animation = `${PULSE_ANIMATION_NAME} ${PULSE_DURATION_MS}ms ease-in-out infinite`;
+  const outer = doc.createElementNS(ns, "g");
+  outer.setAttribute("transform", `translate(${cx},${cy})`);
+  const middle = doc.createElementNS(ns, "g");
+  middle.setAttribute("data-pulse-scale", "true");
+  const inner = doc.createElementNS(ns, "g");
+  inner.setAttribute("transform", `translate(${-cx},${-cy})`);
+
+  while (zone.firstChild) {
+    inner.appendChild(zone.firstChild);
+  }
+
+  const anim = doc.createElementNS(ns, "animateTransform");
+  anim.setAttribute("attributeName", "transform");
+  anim.setAttribute("type", "scale");
+  anim.setAttribute("values", `${PULSE_SCALE_MIN};${PULSE_SCALE_MAX};${PULSE_SCALE_MIN}`);
+  anim.setAttribute("keyTimes", "0;0.5;1");
+  anim.setAttribute("dur", `${PULSE_DURATION_MS / 1000}s`);
+  anim.setAttribute("repeatCount", "indefinite");
+
+  middle.appendChild(anim);
+  middle.appendChild(inner);
+  outer.appendChild(middle);
+  zone.appendChild(outer);
+
+  return { pulseScaleGroup: middle, pulseAnim: anim };
 }
 
 type MakeInteractiveOptions = {
@@ -111,7 +126,6 @@ function makeInteractive(
   const { mapVariant, onSwitchToLocalMap } = options;
 
   if (mapVariant === "full" && onSwitchToLocalMap) {
-    injectPulseKeyframes(svg);
     const pin41Labels = svg.querySelectorAll<SVGElement>('[aria-label="41"]');
     const processed = new Set<SVGElement>();
     pin41Labels.forEach((labelEl) => {
@@ -133,22 +147,26 @@ function makeInteractive(
       const zone = ensureHitArea(g);
       zone.style.cursor = "pointer";
       zone.style.transition = TRANSITION;
-      zone.style.transformOrigin = "50% 50%";
+
+      const { pulseScaleGroup, pulseAnim } = wrapZoneContentForCenterScale(zone);
 
       const stopPulse = () => {
-        zone.style.animation = "none";
-        zone.style.transform = "scale(1)";
+        if (pulseAnim.parentNode === pulseScaleGroup) {
+          pulseScaleGroup.removeChild(pulseAnim);
+        }
+        pulseScaleGroup.setAttribute("transform", "scale(1)");
       };
       const startPulse = () => {
-        zone.style.animation = `${PULSE_ANIMATION_NAME} ${PULSE_DURATION_MS}ms ease-in-out infinite`;
+        pulseScaleGroup.removeAttribute("transform");
+        if (pulseAnim.parentNode !== pulseScaleGroup) {
+          pulseScaleGroup.appendChild(pulseAnim);
+        }
       };
 
       zone.addEventListener("mouseover", stopPulse);
       zone.addEventListener("mouseout", startPulse);
       zone.addEventListener("touchstart", () => stopPulse(), { passive: true });
       zone.addEventListener("touchend", () => startPulse(), { passive: true });
-
-      zone.style.animation = `${PULSE_ANIMATION_NAME} ${PULSE_DURATION_MS}ms ease-in-out infinite`;
 
       zone.addEventListener("click", (e) => {
         e.preventDefault();
@@ -180,8 +198,6 @@ function makeInteractive(
 
   if (mapVariant !== "local") return;
 
-  injectPulseKeyframes(svg);
-
   const interactiveSelectors = [
     '[id="reception"]',
     '[id="reception-g"]',
@@ -194,8 +210,10 @@ function makeInteractive(
       const zone = ensureHitArea(el);
       zone.style.cursor = "pointer";
       zone.style.transition = TRANSITION;
-      zone.style.transformOrigin = "center center";
-      applyPulseToZone(zone);
+
+      const { pulseScaleGroup, pulseAnim } = wrapZoneContentForCenterScale(zone);
+      (zone as SVGElement & { __pulseScaleGroup?: SVGGElement; __pulseAnim?: SVGAnimateElement }).__pulseScaleGroup = pulseScaleGroup;
+      (zone as SVGElement & { __pulseScaleGroup?: SVGGElement; __pulseAnim?: SVGAnimateElement }).__pulseAnim = pulseAnim;
 
       let targets = getFillableDescendants(zone, true);
       if (targets.length === 0) {
@@ -221,11 +239,26 @@ function makeInteractive(
       });
 
       const setScale = (s: number) => {
-        zone.style.transform = `scale(${s})`;
+        if (pulseAnim.parentNode === pulseScaleGroup) {
+          pulseScaleGroup.removeChild(pulseAnim);
+        }
+        pulseScaleGroup.setAttribute("transform", `scale(${s})`);
+      };
+
+      const restorePulse = () => {
+        pulseScaleGroup.removeAttribute("transform");
+        if (pulseAnim.parentNode !== pulseScaleGroup) {
+          pulseScaleGroup.appendChild(pulseAnim);
+        }
       };
 
       const applyHover = (hover: boolean) => {
-        setScale(hover ? HOVER_SCALE_SETTLE : 1);
+        if (hover) {
+          setScale(HOVER_SCALE_SETTLE);
+        } else {
+          setScale(1);
+          restorePulse();
+        }
         targets.forEach((t) => {
           if (t.hasAttribute("data-hit-area")) return;
           const origFill = t.getAttribute("data-original-fill") ?? "#000000";
@@ -245,7 +278,6 @@ function makeInteractive(
       let wobbleSettleTimer: ReturnType<typeof setTimeout> | null = null;
 
       zone.addEventListener("mouseover", () => {
-        zone.style.animation = "none";
         if (hoverOffTimer !== null) {
           clearTimeout(hoverOffTimer);
           hoverOffTimer = null;
@@ -277,7 +309,6 @@ function makeInteractive(
         hoverOffTimer = setTimeout(() => {
           hoverOffTimer = null;
           applyHover(false);
-          zone.style.animation = `${PULSE_ANIMATION_NAME} ${PULSE_DURATION_MS}ms ease-in-out infinite`;
         }, HOVER_OFF_DELAY_MS);
       });
       zone.addEventListener("click", (e) => {
@@ -312,7 +343,6 @@ function makeInteractive(
 
       zone.addEventListener("touchcancel", () => {
         applyHover(false);
-        zone.style.animation = `${PULSE_ANIMATION_NAME} ${PULSE_DURATION_MS}ms ease-in-out infinite`;
         zoneWithTouch._zoneTouchStart = undefined;
       }, { passive: true });
     });
@@ -328,8 +358,10 @@ function formatZoneTitle(zoneId: string): string {
 
 const MIN_ZOOM = 0.4;
 const MAX_ZOOM = 4;
-const ZOOM_SENSITIVITY = 0.002;
-const PINCH_ZOOM_MULTIPLIER = 1.55;
+const ZOOM_SENSITIVITY_LOCAL = 0.002;
+const ZOOM_SENSITIVITY_FULL = 0.005;
+const PINCH_ZOOM_MULTIPLIER_LOCAL = 1.55;
+const PINCH_ZOOM_MULTIPLIER_FULL = 2.4;
 
 const MAP_SOURCES = {
   local: "/interactive-maps/token2049/map-hotel.svg",
@@ -515,7 +547,8 @@ export function Token2049Map() {
       const dist = getTouchDistance(e.touches);
       const center = getTouchCenter(e.touches);
       const ratio = dist / pinchRef.current.distance;
-      const adjustedRatio = 1 + (ratio - 1) * PINCH_ZOOM_MULTIPLIER;
+      const pinchMultiplier = mapVariant === "full" ? PINCH_ZOOM_MULTIPLIER_FULL : PINCH_ZOOM_MULTIPLIER_LOCAL;
+      const adjustedRatio = 1 + (ratio - 1) * pinchMultiplier;
       const newScale = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, pinchRef.current.scale * adjustedRatio));
       const dx = center.x - pinchRef.current.centerX;
       const dy = center.y - pinchRef.current.centerY;
@@ -541,14 +574,15 @@ export function Token2049Map() {
   useEffect(() => {
     const el = panZoomRef.current;
     if (!el) return;
+    const sensitivity = mapVariant === "full" ? ZOOM_SENSITIVITY_FULL : ZOOM_SENSITIVITY_LOCAL;
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      const delta = -e.deltaY * ZOOM_SENSITIVITY;
+      const delta = -e.deltaY * sensitivity;
       setScale((s) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, s + delta)));
     };
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
-  }, []);
+  }, [mapVariant]);
 
   useEffect(() => {
     const onMouseUp = () => setIsPanning(false);
