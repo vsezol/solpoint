@@ -27,7 +27,7 @@ const HIT_PADDING = 8;
 const PULSE_ANIMATION_NAME = "map-interactive-pulse";
 const PULSE_DURATION_MS = 2500;
 const PULSE_SCALE_MIN = 1;
-const PULSE_SCALE_MAX = 1.08;
+const PULSE_SCALE_MAX = 1.025;
 
 function getFillableDescendants(el: SVGElement, excludeHitArea = false): SVGElement[] {
   const tagNames = ["path", "rect", "circle", "ellipse", "polygon", "polyline"];
