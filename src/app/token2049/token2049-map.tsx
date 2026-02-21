@@ -186,6 +186,10 @@ function formatZoneTitle(zoneId: string): string {
     .join(" ");
 }
 
+const MIN_ZOOM = 0.4;
+const MAX_ZOOM = 4;
+const ZOOM_SENSITIVITY = 0.002;
+
 export function Token2049Map() {
   const [popupZone, setPopupZone] = useState<string | null>(null);
   const [attendees, setAttendees] = useState<AttendeeItem[]>([]);
@@ -193,6 +197,13 @@ export function Token2049Map() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [bookedMessage, setBookedMessage] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const panZoomRef = useRef<HTMLDivElement>(null);
+
+  const [scale, setScale] = useState(1);
+  const [translate, setTranslate] = useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const panStartRef = useRef({ x: 0, y: 0, translateX: 0, translateY: 0 });
+  const pinchRef = useRef<{ distance: number; centerX: number; centerY: number; scale: number; translateX: number; translateY: number } | null>(null);
 
   useEffect(() => {
     if (!popupZone) {
@@ -283,20 +294,124 @@ export function Token2049Map() {
     setBookedMessage(null);
   };
 
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    setIsPanning(true);
+    panStartRef.current = { x: e.clientX, y: e.clientY, translateX: translate.x, translateY: translate.y };
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isPanning) return;
+    setTranslate({
+      x: panStartRef.current.translateX + e.clientX - panStartRef.current.x,
+      y: panStartRef.current.translateY + e.clientY - panStartRef.current.y,
+    });
+  };
+
+  const handleMouseUp = () => setIsPanning(false);
+  const handleMouseLeave = () => setIsPanning(false);
+
+  const getTouchDistance = (touches: React.TouchList) =>
+    Math.hypot(touches[1].clientX - touches[0].clientX, touches[1].clientY - touches[0].clientY);
+  const getTouchCenter = (touches: React.TouchList) => ({
+    x: (touches[0].clientX + touches[1].clientX) / 2,
+    y: (touches[0].clientY + touches[1].clientY) / 2,
+  });
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      e.preventDefault();
+      const center = getTouchCenter(e.touches);
+      pinchRef.current = {
+        distance: getTouchDistance(e.touches),
+        centerX: center.x,
+        centerY: center.y,
+        scale,
+        translateX: translate.x,
+        translateY: translate.y,
+      };
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 2 && pinchRef.current) {
+      e.preventDefault();
+      const dist = getTouchDistance(e.touches);
+      const center = getTouchCenter(e.touches);
+      const ratio = dist / pinchRef.current.distance;
+      const newScale = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, pinchRef.current.scale * ratio));
+      const dx = center.x - pinchRef.current.centerX;
+      const dy = center.y - pinchRef.current.centerY;
+      const newX = pinchRef.current.translateX + dx;
+      const newY = pinchRef.current.translateY + dy;
+      setScale(newScale);
+      setTranslate({ x: newX, y: newY });
+      pinchRef.current = { distance: dist, centerX: center.x, centerY: center.y, scale: newScale, translateX: newX, translateY: newY };
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (e.touches.length < 2) pinchRef.current = null;
+  };
+
+  useEffect(() => {
+    const el = panZoomRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const delta = -e.deltaY * ZOOM_SENSITIVITY;
+      setScale((s) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, s + delta)));
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
+
+  useEffect(() => {
+    const onMouseUp = () => setIsPanning(false);
+    window.addEventListener("mouseup", onMouseUp);
+    window.addEventListener("mouseleave", onMouseUp);
+    return () => {
+      window.removeEventListener("mouseup", onMouseUp);
+      window.removeEventListener("mouseleave", onMouseUp);
+    };
+  }, []);
+
   return (
     <>
       <div
         ref={containerRef}
-        className="relative w-full max-w-4xl mx-auto rounded-lg overflow-hidden border border-[var(--color-surface-border)] bg-[var(--color-surface)]"
-        style={{ aspectRatio: "4/3", minHeight: "480px" }}
+        className="relative w-full h-full min-h-[60vh] rounded-lg overflow-hidden border border-[var(--color-surface-border)] bg-[var(--color-surface)] select-none"
+        style={{ touchAction: "none" }}
       >
-        <ReactSVG
-          src="/interactive-maps/token2049/map-hotel.svg"
-          beforeInjection={(svg) => {
-            onInjection(svg as unknown as SVGSVGElement);
-          }}
-          className="w-full h-full [&>div]:!block [&>div]:!h-full [&>div_svg]:!w-full [&>div_svg]:!h-full [&>div_svg]:!max-w-full [&>div_svg]:!max-h-full"
-        />
+        <div
+          ref={panZoomRef}
+          className="absolute inset-0 overflow-hidden cursor-grab active:cursor-grabbing"
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseLeave}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
+          <div
+            className="absolute inset-0 flex items-center justify-center"
+            style={{
+              transform: `translate(${translate.x}px, ${translate.y}px) scale(${scale})`,
+              transformOrigin: "50% 50%",
+            }}
+          >
+            <div className="w-full h-full min-w-full min-h-full" style={{ aspectRatio: "1/1", maxWidth: "100%", maxHeight: "100%" }}>
+              <ReactSVG
+                src="/interactive-maps/token2049/map-hotel.svg"
+                beforeInjection={(svg) => {
+                  onInjection(svg as unknown as SVGSVGElement);
+                }}
+                className="w-full h-full [&>div]:!block [&>div]:!h-full [&>div_svg]:!w-full [&>div_svg]:!h-full [&>div_svg]:!max-w-full [&>div_svg]:!max-h-full"
+              />
+            </div>
+          </div>
+        </div>
       </div>
 
       <Modal
