@@ -2,18 +2,21 @@ import { type NextRequest, NextResponse } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 
 export async function middleware(request: NextRequest) {
-  // Если это OAuth callback на корневом пути с параметром code, редиректим на callback endpoint
   const url = request.nextUrl;
+
   if (url.pathname === "/" && url.searchParams.has("code") && !url.searchParams.has("redirect_to")) {
     const callbackUrl = new URL("/api/auth/callback", url.origin);
     callbackUrl.searchParams.set("code", url.searchParams.get("code") || "");
-    // Сохраняем остальные параметры, если есть
     url.searchParams.forEach((value, key) => {
       if (key !== "code") {
         callbackUrl.searchParams.set(key, value);
       }
     });
     return NextResponse.redirect(callbackUrl);
+  }
+
+  if (url.pathname.startsWith("/api/")) {
+    return NextResponse.next();
   }
 
   return await updateSession(request);

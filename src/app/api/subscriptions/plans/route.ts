@@ -1,33 +1,31 @@
-import { createClient } from "@/lib/supabase/server";
+import { createServiceRoleClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { unstable_cache } from "next/cache";
 
-export async function GET() {
-  const supabase = await createClient();
-
-  try {
-    // Получаем все активные планы
-    const { data: plans, error } = await supabase
+const getActivePlans = unstable_cache(
+  async () => {
+    const supabase = createServiceRoleClient();
+    const { data, error } = await supabase
       .from("plans")
       .select("*")
       .eq("is_active", true)
       .order("interval_days", { ascending: true });
 
-    if (error) {
-      console.error("Error fetching plans:", error);
-      return NextResponse.json(
-        { error: "Failed to fetch plans" },
-        { status: 500 }
-      );
-    }
+    if (error) throw error;
+    return data || [];
+  },
+  ["plans-active"],
+  { revalidate: 300, tags: ["plans"] }
+);
 
-    return NextResponse.json({ plans: plans || [] });
+export async function GET() {
+  try {
+    const plans = await getActivePlans();
+    return NextResponse.json({ plans });
   } catch (error) {
-    console.error("Unexpected error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
     );
   }
 }
-
-

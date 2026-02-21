@@ -1,20 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 
-/**
- * GET /api/dashboard/has-entities
- * Проверяет, есть ли у пользователя хотя бы одна сущность (event, hub, community, project, workspace)
- * Легкий endpoint для проверки наличия сущностей на фронтенде
- */
 export async function GET() {
   const supabase = await createClient();
+  const { data: { user: authUser } } = await supabase.auth.getUser();
 
-  const {
-    data: { user: authUser },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError || !authUser) {
+  if (!authUser) {
     return NextResponse.json({ hasEntities: false });
   }
 

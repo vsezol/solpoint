@@ -29,17 +29,21 @@ export async function createClient() {
   );
 }
 
+let _serviceRoleClient: ReturnType<typeof createSupabaseClient> | null = null;
+
 /** Server-only. Use for cron or background jobs; bypasses RLS. */
 export function createServiceRoleClient() {
+  if (_serviceRoleClient) return _serviceRoleClient;
+
   const key =
     process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_API_KEY;
   if (!key) {
     throw new Error("SUPABASE_SERVICE_ROLE_KEY or SUPABASE_API_KEY required");
   }
-  return createSupabaseClient(
+  _serviceRoleClient = createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     key,
     { auth: { persistSession: false } }
   );
+  return _serviceRoleClient;
 }
-

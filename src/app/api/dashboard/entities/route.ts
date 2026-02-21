@@ -19,49 +19,35 @@ export async function GET() {
   }
 
   try {
-    // Получаем события, где пользователь владелец (прямо или через сущность)
-    const { data: events, error: eventsError } = await supabase
-      .from("events")
-      .select("*")
-      .or(`owner_type.eq.user,owner_id.eq.${authUser.id}`)
-      .order("created_at", { ascending: false });
+    const entityFields = "id, name, slug, image_url, country, country_code, city, created_at";
 
-    if (eventsError) {
-      console.error("Error fetching events:", eventsError);
-    }
-
-    // Получаем хабы, где пользователь владелец
-    const { data: hubs, error: hubsError } = await supabase
-      .from("hubs")
-      .select("*")
-      .eq("owner_id", authUser.id)
-      .order("created_at", { ascending: false });
-
-    if (hubsError) {
-      console.error("Error fetching hubs:", hubsError);
-    }
-
-    // Получаем проекты, где пользователь владелец
-    const { data: projects, error: projectsError } = await supabase
-      .from("projects")
-      .select("*")
-      .eq("owner_id", authUser.id)
-      .order("created_at", { ascending: false });
-
-    if (projectsError) {
-      console.error("Error fetching projects:", projectsError);
-    }
-
-    // Получаем сообщества, где пользователь владелец
-    const { data: communities, error: communitiesError } = await supabase
-      .from("communities")
-      .select("*")
-      .eq("owner_id", authUser.id)
-      .order("created_at", { ascending: false });
-
-    if (communitiesError) {
-      console.error("Error fetching communities:", communitiesError);
-    }
+    const [
+      { data: events },
+      { data: hubs },
+      { data: projects },
+      { data: communities },
+    ] = await Promise.all([
+      supabase
+        .from("events")
+        .select(`${entityFields}, start_date, end_date, attendees_count, owner_type, owner_id`)
+        .or(`owner_type.eq.user,owner_id.eq.${authUser.id}`)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("hubs")
+        .select(`${entityFields}, members_count, owner_id`)
+        .eq("owner_id", authUser.id)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("projects")
+        .select(`${entityFields}, members_count, owner_id`)
+        .eq("owner_id", authUser.id)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("communities")
+        .select(`${entityFields}, members_count, owner_id`)
+        .eq("owner_id", authUser.id)
+        .order("created_at", { ascending: false }),
+    ]);
 
     return NextResponse.json({
       events: events || [],

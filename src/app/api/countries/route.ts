@@ -1,34 +1,30 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceRoleClient } from "@/lib/supabase/server";
+import { unstable_cache } from "next/cache";
 
-/**
- * GET /api/countries
- * Получить список всех стран
- */
-export async function GET() {
-  try {
-    const supabase = await createClient();
-
+const getCountries = unstable_cache(
+  async () => {
+    const supabase = createServiceRoleClient();
     const { data, error } = await supabase
       .from("countries")
       .select("code, name")
       .order("name", { ascending: true });
 
-    if (error) {
-      console.error("Error fetching countries:", error);
-      return NextResponse.json(
-        { error: error.message || "Failed to fetch countries" },
-        { status: 500 }
-      );
-    }
+    if (error) throw error;
+    return data || [];
+  },
+  ["countries-all"],
+  { revalidate: 3600, tags: ["countries"] }
+);
 
-    return NextResponse.json({ countries: data || [] });
+export async function GET() {
+  try {
+    const countries = await getCountries();
+    return NextResponse.json({ countries });
   } catch (error: any) {
-    console.error("Get countries error:", error);
     return NextResponse.json(
       { error: error.message || "Failed to get countries" },
       { status: 500 }
     );
   }
 }
-

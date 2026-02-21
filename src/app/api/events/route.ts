@@ -21,14 +21,11 @@ export async function GET(request: NextRequest) {
   const supabase = await createClient();
   const { searchParams } = new URL(request.url);
 
-  // Проверяем аутентификацию для VIP ивентов
-  const {
-    data: { user: authUser },
-  } = await supabase.auth.getUser();
+  const { data: { user: authUser } } = await supabase.auth.getUser();
 
-  // Получаем профиль для проверки VIP статуса
+  const visibility = searchParams.get("visibility");
   let isVip = false;
-  if (authUser) {
+  if (authUser && (visibility === "vip_only" || !visibility)) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("subscription_tier")
@@ -37,10 +34,6 @@ export async function GET(request: NextRequest) {
     isVip = profile?.subscription_tier === "vip";
   }
 
-    // Строим запрос
-    // Примечание: owner_id - полиморфное поле, поэтому нельзя использовать внешний ключ
-    // Данные владельца получаем отдельно или на клиенте
-    // Показываем ВСЕ события (worldwide) - фильтрация по владельцу только в dashboard
   let query = supabase
     .from("events")
     .select("*")
@@ -69,7 +62,6 @@ export async function GET(request: NextRequest) {
     query = query.eq("event_type", eventType);
   }
 
-  const visibility = searchParams.get("visibility");
   if (visibility) {
     query = query.eq("visibility", visibility);
   } else if (!isVip) {

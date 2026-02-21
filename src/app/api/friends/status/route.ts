@@ -10,9 +10,7 @@ import { createClient } from "@/lib/supabase/server";
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
-    const {
-      data: { user: authUser },
-    } = await supabase.auth.getUser();
+    const { data: { user: authUser } } = await supabase.auth.getUser();
 
     if (!authUser) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -36,19 +34,19 @@ export async function POST(request: NextRequest) {
 
     const statuses: Record<string, "none" | "following" | "mutual"> = {};
 
-    // Получаем все подписки текущего пользователя на других
-    const { data: userFollowsOthers } = await supabase
-      .from("follows")
-      .select("following_id")
-      .eq("follower_id", authUser.id)
-      .in("following_id", filteredUserIds);
-
-    // Получаем все подписки других пользователей на текущего
-    const { data: othersFollowUser } = await supabase
-      .from("follows")
-      .select("follower_id")
-      .eq("following_id", authUser.id)
-      .in("follower_id", filteredUserIds);
+    const [{ data: userFollowsOthers }, { data: othersFollowUser }] =
+      await Promise.all([
+        supabase
+          .from("follows")
+          .select("following_id")
+          .eq("follower_id", authUser.id)
+          .in("following_id", filteredUserIds),
+        supabase
+          .from("follows")
+          .select("follower_id")
+          .eq("following_id", authUser.id)
+          .in("follower_id", filteredUserIds),
+      ]);
 
     const followingIds = new Set(
       userFollowsOthers?.map((f) => f.following_id) || []
