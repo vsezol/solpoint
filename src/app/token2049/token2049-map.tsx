@@ -175,6 +175,35 @@ function makeInteractive(svg: SVGSVGElement, onZoneClick: (zoneId: string) => vo
         e.stopPropagation();
         onZoneClick(zoneId);
       });
+
+      const TAP_MOVE_THRESHOLD = 24;
+      const zoneWithTouch = zone as SVGElement & { _zoneTouchStart?: { x: number; y: number } };
+
+      zone.addEventListener("touchstart", (e: TouchEvent) => {
+        if (e.touches.length === 1) {
+          zoneWithTouch._zoneTouchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+          applyHover(true);
+        }
+      }, { passive: true });
+
+      zone.addEventListener("touchend", (e: TouchEvent) => {
+        applyHover(false);
+        if (zoneWithTouch._zoneTouchStart && e.changedTouches.length === 1) {
+          const t = e.changedTouches[0];
+          const dx = t.clientX - zoneWithTouch._zoneTouchStart.x;
+          const dy = t.clientY - zoneWithTouch._zoneTouchStart.y;
+          if (Math.hypot(dx, dy) < TAP_MOVE_THRESHOLD) {
+            e.preventDefault();
+            onZoneClick(zoneId);
+          }
+        }
+        zoneWithTouch._zoneTouchStart = undefined;
+      }, { passive: false });
+
+      zone.addEventListener("touchcancel", () => {
+        applyHover(false);
+        zoneWithTouch._zoneTouchStart = undefined;
+      }, { passive: true });
     });
   });
 }
@@ -189,6 +218,13 @@ function formatZoneTitle(zoneId: string): string {
 const MIN_ZOOM = 0.4;
 const MAX_ZOOM = 4;
 const ZOOM_SENSITIVITY = 0.002;
+const PINCH_ZOOM_MULTIPLIER = 1.55;
+
+const MAP_SOURCES = {
+  local: "/interactive-maps/token2049/map-hotel.svg",
+  full: "/interactive-maps/token2049/full-hotel.svg",
+} as const;
+type MapVariant = keyof typeof MAP_SOURCES;
 
 export function Token2049Map() {
   const [popupZone, setPopupZone] = useState<string | null>(null);
@@ -199,11 +235,22 @@ export function Token2049Map() {
   const containerRef = useRef<HTMLDivElement>(null);
   const panZoomRef = useRef<HTMLDivElement>(null);
 
+  const [mapVariant, setMapVariant] = useState<MapVariant>("local");
   const [scale, setScale] = useState(1);
   const [translate, setTranslate] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const panStartRef = useRef({ x: 0, y: 0, translateX: 0, translateY: 0 });
   const pinchRef = useRef<{ distance: number; centerX: number; centerY: number; scale: number; translateX: number; translateY: number } | null>(null);
+  const touchPanRef = useRef<{ startX: number; startY: number; translateX: number; translateY: number } | null>(null);
+
+  const mapSrc = MAP_SOURCES[mapVariant];
+
+  const switchMap = (variant: MapVariant) => {
+    if (variant === mapVariant) return;
+    setMapVariant(variant);
+    setScale(1);
+    setTranslate({ x: 0, y: 0 });
+  };
 
   useEffect(() => {
     if (!popupZone) {
@@ -321,9 +368,13 @@ export function Token2049Map() {
     y: (touches[0].clientY + touches[1].clientY) / 2,
   });
 
+  const isTouchOnZone = (target: EventTarget | null) =>
+    target && (target as Element).closest?.('[id="reception"], [id="reception-g"], [id="conference-office"], [data-zone-id]');
+
   const handleTouchStart = (e: React.TouchEvent) => {
     if (e.touches.length === 2) {
       e.preventDefault();
+      touchPanRef.current = null;
       const center = getTouchCenter(e.touches);
       pinchRef.current = {
         distance: getTouchDistance(e.touches),
@@ -333,16 +384,25 @@ export function Token2049Map() {
         translateX: translate.x,
         translateY: translate.y,
       };
+    } else if (e.touches.length === 1 && !isTouchOnZone(e.target)) {
+      touchPanRef.current = {
+        startX: e.touches[0].clientX,
+        startY: e.touches[0].clientY,
+        translateX: translate.x,
+        translateY: translate.y,
+      };
     }
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
     if (e.touches.length === 2 && pinchRef.current) {
       e.preventDefault();
+      touchPanRef.current = null;
       const dist = getTouchDistance(e.touches);
       const center = getTouchCenter(e.touches);
       const ratio = dist / pinchRef.current.distance;
-      const newScale = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, pinchRef.current.scale * ratio));
+      const adjustedRatio = 1 + (ratio - 1) * PINCH_ZOOM_MULTIPLIER;
+      const newScale = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, pinchRef.current.scale * adjustedRatio));
       const dx = center.x - pinchRef.current.centerX;
       const dy = center.y - pinchRef.current.centerY;
       const newX = pinchRef.current.translateX + dx;
@@ -350,11 +410,18 @@ export function Token2049Map() {
       setScale(newScale);
       setTranslate({ x: newX, y: newY });
       pinchRef.current = { distance: dist, centerX: center.x, centerY: center.y, scale: newScale, translateX: newX, translateY: newY };
+    } else if (e.touches.length === 1 && touchPanRef.current) {
+      e.preventDefault();
+      setTranslate({
+        x: touchPanRef.current.translateX + e.touches[0].clientX - touchPanRef.current.startX,
+        y: touchPanRef.current.translateY + e.touches[0].clientY - touchPanRef.current.startY,
+      });
     }
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (e.touches.length < 2) pinchRef.current = null;
+    if (e.touches.length === 0) touchPanRef.current = null;
   };
 
   useEffect(() => {
@@ -381,11 +448,48 @@ export function Token2049Map() {
 
   return (
     <>
-      <div
-        ref={containerRef}
-        className="relative w-full h-full min-h-[calc(60vh+300px)] rounded-lg overflow-hidden border border-[var(--color-surface-border)] bg-[var(--color-surface)] select-none"
-        style={{ touchAction: "none" }}
-      >
+      <div className="flex flex-col h-full min-h-0 w-full">
+        <div className="flex items-center gap-2 mb-3 shrink-0">
+          <span className="text-sm text-[var(--color-text-secondary)]">Map:</span>
+          <div
+            className="inline-flex rounded-lg border border-[var(--color-surface-border)] bg-[var(--color-surface)] p-0.5"
+            role="tablist"
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mapVariant === "local"}
+              onClick={() => switchMap("local")}
+              className={cn(
+                "px-3 py-1.5 text-sm font-medium rounded-md transition-colors",
+                mapVariant === "local"
+                  ? "bg-[var(--color-surface-hover)] text-[var(--color-text-primary)]"
+                  : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+              )}
+            >
+              Local map
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mapVariant === "full"}
+              onClick={() => switchMap("full")}
+              className={cn(
+                "px-3 py-1.5 text-sm font-medium rounded-md transition-colors",
+                mapVariant === "full"
+                  ? "bg-[var(--color-surface-hover)] text-[var(--color-text-primary)]"
+                  : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+              )}
+            >
+              Full map
+            </button>
+          </div>
+        </div>
+        <div
+          ref={containerRef}
+          className="relative flex-1 w-full min-h-[calc(60vh+300px)] rounded-lg overflow-hidden border border-[var(--color-surface-border)] bg-[var(--color-surface)] select-none"
+          style={{ touchAction: "none" }}
+        >
         <div
           ref={panZoomRef}
           className="absolute inset-0 overflow-hidden cursor-grab active:cursor-grabbing"
@@ -406,7 +510,8 @@ export function Token2049Map() {
           >
             <div className="w-full h-full min-w-full min-h-full" style={{ aspectRatio: "1/1", maxWidth: "100%", maxHeight: "100%" }}>
               <ReactSVG
-                src="/interactive-maps/token2049/map-hotel.svg"
+                key={mapSrc}
+                src={mapSrc}
                 beforeInjection={(svg) => {
                   onInjection(svg as unknown as SVGSVGElement);
                 }}
@@ -414,6 +519,7 @@ export function Token2049Map() {
               />
             </div>
           </div>
+        </div>
         </div>
       </div>
 
