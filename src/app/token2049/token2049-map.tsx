@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { ReactSVG } from "react-svg";
 import {
   Modal,
@@ -12,27 +12,17 @@ import {
   Avatar,
 } from "@/components/ui";
 import { cn } from "@/lib/utils";
-import { Loader2 } from "lucide-react";
+import { Loader2, Maximize, Minimize } from "lucide-react";
 
 type AttendeeItem = { id: string; name: string; avatar_url: string | null };
 
-const HOVER_FILL = "#9945ff";
-const TRANSITION = "fill 0.25s ease, stroke 0.25s ease, transform 0.35s ease-out";
-const HOVER_SCALE_SETTLE = 1.03;
-const HOVER_SCALE_OVERSHOOT = 1.045;
-const HOVER_WOBBLE_MS = 140;
-const HOVER_OFF_DELAY_MS = 120;
 const HIT_PADDING = 8;
-
-const PULSE_DURATION_MS = 2500;
-const PULSE_SCALE_MIN = 1;
-const PULSE_SCALE_MAX = 1.0075;
 
 function getFillableDescendants(el: SVGElement, excludeHitArea = false): SVGElement[] {
   const tagNames = ["path", "rect", "circle", "ellipse", "polygon", "polyline"];
   const list = Array.from(el.querySelectorAll<SVGElement>(tagNames.join(",")));
   if (!excludeHitArea) return list;
-  return list.filter((t) => !t.hasAttribute("data-hit-area"));
+  return list.filter((t) => !t.hasAttribute("data-hit-area") && !t.hasAttribute("data-radar"));
 }
 
 function ensureHitArea(zone: SVGElement): SVGElement {
@@ -78,39 +68,97 @@ function ensureHitArea(zone: SVGElement): SVGElement {
   return zone;
 }
 
-/** Wraps zone content so scale is applied from geometric center (element grows/shrinks in place, no drift). */
-function wrapZoneContentForCenterScale(zone: SVGElement): { pulseScaleGroup: SVGGElement; pulseAnim: SVGAnimateElement } {
-  const doc = zone.ownerDocument;
+/** Detect the dominant color of a zone's visible children */
+function detectZoneColor(zone: SVGElement): string {
+  const skip = new Set(["none", "rgb(0, 0, 0)", "rgb(255, 255, 255)", "rgba(0, 0, 0, 0)", "transparent"]);
+  const children = zone.querySelectorAll("path, rect, circle, ellipse, polygon, polyline");
+  const colorCounts = new Map<string, number>();
+  children.forEach((el) => {
+    if (el.hasAttribute("data-hit-area") || el.hasAttribute("data-radar")) return;
+    const computed = getComputedStyle(el);
+    for (const val of [computed.stroke, computed.fill]) {
+      if (val && !skip.has(val) && !val.includes("url(")) {
+        colorCounts.set(val, (colorCounts.get(val) || 0) + 1);
+      }
+    }
+  });
+  let best = "#14f195";
+  let bestCount = 0;
+  colorCounts.forEach((count, color) => {
+    if (count > bestCount) { bestCount = count; best = color; }
+  });
+  return best;
+}
+
+function injectRadarStyles(svg: SVGSVGElement, variant: "local" | "full") {
+  if (svg.querySelector("style[data-radar]")) return;
+  const maxScale = variant === "local" ? 2 : 2.5;
+  const duration = variant === "local" ? 2 : 1.8;
+  const strokeWidth = variant === "local" ? 1.5 : 12;
+  const delay1 = (duration / 3).toFixed(1);
+  const delay2 = ((duration * 2) / 3).toFixed(1);
+  const style = svg.ownerDocument.createElementNS("http://www.w3.org/2000/svg", "style");
+  style.setAttribute("data-radar", "true");
+  style.textContent = `
+    @keyframes radar-pulse {
+      0% { transform: scale(1); opacity: 0.45; }
+      100% { transform: scale(${maxScale}); opacity: 0; }
+    }
+    .radar-ring-group { pointer-events: none; }
+    .radar-ring {
+      fill: none;
+      stroke-width: ${strokeWidth};
+      pointer-events: none;
+      opacity: 0;
+      will-change: transform, opacity;
+      animation: radar-pulse ${duration}s ease-out infinite;
+    }
+    .radar-ring--delay-1 { animation-delay: ${delay1}s; }
+    .radar-ring--delay-2 { animation-delay: ${delay2}s; }
+  `;
+  const defs = svg.querySelector("defs");
+  if (defs) {
+    defs.appendChild(style);
+  } else {
+    svg.insertBefore(style, svg.firstChild);
+  }
+}
+
+function addRadarWaveToZone(zone: SVGElement, svg: SVGSVGElement) {
+  if (zone.querySelector("[data-radar]")) return;
   const ns = "http://www.w3.org/2000/svg";
-  const bbox = (zone as SVGGraphicsElement).getBBox();
-  const cx = bbox.x + bbox.width / 2;
-  const cy = bbox.y + bbox.height / 2;
+  const doc = svg.ownerDocument;
 
-  const outer = doc.createElementNS(ns, "g");
-  outer.setAttribute("transform", `translate(${cx},${cy})`);
-  const middle = doc.createElementNS(ns, "g");
-  middle.setAttribute("data-pulse-scale", "true");
-  const inner = doc.createElementNS(ns, "g");
-  inner.setAttribute("transform", `translate(${-cx},${-cy})`);
-
-  while (zone.firstChild) {
-    inner.appendChild(zone.firstChild);
+  let cx: number, cy: number, baseRadius: number;
+  try {
+    const bbox = (zone as SVGGraphicsElement).getBBox();
+    cx = bbox.x + bbox.width / 2;
+    cy = bbox.y + bbox.height / 2;
+    baseRadius = Math.max(bbox.width, bbox.height) / 2;
+  } catch {
+    return;
   }
 
-  const anim = doc.createElementNS(ns, "animateTransform");
-  anim.setAttribute("attributeName", "transform");
-  anim.setAttribute("type", "scale");
-  anim.setAttribute("values", `${PULSE_SCALE_MIN};${PULSE_SCALE_MAX};${PULSE_SCALE_MIN}`);
-  anim.setAttribute("keyTimes", "0;0.5;1");
-  anim.setAttribute("dur", `${PULSE_DURATION_MS / 1000}s`);
-  anim.setAttribute("repeatCount", "indefinite");
+  const color = detectZoneColor(zone);
 
-  middle.appendChild(anim);
-  middle.appendChild(inner);
-  outer.appendChild(middle);
-  zone.appendChild(outer);
+  const group = doc.createElementNS(ns, "g");
+  group.setAttribute("class", "radar-ring-group");
+  group.setAttribute("data-radar", "true");
 
-  return { pulseScaleGroup: middle, pulseAnim: anim };
+  const delays = ["", "radar-ring--delay-1", "radar-ring--delay-2"];
+  for (let i = 0; i < 3; i++) {
+    const circle = doc.createElementNS(ns, "circle");
+    circle.setAttribute("cx", String(cx));
+    circle.setAttribute("cy", String(cy));
+    circle.setAttribute("r", String(baseRadius * 0.6));
+    circle.setAttribute("class", `radar-ring ${delays[i]}`.trim());
+    circle.setAttribute("data-radar", "true");
+    circle.style.stroke = color;
+    circle.style.transformOrigin = `${cx}px ${cy}px`;
+    group.appendChild(circle);
+  }
+
+  zone.insertBefore(group, zone.firstChild);
 }
 
 type MakeInteractiveOptions = {
@@ -125,48 +173,43 @@ function makeInteractive(
 ) {
   const { mapVariant, onSwitchToLocalMap } = options;
 
+  injectRadarStyles(svg, mapVariant);
+
   if (mapVariant === "full" && onSwitchToLocalMap) {
     const pin41Labels = svg.querySelectorAll<SVGElement>('[aria-label="41"]');
-    const processed = new Set<SVGElement>();
     pin41Labels.forEach((labelEl) => {
-      const first = labelEl.previousElementSibling?.previousElementSibling as SVGElement | null;
-      const start = first || labelEl;
-      if (processed.has(start)) return;
-      const nodesToWrap: SVGElement[] =
-        first
-          ? [first, first.nextElementSibling as SVGElement, labelEl]
-          : [labelEl];
+      const prev = labelEl.previousElementSibling as SVGElement | null;
+      if (!prev) return;
+
+      // Distinguish map pin from legend entry:
+      // Map pins alternate (pink shape path → white text path), so prev-prev
+      // of the label text is a different pin's text (has aria-label).
+      // Legend entries have 2+ consecutive non-labeled pink paths before text.
+      const prevPrev = prev.previousElementSibling as SVGElement | null;
+      if (!prevPrev || !prevPrev.getAttribute("aria-label")) return;
+
+      // Wrap pink shape + white text (2 elements for map pins)
+      const nodesToWrap = [prev, labelEl];
       const g = svg.ownerDocument.createElementNS("http://www.w3.org/2000/svg", "g");
       g.setAttribute("data-zone-id", "pin-41");
       g.setAttribute("data-pin-41", "true");
-      const parent = start.parentNode;
+      const parent = prev.parentNode;
       if (!parent) return;
-      parent.insertBefore(g, start);
+      parent.insertBefore(g, prev);
       nodesToWrap.forEach((n) => g.appendChild(n));
-      processed.add(start);
+
       const zone = ensureHitArea(g);
       zone.style.cursor = "pointer";
-      zone.style.transition = TRANSITION;
 
-      const { pulseScaleGroup, pulseAnim } = wrapZoneContentForCenterScale(zone);
+      addRadarWaveToZone(zone, svg);
 
-      const stopPulse = () => {
-        if (pulseAnim.parentNode === pulseScaleGroup) {
-          pulseScaleGroup.removeChild(pulseAnim);
-        }
-        pulseScaleGroup.setAttribute("transform", "scale(1)");
-      };
-      const startPulse = () => {
-        pulseScaleGroup.removeAttribute("transform");
-        if (pulseAnim.parentNode !== pulseScaleGroup) {
-          pulseScaleGroup.appendChild(pulseAnim);
-        }
-      };
-
-      zone.addEventListener("mouseover", stopPulse);
-      zone.addEventListener("mouseout", startPulse);
-      zone.addEventListener("touchstart", () => stopPulse(), { passive: true });
-      zone.addEventListener("touchend", () => startPulse(), { passive: true });
+      // Hover glow
+      zone.addEventListener("mouseover", () => {
+        zone.style.filter = "brightness(1.3) drop-shadow(0 0 8px #d669bb)";
+      });
+      zone.addEventListener("mouseout", () => {
+        zone.style.filter = "";
+      });
 
       zone.addEventListener("click", (e) => {
         e.preventDefault();
@@ -179,9 +222,11 @@ function makeInteractive(
       zone.addEventListener("touchstart", (e: TouchEvent) => {
         if (e.touches.length === 1) {
           zoneWithTouch._pinTouchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+          zone.style.filter = "brightness(1.3) drop-shadow(0 0 8px #d669bb)";
         }
       }, { passive: true });
       zone.addEventListener("touchend", (e: TouchEvent) => {
+        zone.style.filter = "";
         if (zoneWithTouch._pinTouchStart && e.changedTouches.length === 1) {
           const t = e.changedTouches[0];
           const dx = t.clientX - zoneWithTouch._pinTouchStart.x;
@@ -209,108 +254,19 @@ function makeInteractive(
     elements.forEach((el) => {
       const zone = ensureHitArea(el);
       zone.style.cursor = "pointer";
-      zone.style.transition = TRANSITION;
 
-      const { pulseScaleGroup, pulseAnim } = wrapZoneContentForCenterScale(zone);
-      (zone as SVGElement & { __pulseScaleGroup?: SVGGElement; __pulseAnim?: SVGAnimateElement }).__pulseScaleGroup = pulseScaleGroup;
-      (zone as SVGElement & { __pulseScaleGroup?: SVGGElement; __pulseAnim?: SVGAnimateElement }).__pulseAnim = pulseAnim;
-
-      let targets = getFillableDescendants(zone, true);
-      if (targets.length === 0) {
-        const path = zone.querySelector("path:not([data-hit-area])");
-        if (path) targets = [path as SVGElement];
-      }
-      if (targets.length === 0) {
-        targets = getFillableDescendants(zone, false).filter((t) => !t.hasAttribute("data-hit-area"));
-      }
-
-      targets.forEach((t) => {
-        if (t.hasAttribute("data-hit-area")) return;
-        const style = t.getAttribute("style") || "";
-        const origFill =
-          t.getAttribute("fill") ??
-          (style.match(/fill:\s*([^;]+)/)?.[1]?.trim()) ??
-          "#000000";
-        t.setAttribute("data-original-fill", origFill);
-        const hasStroke = style.includes("stroke:") && !style.includes("stroke:none");
-        if (hasStroke) {
-          t.setAttribute("data-original-stroke", t.getAttribute("stroke") ?? "#000000");
-        }
-      });
-
-      const setScale = (s: number) => {
-        if (pulseAnim.parentNode === pulseScaleGroup) {
-          pulseScaleGroup.removeChild(pulseAnim);
-        }
-        pulseScaleGroup.setAttribute("transform", `scale(${s})`);
-      };
-
-      const restorePulse = () => {
-        pulseScaleGroup.removeAttribute("transform");
-        if (pulseAnim.parentNode !== pulseScaleGroup) {
-          pulseScaleGroup.appendChild(pulseAnim);
-        }
-      };
-
-      const applyHover = (hover: boolean) => {
-        if (hover) {
-          setScale(HOVER_SCALE_SETTLE);
-        } else {
-          setScale(1);
-          restorePulse();
-        }
-        targets.forEach((t) => {
-          if (t.hasAttribute("data-hit-area")) return;
-          const origFill = t.getAttribute("data-original-fill") ?? "#000000";
-          const origStroke = t.getAttribute("data-original-stroke");
-          t.style.transition = TRANSITION;
-          if (origFill && origFill !== "none") {
-            t.style.fill = hover ? HOVER_FILL : origFill;
-          }
-          if (origStroke !== null) {
-            t.style.stroke = hover ? HOVER_FILL : origStroke;
-          }
-        });
-      };
+      addRadarWaveToZone(zone, svg);
 
       const zoneId = zone.getAttribute("data-zone-id") || zone.getAttribute("id") || "zone";
-      let hoverOffTimer: ReturnType<typeof setTimeout> | null = null;
-      let wobbleSettleTimer: ReturnType<typeof setTimeout> | null = null;
 
+      // Hover: use CSS filter for clean glow effect — no color tracking needed
       zone.addEventListener("mouseover", () => {
-        if (hoverOffTimer !== null) {
-          clearTimeout(hoverOffTimer);
-          hoverOffTimer = null;
-        }
-        if (wobbleSettleTimer !== null) {
-          clearTimeout(wobbleSettleTimer);
-          wobbleSettleTimer = null;
-        }
-        setScale(HOVER_SCALE_OVERSHOOT);
-        targets.forEach((t) => {
-          if (t.hasAttribute("data-hit-area")) return;
-          const origFill = t.getAttribute("data-original-fill") ?? "#000000";
-          const origStroke = t.getAttribute("data-original-stroke");
-          t.style.transition = TRANSITION;
-          t.style.fill = HOVER_FILL;
-          if (origStroke !== null) t.style.stroke = HOVER_FILL;
-        });
-        wobbleSettleTimer = setTimeout(() => {
-          wobbleSettleTimer = null;
-          setScale(HOVER_SCALE_SETTLE);
-        }, HOVER_WOBBLE_MS);
+        zone.style.filter = "brightness(1.6) drop-shadow(0 0 6px #14f195)";
       });
       zone.addEventListener("mouseout", () => {
-        if (wobbleSettleTimer !== null) {
-          clearTimeout(wobbleSettleTimer);
-          wobbleSettleTimer = null;
-        }
-        if (hoverOffTimer !== null) clearTimeout(hoverOffTimer);
-        hoverOffTimer = setTimeout(() => {
-          hoverOffTimer = null;
-          applyHover(false);
-        }, HOVER_OFF_DELAY_MS);
+        zone.style.filter = "";
       });
+
       zone.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -323,12 +279,12 @@ function makeInteractive(
       zone.addEventListener("touchstart", (e: TouchEvent) => {
         if (e.touches.length === 1) {
           zoneWithTouch._zoneTouchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-          applyHover(true);
+          zone.style.filter = "brightness(1.6) drop-shadow(0 0 6px #14f195)";
         }
       }, { passive: true });
 
       zone.addEventListener("touchend", (e: TouchEvent) => {
-        applyHover(false);
+        zone.style.filter = "";
         if (zoneWithTouch._zoneTouchStart && e.changedTouches.length === 1) {
           const t = e.changedTouches[0];
           const dx = t.clientX - zoneWithTouch._zoneTouchStart.x;
@@ -342,7 +298,7 @@ function makeInteractive(
       }, { passive: false });
 
       zone.addEventListener("touchcancel", () => {
-        applyHover(false);
+        zone.style.filter = "";
         zoneWithTouch._zoneTouchStart = undefined;
       }, { passive: true });
     });
@@ -377,22 +333,35 @@ export function Token2049Map() {
   const [bookedMessage, setBookedMessage] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const panZoomRef = useRef<HTMLDivElement>(null);
+  const transformRef = useRef<HTMLDivElement>(null);
 
   const [mapVariant, setMapVariant] = useState<MapVariant>("local");
-  const [scale, setScale] = useState(1);
-  const [translate, setTranslate] = useState({ x: 0, y: 0 });
-  const [isPanning, setIsPanning] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Use refs for transform values to avoid re-renders during pan/zoom
+  const scaleRef = useRef(1);
+  const translateRef = useRef({ x: 0, y: 0 });
+  const isPanningRef = useRef(false);
   const panStartRef = useRef({ x: 0, y: 0, translateX: 0, translateY: 0 });
   const pinchRef = useRef<{ distance: number; centerX: number; centerY: number; scale: number; translateX: number; translateY: number } | null>(null);
   const touchPanRef = useRef<{ startX: number; startY: number; translateX: number; translateY: number } | null>(null);
 
   const mapSrc = MAP_SOURCES[mapVariant];
 
+  /** Apply transform directly to DOM — no React re-render */
+  const applyTransform = useCallback(() => {
+    if (!transformRef.current) return;
+    const { x, y } = translateRef.current;
+    const s = scaleRef.current;
+    transformRef.current.style.transform = `translate(${x}px, ${y}px) scale(${s})`;
+  }, []);
+
   const switchMap = (variant: MapVariant) => {
     if (variant === mapVariant) return;
     setMapVariant(variant);
-    setScale(1);
-    setTranslate({ x: 0, y: 0 });
+    scaleRef.current = 1;
+    translateRef.current = { x: 0, y: 0 };
+    applyTransform();
   };
 
   useEffect(() => {
@@ -453,9 +422,12 @@ export function Token2049Map() {
     );
   };
 
-  const onInjection = (svg: SVGSVGElement) => {
+  const onBeforeInjection = (svg: SVGSVGElement) => {
     svg.setAttribute("style", "width: 100%; height: 100%;");
     svg.style.display = "block";
+  };
+
+  const onAfterInjection = (svg: SVGSVGElement) => {
     makeInteractive(svg as unknown as SVGSVGElement, handleZoneClick, {
       mapVariant,
       onSwitchToLocalMap: () => switchMap("local"),
@@ -470,6 +442,23 @@ export function Token2049Map() {
     };
     el.addEventListener("mapzoneclick", handler as EventListener);
     return () => el.removeEventListener("mapzoneclick", handler as EventListener);
+  }, []);
+
+  // Fullscreen
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
+
+  const handleFullscreen = useCallback(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else {
+      el.requestFullscreen();
+    }
   }, []);
 
   const selectedAttendee = selectedId ? attendees.find((a) => a.id === selectedId) : null;
@@ -487,90 +476,145 @@ export function Token2049Map() {
     setBookedMessage(null);
   };
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.button !== 0) return;
-    const el = e.target as Element;
-    const isClickableZone = el.closest?.('[id="reception"], [id="reception-g"], [id="conference-office"], [data-zone-id]');
-    if (isClickableZone) return;
-    setIsPanning(true);
-    panStartRef.current = { x: e.clientX, y: e.clientY, translateX: translate.x, translateY: translate.y };
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isPanning) return;
-    setTranslate({
-      x: panStartRef.current.translateX + e.clientX - panStartRef.current.x,
-      y: panStartRef.current.translateY + e.clientY - panStartRef.current.y,
-    });
-  };
-
-  const handleMouseUp = () => setIsPanning(false);
-  const handleMouseLeave = () => setIsPanning(false);
-
-  const getTouchDistance = (touches: React.TouchList) =>
-    Math.hypot(touches[1].clientX - touches[0].clientX, touches[1].clientY - touches[0].clientY);
-  const getTouchCenter = (touches: React.TouchList) => ({
-    x: (touches[0].clientX + touches[1].clientX) / 2,
-    y: (touches[0].clientY + touches[1].clientY) / 2,
-  });
-
   const isTouchOnZone = (target: EventTarget | null) =>
     target && (target as Element).closest?.('[id="reception"], [id="reception-g"], [id="conference-office"], [data-zone-id]');
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (e.touches.length === 2) {
-      e.preventDefault();
-      touchPanRef.current = null;
-      const center = getTouchCenter(e.touches);
-      pinchRef.current = {
-        distance: getTouchDistance(e.touches),
-        centerX: center.x,
-        centerY: center.y,
-        scale,
-        translateX: translate.x,
-        translateY: translate.y,
+  // Mouse pan — direct DOM manipulation, no React state during drag
+  useEffect(() => {
+    const el = panZoomRef.current;
+    if (!el) return;
+
+    const onMouseDown = (e: MouseEvent) => {
+      if (e.button !== 0) return;
+      const target = e.target as Element;
+      if (target.closest?.('[id="reception"], [id="reception-g"], [id="conference-office"], [data-zone-id]')) return;
+      isPanningRef.current = true;
+      panStartRef.current = {
+        x: e.clientX, y: e.clientY,
+        translateX: translateRef.current.x, translateY: translateRef.current.y,
       };
-    } else if (e.touches.length === 1 && !isTouchOnZone(e.target)) {
-      touchPanRef.current = {
-        startX: e.touches[0].clientX,
-        startY: e.touches[0].clientY,
-        translateX: translate.x,
-        translateY: translate.y,
+      el.style.cursor = "grabbing";
+    };
+
+    const onMouseMove = (e: MouseEvent) => {
+      if (!isPanningRef.current) return;
+      translateRef.current = {
+        x: panStartRef.current.translateX + e.clientX - panStartRef.current.x,
+        y: panStartRef.current.translateY + e.clientY - panStartRef.current.y,
       };
-    }
-  };
+      applyTransform();
+    };
 
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (e.touches.length === 2 && pinchRef.current) {
-      e.preventDefault();
-      touchPanRef.current = null;
-      const dist = getTouchDistance(e.touches);
-      const center = getTouchCenter(e.touches);
-      const ratio = dist / pinchRef.current.distance;
-      const pinchMultiplier = mapVariant === "full" ? PINCH_ZOOM_MULTIPLIER_FULL : PINCH_ZOOM_MULTIPLIER_LOCAL;
-      const adjustedRatio = 1 + (ratio - 1) * pinchMultiplier;
-      const newScale = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, pinchRef.current.scale * adjustedRatio));
-      const dx = center.x - pinchRef.current.centerX;
-      const dy = center.y - pinchRef.current.centerY;
-      const newX = pinchRef.current.translateX + dx;
-      const newY = pinchRef.current.translateY + dy;
-      setScale(newScale);
-      setTranslate({ x: newX, y: newY });
-      pinchRef.current = { distance: dist, centerX: center.x, centerY: center.y, scale: newScale, translateX: newX, translateY: newY };
-    } else if (e.touches.length === 1 && touchPanRef.current) {
-      e.preventDefault();
-      setTranslate({
-        x: touchPanRef.current.translateX + e.touches[0].clientX - touchPanRef.current.startX,
-        y: touchPanRef.current.translateY + e.touches[0].clientY - touchPanRef.current.startY,
-      });
-    }
-  };
+    const onMouseUp = () => {
+      if (!isPanningRef.current) return;
+      isPanningRef.current = false;
+      el.style.cursor = "";
+    };
 
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (e.touches.length < 2) pinchRef.current = null;
-    if (e.touches.length === 0) touchPanRef.current = null;
-  };
+    el.addEventListener("mousedown", onMouseDown);
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
 
+    return () => {
+      el.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+  }, [applyTransform]);
+
+  // Touch pan & pinch — native events, direct DOM manipulation
+  useEffect(() => {
+    const el = panZoomRef.current;
+    if (!el) return;
+
+    const getTouchDist = (t: TouchList) =>
+      Math.hypot(t[1].clientX - t[0].clientX, t[1].clientY - t[0].clientY);
+    const getTouchCenter = (t: TouchList) => ({
+      x: (t[0].clientX + t[1].clientX) / 2,
+      y: (t[0].clientY + t[1].clientY) / 2,
+    });
+
+    const pinchMultiplier = mapVariant === "full" ? PINCH_ZOOM_MULTIPLIER_FULL : PINCH_ZOOM_MULTIPLIER_LOCAL;
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        touchPanRef.current = null;
+        const center = getTouchCenter(e.touches);
+        pinchRef.current = {
+          distance: getTouchDist(e.touches),
+          centerX: center.x,
+          centerY: center.y,
+          scale: scaleRef.current,
+          translateX: translateRef.current.x,
+          translateY: translateRef.current.y,
+        };
+      } else if (e.touches.length === 1 && !isTouchOnZone(e.target)) {
+        touchPanRef.current = {
+          startX: e.touches[0].clientX,
+          startY: e.touches[0].clientY,
+          translateX: translateRef.current.x,
+          translateY: translateRef.current.y,
+        };
+      }
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 2 && pinchRef.current) {
+        e.preventDefault();
+        touchPanRef.current = null;
+        const dist = getTouchDist(e.touches);
+        const center = getTouchCenter(e.touches);
+        const ratio = dist / pinchRef.current.distance;
+        const adjustedRatio = 1 + (ratio - 1) * pinchMultiplier;
+        const newScale = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, pinchRef.current.scale * adjustedRatio));
+        const dx = center.x - pinchRef.current.centerX;
+        const dy = center.y - pinchRef.current.centerY;
+        const newX = pinchRef.current.translateX + dx;
+        const newY = pinchRef.current.translateY + dy;
+        scaleRef.current = newScale;
+        translateRef.current = { x: newX, y: newY };
+        applyTransform();
+        pinchRef.current = { distance: dist, centerX: center.x, centerY: center.y, scale: newScale, translateX: newX, translateY: newY };
+      } else if (e.touches.length === 1 && touchPanRef.current) {
+        e.preventDefault();
+        translateRef.current = {
+          x: touchPanRef.current.translateX + e.touches[0].clientX - touchPanRef.current.startX,
+          y: touchPanRef.current.translateY + e.touches[0].clientY - touchPanRef.current.startY,
+        };
+        applyTransform();
+      }
+    };
+
+    const onTouchEnd = (e: TouchEvent) => {
+      if (e.touches.length === 1 && pinchRef.current) {
+        pinchRef.current = null;
+        touchPanRef.current = {
+          startX: e.touches[0].clientX,
+          startY: e.touches[0].clientY,
+          translateX: translateRef.current.x,
+          translateY: translateRef.current.y,
+        };
+      } else if (e.touches.length < 2) {
+        pinchRef.current = null;
+      }
+      if (e.touches.length === 0) {
+        touchPanRef.current = null;
+      }
+    };
+
+    el.addEventListener("touchstart", onTouchStart, { passive: false });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    el.addEventListener("touchend", onTouchEnd, { passive: true });
+
+    return () => {
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("touchend", onTouchEnd);
+    };
+  }, [mapVariant, applyTransform]);
+
+  // Wheel zoom — direct DOM manipulation
   useEffect(() => {
     const el = panZoomRef.current;
     if (!el) return;
@@ -578,21 +622,12 @@ export function Token2049Map() {
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       const delta = -e.deltaY * sensitivity;
-      setScale((s) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, s + delta)));
+      scaleRef.current = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, scaleRef.current + delta));
+      applyTransform();
     };
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
-  }, [mapVariant]);
-
-  useEffect(() => {
-    const onMouseUp = () => setIsPanning(false);
-    window.addEventListener("mouseup", onMouseUp);
-    window.addEventListener("mouseleave", onMouseUp);
-    return () => {
-      window.removeEventListener("mouseup", onMouseUp);
-      window.removeEventListener("mouseleave", onMouseUp);
-    };
-  }, []);
+  }, [mapVariant, applyTransform]);
 
   return (
     <>
@@ -636,38 +671,46 @@ export function Token2049Map() {
         <div
           ref={containerRef}
           className="relative flex-1 w-full min-h-[calc(60vh+300px)] rounded-lg overflow-hidden border border-[var(--color-surface-border)] bg-[var(--color-surface)] select-none"
-          style={{ touchAction: "none" }}
         >
-        <div
-          ref={panZoomRef}
-          className="absolute inset-0 overflow-hidden cursor-grab active:cursor-grabbing"
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseLeave}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-        >
-          <div
-            className="absolute inset-0 flex items-center justify-center"
-            style={{
-              transform: `translate(${translate.x}px, ${translate.y}px) scale(${scale})`,
-              transformOrigin: "50% 50%",
-            }}
+          {/* Fullscreen button */}
+          <button
+            type="button"
+            onClick={handleFullscreen}
+            aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+            className="absolute top-3 right-3 z-20 flex items-center justify-center size-9 rounded-md border border-[var(--color-surface-border)] bg-[var(--color-surface)]/80 backdrop-blur-sm hover:bg-[var(--color-surface-hover)] transition-colors text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
           >
-            <div className="w-full h-full min-w-full min-h-full" style={{ aspectRatio: "1/1", maxWidth: "100%", maxHeight: "100%" }}>
-              <ReactSVG
-                key={mapSrc}
-                src={mapSrc}
-                beforeInjection={(svg) => {
-                  onInjection(svg as unknown as SVGSVGElement);
-                }}
-                className="w-full h-full [&>div]:!block [&>div]:!h-full [&>div_svg]:!w-full [&>div_svg]:!h-full [&>div_svg]:!max-w-full [&>div_svg]:!max-h-full"
-              />
+            {isFullscreen ? <Minimize className="size-4" /> : <Maximize className="size-4" />}
+          </button>
+
+          <div
+            ref={panZoomRef}
+            className="absolute inset-0 overflow-hidden cursor-grab"
+            style={{ touchAction: "none" }}
+          >
+            <div
+              ref={transformRef}
+              className="absolute inset-0 flex items-center justify-center"
+              style={{
+                transform: "translate(0px, 0px) scale(1)",
+                transformOrigin: "50% 50%",
+                willChange: "transform",
+              }}
+            >
+              <div className="w-full h-full min-w-full min-h-full" style={{ aspectRatio: "1/1", maxWidth: "100%", maxHeight: "100%" }}>
+                <ReactSVG
+                  key={mapSrc}
+                  src={mapSrc}
+                  beforeInjection={(svg) => {
+                    onBeforeInjection(svg as unknown as SVGSVGElement);
+                  }}
+                  afterInjection={(svg) => {
+                    onAfterInjection(svg as unknown as SVGSVGElement);
+                  }}
+                  className="w-full h-full [&>div]:!block [&>div]:!h-full [&>div_svg]:!w-full [&>div_svg]:!h-full [&>div_svg]:!max-w-full [&>div_svg]:!max-h-full"
+                />
+              </div>
             </div>
           </div>
-        </div>
         </div>
       </div>
 

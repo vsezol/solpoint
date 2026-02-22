@@ -1,0 +1,1 @@
+Use beads (`bd` in bash) for task tracking
