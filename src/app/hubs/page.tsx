@@ -190,20 +190,20 @@ export default function HubsPage() {
   return (
     <>
       <Header />
-      <main className="min-h-screen pt-16 pb-16 animated-bg">
+      <main className="min-h-screen pt-0 md:pt-16 pb-20 md:pb-16 animated-bg">
         {/* Hero */}
-        <section className="py-12 text-center">
+        <section className="py-4 md:py-12 text-center">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h1 className="text-4xl sm:text-5xl font-bold mb-4 inline-block bg-gradient-to-r from-[#00F58D] to-[#A73EFF] bg-clip-text text-transparent">
+          <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold mb-2 md:mb-4 inline-block bg-gradient-to-r from-[#00F58D] to-[#A73EFF] bg-clip-text text-transparent">
             Solana Hubs
           </h1>
-            <p className="text-lg text-[var(--color-text-secondary)] max-w-2xl mx-auto mb-8">
+            <p className="text-sm md:text-lg text-[var(--color-text-secondary)] max-w-2xl mx-auto mb-4 md:mb-8 hidden md:block">
               Connect with local Solana communities and Superteam chapters
               around the world.
             </p>
 
             {/* Stats */}
-            <div className="flex items-center justify-center gap-8">
+            <div className="hidden md:flex items-center justify-center gap-8">
               <div className="text-center">
                 <div className="flex items-center justify-center gap-2 text-[var(--color-primary)]">
                   <Users className="w-5 h-5" />
@@ -227,7 +227,7 @@ export default function HubsPage() {
         </section>
 
         {/* Controls */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <section className="sticky top-0 md:static z-30 bg-[var(--color-background)]/95 backdrop-blur-sm md:bg-transparent md:backdrop-blur-none max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 md:py-8 border-b border-[var(--color-surface-border)] md:border-b-0">
           <HubsControls />
         </section>
 

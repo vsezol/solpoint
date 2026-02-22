@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Header, Footer } from "@/components/layout";
 import { Card } from "@/components/ui";
 import { MapFiltersPanel } from "@/components/map";
+import { SlidersHorizontal } from "lucide-react";
 import type { MapFilters, MapMarker } from "@/types";
 import { getMapMarkers } from "@/lib/api/map";
 import { useAuth } from "@/hooks/use-auth";
@@ -62,9 +63,25 @@ export default function MapPage() {
     showWorkspaces: true,
     contentType: "all",
   });
+  const [mobileFiltersCollapsed, setMobileFiltersCollapsed] = useState(false);
+  const filtersRef = useRef<HTMLElement>(null);
   const { user } = useAuth();
   const isVip = user?.subscription_tier === "vip";
   const isAuthenticated = !!user;
+
+  // Collapse filters on mobile when scrolling down
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        // When the filters section scrolls out of view, collapse
+        setMobileFiltersCollapsed(!entry.isIntersecting);
+      },
+      { threshold: 0.1 }
+    );
+    const el = filtersRef.current;
+    if (el) observer.observe(el);
+    return () => { if (el) observer.unobserve(el); };
+  }, []);
 
   // Отслеживаем просмотр карты
   useEffect(() => {
@@ -100,11 +117,11 @@ export default function MapPage() {
   return (
     <>
       <Header />
-      <main className="pt-16 min-h-screen bg-[var(--color-background)]">
+      <main className="pt-0 md:pt-16 min-h-screen pb-20 md:pb-0 bg-[var(--color-background)]">
         {/* Hero section */}
-        <section className="py-12 text-center">
+        <section className="py-4 md:py-12 text-center">
           {/* Background decoration */}
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute inset-0 overflow-hidden pointer-events-none hidden md:block">
             <svg
               className="absolute top-0 left-0 w-full h-48 opacity-30"
               viewBox="0 0 1200 200"
@@ -132,10 +149,10 @@ export default function MapPage() {
               </defs>
             </svg>
           </div>
-          <h1 className="text-4xl sm:text-5xl font-bold mb-4 inline-block bg-gradient-to-r from-[#00F58D] to-[#A73EFF] bg-clip-text text-transparent">
+          <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold mb-2 md:mb-4 inline-block bg-gradient-to-r from-[#00F58D] to-[#A73EFF] bg-clip-text text-transparent">
             Solana Map
           </h1>
-          <p className="text-lg text-[var(--color-text-secondary)] max-w-2xl mx-auto">
+          <p className="text-sm md:text-lg text-[var(--color-text-secondary)] max-w-2xl mx-auto hidden md:block">
             Discover Solana Users, Hubs, and Events Around the World.
           </p>
         </section>
@@ -144,13 +161,32 @@ export default function MapPage() {
         <section className="max-w-[90rem] mx-auto px-4 sm:px-6 lg:px-8 pb-16">
           <div className="flex flex-col lg:flex-row gap-6">
             {/* Filters sidebar */}
-            <aside className="w-full lg:w-[320px] lg:flex-shrink-0">
-              <MapFiltersPanel
-                filters={filters}
-                onFiltersChange={setFilters}
-                isVip={isVip}
-              />
+            <aside ref={filtersRef} className="w-full lg:w-[320px] lg:flex-shrink-0">
+              {/* Full filters (visible normally) */}
+              <div className="md:block">
+                <MapFiltersPanel
+                  filters={filters}
+                  onFiltersChange={setFilters}
+                  isVip={isVip}
+                />
+              </div>
             </aside>
+
+            {/* Collapsed filters bar (sticky on mobile when scrolled past) */}
+            {mobileFiltersCollapsed && (
+              <div className="fixed top-0 left-0 right-0 z-30 md:hidden">
+                <button
+                  onClick={() => {
+                    filtersRef.current?.scrollIntoView({ behavior: "smooth" });
+                    setMobileFiltersCollapsed(false);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 bg-[var(--color-surface)]/95 backdrop-blur-sm border-b border-[var(--color-surface-border)] text-sm text-[var(--color-text-secondary)]"
+                >
+                  <SlidersHorizontal className="w-4 h-4 text-[var(--color-primary)]" />
+                  <span>Filters</span>
+                </button>
+              </div>
+            )}
 
             {/* Map */}
             <div className="flex-1">

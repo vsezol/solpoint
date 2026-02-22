@@ -363,11 +363,9 @@ export function HubCard({ hub, compact = false, entityType, isBlurred = false }:
         <div className="flex items-center gap-2 mb-4 justify-center" onClick={(e) => e.stopPropagation()}>
           <span className="text-xs text-[var(--color-text-muted)]">Socials:</span>
           {hub.socials?.twitter && (
-            <a
-              href={hub.socials.twitter}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
               onClick={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
                 trackEvent("hub_social_link_click", {
                   event_category: "Hubs",
@@ -377,18 +375,17 @@ export function HubCard({ hub, compact = false, entityType, isBlurred = false }:
                   social_platform: "twitter",
                   source: "hub_card_compact",
                 });
+                window.open(hub.socials!.twitter!, "_blank", "noopener,noreferrer");
               }}
               className="p-1.5 rounded-full bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
             >
               <Twitter className="w-4 h-4" />
-            </a>
+            </button>
           )}
           {hub.socials?.instagram && (
-            <a
-              href={hub.socials.instagram}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
               onClick={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
                 trackEvent("hub_social_link_click", {
                   event_category: "Hubs",
@@ -398,18 +395,17 @@ export function HubCard({ hub, compact = false, entityType, isBlurred = false }:
                   social_platform: "instagram",
                   source: "hub_card_compact",
                 });
+                window.open(hub.socials!.instagram!, "_blank", "noopener,noreferrer");
               }}
               className="p-1.5 rounded-full bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
             >
               <Instagram className="w-4 h-4" />
-            </a>
+            </button>
           )}
           {hub.socials?.facebook && (
-            <a
-              href={hub.socials.facebook}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
               onClick={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
                 trackEvent("hub_social_link_click", {
                   event_category: "Hubs",
@@ -419,11 +415,12 @@ export function HubCard({ hub, compact = false, entityType, isBlurred = false }:
                   social_platform: "facebook",
                   source: "hub_card_compact",
                 });
+                window.open(hub.socials!.facebook!, "_blank", "noopener,noreferrer");
               }}
               className="p-1.5 rounded-full bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
             >
               <Facebook className="w-4 h-4" />
-            </a>
+            </button>
           )}
         </div>
 
@@ -448,11 +445,12 @@ export function HubCard({ hub, compact = false, entityType, isBlurred = false }:
             )}
           </Button>
           {hub.slug && (
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               className="flex-1 cursor-pointer"
               onClick={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
                 trackEvent("hub_card_click", {
                   event_category: "Hubs",
@@ -463,12 +461,9 @@ export function HubCard({ hub, compact = false, entityType, isBlurred = false }:
                   source: "hub_card_compact_details_button",
                 });
               }}
-              asChild
             >
-              <Link href={getEntityPath(hub.slug)}>
-                <ExternalLink className="w-4 h-4 mr-1" />
-                Details
-              </Link>
+              <ExternalLink className="w-4 h-4 mr-1" />
+              Details
             </Button>
           )}
         </div>
@@ -552,43 +547,40 @@ export function HubCard({ hub, compact = false, entityType, isBlurred = false }:
       {/* Socials */}
       <div className="flex items-center gap-3 mb-4" onClick={(e) => e.stopPropagation()}>
         {hub.socials?.twitter && (
-          <a
-            href={hub.socials.twitter}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
             onClick={(e) => {
+              e.preventDefault();
               e.stopPropagation();
+              window.open(hub.socials!.twitter!, "_blank", "noopener,noreferrer");
             }}
             className="p-2 rounded-full bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
           >
             <Twitter className="w-5 h-5" />
-          </a>
+          </button>
         )}
         {hub.socials?.instagram && (
-          <a
-            href={hub.socials.instagram}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
             onClick={(e) => {
+              e.preventDefault();
               e.stopPropagation();
+              window.open(hub.socials!.instagram!, "_blank", "noopener,noreferrer");
             }}
             className="p-2 rounded-full bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
           >
             <Instagram className="w-5 h-5" />
-          </a>
+          </button>
         )}
         {hub.socials?.website && (
-          <a
-            href={hub.socials.website}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
             onClick={(e) => {
+              e.preventDefault();
               e.stopPropagation();
+              window.open(hub.socials!.website!, "_blank", "noopener,noreferrer");
             }}
             className="p-2 rounded-full bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
           >
             <ExternalLink className="w-5 h-5" />
-          </a>
+          </button>
         )}
       </div>
 
@@ -612,10 +604,11 @@ export function HubCard({ hub, compact = false, entityType, isBlurred = false }:
           )}
         </Button>
         {(hub.slug || hub.id) && (
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="flex-1 cursor-pointer"
             onClick={(e) => {
+              e.preventDefault();
               e.stopPropagation();
               // Вызываем trackEvent асинхронно, чтобы не блокировать навигацию
               setTimeout(() => {
@@ -629,12 +622,9 @@ export function HubCard({ hub, compact = false, entityType, isBlurred = false }:
                 });
               }, 0);
             }}
-            asChild
           >
-            <Link href={getEntityPath(hub.slug, hub.id)}>
-              <ExternalLink className="w-4 h-4 mr-2" />
-              Details
-            </Link>
+            <ExternalLink className="w-4 h-4 mr-2" />
+            Details
           </Button>
         )}
       </div>

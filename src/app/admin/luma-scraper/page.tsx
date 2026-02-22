@@ -874,7 +874,7 @@ export default function AdminLumaScraperPage() {
                 Run transfer → enrich locations → enrich timezones → save images in sequence (same as cron). Manual trigger.
               </p>
               <Button
-                variant="default"
+                variant="primary"
                 disabled={fullPipelineLoading}
                 onClick={handleRunFullPipeline}
               >

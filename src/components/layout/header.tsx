@@ -143,24 +143,35 @@ export function Header() {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-[1000] glass">
+    <header className="fixed top-0 left-0 right-0 z-[1000] glass hidden md:block">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 relative">
-              <Image
-                src="/logo.svg"
-                alt="SolPoint"
-                fill
-                className="object-contain"
-                priority
-              />
+          {/* Logo + Supported By */}
+          <div className="flex items-center gap-3">
+            <Link href="/" className="flex items-center gap-2">
+              <div className="w-10 h-10 relative">
+                <Image
+                  src="/logo.svg"
+                  alt="SolPoint"
+                  fill
+                  className="object-contain"
+                  priority
+                />
+              </div>
+              <span className="text-lg font-semibold text-[var(--color-primary)]">
+                Sol Point
+              </span>
+            </Link>
+            <div className="hidden xl:flex items-center gap-1.5 px-3 py-1 rounded-full border border-[var(--color-surface-border)] bg-[var(--color-surface)]/60 backdrop-blur-sm">
+              <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] animate-pulse" />
+              <span className="text-[11px] text-[var(--color-text-muted)]">
+                Supported by{" "}
+                <span className="text-[var(--color-text-secondary)] font-medium">Superteam KZ</span>
+                {" & "}
+                <span className="text-[var(--color-text-secondary)] font-medium">Encode Club</span>
+              </span>
             </div>
-            <span className="text-lg font-semibold text-[var(--color-primary)]">
-              Sol Point
-            </span>
-          </Link>
+          </div>
 
           {/* Desktop Navigation and Auth Buttons - Right Side */}
           <div className="hidden lg:flex items-center gap-1">

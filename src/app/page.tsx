@@ -1,5 +1,9 @@
 import { Header, Footer } from "@/components/layout";
-import { HeroSection, AboutSection, TeamSection } from "@/components/landing";
+import {
+  HeroSection,
+  FeaturesSection,
+  TeamSection,
+} from "@/components/landing";
 
 export default function Home() {
   return (
@@ -7,7 +11,7 @@ export default function Home() {
       <Header />
       <main className="grid-pattern-bg relative">
         <HeroSection />
-        <AboutSection />
+        <FeaturesSection />
         <TeamSection />
       </main>
       <Footer />

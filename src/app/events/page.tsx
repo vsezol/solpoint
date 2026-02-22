@@ -99,23 +99,23 @@ export default function EventsPage() {
   return (
     <>
       <Header />
-      <main className="min-h-screen pt-16 pb-16 animated-bg">
+      <main className="min-h-screen pt-0 md:pt-16 pb-20 md:pb-16 animated-bg">
         {/* Hero */}
-        <section className="py-12 text-center">
+        <section className="py-4 md:py-12 text-center">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h1 className="text-4xl sm:text-5xl font-bold mb-4 inline-block bg-gradient-to-r from-[#00F58D] to-[#A73EFF] bg-clip-text text-transparent">
+          <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold mb-2 md:mb-4 inline-block bg-gradient-to-r from-[#00F58D] to-[#A73EFF] bg-clip-text text-transparent">
   Solana Events
 </h1>
-            <p className="text-lg text-[var(--color-text-secondary)] max-w-2xl mx-auto">
+            <p className="text-sm md:text-lg text-[var(--color-text-secondary)] max-w-2xl mx-auto hidden md:block">
               Discover meetups, conferences, and gatherings in the Solana
               ecosystem worldwide.
             </p>
           </div>
         </section>
 
-        {/* Filters */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex flex-col sm:flex-row gap-4 items-center">
+        {/* Search + Filter tags (sticky on mobile) */}
+        <section className="sticky top-0 md:static z-30 bg-[var(--color-background)]/95 backdrop-blur-sm md:bg-transparent md:backdrop-blur-none max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 md:py-8 border-b border-[var(--color-surface-border)] md:border-b-0">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 sm:items-center">
             <div className="w-full sm:w-96">
               <Input
                 placeholder="Search events..."
@@ -174,30 +174,32 @@ export default function EventsPage() {
                 </FilterTag>
               ))}
             </div>
-            <div className="ml-auto">
-              <Button
-                variant="primary"
-                className="whitespace-nowrap"
-                onClick={() => {
-                  if (!isAuthenticated) {
-                    setShowAuthModal(true);
-                    return;
-                  }
-                  if (!isVip) {
-                    setShowProModal(true);
-                    return;
-                  }
-                  setIsCreateModalOpen(true);
-                  trackEvent("event_create_modal_open", {
-                    event_category: "Events",
-                  });
-                }}
-              >
-                Host an event
-              </Button>
-            </div>
           </div>
         </section>
+
+        {/* Host an event button (scrolls away on mobile) */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex justify-end">
+          <Button
+            variant="primary"
+            className="whitespace-nowrap"
+            onClick={() => {
+              if (!isAuthenticated) {
+                setShowAuthModal(true);
+                return;
+              }
+              if (!isVip) {
+                setShowProModal(true);
+                return;
+              }
+              setIsCreateModalOpen(true);
+              trackEvent("event_create_modal_open", {
+                event_category: "Events",
+              });
+            }}
+          >
+            Host an event
+          </Button>
+        </div>
 
         {/* Upcoming Events */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">

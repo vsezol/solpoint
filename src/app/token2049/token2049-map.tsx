@@ -335,7 +335,7 @@ export function Token2049Map() {
   const panZoomRef = useRef<HTMLDivElement>(null);
   const transformRef = useRef<HTMLDivElement>(null);
 
-  const [mapVariant, setMapVariant] = useState<MapVariant>("local");
+  const [mapVariant, setMapVariant] = useState<MapVariant>("full");
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Use refs for transform values to avoid re-renders during pan/zoom
@@ -641,20 +641,6 @@ export function Token2049Map() {
             <button
               type="button"
               role="tab"
-              aria-selected={mapVariant === "local"}
-              onClick={() => switchMap("local")}
-              className={cn(
-                "px-3 py-1.5 text-sm font-medium rounded-md transition-colors",
-                mapVariant === "local"
-                  ? "bg-[var(--color-surface-hover)] text-[var(--color-text-primary)]"
-                  : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
-              )}
-            >
-              Local map
-            </button>
-            <button
-              type="button"
-              role="tab"
               aria-selected={mapVariant === "full"}
               onClick={() => switchMap("full")}
               className={cn(
@@ -665,6 +651,20 @@ export function Token2049Map() {
               )}
             >
               Full map
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mapVariant === "local"}
+              onClick={() => switchMap("local")}
+              className={cn(
+                "px-3 py-1.5 text-sm font-medium rounded-md transition-colors",
+                mapVariant === "local"
+                  ? "bg-[var(--color-surface-hover)] text-[var(--color-text-primary)]"
+                  : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+              )}
+            >
+              Local map
             </button>
           </div>
         </div>
@@ -711,67 +711,68 @@ export function Token2049Map() {
               </div>
             </div>
           </div>
+
+          {/* Modal inside containerRef so it's visible in fullscreen */}
+          <Modal
+            isOpen={popupZone !== null}
+            onClose={handleCloseModal}
+            closeOnOverlayClick
+            showCloseButton
+            size="sm"
+          >
+            <ModalHeader>
+              <ModalTitle>
+                {popupZone ? `Booking the meeting at ${formatZoneTitle(popupZone)}` : ""}
+              </ModalTitle>
+            </ModalHeader>
+            <ModalContent>
+              <p className="text-sm text-[var(--color-text-secondary)] mb-3">
+                You can book the meeting.
+              </p>
+              {attendeesLoading ? (
+                <div className="flex justify-center py-4">
+                  <Loader2 className="w-8 h-8 animate-spin text-[var(--color-primary)]" aria-hidden />
+                </div>
+              ) : attendees.length === 0 ? (
+                <p className="text-sm text-[var(--color-text-muted)]">No attendees for this event yet.</p>
+              ) : (
+                <div className="flex flex-wrap gap-3">
+                  {attendees.map((a) => (
+                    <button
+                      key={a.id}
+                      type="button"
+                      onClick={() => setSelectedId(selectedId === a.id ? null : a.id)}
+                      className={cn(
+                        "flex items-center gap-2 rounded-lg px-2 py-1.5 border transition-colors",
+                        selectedId === a.id
+                          ? "border-[var(--color-primary)] bg-[var(--color-surface-hover)]"
+                          : "border-[var(--color-surface-border)] hover:bg-[var(--color-surface-hover)]"
+                      )}
+                    >
+                      <Avatar src={a.avatar_url} alt={a.name} size="sm" />
+                      <span className="text-sm text-[var(--color-text-primary)] truncate max-w-[120px]">
+                        {a.name}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {bookedMessage && (
+                <p className="mt-3 text-sm text-[var(--color-primary)] font-medium">{bookedMessage}</p>
+              )}
+            </ModalContent>
+            <ModalFooter>
+              <Button
+                variant="primary"
+                onClick={handleBook}
+                disabled={!selectedId}
+              >
+                Book
+              </Button>
+            </ModalFooter>
+          </Modal>
         </div>
       </div>
-
-      <Modal
-        isOpen={popupZone !== null}
-        onClose={handleCloseModal}
-        closeOnOverlayClick
-        showCloseButton
-        size="sm"
-      >
-        <ModalHeader>
-          <ModalTitle>
-            {popupZone ? `Booking the meeting at ${formatZoneTitle(popupZone)}` : ""}
-          </ModalTitle>
-        </ModalHeader>
-        <ModalContent>
-          <p className="text-sm text-[var(--color-text-secondary)] mb-3">
-            You can book the meeting.
-          </p>
-          {attendeesLoading ? (
-            <div className="flex justify-center py-4">
-              <Loader2 className="w-8 h-8 animate-spin text-[var(--color-primary)]" aria-hidden />
-            </div>
-          ) : attendees.length === 0 ? (
-            <p className="text-sm text-[var(--color-text-muted)]">No attendees for this event yet.</p>
-          ) : (
-            <div className="flex flex-wrap gap-3">
-              {attendees.map((a) => (
-                <button
-                  key={a.id}
-                  type="button"
-                  onClick={() => setSelectedId(selectedId === a.id ? null : a.id)}
-                  className={cn(
-                    "flex items-center gap-2 rounded-lg px-2 py-1.5 border transition-colors",
-                    selectedId === a.id
-                      ? "border-[var(--color-primary)] bg-[var(--color-surface-hover)]"
-                      : "border-[var(--color-surface-border)] hover:bg-[var(--color-surface-hover)]"
-                  )}
-                >
-                  <Avatar src={a.avatar_url} alt={a.name} size="sm" />
-                  <span className="text-sm text-[var(--color-text-primary)] truncate max-w-[120px]">
-                    {a.name}
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
-          {bookedMessage && (
-            <p className="mt-3 text-sm text-[var(--color-primary)] font-medium">{bookedMessage}</p>
-          )}
-        </ModalContent>
-        <ModalFooter>
-          <Button
-            variant="primary"
-            onClick={handleBook}
-            disabled={!selectedId}
-          >
-            Book
-          </Button>
-        </ModalFooter>
-      </Modal>
     </>
   );
 }

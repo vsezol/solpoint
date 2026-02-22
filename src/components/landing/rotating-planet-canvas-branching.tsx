@@ -167,15 +167,26 @@ function ParticlePlanet({ pointCount, arcRadius }: { pointCount: number; arcRadi
       positions[index + 1] = direction.y * radius;
       positions[index + 2] = direction.z * radius;
 
-      const ocean = THREE.MathUtils.lerp(0.3, 0.37, seededRandom(i * 5.2 + 0.3));
-      const land = THREE.MathUtils.lerp(0.4, 0.47, seededRandom(i * 6.1 + 0.8));
-      const value = isLand ? land : ocean;
-      mixed.setRGB(value, value + 0.01, value + 0.02);
+      // Solana-colored planet: purple (#9945ff) for land, dark teal for ocean, green (#14f195) accents
+      const solGreen = new THREE.Color(0.078, 0.945, 0.584);   // #14f195
+      const solPurple = new THREE.Color(0.6, 0.271, 1.0);      // #9945ff
+      const solCyan = new THREE.Color(0.0, 0.82, 1.0);         // #00d1ff
+      const solDarkPurple = new THREE.Color(0.22, 0.08, 0.45); // deep purple for ocean
+      const rnd = seededRandom(i * 5.2 + 0.3);
+      if (isLand) {
+        // Land: blend between purple and green based on noise
+        const blend = THREE.MathUtils.clamp(noise * 0.5 + 0.5 + rnd * 0.2, 0, 1);
+        mixed.copy(solPurple).lerp(solGreen, blend * 0.35);
+        mixed.lerp(new THREE.Color(1, 1, 1), rnd * 0.06);
+      } else {
+        // Ocean: dark purple-teal
+        mixed.copy(solDarkPurple).lerp(solCyan, rnd * 0.15 + 0.05);
+      }
       if (coastMask > 0) {
-        mixed.lerp(new THREE.Color(0.69, 0.72, 0.74), coastMask * 0.24);
+        mixed.lerp(solGreen, coastMask * 0.3);
       }
       if (polarMask > 0) {
-        mixed.lerp(new THREE.Color(0.88, 0.89, 0.9), polarMask * 0.42);
+        mixed.lerp(solCyan, polarMask * 0.35);
       }
 
       baseColors[index] = mixed.r;
@@ -816,7 +827,7 @@ function ParticlePlanet({ pointCount, arcRadius }: { pointCount: number; arcRadi
 
               void main() {
                 if (vUv.x > uProgress) discard;
-                vec3 color = vec3(0.34, 0.84, 0.98);
+                vec3 color = mix(vec3(0.078, 0.945, 0.584), vec3(0.6, 0.271, 1.0), vUv.x);
                 float alpha = 0.78 * uOpacity;
                 gl_FragColor = vec4(color, alpha);
               }

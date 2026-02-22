@@ -298,6 +298,20 @@ input::selection {
   border: 1px solid var(--color-surface-border);
 }
 
+/* Mobile bottom nav safe area */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  body {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* PWA standalone mode: no bounce */
+@media (display-mode: standalone) {
+  html {
+    overscroll-behavior: none;
+  }
+}
+
 /* Animation keyframes */
 @keyframes float {
   0%, 100% {

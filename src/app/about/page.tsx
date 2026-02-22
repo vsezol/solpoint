@@ -5,7 +5,7 @@ export default function AboutPage() {
   return (
     <>
       <Header />
-      <main className="pt-16">
+      <main className="pt-0 md:pt-16">
         <AboutSection />
         <TeamSection />
       </main>
@@ -13,4 +13,3 @@ export default function AboutPage() {
     </>
   );
 }
-

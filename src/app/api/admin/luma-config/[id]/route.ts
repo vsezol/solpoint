@@ -56,7 +56,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Config not found" }, { status: 404 });
   }
 
-  if (body.schedule_type === "daily" && body.run_at_hour_utc !== undefined && (body.run_at_hour_utc < 0 || body.run_at_hour_utc > 23)) {
+  if (body.schedule_type === "daily" && body.run_at_hour_utc != null && (body.run_at_hour_utc < 0 || body.run_at_hour_utc > 23)) {
     return NextResponse.json({ error: "run_at_hour_utc must be 0-23" }, { status: 400 });
   }
   if (body.schedule_type === "cron" && body.cron_expression !== undefined && !body.cron_expression?.trim()) {

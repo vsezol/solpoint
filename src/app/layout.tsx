@@ -7,6 +7,7 @@ import { QueryProvider } from "@/components/providers/query-provider";
 import { WalletContextProvider } from "@/components/providers/wallet-provider";
 import { GoogleAnalytics } from "@/components/analytics/google-analytics";
 import { IntentChecker } from "@/components/subscription/intent-checker";
+import { MobileNav } from "@/components/layout/mobile-nav";
 
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-display",
@@ -41,6 +42,12 @@ export const metadata: Metadata = {
     "blockchain",
   ],
   authors: [{ name: "SolPoint Team" }],
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "SolPoint",
+  },
   openGraph: {
     title: "SolPoint - The Global Solana Community Map",
     description:
@@ -57,7 +64,7 @@ export const metadata: Metadata = {
   icons: {
     icon: "/logo_solpoint.svg",
     shortcut: "/logo_solpoint.svg",
-    apple: "/logo_solpoint.svg",
+    apple: "/icons/icon-192x192.png",
   },
 };
 
@@ -68,6 +75,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
+      <head>
+        <meta name="theme-color" content="#0a0f14" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+      </head>
       <body
         className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} ${inter.variable} antialiased`}
       >
@@ -78,6 +90,7 @@ export default function RootLayout({
               <AuthProvider>
                 <IntentChecker />
                 {children}
+                <MobileNav />
               </AuthProvider>
             </WalletContextProvider>
           </QueryProvider>
