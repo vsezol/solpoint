@@ -4,7 +4,6 @@ import { cn } from "@/lib/utils";
 import { Button, ProSubscriptionModal } from "@/components/ui";
 import Image from "next/image";
 import Link from "next/link";
-import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
 import { Menu, X, LogOut, User, MessageSquare, CalendarClock } from "lucide-react";
@@ -13,21 +12,6 @@ import { useAuth } from "@/hooks/use-auth";
 import { trackEvent } from "@/lib/analytics";
 import { getMeetingRequestCounts } from "@/lib/api/meeting-requests";
 import { isMeetingRequestsEnabled } from "@/lib/meeting-requests";
-
-const RotatingPlanetCanvas = dynamic(
-  () => import("@/components/landing/rotating-planet-canvas-branching").then((mod) => mod.RotatingPlanetCanvas),
-  {
-    ssr: false,
-    loading: () => (
-      <Image
-        src="/logo.svg"
-        alt="SolPoint"
-        fill
-        className="object-contain"
-      />
-    ),
-  }
-);
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -164,8 +148,14 @@ export function Header() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 relative overflow-hidden rounded-full">
-              <RotatingPlanetCanvas />
+            <div className="w-10 h-10 relative">
+              <Image
+                src="/logo.svg"
+                alt="SolPoint"
+                fill
+                className="object-contain"
+                priority
+              />
             </div>
             <span className="text-lg font-semibold text-[var(--color-primary)]">
               Sol Point

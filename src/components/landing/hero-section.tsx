@@ -31,7 +31,7 @@ export function HeroSection() {
       </div>
 
       {/* Content */}
-      <div className="relative z-20 mx-auto flex flex-1 w-full max-w-7xl flex-col justify-end px-4 pb-16 sm:px-6 md:justify-center md:px-8 md:pb-0 md:pt-20">
+      <div className="relative z-20 mx-auto flex flex-1 w-full max-w-7xl flex-col justify-end px-4 pb-6 sm:px-6 md:justify-center md:px-8 md:pb-0 md:pt-20">
         <div className="max-w-2xl space-y-4 lg:max-w-3xl lg:pr-16">
           <h1
             className="text-3xl font-bold leading-[1.15] tracking-tight text-[var(--color-text-primary)] sm:text-5xl md:text-[44px]"
@@ -72,7 +72,7 @@ export function HeroSection() {
       </div>
 
       {/* Scroll indicator */}
-      <div className="relative z-20 flex justify-center pb-8 md:pb-10">
+      <div className="relative z-20 flex justify-center pb-24 md:pb-10">
         <button
           onClick={() => {
             document.getElementById("features")?.scrollIntoView({ behavior: "smooth" });
