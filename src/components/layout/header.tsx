@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { Button, ProSubscriptionModal } from "@/components/ui";
 import Image from "next/image";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
 import { Menu, X, LogOut, User, MessageSquare, CalendarClock } from "lucide-react";
@@ -12,6 +13,21 @@ import { useAuth } from "@/hooks/use-auth";
 import { trackEvent } from "@/lib/analytics";
 import { getMeetingRequestCounts } from "@/lib/api/meeting-requests";
 import { isMeetingRequestsEnabled } from "@/lib/meeting-requests";
+
+const RotatingPlanetCanvas = dynamic(
+  () => import("@/components/landing/rotating-planet-canvas-branching").then((mod) => mod.RotatingPlanetCanvas),
+  {
+    ssr: false,
+    loading: () => (
+      <Image
+        src="/logo.svg"
+        alt="SolPoint"
+        fill
+        className="object-contain"
+      />
+    ),
+  }
+);
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -146,32 +162,15 @@ export function Header() {
     <header className="fixed top-0 left-0 right-0 z-[1000] glass hidden md:block">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo + Supported By */}
-          <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="w-10 h-10 relative">
-                <Image
-                  src="/logo.svg"
-                  alt="SolPoint"
-                  fill
-                  className="object-contain"
-                  priority
-                />
-              </div>
-              <span className="text-lg font-semibold text-[var(--color-primary)]">
-                Sol Point
-              </span>
-            </Link>
-            <div className="hidden xl:flex items-center gap-1.5 px-3 py-1 rounded-full border border-[var(--color-surface-border)] bg-[var(--color-surface)]/60 backdrop-blur-sm">
-              <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] animate-pulse" />
-              <span className="text-[11px] text-[var(--color-text-muted)]">
-                Supported by{" "}
-                <span className="text-[var(--color-text-secondary)] font-medium">Superteam KZ</span>
-                {" & "}
-                <span className="text-[var(--color-text-secondary)] font-medium">Encode Club</span>
-              </span>
+          {/* Logo */}
+          <Link href="/" className="flex items-center gap-2">
+            <div className="w-10 h-10 relative overflow-hidden rounded-full">
+              <RotatingPlanetCanvas />
             </div>
-          </div>
+            <span className="text-lg font-semibold text-[var(--color-primary)]">
+              Sol Point
+            </span>
+          </Link>
 
           {/* Desktop Navigation and Auth Buttons - Right Side */}
           <div className="hidden lg:flex items-center gap-1">

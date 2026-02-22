@@ -11,21 +11,21 @@ const teamMembers = [
     role: "CEO, Founder",
     description: "Scaled a Web3 analytics tool to $80k MRR. Proven builder.",
     image: "/danich.jpeg",
-    imagePosition: "center 20%",
+    imagePosition: "center top",
   },
   {
     name: "Vsevolod",
     role: "CTO, Full Stack",
     description: "7+ years in dev. Deep Web3 & Solana expertise.",
     image: "/vsevolod.jpeg",
-    imagePosition: "center",
+    imagePosition: "center top",
   },
   {
     name: "Artem",
     role: "Senior Frontend",
     description: "Frontend specialist. Web3 native. Solana enthusiast.",
     image: "/artem.jpg",
-    imagePosition: "center",
+    imagePosition: "center top",
   },
 ];
 

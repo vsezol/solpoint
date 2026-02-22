@@ -49,13 +49,14 @@ function FeatureCard({ feature, index }: { feature: typeof features[0]; index: n
         <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-[radial-gradient(circle_at_50%_0%,rgba(20,241,149,0.08),transparent_60%)]" />
 
         <div className="relative z-10 flex flex-col flex-1">
-          <div className={`inline-flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br ${feature.gradient} mb-5`}>
-            <feature.icon className="w-6 h-6 text-[var(--color-background)]" strokeWidth={2} />
+          <div className="flex items-center gap-3 mb-4">
+            <div className={`flex-shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br ${feature.gradient}`}>
+              <feature.icon className="w-5 h-5 text-[var(--color-background)]" strokeWidth={2} />
+            </div>
+            <h3 className="text-xl sm:text-2xl font-bold text-[var(--color-text-primary)]">
+              {feature.title}
+            </h3>
           </div>
-
-          <h3 className="text-xl sm:text-2xl font-bold text-[var(--color-text-primary)] mb-3">
-            {feature.title}
-          </h3>
 
           <p className="text-sm sm:text-base text-[var(--color-text-secondary)] leading-relaxed mt-auto">
             {feature.description}
