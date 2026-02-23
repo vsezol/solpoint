@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getAppOrigin } from "@/lib/utils";
 import { normalizeOAuthRedirectTarget } from "@/lib/auth/oauth-redirect";
+import { authDebugLog } from "@/lib/auth/debug";
 
 export async function GET(request: Request) {
   const supabase = await createClient();
@@ -15,6 +16,14 @@ export async function GET(request: Request) {
   // Автоматически определяем origin в зависимости от окружения
   const requestUrl = new URL(request.url);
   const origin = getAppOrigin(requestUrl.origin);
+
+  authDebugLog("twitter", "oauth_start", {
+    request_origin: requestUrl.origin,
+    app_origin: origin,
+    has_redirect_to_param: Boolean(searchParams.get("redirect_to")),
+    redirect_target_type: redirectTarget.type,
+    redirect_to: redirectTo,
+  });
 
   // Сохраняем redirect_to в cookie, чтобы восстановить его в callback
   const cookieStore = await cookies();
@@ -38,6 +47,10 @@ export async function GET(request: Request) {
   });
 
   if (error) {
+    authDebugLog("twitter", "oauth_init_failed", {
+      message: error.message,
+      callback_url: callbackUrl,
+    });
     return NextResponse.redirect(
       `${origin}/login?error=${encodeURIComponent(error.message)}`
     );
@@ -45,8 +58,15 @@ export async function GET(request: Request) {
 
   // Supabase вернет URL для редиректа на Twitter
   if (data?.url) {
+    authDebugLog("twitter", "oauth_redirect_to_provider", {
+      callback_url: callbackUrl,
+      has_provider_url: true,
+    });
     return NextResponse.redirect(data.url);
   }
 
+  authDebugLog("twitter", "oauth_failed_no_provider_url", {
+    callback_url: callbackUrl,
+  });
   return NextResponse.redirect(`${origin}/login?error=oauth_failed`);
 }

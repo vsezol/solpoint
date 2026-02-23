@@ -2,6 +2,7 @@ import {
   createClient,
   createServiceRoleClient,
 } from "@/lib/supabase/server";
+import { authDebugLog } from "@/lib/auth/debug";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 
@@ -32,6 +33,7 @@ async function getUserFromBearerToken(accessToken: string) {
 
 export async function GET(request: Request) {
   const bearerToken = getBearerToken(request);
+  const authSource = bearerToken ? "bearer" : "cookie";
 
   let authUser: Awaited<ReturnType<typeof getUserFromBearerToken>>["data"]["user"] =
     null;
@@ -48,7 +50,17 @@ export async function GET(request: Request) {
     authError = error;
   }
 
+  authDebugLog("me", "auth_user_lookup", {
+    auth_source: authSource,
+    auth_user_id: authUser?.id ?? null,
+    auth_error: authError?.message ?? null,
+  });
+
   if (authError || !authUser) {
+    authDebugLog("me", "response_unauthenticated", {
+      auth_source: authSource,
+      has_auth_error: Boolean(authError),
+    });
     return NextResponse.json({ user: null, profile: null });
   }
 
@@ -59,9 +71,24 @@ export async function GET(request: Request) {
     .eq("id", authUser.id)
     .single();
 
+  authDebugLog("me", "profile_lookup", {
+    auth_user_id: authUser.id,
+    profile_found: Boolean(profile),
+    profile_error_code: profileError?.code ?? null,
+    profile_error_message: profileError?.message ?? null,
+  });
+
   if (profileError || !profile) {
+    authDebugLog("me", "response_user_without_profile", {
+      auth_user_id: authUser.id,
+    });
     return NextResponse.json({ user: authUser, profile: null });
   }
 
+  authDebugLog("me", "response_user_with_profile", {
+    auth_user_id: authUser.id,
+    profile_id: profile.id,
+    twitter_handle: profile.twitter_handle ?? null,
+  });
   return NextResponse.json({ user: authUser, profile });
 }

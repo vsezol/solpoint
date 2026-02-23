@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { User } from "@/types";
 import { trackEvent, setUserId } from "@/lib/analytics";
@@ -10,6 +10,23 @@ import { trackEvent, setUserId } from "@/lib/analytics";
 let sessionCheckSetupDone = false;
 let globalFocusHandler: (() => void) | null = null;
 let globalIntervalId: NodeJS.Timeout | null = null;
+
+const CLIENT_AUTH_DEBUG_ENABLED =
+  process.env.NODE_ENV !== "production" ||
+  process.env.NEXT_PUBLIC_AUTH_DEBUG_LOGS === "true";
+
+function clientAuthDebugLog(event: string, payload?: Record<string, unknown>) {
+  if (!CLIENT_AUTH_DEBUG_ENABLED) {
+    return;
+  }
+
+  if (payload) {
+    console.info(`[auth-debug:client] ${event}`, payload);
+    return;
+  }
+
+  console.info(`[auth-debug:client] ${event}`);
+}
 
 // Функция для загрузки профиля через API
 async function fetchProfile(): Promise<User | null> {
@@ -31,12 +48,22 @@ async function fetchProfile(): Promise<User | null> {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    const { profile } = await response.json();
+    const { user, profile } = await response.json();
+    clientAuthDebugLog("fetch_profile_response", {
+      has_user: Boolean(user),
+      has_profile: Boolean(profile),
+      user_id: user?.id ?? null,
+      profile_id: profile?.id ?? null,
+      profile_twitter_handle: profile?.twitter_handle ?? null,
+    });
     return profile as User | null;
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
       throw new Error("Request timeout");
     }
+    clientAuthDebugLog("fetch_profile_error", {
+      message: error instanceof Error ? error.message : "unknown_error",
+    });
     throw error;
   }
 }
@@ -70,6 +97,7 @@ export function useAuth() {
   // Принудительно обновляем данные после callback
   useEffect(() => {
     if (isFromCallback) {
+      clientAuthDebugLog("oauth_success_query_param_detected");
       queryClient.invalidateQueries({ queryKey: ["auth", "profile"] });
       if (typeof window !== "undefined") {
         const url = new URL(window.location.href);
@@ -97,10 +125,17 @@ export function useAuth() {
         
         if (response.ok) {
           const { session } = await response.json();
+          clientAuthDebugLog("session_check_response", {
+            has_session_user: Boolean(session?.user),
+            session_user_id: session?.user?.id ?? null,
+          });
           if (session?.user) {
             setUserId(session.user.id);
             // Обновляем данные только если профиль не загружен или устарел
             const queryData = queryClient.getQueryData(["auth", "profile"]);
+            clientAuthDebugLog("session_check_query_state", {
+              has_profile_query_data: Boolean(queryData),
+            });
             if (!queryData) {
               queryClient.invalidateQueries({ queryKey: ["auth", "profile"] });
             }
@@ -108,9 +143,16 @@ export function useAuth() {
             setUserId(null);
             queryClient.setQueryData(["auth", "profile"], null);
           }
+        } else {
+          clientAuthDebugLog("session_check_http_error", {
+            status: response.status,
+          });
         }
       } catch (error) {
         console.error("Error checking session:", error);
+        clientAuthDebugLog("session_check_error", {
+          message: error instanceof Error ? error.message : "unknown_error",
+        });
       }
     };
 
@@ -143,6 +185,10 @@ export function useAuth() {
 
   // Обновляем userId когда загружается профиль
   useEffect(() => {
+    clientAuthDebugLog("auth_state_updated", {
+      has_profile_user: Boolean(user),
+      profile_user_id: user?.id ?? null,
+    });
     if (user) {
       setUserId(user.id);
     } else {

@@ -13,6 +13,7 @@ import {
   createClient,
   createServiceRoleClient,
 } from "@/lib/supabase/server";
+import { authDebugLog } from "@/lib/auth/debug";
 import { getAppOrigin } from "@/lib/utils";
 import { cookies } from "next/headers";
 import type { NextRequest } from "next/server";
@@ -126,7 +127,24 @@ export async function GET(request: NextRequest) {
     redirectUrl.searchParams.get("redirect_to")
   );
 
+  authDebugLog("callback", "callback_received", {
+    request_origin: requestUrl.origin,
+    app_origin: origin,
+    has_code: Boolean(code),
+    redirect_target_type: redirectTarget.type,
+    redirect_target_value: redirectTarget.value,
+    had_redirect_cookie: Boolean(redirectToFromCookie),
+    has_invite_code: Boolean(inviteCode),
+    has_nested_redirect_to: Boolean(nestedRedirectTo),
+  });
+
   const redirectWithError = (errorMessage: string) => {
+    authDebugLog("callback", "redirect_with_error", {
+      is_mobile_redirect: isMobileRedirect,
+      redirect_target: redirectTarget.value,
+      error_message: errorMessage,
+    });
+
     if (isMobileRedirect) {
       return NextResponse.redirect(
         buildOAuthErrorRedirect(redirectTarget, origin, errorMessage)
@@ -149,6 +167,10 @@ export async function GET(request: NextRequest) {
     return redirectWithError(exchangeError.message);
   }
 
+  authDebugLog("callback", "exchange_code_for_session_success", {
+    has_session: Boolean(exchangeData.session),
+  });
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -156,6 +178,11 @@ export async function GET(request: NextRequest) {
   if (!user) {
     return redirectWithError("oauth_failed");
   }
+
+  authDebugLog("callback", "auth_user_loaded", {
+    user_id: user.id,
+    identities_count: user.identities?.length ?? 0,
+  });
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
@@ -175,7 +202,21 @@ export async function GET(request: NextRequest) {
         !redirectTarget.value.startsWith("/login")));
   let createdProfileInThisCallback = false;
 
+  authDebugLog("callback", "profile_lookup_result", {
+    user_id: user.id,
+    profile_found: Boolean(profile),
+    profile_error_code: profileError?.code ?? null,
+    profile_missing: profileMissing,
+    is_signup_flow: isSignupFlow,
+    should_create_profile: shouldCreateProfile,
+    is_mobile_redirect: isMobileRedirect,
+  });
+
   if (profileMissing && !shouldCreateProfile) {
+    authDebugLog("callback", "profile_missing_without_creation_branch", {
+      user_id: user.id,
+      redirect_target: redirectTarget.value,
+    });
     return NextResponse.redirect(
       `${origin}/signup?message=${encodeURIComponent(
         "Please complete your registration. Your Twitter account is authorized, but your profile has not been created yet."
@@ -200,6 +241,17 @@ export async function GET(request: NextRequest) {
       metadata?.avatar_url || metadata?.picture || metadata?.profile_image_url || "";
     const isVerified = metadata?.verified || false;
 
+    authDebugLog("callback", "creating_profile", {
+      user_id: user.id,
+      twitter_id_length: twitterId.length,
+      twitter_handle: twitterHandle || null,
+      twitter_name: twitterName || null,
+      has_avatar_url: Boolean(avatarUrl),
+      is_verified: Boolean(isVerified),
+      is_mobile_redirect: isMobileRedirect,
+      redirect_target: redirectTarget.value,
+    });
+
     const { error: insertError } = await supabase.from("profiles").insert({
       id: user.id,
       twitter_id: twitterId,
@@ -214,6 +266,11 @@ export async function GET(request: NextRequest) {
     });
 
     if (insertError) {
+      authDebugLog("callback", "profile_create_failed", {
+        user_id: user.id,
+        message: insertError.message,
+        code: insertError.code,
+      });
       if (isMobileRedirect) {
         return redirectWithError("profile_create_failed");
       }
@@ -226,6 +283,10 @@ export async function GET(request: NextRequest) {
     }
 
     createdProfileInThisCallback = true;
+    authDebugLog("callback", "profile_created", {
+      user_id: user.id,
+      has_invite_code: Boolean(inviteCode),
+    });
     await applyInviteIfPresent(supabase, user.id, inviteCode);
   }
 
@@ -245,6 +306,10 @@ export async function GET(request: NextRequest) {
     }
 
     if (Object.keys(updates).length > 0) {
+      authDebugLog("callback", "profile_update_from_metadata", {
+        user_id: user.id,
+        update_keys: Object.keys(updates),
+      });
       await supabase.from("profiles").update(updates).eq("id", user.id);
     }
   }
@@ -254,6 +319,11 @@ export async function GET(request: NextRequest) {
     if (!session?.access_token || !session?.refresh_token) {
       return redirectWithError("oauth_failed");
     }
+
+    authDebugLog("callback", "mobile_handoff_creating", {
+      user_id: user.id,
+      redirect_target: redirectTarget.value,
+    });
 
     const handoffCode = generateMobileOAuthCode();
     const handoffCodeHash = hashMobileOAuthCode(handoffCode);
@@ -271,8 +341,17 @@ export async function GET(request: NextRequest) {
       });
 
     if (handoffInsertError) {
+      authDebugLog("callback", "mobile_handoff_failed", {
+        user_id: user.id,
+        message: handoffInsertError.message,
+        code: handoffInsertError.code,
+      });
       return redirectWithError("oauth_failed");
     }
+
+    authDebugLog("callback", "mobile_handoff_created", {
+      user_id: user.id,
+    });
 
     return NextResponse.redirect(
       buildOAuthSuccessRedirect(redirectTarget, origin, { code: handoffCode })
@@ -289,11 +368,19 @@ export async function GET(request: NextRequest) {
     if (nestedRedirectTo) {
       signupUrl.searchParams.set("redirect_to", nestedRedirectTo);
     }
+    authDebugLog("callback", "redirect_new_profile_to_signup_location", {
+      user_id: user.id,
+      redirect_url: signupUrl.toString(),
+    });
     return NextResponse.redirect(signupUrl.toString());
   }
 
   if (profile && (!profile.country_code || profile.country === "Unknown")) {
     if (redirectTarget.value === "/profile" || redirectTarget.value.startsWith("/login")) {
+      authDebugLog("callback", "redirect_incomplete_profile_to_signup_location", {
+        user_id: user.id,
+        redirect_target: redirectTarget.value,
+      });
       return NextResponse.redirect(
         `${origin}/signup?message=${encodeURIComponent(
           "Please complete your registration. Fill in your location information."
@@ -323,12 +410,20 @@ export async function GET(request: NextRequest) {
       if (nestedRedirectTo) {
         locationUrl.searchParams.set("redirect_to", nestedRedirectTo);
       }
+      authDebugLog("callback", "redirect_signup_flow_to_location_step", {
+        user_id: user.id,
+        redirect_url: locationUrl.toString(),
+      });
       return NextResponse.redirect(locationUrl.toString());
     }
 
     if (nestedRedirectTo) {
       const finalNestedTarget = normalizeOAuthRedirectTarget(nestedRedirectTo);
       if (finalNestedTarget.type === "web") {
+        authDebugLog("callback", "redirect_signup_flow_to_nested_target", {
+          user_id: user.id,
+          nested_target: finalNestedTarget.value,
+        });
         return NextResponse.redirect(
           buildOAuthSuccessRedirect(finalNestedTarget, origin)
         );
@@ -341,8 +436,16 @@ export async function GET(request: NextRequest) {
     if (inviteCode) {
       profileUrl.searchParams.set("invite", inviteCode);
     }
+    authDebugLog("callback", "redirect_signup_flow_to_profile_step", {
+      user_id: user.id,
+      redirect_url: profileUrl.toString(),
+    });
     return NextResponse.redirect(profileUrl.toString());
   }
 
+  authDebugLog("callback", "redirect_success_to_target", {
+    user_id: user.id,
+    redirect_target: redirectTarget.value,
+  });
   return NextResponse.redirect(buildOAuthSuccessRedirect(redirectTarget, origin));
 }
