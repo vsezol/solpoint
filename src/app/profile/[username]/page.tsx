@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { Header, Footer } from "@/components/layout";
 import { createClient } from "@/lib/supabase/server";
+import { isProfileQrEnabled } from "@/lib/qr/feature-flags";
 import { ProfileContent } from "../profile-content";
 import { ProfileEditProvider } from "../profile-edit-provider";
 import type { Metadata } from "next";
@@ -121,6 +122,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
             <ProfileContent
               user={user}
               isOwnProfile={isOwnProfile}
+              profileQrEnabled={isProfileQrEnabled()}
             />
           </ProfileEditProvider>
         </div>

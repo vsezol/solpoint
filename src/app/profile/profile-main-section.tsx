@@ -1,4 +1,5 @@
 "use client";
+// LEGACY ADAPTER: Удалить после ручного тестирования.
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
@@ -614,4 +615,3 @@ export function ProfileMainSection({ user, isOwnProfile, friendsCount = 0 }: Pro
     </div>
   );
 }
-

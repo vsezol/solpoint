@@ -1,3 +1,7 @@
+import type {
+  FriendshipStatus,
+} from "./profile";
+
 // User types
 export type UserRole = "degen" | "developer" | "trader" | "investor" | "designer" | "founder" | "other";
 export type SubscriptionTier = "free" | "vip";
@@ -399,6 +403,33 @@ export interface GeoLocation {
   longitude: number;
 }
 
+export type QrCodeType = "profile" | "event_checkin";
+
+export interface ProfileQrCode {
+  id: string;
+  publicToken: string;
+  imageUrl: string;
+  scanUrl: string;
+  createdAt: string;
+}
+
+export interface ProfileQrScanResponse {
+  scanId: string;
+  requiresAuth: boolean;
+  relationship: FriendshipStatus;
+  isOwnQr: boolean;
+}
+
+export interface ProfileQrConnectResponse {
+  relationship: FriendshipStatus;
+  action:
+    | "request_created"
+    | "request_completed_mutual"
+    | "already_pending"
+    | "already_connected";
+  scanId?: string;
+}
+
 // Invite types
 export interface Invite {
   id: string;
@@ -427,7 +458,7 @@ export interface EntitySubmission {
   entity_type: EntityType;
   submitter_id: string;
   submitter?: User; // При загрузке с JOIN
-  entity_data: Record<string, any>; // JSONB данные сущности
+  entity_data: Record<string, unknown>; // JSONB данные сущности
   contacts: {
     email?: string;
     telegram?: string;
@@ -448,7 +479,7 @@ export interface EntitySubmission {
 // Типы для создания заявки
 export interface CreateSubmissionRequest {
   entity_type: EntityType;
-  entity_data: Record<string, any>;
+  entity_data: Record<string, unknown>;
   contacts: {
     email?: string;
     telegram?: string;
@@ -535,3 +566,11 @@ export interface CreatePaymentResponse {
   status: PaymentStatus;
   expires_at?: string;
 }
+
+export type {
+  FriendshipStatus,
+  UsersFilterType,
+  DirectoryUser,
+  ProfileAffiliation,
+  ProfileAffiliationType,
+} from "./profile";

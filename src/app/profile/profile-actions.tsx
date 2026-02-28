@@ -1,4 +1,5 @@
 "use client";
+// LEGACY ADAPTER: Удалить после ручного тестирования.
 
 import { Button } from "@/components/ui";
 import { Settings, Shield } from "lucide-react";
@@ -44,4 +45,3 @@ export function ProfileActions() {
     </div>
   );
 }
-

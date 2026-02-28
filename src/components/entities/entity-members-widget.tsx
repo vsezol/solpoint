@@ -2,10 +2,17 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Card, Avatar, ProSubscriptionModal, AuthRequiredModal, Modal, ModalHeader, ModalTitle, ModalDescription, ModalContent, ModalFooter, Button, UserListItem } from "@/components/ui";
+import { UserListModal } from "@/components/users/user-list-modal";
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
 import { Twitter, Linkedin, Instagram, Facebook, Globe } from "lucide-react";
 import type { ExternalUser } from "@/types";
+import type { DirectoryUser, FriendshipStatus } from "@/types/profile";
+import {
+  addFriend,
+  getFriendStatuses,
+  mapFollowStatusesToFriendshipStatuses,
+} from "@/lib/api/friends";
 import { isMeetingRequestsEnabled } from "@/lib/meeting-requests";
 import { trackEvent } from "@/lib/analytics";
 import { MeetingRequestForm } from "@/components/meeting-request-form";
@@ -20,16 +27,7 @@ const EXTERNAL_SOCIAL_ICONS: Record<string, { Icon: React.ComponentType<{ classN
 
 type EntityType = "hub" | "community" | "project" | "workspace" | "event";
 
-interface Member {
-  id: string;
-  avatar_url?: string | null;
-  name: string;
-  twitter_handle?: string;
-  isVip?: boolean;
-  isVerified?: boolean;
-  isOwner?: boolean;
-  joinedAt?: string;
-}
+type Member = DirectoryUser;
 
 interface EntityMembersWidgetProps {
   entityType: EntityType;
@@ -144,7 +142,7 @@ export function EntityMembersWidget({
   const [allMembers, setAllMembers] = useState<Member[]>([]);
   const [allFriends, setAllFriends] = useState<Member[]>([]);
   const [allExternal, setAllExternal] = useState<ExternalUser[]>([]);
-  const [friendStatuses, setFriendStatuses] = useState<Record<string, "none" | "pending_sent" | "pending_received" | "accepted" | "blocked">>({});
+  const [friendStatuses, setFriendStatuses] = useState<Record<string, FriendshipStatus>>({});
   const [sendingFriendRequest, setSendingFriendRequest] = useState<Record<string, boolean>>({});
   const [creatingChat] = useState<Record<string, boolean>>({});
   const [isMeetingModalOpen, setIsMeetingModalOpen] = useState(false);
@@ -238,32 +236,28 @@ export function EntityMembersWidget({
 
   // Загружаем статусы дружбы для пользователей в модальном окне
   useEffect(() => {
-    if ((showMembersModal || showFriendsModal) && isAuthenticated && user) {
-      const userIds = showMembersModal
-        ? allMembers.map((m) => m.id)
-        : allFriends.map((f) => f.id);
-
-      Promise.all(
-        userIds.map(async (userId) => {
-          try {
-            const response = await fetch(`/api/friends?user_id=${userId}`);
-            if (response.ok) {
-              const result = await response.json();
-              return { userId, status: result.data?.status || "none" };
-            }
-          } catch (error) {
-            console.error(`Error fetching friend status for ${userId}:`, error);
-          }
-          return { userId, status: "none" as const };
-        })
-      ).then((results) => {
-        const statusMap: Record<string, "none" | "pending_sent" | "pending_received" | "accepted" | "blocked"> = {};
-        results.forEach(({ userId, status }) => {
-          statusMap[userId] = status;
-        });
-        setFriendStatuses(statusMap);
-      });
+    if (!(showMembersModal || showFriendsModal) || !isAuthenticated || !user) {
+      return;
     }
+
+    const userIds = showMembersModal ? allMembers.map((m) => m.id) : allFriends.map((f) => f.id);
+    if (userIds.length === 0) {
+      setFriendStatuses({});
+      return;
+    }
+
+    getFriendStatuses(userIds)
+      .then(({ statuses }) => {
+        setFriendStatuses(mapFollowStatusesToFriendshipStatuses(statuses));
+      })
+      .catch((error) => {
+        console.error("Error fetching friend statuses:", error);
+        const fallback = userIds.reduce<Record<string, FriendshipStatus>>((acc, userId) => {
+          acc[userId] = "none";
+          return acc;
+        }, {});
+        setFriendStatuses(fallback);
+      });
   }, [showMembersModal, showFriendsModal, allMembers, allFriends, isAuthenticated, user]);
 
   // Отправка запроса на добавление в друзья
@@ -275,16 +269,8 @@ export function EntityMembersWidget({
 
     setSendingFriendRequest((prev) => ({ ...prev, [userId]: true }));
     try {
-      const response = await fetch("/api/friends", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ friend_id: userId }),
-      });
-
-      if (response.ok) {
-        // Обновляем статус
-        setFriendStatuses((prev) => ({ ...prev, [userId]: "pending_sent" }));
-      }
+      const response = await addFriend(userId);
+      setFriendStatuses((prev) => ({ ...prev, [userId]: response.status }));
     } catch (error) {
       console.error("Error adding friend:", error);
     } finally {
@@ -708,37 +694,19 @@ export function EntityMembersWidget({
         />
       )}
 
-      {/* Friends Modal */}
-      <Modal
+      <UserListModal
         isOpen={showFriendsModal}
         onClose={() => setShowFriendsModal(false)}
-        size="md"
+        title={texts.modalTitleFriends}
         ariaLabel={texts.modalTitleFriends}
-      >
-        <ModalHeader>
-          <ModalTitle>{texts.modalTitleFriends}</ModalTitle>
-        </ModalHeader>
-        <ModalContent>
-          <div className="space-y-3 max-h-[60vh] overflow-y-auto">
-            {allFriends.length === 0 ? (
-              <p className="text-sm text-[var(--color-text-secondary)] text-center py-4">
-                {texts.emptyFriends}
-              </p>
-            ) : (
-              allFriends.map((friend) => (
-                <UserListItem
-                  key={friend.id}
-                  member={friend}
-                  friendStatus="accepted"
-                  onAddFriend={handleAddFriend}
-                  sendingFriendRequest={sendingFriendRequest[friend.id]}
-                  creatingChat={creatingChat[friend.id]}
-                />
-              ))
-            )}
-          </div>
-        </ModalContent>
-      </Modal>
+        users={allFriends}
+        emptyText={texts.emptyFriends}
+        friendStatuses={friendStatuses}
+        defaultFriendStatus="accepted"
+        onAddFriend={handleAddFriend}
+        sendingFriendRequest={sendingFriendRequest}
+        creatingChat={creatingChat}
+      />
     </>
   );
 }

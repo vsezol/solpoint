@@ -1,4 +1,5 @@
 "use client";
+// LEGACY ADAPTER: Удалить после ручного тестирования.
 
 import { useState, useEffect } from "react";
 import { Card, Button } from "@/components/ui";
@@ -121,4 +122,3 @@ export function ProfileInfoSection({ user, isOwnProfile, friends = [] }: Profile
     </div>
   );
 }
-
