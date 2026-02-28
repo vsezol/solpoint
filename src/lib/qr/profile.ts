@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { getAppUrl, isUUID } from "@/lib/utils";
 import type { User } from "@/types";
@@ -41,6 +42,8 @@ export interface UpsertProfileQrScanInput {
   publicToken: string;
   scanSessionId: string;
   scannerProfileId?: string | null;
+  /** If provided, used for the upsert to bypass RLS (e.g. service role from API route). */
+  supabaseForWrite?: SupabaseClient;
 }
 
 export interface UpsertProfileQrScanResult {
@@ -225,6 +228,7 @@ export async function upsertProfileQrScan({
   publicToken,
   scanSessionId,
   scannerProfileId = null,
+  supabaseForWrite,
 }: UpsertProfileQrScanInput): Promise<UpsertProfileQrScanResult | null> {
   const target = await resolveProfileQrTarget(publicToken);
   if (!target) {
@@ -243,7 +247,7 @@ export async function upsertProfileQrScan({
     ? await getProfileQrRelationship(scannerProfileId, target.profile.id)
     : "none";
 
-  const supabase = await createClient();
+  const supabase = supabaseForWrite ?? (await createClient());
   const now = new Date().toISOString();
   const { data: scan, error } = await supabase
     .from("profile_qr_scans")

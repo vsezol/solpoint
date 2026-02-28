@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceRoleClient } from "@/lib/supabase/server";
 import { isProfileQrEnabled } from "@/lib/qr/feature-flags";
 import {
   getProfileQrRelationship,
@@ -59,6 +59,7 @@ export async function POST(
         publicToken: token,
         scanSessionId,
         scannerProfileId: authUser.id,
+        supabaseForWrite: createServiceRoleClient(),
       });
       scanId = scanResult?.id || undefined;
     }
