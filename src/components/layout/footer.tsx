@@ -57,7 +57,7 @@ export function Footer() {
 
             <div className="flex items-center gap-4">
               <a
-                href="https://twitter.com/solaborapoint"
+                href="https://twitter.com/solpointxyz"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
