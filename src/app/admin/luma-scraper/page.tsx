@@ -6,7 +6,7 @@ import { Button, Input, CheckBox } from "@/components/ui";
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Loader2, ArrowLeft, Save, Calendar, RefreshCw, AlertCircle, CheckCircle, MapPin, ImagePlus, Clock } from "lucide-react";
+import { Loader2, ArrowLeft, Save, Calendar, RefreshCw, AlertCircle, CheckCircle, MapPin, ImagePlus, Clock, Star } from "lucide-react";
 import type { ScraperId } from "@/app/api/admin/luma-scraper/route";
 
 type RequiredVerificationEvent = {
@@ -21,6 +21,20 @@ type RequiredVerificationEvent = {
   address: string | null;
   luma_link: string | null;
   luma_event_id: string | null;
+};
+
+type MajorEventAdminItem = {
+  id: string;
+  name: string | null;
+  slug: string | null;
+  image_url: string | null;
+  city: string | null;
+  country: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  attendees_count: number | null;
+  visibility: "public" | "vip_only";
+  is_major: boolean;
 };
 
 type ScraperParams = {
@@ -328,6 +342,9 @@ export default function AdminLumaScraperPage() {
   const [requiredList, setRequiredList] = useState<RequiredVerificationEvent[]>([]);
   const [requiredLoading, setRequiredLoading] = useState(false);
   const [dismissingId, setDismissingId] = useState<string | null>(null);
+  const [majorEvents, setMajorEvents] = useState<MajorEventAdminItem[]>([]);
+  const [majorLoading, setMajorLoading] = useState(false);
+  const [majorUpdatingId, setMajorUpdatingId] = useState<string | null>(null);
   const [workflowConfigs, setWorkflowConfigs] = useState<LumaWorkflowConfig[]>([]);
   const [workflowConfigLoading, setWorkflowConfigLoading] = useState(false);
   const [workflowConfigError, setWorkflowConfigError] = useState<string | null>(null);
@@ -385,6 +402,24 @@ export default function AdminLumaScraperPage() {
     if (user?.is_admin) fetchRequiredVerification();
   }, [user?.is_admin, fetchRequiredVerification]);
 
+  const fetchMajorEvents = useCallback(async () => {
+    if (!user?.is_admin) return;
+    setMajorLoading(true);
+    try {
+      const res = await fetch("/api/admin/events/major");
+      const data = await res.json();
+      if (res.ok) {
+        setMajorEvents(data.events ?? []);
+      }
+    } finally {
+      setMajorLoading(false);
+    }
+  }, [user?.is_admin]);
+
+  useEffect(() => {
+    if (user?.is_admin) fetchMajorEvents();
+  }, [user?.is_admin, fetchMajorEvents]);
+
   const fetchWorkflowConfigs = useCallback(async () => {
     if (!user?.is_admin) return;
     setWorkflowConfigLoading(true);
@@ -414,6 +449,7 @@ export default function AdminLumaScraperPage() {
       if (!res.ok) throw new Error(data.error || "Transfer failed");
       setTransferResult(data);
       fetchRequiredVerification();
+      fetchMajorEvents();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Transfer failed");
     } finally {
@@ -507,6 +543,7 @@ export default function AdminLumaScraperPage() {
       });
       setFullPipelineStep(null);
       fetchRequiredVerification();
+      fetchMajorEvents();
     } catch (err) {
       setFullPipelineError(err instanceof Error ? err.message : "Pipeline failed");
       setFullPipelineStep(null);
@@ -523,6 +560,26 @@ export default function AdminLumaScraperPage() {
       setRequiredList((prev) => prev.filter((e) => e.id !== eventId));
     } finally {
       setDismissingId(null);
+    }
+  };
+
+  const handleToggleMajor = async (eventId: string, nextValue: boolean) => {
+    setMajorUpdatingId(eventId);
+    try {
+      const res = await fetch(`/api/admin/events/${eventId}/major`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_major: nextValue }),
+      });
+      if (!res.ok) throw new Error("Update failed");
+
+      setMajorEvents((prev) =>
+        prev.map((event) =>
+          event.id === eventId ? { ...event, is_major: nextValue } : event
+        )
+      );
+    } finally {
+      setMajorUpdatingId(null);
     }
   };
 
@@ -1055,6 +1112,75 @@ export default function AdminLumaScraperPage() {
                     </span>
                   )}
                 </p>
+              )}
+            </div>
+
+            {/* Major events */}
+            <div className="mt-8 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg p-6">
+              <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2 flex items-center gap-2">
+                <Star className="w-5 h-5" />
+                Major events
+              </h2>
+              <p className="text-[var(--color-text-secondary)] text-sm mb-4">
+                Mark events manually as major. The events page will show up to 3 major events first, and all non-major upcoming events in Local events.
+              </p>
+              {majorLoading ? (
+                <p className="text-sm text-[var(--color-text-muted)]">Loading…</p>
+              ) : majorEvents.length === 0 ? (
+                <p className="text-sm text-[var(--color-text-muted)]">No upcoming events found.</p>
+              ) : (
+                <ul className="space-y-3">
+                  {majorEvents.map((ev) => (
+                    <li
+                      key={ev.id}
+                      className="flex flex-col gap-3 border-b border-[var(--color-surface-border)] pb-3 last:border-0 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <span className="font-medium text-[var(--color-text-primary)] truncate block">
+                          {ev.name || "(no name)"}
+                        </span>
+                        <p className="text-xs text-[var(--color-text-muted)]">
+                          {ev.city || "Unknown city"}
+                          {ev.country ? `, ${ev.country}` : ""}
+                          {ev.start_date
+                            ? ` · ${new Date(ev.start_date).toLocaleDateString("en-US", {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              })}`
+                            : ""}
+                          {` · ${ev.visibility === "vip_only" ? "VIP" : "Public"}`}
+                        </p>
+                        {ev.slug ? (
+                          <Link
+                            href={`/events/${ev.slug}`}
+                            className="text-xs text-[var(--color-primary)] hover:underline"
+                          >
+                            /events/{ev.slug}
+                          </Link>
+                        ) : (
+                          <span className="text-xs text-[var(--color-text-muted)]">{ev.id}</span>
+                        )}
+                      </div>
+
+                      <Button
+                        variant={ev.is_major ? "primary" : "outline"}
+                        size="sm"
+                        disabled={majorUpdatingId === ev.id}
+                        onClick={() => handleToggleMajor(ev.id, !ev.is_major)}
+                        title={ev.is_major ? "Remove from major events" : "Add to major events"}
+                      >
+                        {majorUpdatingId === ev.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : ev.is_major ? (
+                          "Major"
+                        ) : (
+                          "Set major"
+                        )}
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
 

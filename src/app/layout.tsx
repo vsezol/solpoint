@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Space_Grotesk, JetBrains_Mono, Inter } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/components/providers/auth-provider";
@@ -18,6 +19,12 @@ const spaceGrotesk = Space_Grotesk({
 const jetbrainsMono = JetBrains_Mono({
   variable: "--font-mono",
   subsets: ["latin"],
+  display: "swap",
+});
+
+const kodeMono = localFont({
+  src: "../../public/KodeMono-VariableFont_wght.ttf",
+  variable: "--font-kode-mono",
   display: "swap",
 });
 
@@ -81,7 +88,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
       </head>
       <body
-        className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} ${inter.variable} antialiased`}
+        className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} ${inter.variable} ${kodeMono.variable} antialiased`}
       >
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
           <GoogleAnalytics />

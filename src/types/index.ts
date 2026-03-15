@@ -86,6 +86,7 @@ export interface Event {
   registration_deadline?: string; // Дедлайн регистрации
   is_online: boolean; // Онлайн/офлайн (гибрид пока не делаем)
   is_recommended?: boolean; // Рекомендованное событие (показывается в приоритете)
+  is_major?: boolean; // Ручная пометка для секции "Major events"
   socials?: {
     twitter?: string;
     instagram?: string;
