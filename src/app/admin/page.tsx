@@ -111,6 +111,22 @@ export default async function AdminPage() {
                 </p>
               </a>
 
+              {/* Major events manager */}
+              <a
+                href="/admin/events-major"
+                className="bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg p-6 hover:border-[var(--color-primary)] transition-colors cursor-pointer"
+              >
+                <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">
+                  Major Events Manager
+                </h2>
+                <p className="text-[var(--color-text-secondary)] mb-2">
+                  Manage major/non-major feeds with search, filters, and bulk updates.
+                </p>
+                <p className="text-sm text-[var(--color-primary)]">
+                  Open manager →
+                </p>
+              </a>
+
               {/* Статистика */}
               <div className="bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg p-6">
                 <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">
@@ -158,4 +174,3 @@ export default async function AdminPage() {
     </>
   );
 }
-

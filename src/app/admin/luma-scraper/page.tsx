@@ -406,7 +406,9 @@ export default function AdminLumaScraperPage() {
     if (!user?.is_admin) return;
     setMajorLoading(true);
     try {
-      const res = await fetch("/api/admin/events/major");
+      const res = await fetch(
+        "/api/admin/events/major?period=upcoming&sort=asc&page=1&limit=250"
+      );
       const data = await res.json();
       if (res.ok) {
         setMajorEvents(data.events ?? []);
@@ -1124,6 +1126,11 @@ export default function AdminLumaScraperPage() {
               <p className="text-[var(--color-text-secondary)] text-sm mb-4">
                 Mark events manually as major. The events page will show up to 3 major events first, and all non-major upcoming events in Local events.
               </p>
+              <div className="mb-4">
+                <Button variant="outline" size="sm" asChild>
+                  <Link href="/admin/events-major">Open full major manager</Link>
+                </Button>
+              </div>
               {majorLoading ? (
                 <p className="text-sm text-[var(--color-text-muted)]">Loading…</p>
               ) : majorEvents.length === 0 ? (

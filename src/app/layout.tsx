@@ -28,6 +28,18 @@ const kodeMono = localFont({
   display: "swap",
 });
 
+const iceland = localFont({
+  src: "../../public/Iceland-Regular.ttf",
+  variable: "--font-iceland",
+  display: "swap",
+});
+
+const lalezar = localFont({
+  src: "../../public/Lalezar-Regular.ttf",
+  variable: "--font-lalezar",
+  display: "swap",
+});
+
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
@@ -88,7 +100,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
       </head>
       <body
-        className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} ${inter.variable} ${kodeMono.variable} antialiased`}
+        className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} ${inter.variable} ${kodeMono.variable} ${iceland.variable} ${lalezar.variable} antialiased`}
       >
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
           <GoogleAnalytics />

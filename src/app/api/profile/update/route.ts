@@ -20,11 +20,12 @@ export async function PATCH(request: Request) {
 
   try {
     const body = await request.json();
-    const { bio, role, is_open_to_meet, country, country_code, city, socials } = body;
+    const { bio, about, role, is_open_to_meet, country, country_code, city, socials } = body;
 
     // Валидация
     const updates: {
       bio?: string | null;
+      about?: string | null;
       role?: string;
       is_open_to_meet?: boolean;
       country?: string | null;
@@ -43,6 +44,17 @@ export async function PATCH(request: Request) {
         substack?: string | null;
       } | null;
     } = {};
+
+    // Long-form about (separate from short bio)
+    if (about !== undefined) {
+      if (about !== null && typeof about !== "string") {
+        return NextResponse.json({ error: "about must be a string" }, { status: 400 });
+      }
+      if (about && about.length > 4000) {
+        return NextResponse.json({ error: "about must be 4000 characters or less" }, { status: 400 });
+      }
+      updates.about = about === "" || about === null ? null : about;
+    }
 
     // Валидация bio
     if (bio !== undefined) {

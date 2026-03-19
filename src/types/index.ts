@@ -20,6 +20,8 @@ export interface User {
   avatar_url: string;
   banner_url?: string; // URL баннера профиля из Supabase Storage
   bio?: string;
+  /** Long-form profile description (separate from short bio) */
+  about?: string | null;
   country?: string; // @deprecated Use country_code instead
   country_code?: string; // ISO 3166-1 alpha-2 (e.g., "US", "RU")
   city?: string; // Max 150 characters
@@ -44,6 +46,24 @@ export interface User {
   last_active_at: string;
   created_at: string;
   updated_at: string;
+}
+
+/** Skill row from profile_skills */
+export interface ProfileSkillItem {
+  id: string;
+  name: string;
+  sortOrder: number;
+}
+
+/** Experience row from profile_experience */
+export interface ProfileExperienceItem {
+  id: string;
+  title: string;
+  company: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  description: string | null;
+  sortOrder: number;
 }
 
 export interface UserProfile extends User {

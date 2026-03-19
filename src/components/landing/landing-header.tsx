@@ -15,9 +15,12 @@ const kodeMonoStyle = {
 };
 
 export function LandingHeader() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
 
-  const profileHref = isAuthenticated && user ? `/profile/${user.twitter_handle}` : "/login";
+  const profileHref =
+    isAuthenticated && user?.twitter_handle
+      ? `/profile-v2/${user.twitter_handle}`
+      : "/login";
 
   return (
     <header className="fixed top-0 left-0 right-0 z-[1200] border-b border-[#2a2a2a] bg-black/95 backdrop-blur">
@@ -47,25 +50,32 @@ export function LandingHeader() {
         </nav>
 
         <div className="flex flex-1 justify-end">
-          <Link
-            href={profileHref}
-            aria-label="Profile"
-            className="group flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border border-[#2f2f2f] bg-[#0f0f0f] transition-colors hover:border-[#00f58d]"
-          >
-            {user?.avatar_url ? (
-              <div className="relative h-full w-full">
-                <Image
-                  src={user.avatar_url}
-                  alt={user.twitter_handle || "Profile"}
-                  fill
-                  className="object-cover"
-                  sizes="44px"
-                />
-              </div>
-            ) : (
-              <User className="h-5 w-5 text-white/85 transition-colors group-hover:text-white" />
-            )}
-          </Link>
+          {isLoading ? (
+            <div
+              className="h-11 w-11 shrink-0 rounded-full border border-[#2f2f2f] bg-[#1a1a1a] animate-pulse"
+              aria-hidden
+            />
+          ) : (
+            <Link
+              href={profileHref}
+              aria-label="Profile"
+              className="group flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border border-[#2f2f2f] bg-[#0f0f0f] transition-colors hover:border-[#00f58d]"
+            >
+              {user?.avatar_url ? (
+                <div className="relative h-full w-full">
+                  <Image
+                    src={user.avatar_url}
+                    alt={user.twitter_handle || "Profile"}
+                    fill
+                    className="object-cover"
+                    sizes="44px"
+                  />
+                </div>
+              ) : (
+                <User className="h-5 w-5 text-white/85 transition-colors group-hover:text-white" />
+              )}
+            </Link>
+          )}
         </div>
       </div>
     </header>

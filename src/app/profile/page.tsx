@@ -38,5 +38,5 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
   }
 
   const queryString = nextParams.toString();
-  redirect(`/profile/${profile.twitter_handle}${queryString ? `?${queryString}` : ""}`);
+  redirect(`/profile-v2/${profile.twitter_handle}${queryString ? `?${queryString}` : ""}`);
 }

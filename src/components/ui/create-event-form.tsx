@@ -27,6 +27,7 @@ import { trackEvent } from "@/lib/analytics";
 import { useFormsStore } from "@/store/forms-store";
 import { cn } from "@/lib/utils";
 import { ImageUpload } from "./image-upload";
+import { formControlFocusClasses } from "./form-control-focus";
 
 interface CreateEventFormProps {
   onSuccess?: (event: { id: string; slug: string }) => void;
@@ -657,7 +658,10 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Tell us about your event..."
             rows={4}
-            className="w-full px-3 py-2 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] transition-colors focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] resize-none"
+            className={cn(
+              "w-full px-3 py-2 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] resize-none",
+              formControlFocusClasses
+            )}
           />
         </div>
 
@@ -898,7 +902,10 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
             <select
               value={eventType}
               onChange={(e) => setEventType(e.target.value as EventType)}
-              className="w-full px-4 py-2 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]"
+              className={cn(
+                "w-full px-4 py-2 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg text-[var(--color-text-primary)]",
+                formControlFocusClasses
+              )}
               required
             >
               <option value="official">Official</option>
@@ -915,7 +922,10 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
             <select
               value={visibility}
               onChange={(e) => setVisibility(e.target.value as EventVisibility)}
-              className="w-full px-4 py-2 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]"
+              className={cn(
+                "w-full px-4 py-2 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg text-[var(--color-text-primary)]",
+                formControlFocusClasses
+              )}
               required
             >
               <option value="public">Public</option>
@@ -938,7 +948,7 @@ export function CreateEventForm({ onSuccess, onCancel }: CreateEventFormProps) {
             id="isPaid"
             checked={isPaid}
             onChange={(e) => setIsPaid(e.target.checked)}
-            className="w-4 h-4 rounded border-[var(--color-surface-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
+            className="w-4 h-4 rounded border-[var(--color-surface-border)] text-[var(--color-primary)] transition-[box-shadow] duration-200 ease-out focus:outline-none focus:ring-1 focus:ring-white focus:ring-offset-1 focus:ring-offset-[var(--color-background)]"
           />
           <label htmlFor="isPaid" className="text-sm text-[var(--color-text-secondary)]">
             Paid event

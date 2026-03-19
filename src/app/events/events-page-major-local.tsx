@@ -79,13 +79,15 @@ function EventPoster({
 function AttendeesSummary({
   attendees,
   peopleGoing,
+  centered = false,
 }: {
   attendees: ShowcaseEvent["attendee_previews"];
   peopleGoing: number;
+  centered?: boolean;
 }) {
   return (
-    <div className="flex flex-col items-start gap-2">
-      <div className="flex items-center pl-2">
+    <div className={`flex flex-col gap-2 ${centered ? "items-center" : "items-start"}`}>
+      <div className={`flex items-center ${centered ? "justify-center" : "pl-2"}`}>
         {attendees.length > 0 ? (
           attendees.slice(0, 3).map((attendee, index) => (
             <Avatar
@@ -100,7 +102,10 @@ function AttendeesSummary({
           <span className="h-6 w-6 rounded-full border border-white/20 bg-white/10" />
         )}
       </div>
-      <p className="text-[11px] text-white tracking-tight" style={{ fontFamily: "var(--font-kode-mono), monospace" }}>
+      <p
+        className={`text-[11px] text-white tracking-tight ${centered ? "text-center" : ""}`}
+        style={{ fontFamily: "var(--font-kode-mono), monospace" }}
+      >
         {peopleGoing} people going!
       </p>
     </div>
@@ -133,16 +138,26 @@ function MajorEventCard({ event }: { event: ShowcaseEvent }) {
         </p>
       </div>
 
-      <AttendeesSummary attendees={event.attendee_previews} peopleGoing={event.people_going} />
+      <AttendeesSummary attendees={event.attendee_previews} peopleGoing={event.people_going} centered />
 
-      <Button
-        variant="outline"
-        size="sm"
-        className="h-9 w-[118px] border-white bg-white text-black hover:bg-white/90"
-        onClick={() => router.push(`/events/${event.slug}`)}
-      >
-        Show list
-      </Button>
+      <div className="flex items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-9 w-[92px] border-white bg-white text-black hover:bg-white/90"
+          onClick={() => router.push(`/events/${event.slug}`)}
+        >
+          Attend
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-9 w-[118px] border-[#00d084] bg-black text-white hover:bg-[#0f1411]"
+          onClick={() => router.push(`/events/${event.slug}`)}
+        >
+          Show list
+        </Button>
+      </div>
     </article>
   );
 }
@@ -231,16 +246,7 @@ export default function EventsPageMajorLocal() {
     <>
       <Header />
       <main className="min-h-screen bg-black pt-20 pb-16 text-white">
-        <section className="mx-auto w-full max-w-[1180px] px-4 sm:px-6">
-          <div className="border-b border-white/10 pb-6">
-            <h1
-              className="text-center text-[28px] sm:text-[34px] font-semibold tracking-tight"
-              style={{ fontFamily: "var(--font-kode-mono), monospace" }}
-            >
-              Events
-            </h1>
-          </div>
-
+        <section className="mx-auto w-full px-4 sm:px-8 lg:px-[238px]">
           {loading ? (
             <div className="space-y-8 pt-10">
               <div className="h-8 w-56 animate-pulse rounded bg-white/10" />

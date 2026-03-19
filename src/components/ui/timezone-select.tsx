@@ -2,6 +2,7 @@
 
 import { useId, useMemo, useState } from "react";
 import { Input } from "./input";
+import { formControlFocusClasses } from "./form-control-focus";
 import { cn } from "@/lib/utils";
 import { getIanaTimezones } from "@/lib/utils/timezone";
 
@@ -45,8 +46,8 @@ export function TimezoneSelect({
         onChange={(event) => onChange(event.target.value)}
         disabled={disabled}
         className={cn(
-          "w-full h-10 px-3 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg text-[var(--color-text-primary)] transition-colors",
-          "focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]",
+          "w-full h-10 px-3 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg text-[var(--color-text-primary)]",
+          formControlFocusClasses,
           "disabled:opacity-50 disabled:cursor-not-allowed"
         )}
       >

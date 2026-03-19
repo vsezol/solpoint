@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
+
 import { Header, Footer } from "@/components/layout";
 import { Card } from "@/components/ui";
 import { MapFiltersPanel } from "@/components/map";
@@ -10,23 +11,22 @@ import type { MapFilters, MapMarker } from "@/types";
 import { getMapMarkers } from "@/lib/api/map";
 import { useAuth } from "@/hooks/use-auth";
 import { trackEvent } from "@/lib/analytics";
-// Dynamic imports to avoid SSR issues with maplibre-gl
+
 const WaterLayer = dynamic(
-  () => import("./water-layer").then((mod) => ({ default: mod.WaterLayer })),
+  () => import("../mapcn/water-layer").then((mod) => ({ default: mod.WaterLayer })),
   { ssr: false }
 );
 
 const CountriesLayer = dynamic(
-  () => import("./countries-layer").then((mod) => ({ default: mod.CountriesLayer })),
+  () => import("../mapcn/countries-layer").then((mod) => ({ default: mod.CountriesLayer })),
   { ssr: false }
 );
 
 const MapMarkersLayer = dynamic(
-  () => import("./markers-layer").then((mod) => ({ default: mod.MapMarkersLayer })),
+  () => import("../mapcn/markers-layer").then((mod) => ({ default: mod.MapMarkersLayer })),
   { ssr: false }
 );
 
-// Dynamic import for map component to avoid SSR issues with MapLibre GL
 const Map = dynamic(
   () => import("@/components/ui/map").then((mod) => mod.Map),
   {
@@ -49,7 +49,7 @@ const MapControls = dynamic(
   }
 );
 
-export default function MapCnPage() {
+export default function MapV1Page() {
   const router = useRouter();
   const [markers, setMarkers] = useState<MapMarker[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,15 +62,14 @@ export default function MapCnPage() {
     showWorkspaces: true,
     contentType: "all",
   });
+
   const { user } = useAuth();
   const isVip = user?.subscription_tier === "vip";
   const isAuthenticated = !!user;
 
-  // Отслеживаем просмотр карты
   useEffect(() => {
-    // Вызываем trackEvent асинхронно, чтобы не блокировать загрузку страницы
     setTimeout(() => {
-      trackEvent("map_view", {
+      trackEvent("map_v1_view", {
         event_category: "Map",
         is_vip: isVip,
         is_authenticated: isAuthenticated,
@@ -78,7 +77,6 @@ export default function MapCnPage() {
     }, 0);
   }, [isVip, isAuthenticated]);
 
-  // Загружаем маркеры при изменении фильтров
   useEffect(() => {
     async function loadMarkers() {
       try {
@@ -100,11 +98,9 @@ export default function MapCnPage() {
   return (
     <>
       <Header />
-      <main className="pt-16 min-h-screen pb-16 bg-[var(--color-background)]">
-        {/* Hero section */}
-        <section className="py-12 text-center">
-          {/* Background decoration */}
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      <main className="pt-0 md:pt-16 min-h-screen pb-16 bg-[var(--color-background)]">
+        <section className="py-4 md:py-12 text-center">
+          <div className="absolute inset-0 overflow-hidden pointer-events-none hidden md:block">
             <svg
               className="absolute top-0 left-0 w-full h-48 opacity-30"
               viewBox="0 0 1200 200"
@@ -132,18 +128,16 @@ export default function MapCnPage() {
               </defs>
             </svg>
           </div>
-          <h1 className="text-4xl sm:text-5xl font-bold mb-4 inline-block bg-gradient-to-r from-[#00F58D] to-[#A73EFF] bg-clip-text text-transparent">
+          <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold mb-2 md:mb-4 inline-block bg-gradient-to-r from-[#00F58D] to-[#A73EFF] bg-clip-text text-transparent">
             Solana Map
           </h1>
-          <p className="text-lg text-[var(--color-text-secondary)] max-w-2xl mx-auto">
+          <p className="text-sm md:text-lg text-[var(--color-text-secondary)] max-w-2xl mx-auto hidden md:block">
             Discover Solana Users, Hubs, and Events Around the World.
           </p>
         </section>
 
-        {/* Map section */}
         <section className="max-w-[90rem] mx-auto px-4 sm:px-6 lg:px-8 pb-16">
           <div className="flex flex-col lg:flex-row gap-6">
-            {/* Filters sidebar */}
             <aside className="w-full lg:w-[320px] lg:flex-shrink-0">
               <MapFiltersPanel
                 filters={filters}
@@ -152,7 +146,6 @@ export default function MapCnPage() {
               />
             </aside>
 
-            {/* Map */}
             <div className="flex-1">
               <div className="h-[500px] lg:h-[720px] rounded-xl overflow-hidden border border-[var(--color-surface-border)]">
                 {loading ? (
@@ -176,8 +169,8 @@ export default function MapCnPage() {
                   </div>
                 ) : (
                   <Card className="h-full p-0 overflow-hidden mapcn-map-container" style={{ background: "#18E3C5" }}>
-                    <Map 
-                      center={[55, 35]} 
+                    <Map
+                      center={[55, 35]}
                       zoom={4}
                     >
                       <WaterLayer />
@@ -188,7 +181,7 @@ export default function MapCnPage() {
                         isAuthenticated={isAuthenticated}
                         currentUserId={user?.id}
                       />
-                      <MapControls 
+                      <MapControls
                         showZoom={true}
                         showCompass={true}
                         showLocate={true}
@@ -206,4 +199,3 @@ export default function MapCnPage() {
     </>
   );
 }
-

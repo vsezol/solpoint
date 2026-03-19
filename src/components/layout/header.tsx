@@ -12,6 +12,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { trackEvent } from "@/lib/analytics";
 import { getMeetingRequestCounts } from "@/lib/api/meeting-requests";
 import { isMeetingRequestsEnabled } from "@/lib/meeting-requests";
+import { LandingHeader } from "@/components/landing/landing-header";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -23,7 +24,7 @@ const navLinks = [
   { href: "/about", label: "About us" },
 ];
 
-export function Header() {
+function LegacyHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -34,10 +35,12 @@ export function Header() {
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const { user, isAuthenticated, isLoading, logout } = useAuth();
   const meetingRequestsEnabled = isMeetingRequestsEnabled();
+  const userId = user?.id;
+  const isVipUser = user?.subscription_tier === "vip";
 
   // Проверяем наличие сущностей для показа Dashboard на фронтенде
   useEffect(() => {
-    if (!isAuthenticated || !user) {
+    if (!isAuthenticated || !userId) {
       // Используем setTimeout чтобы избежать синхронного setState в useEffect
       const timer = setTimeout(() => setHasEntities(null), 0);
       return () => clearTimeout(timer);
@@ -62,12 +65,12 @@ export function Header() {
     };
 
     checkHasEntities();
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, userId]);
 
   useEffect(() => {
-    if (!meetingRequestsEnabled || !isAuthenticated || !user || user.subscription_tier !== "vip") {
-      setMeetingActionNeededCount(0);
-      return;
+    if (!meetingRequestsEnabled || !isAuthenticated || !userId || !isVipUser) {
+      const timer = setTimeout(() => setMeetingActionNeededCount(0), 0);
+      return () => clearTimeout(timer);
     }
 
     let mounted = true;
@@ -77,7 +80,7 @@ export function Header() {
         if (mounted) {
           setMeetingActionNeededCount(counts.action_needed_count || 0);
         }
-      } catch (_error) {
+      } catch {
         if (mounted) {
           setMeetingActionNeededCount(0);
         }
@@ -98,7 +101,7 @@ export function Header() {
       clearInterval(intervalId);
       window.removeEventListener("meeting-requests-updated", onMeetingRequestsUpdated);
     };
-  }, [isAuthenticated, user, meetingRequestsEnabled]);
+  }, [isAuthenticated, userId, isVipUser, meetingRequestsEnabled]);
 
   // Формируем динамический список ссылок навигации
   const dynamicNavLinks = [...navLinks];
@@ -399,4 +402,27 @@ export function Header() {
       />
     </header>
   );
+}
+
+export function Header() {
+  const pathname = usePathname();
+
+  const shouldUseLandingHeader =
+    pathname === "/events" ||
+    pathname.startsWith("/events/") ||
+    pathname === "/map" ||
+    pathname.startsWith("/map/") ||
+    pathname === "/map-v1" ||
+    pathname.startsWith("/map-v1/") ||
+    pathname === "/profile" ||
+    pathname.startsWith("/profile/") ||
+    pathname === "/profile-v2" ||
+    pathname.startsWith("/profile-v2/");
+
+  if (shouldUseLandingHeader) {
+    return <LandingHeader />;
+  }
+
+  // return <LegacyHeader />; // Keep legacy header as default for all other pages.
+  return <LegacyHeader />;
 }

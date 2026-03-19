@@ -1,4 +1,4 @@
-import type { Event, User } from "@/types";
+import type { Event, ProfileExperienceItem, ProfileSkillItem, User } from "@/types";
 import type { ProfileAffiliation } from "@/types/profile";
 
 export interface ProfileDataResponse {
@@ -6,6 +6,57 @@ export interface ProfileDataResponse {
   friendsCount: number;
   friendshipStatus: "none" | "pending_sent" | "pending_received" | "accepted";
   upcomingEvents: Event[];
+}
+
+export interface MutualConnection {
+  id: string;
+  twitter_handle: string;
+  twitter_name: string;
+  avatar_url: string | null;
+  is_verified: boolean;
+  subscription_tier: "free" | "vip";
+}
+
+export interface MutualEvent {
+  id: string;
+  name: string;
+  slug: string | null;
+  image_url: string | null;
+  start_date: string;
+  end_date: string | null;
+  city: string;
+  country: string;
+  timezone: string | null;
+}
+
+export interface ProfileMutualConnectionsResponse {
+  count: number;
+  preview: MutualConnection[];
+  items: MutualConnection[];
+}
+
+export interface ProfileMutualEventsResponse {
+  count: number;
+  preview: MutualEvent[];
+  items: MutualEvent[];
+}
+
+export interface ProfileDetailsResponse {
+  about: string | null;
+  skills: ProfileSkillItem[];
+  experience: ProfileExperienceItem[];
+}
+
+export interface SaveProfileDetailsPayload {
+  about: string | null;
+  skills: { name: string }[];
+  experience: {
+    title: string;
+    company?: string | null;
+    startDate?: string | null;
+    endDate?: string | null;
+    description?: string | null;
+  }[];
 }
 
 export interface ProfileStatsResponse {
@@ -30,6 +81,36 @@ async function parseJsonOrThrow(response: Response) {
 export async function getProfileData(userId: string): Promise<ProfileDataResponse> {
   const response = await fetch(`/api/profile/data?user_id=${encodeURIComponent(userId)}`);
   return (await parseJsonOrThrow(response)) as ProfileDataResponse;
+}
+
+export async function getProfileMutualConnections(userId: string): Promise<ProfileMutualConnectionsResponse> {
+  const response = await fetch(`/api/profile/mutual-connections?user_id=${encodeURIComponent(userId)}`, {
+    cache: "no-store",
+  });
+  return (await parseJsonOrThrow(response)) as ProfileMutualConnectionsResponse;
+}
+
+export async function getProfileMutualEvents(userId: string): Promise<ProfileMutualEventsResponse> {
+  const response = await fetch(`/api/profile/mutual-events?user_id=${encodeURIComponent(userId)}`, {
+    cache: "no-store",
+  });
+  return (await parseJsonOrThrow(response)) as ProfileMutualEventsResponse;
+}
+
+export async function getProfileDetails(userId: string): Promise<ProfileDetailsResponse> {
+  const response = await fetch(`/api/profile/details?user_id=${encodeURIComponent(userId)}`, {
+    cache: "no-store",
+  });
+  return (await parseJsonOrThrow(response)) as ProfileDetailsResponse;
+}
+
+export async function saveProfileDetails(payload: SaveProfileDetailsPayload): Promise<ProfileDetailsResponse> {
+  const response = await fetch("/api/profile/details", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return (await parseJsonOrThrow(response)) as ProfileDetailsResponse;
 }
 
 export async function getProfileStats(params: {
