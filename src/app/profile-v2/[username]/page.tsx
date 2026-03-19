@@ -55,7 +55,7 @@ export default async function ProfileV2Page({ params }: ProfileV2PageProps) {
   return (
     <>
       <Header />
-      <main className="min-h-screen bg-[var(--color-background)] pt-20 pb-6">
+      <main className="min-h-screen bg-black pt-20 pb-6">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <ProfileV2Content
             user={user as User}

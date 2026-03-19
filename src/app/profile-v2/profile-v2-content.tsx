@@ -594,7 +594,7 @@ export function ProfileV2Content({
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,6fr)_minmax(0,4fr)] gap-6 items-start">
-      <section className="overflow-hidden rounded-none border border-white/10 bg-black/60">
+      <section className="overflow-hidden rounded-none border border-white/10 bg-black">
         <div className="relative h-32 sm:h-40 bg-[var(--color-surface)]">
           {user.banner_url && <Image src={user.banner_url} alt="Profile banner" fill className="object-cover" unoptimized />}
         </div>
@@ -680,7 +680,7 @@ export function ProfileV2Content({
         </div>
       </section>
 
-      <aside className="bg-black/60 border border-white/10 rounded-xl p-4 sm:p-5">
+      <aside className="border border-white/10 rounded-xl bg-black p-4 sm:p-5">
         <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-4">Mutual context</h3>
         {isOwnProfile ? (
           <p className="text-sm text-[var(--color-text-secondary)]">Mutual context is shown when someone else views your profile.</p>

@@ -83,39 +83,39 @@ export function Footer() {
 
   return (
     <footer className="border-t border-[#595959] bg-[#101010] pb-20 md:pb-0">
-      <div className="mx-auto flex w-full max-w-[980px] flex-col gap-10 px-6 py-10 md:flex-row md:items-start md:px-8 md:py-12">
-        <div className="flex min-w-0 flex-1 flex-col gap-8">
-          <div className="flex flex-col gap-8 sm:flex-row sm:gap-[148px]">
+      <div className="mx-auto flex w-full max-w-[980px] flex-col gap-8 px-4 py-7 sm:px-6 sm:py-10 md:flex-row md:items-start md:px-8 md:py-12">
+        <div className="flex min-w-0 flex-1 flex-col gap-6 sm:gap-8">
+          <div className="flex flex-row gap-8 sm:gap-[148px]">
             <div>
-              <h3 className="text-[26px] font-bold leading-none tracking-normal text-white" style={kodeMonoStyle}>
+              <h3 className="text-[18px] font-bold leading-none tracking-normal text-white sm:text-[26px]" style={kodeMonoStyle}>
                 Socials
               </h3>
               <a
                 href="https://twitter.com/solpointxyz"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-4 inline-flex h-8 w-8 items-center justify-center text-white transition-opacity hover:opacity-80"
+                className="mt-3 inline-flex h-7 w-7 items-center justify-center text-white transition-opacity hover:opacity-80 sm:mt-4 sm:h-8 sm:w-8"
                 aria-label="SolPoint Twitter"
               >
-                <Twitter className="h-7 w-7" />
+                <Twitter className="h-6 w-6 sm:h-7 sm:w-7" />
               </a>
             </div>
 
             <div>
-              <h3 className="text-[26px] font-bold leading-none tracking-normal text-white" style={kodeMonoStyle}>
+              <h3 className="text-[18px] font-bold leading-none tracking-normal text-white sm:text-[26px]" style={kodeMonoStyle}>
                 Navigation
               </h3>
-              <div className="mt-[23px] flex flex-col gap-[17px]">
+              <div className="mt-4 flex flex-col gap-3 sm:mt-[23px] sm:gap-[17px]">
                 <Link
                   href="/events"
-                  className="text-[18px] font-bold leading-none tracking-normal text-white hover:text-white/85"
+                  className="text-[14px] font-bold leading-none tracking-normal text-white hover:text-white/85 sm:text-[18px]"
                   style={kodeMonoStyle}
                 >
                   Events
                 </Link>
                 <Link
                   href="/map"
-                  className="text-[18px] font-bold leading-none tracking-normal text-white hover:text-white/85"
+                  className="text-[14px] font-bold leading-none tracking-normal text-white hover:text-white/85 sm:text-[18px]"
                   style={kodeMonoStyle}
                 >
                   Map
@@ -124,17 +124,17 @@ export function Footer() {
             </div>
           </div>
 
-          <div className="mt-[60px] grid gap-6 sm:grid-cols-3 sm:gap-x-[43px]">
+          <div className="grid grid-cols-3 gap-3 sm:gap-x-[43px]">
             {badges.map((badge) => (
-              <article key={badge.title} className="mx-auto flex w-fit flex-col">
+              <article key={badge.title} className="flex w-fit flex-col">
                 <p
-                  className="self-center text-[12px] font-normal leading-none tracking-normal text-white/70"
+                  className="self-center text-[10px] font-normal leading-none tracking-normal text-white/70 sm:text-[12px]"
                   style={kodeMonoStyle}
                 >
                   {badge.title}
                 </p>
-                <div className="mt-[15px] flex items-center gap-[12px]">
-                  <div className="relative h-10 w-10 overflow-hidden rounded-full border border-white/25">
+                <div className="mt-2 flex items-center gap-2 sm:mt-[15px] sm:gap-[12px]">
+                  <div className="relative h-7 w-7 shrink-0 overflow-hidden rounded-full border border-white/25 sm:h-10 sm:w-10">
                     <img
                       src={badge.logoSrc}
                       alt={`${badge.nameTop} ${badge.nameBottom} logo`}
@@ -142,10 +142,10 @@ export function Footer() {
                     />
                   </div>
                   <div>
-                    <p className="text-[17px] leading-[15px] tracking-normal text-white" style={badge.nameStyle}>
+                    <p className="text-[12px] leading-[13px] tracking-normal text-white sm:text-[17px] sm:leading-[15px]" style={badge.nameStyle}>
                       {badge.nameTop}
                     </p>
-                    <p className="text-[17px] leading-[15px] tracking-normal text-white" style={badge.nameStyle}>
+                    <p className="text-[12px] leading-[13px] tracking-normal text-white sm:text-[17px] sm:leading-[15px]" style={badge.nameStyle}>
                       {badge.nameBottom}
                     </p>
                   </div>
@@ -155,11 +155,11 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="w-full md:ml-[102px] md:w-[320px] md:shrink-0">
-          <h3 className="text-[26px] font-bold leading-none tracking-normal text-white" style={kodeMonoStyle}>
+        <div className="w-full px-5 md:ml-[102px] md:w-[320px] md:shrink-0 md:px-0">
+          <h3 className="text-[18px] font-bold leading-none tracking-normal text-white sm:text-[26px]" style={kodeMonoStyle}>
             Contact &amp; Support
           </h3>
-          <form className="mt-4 space-y-4" onSubmit={onSubmitFeedback}>
+          <form className="mt-3 space-y-3 sm:mt-4 sm:space-y-4" onSubmit={onSubmitFeedback}>
             <input
               type="text"
               name="name"
@@ -168,7 +168,7 @@ export function Footer() {
               placeholder="name"
               required
               maxLength={120}
-              className="h-[65px] w-full rounded-[4px] border border-[#5e5e5e] bg-black px-2.5 text-[16px] font-semibold text-white placeholder:text-[#a4a7ac] outline-none transition-colors duration-200 focus:border-white focus:ring-0 focus-visible:ring-0 md:w-[266px]"
+              className="h-[50px] w-full rounded-[4px] border border-[#5e5e5e] bg-black px-2.5 text-[14px] font-semibold text-white placeholder:text-[#a4a7ac] outline-none ring-0 transition-[border-color] duration-200 focus:border-white focus:outline-none focus:ring-0 focus:ring-offset-0 sm:h-[65px] sm:text-[16px] md:w-[266px]"
             />
             <input
               type="email"
@@ -178,7 +178,7 @@ export function Footer() {
               placeholder="email"
               required
               maxLength={255}
-              className="h-[65px] w-full rounded-[4px] border border-[#5e5e5e] bg-black px-2.5 text-[16px] font-semibold text-white placeholder:text-[#a4a7ac] outline-none transition-colors duration-200 focus:border-white focus:ring-0 focus-visible:ring-0 md:w-[266px]"
+              className="h-[50px] w-full rounded-[4px] border border-[#5e5e5e] bg-black px-2.5 text-[14px] font-semibold text-white placeholder:text-[#a4a7ac] outline-none ring-0 transition-[border-color] duration-200 focus:border-white focus:outline-none focus:ring-0 focus:ring-offset-0 sm:h-[65px] sm:text-[16px] md:w-[266px]"
             />
             <textarea
               name="message"
@@ -187,12 +187,12 @@ export function Footer() {
               placeholder="message"
               required
               maxLength={2000}
-              className="h-[65px] w-full resize-none rounded-[4px] border border-[#5e5e5e] bg-black px-2.5 py-2 text-[16px] font-semibold text-white placeholder:text-[#a4a7ac] outline-none transition-colors duration-200 focus:border-white focus:ring-0 focus-visible:ring-0 md:w-[266px]"
+              className="h-[50px] w-full resize-none rounded-[4px] border border-[#5e5e5e] bg-black px-2.5 py-2 text-[14px] font-semibold text-white placeholder:text-[#a4a7ac] outline-none ring-0 transition-[border-color] duration-200 focus:border-white focus:outline-none focus:ring-0 focus:ring-offset-0 sm:h-[65px] sm:text-[16px] md:w-[266px]"
             />
             <button
               type="submit"
               disabled={isSubmitting}
-              className="inline-flex h-[44px] w-full md:w-[266px] items-center justify-center rounded-[5px] bg-white text-[25px] font-bold leading-none tracking-normal text-black disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex h-[38px] w-full items-center justify-center rounded-[5px] bg-white text-[18px] font-bold leading-none tracking-normal text-black disabled:cursor-not-allowed disabled:opacity-60 sm:h-[44px] sm:text-[25px] md:w-[266px]"
               style={kodeMonoStyle}
             >
               {isSubmitting ? "SENDING..." : "SEND"}

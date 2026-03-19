@@ -30,7 +30,7 @@ export function LandingHeader() {
             <div className="relative h-[60px] w-[60px]">
               <Image src="/main-logo.svg" alt="SolPoint" fill className="object-contain" priority />
             </div>
-          <span className="text-xl font-semibold text-white md:text-[25px]" style={kodeMonoStyle}>
+          <span className="hidden sm:inline text-xl font-semibold text-white md:text-[25px]" style={kodeMonoStyle}>
             SolPoint
           </span>
           </Link>
