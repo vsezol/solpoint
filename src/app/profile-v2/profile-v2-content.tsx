@@ -421,7 +421,7 @@ export function ProfileV2Content({
   );
 
   const aboutCard = (
-    <div className={cn(profileSectionCardClass, "flex min-h-[152px] w-full min-w-0 flex-col p-3")}>
+    <div className={cn(profileSectionCardClass, "flex w-full min-w-0 flex-col p-3")}>
       <h3 className="mb-2 text-[var(--color-text-primary)]" style={kodeMono15}>
         About
       </h3>
@@ -452,7 +452,7 @@ export function ProfileV2Content({
   );
 
   const experienceCard = (
-    <div className={cn(profileSectionCardClass, "flex min-h-[258px] w-full min-w-0 flex-col p-4")}>
+    <div className={cn(profileSectionCardClass, "flex w-full min-w-0 flex-col p-4")}>
       <h3 className="mb-5 text-[var(--color-text-primary)]" style={kodeMono15}>
         Experience
       </h3>
@@ -539,18 +539,12 @@ export function ProfileV2Content({
           No experience added yet.
         </p>
       ) : (
-        <ul className="flex flex-col gap-5 text-[var(--color-text-secondary)]">
+        <ul className="flex flex-col gap-3 text-[var(--color-text-secondary)]">
           {experienceList.map((e) => (
-            <li key={e.id} className="flex items-start justify-between gap-4 border-b border-white/10 pb-5 last:border-0 last:pb-0" style={interBody12}>
-              <div className="min-w-0 flex-1 space-y-1">
-                {e.company && (
-                  <p className="break-words font-semibold text-[var(--color-text-primary)] leading-snug">{e.company}</p>
-                )}
-                <p className="break-words text-[var(--color-text-secondary)] leading-snug">{e.title}</p>
-                {e.description && (
-                  <p className="mt-2 whitespace-pre-wrap text-[var(--color-text-secondary)] leading-relaxed opacity-75">{e.description}</p>
-                )}
-              </div>
+            <li key={e.id} className="flex items-center justify-between gap-4 border-b border-white/10 pb-3 last:border-0 last:pb-0" style={interBody12}>
+              <p className="min-w-0 break-words leading-snug">
+                {e.title}{e.company ? ` at ${e.company}` : ""}
+              </p>
               {(e.startDate || e.endDate) && (
                 <p className="shrink-0 whitespace-nowrap text-[var(--color-text-muted)] leading-snug">
                   {fmtMonthYear(e.startDate) || "—"} — {fmtMonthYear(e.endDate) || "Present"}
@@ -564,7 +558,7 @@ export function ProfileV2Content({
   );
 
   const skillsCard = (
-    <div className={cn(profileSectionCardClass, "flex min-h-[258px] w-full min-w-0 flex-col p-4")}>
+    <div className={cn(profileSectionCardClass, "flex w-full min-w-0 flex-col p-4")}>
       <h3 className="mb-3 text-[var(--color-text-primary)]" style={kodeMono15}>
         Skills
       </h3>
@@ -624,12 +618,16 @@ export function ProfileV2Content({
             {skillsCard}
           </div>
 
-          {/* Desktop: 2×2 grid — stable columns, no crushed Experience */}
-          <div className="hidden md:grid md:grid-cols-[minmax(280px,1fr)_300px] md:gap-x-[100px] md:items-start">
-            <div className="min-w-0">{identityBlock}</div>
-            <div className="min-w-0">{aboutCard}</div>
-            <div className="mt-[34px] min-w-0">{experienceCard}</div>
-            <div className="mt-[116px] min-w-0 w-full">{skillsCard}</div>
+          {/* Desktop: 2 columns — left: identity+experience, right: about+skills */}
+          <div className="hidden md:grid md:grid-cols-2 md:gap-6 md:items-start">
+            <div className="min-w-0 flex flex-col gap-4">
+              {identityBlock}
+              {experienceCard}
+            </div>
+            <div className="min-w-0 flex flex-col gap-4">
+              {aboutCard}
+              {skillsCard}
+            </div>
           </div>
 
           <div className="mt-8 flex flex-wrap items-center gap-3 border-t border-white/10 pt-6">
