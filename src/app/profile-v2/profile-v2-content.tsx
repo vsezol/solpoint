@@ -88,6 +88,19 @@ function emptyExpRow(): ExpFormRow {
   };
 }
 
+const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** "2025-03" → "Mar 2025". Legcy free-text returned as-is. */
+function fmtMonthYear(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const m = value.match(/^(\d{4})-(\d{2})$/);
+  if (m) {
+    const idx = parseInt(m[2], 10) - 1;
+    return `${MONTH_NAMES[idx] ?? m[2]} ${m[1]}`;
+  }
+  return value;
+}
+
 function detailsToExpDrafts(d: ProfileDetailsResponse): ExpFormRow[] {
   if (d.experience.length === 0) {
     return [emptyExpRow()];
@@ -381,7 +394,7 @@ export function ProfileV2Content({
           : "Connect";
 
   const identityBlock = (
-    <div>
+    <div className="min-w-0 max-w-full">
       <h1 className="mb-[16px] text-[var(--color-text-primary)]" style={interDisplayName}>
         {user.twitter_name}
       </h1>
@@ -408,7 +421,7 @@ export function ProfileV2Content({
   );
 
   const aboutCard = (
-    <div className={cn(profileSectionCardClass, "flex min-h-[152px] w-full flex-col p-3")}>
+    <div className={cn(profileSectionCardClass, "flex min-h-[152px] w-full min-w-0 flex-col p-3")}>
       <h3 className="mb-2 text-[var(--color-text-primary)]" style={kodeMono15}>
         About
       </h3>
@@ -439,8 +452,8 @@ export function ProfileV2Content({
   );
 
   const experienceCard = (
-    <div className={cn(profileSectionCardClass, "flex min-h-[258px] flex-col p-4")}>
-      <h3 className="mb-3 text-[var(--color-text-primary)]" style={kodeMono15}>
+    <div className={cn(profileSectionCardClass, "flex min-h-[258px] w-full min-w-0 flex-col p-4")}>
+      <h3 className="mb-5 text-[var(--color-text-primary)]" style={kodeMono15}>
         Experience
       </h3>
       {showProfileForm ? (
@@ -474,24 +487,32 @@ export function ProfileV2Content({
                 }
               />
               <div className="grid grid-cols-2 gap-2">
-                <input
-                  className={inputClass}
-                  placeholder="Start (e.g. Mar 2023)"
-                  value={row.startDate}
-                  onChange={(e) =>
-                    setExpDrafts((prev) =>
-                      prev.map((r) => (r.key === row.key ? { ...r, startDate: e.target.value } : r))
-                    )
-                  }
-                />
-                <input
-                  className={inputClass}
-                  placeholder="End (e.g. Aug 2023)"
-                  value={row.endDate}
-                  onChange={(e) =>
-                    setExpDrafts((prev) => prev.map((r) => (r.key === row.key ? { ...r, endDate: e.target.value } : r)))
-                  }
-                />
+                <div>
+                  <label className="mb-1 block text-xs text-[var(--color-text-muted)]">Start</label>
+                  <input
+                    type="month"
+                    className={inputClass}
+                    value={row.startDate}
+                    onChange={(e) =>
+                      setExpDrafts((prev) =>
+                        prev.map((r) => (r.key === row.key ? { ...r, startDate: e.target.value } : r))
+                      )
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-[var(--color-text-muted)]">End (leave blank = present)</label>
+                  <input
+                    type="month"
+                    className={inputClass}
+                    value={row.endDate}
+                    onChange={(e) =>
+                      setExpDrafts((prev) =>
+                        prev.map((r) => (r.key === row.key ? { ...r, endDate: e.target.value } : r))
+                      )
+                    }
+                  />
+                </div>
               </div>
               <textarea
                 className={textareaClass + " min-h-[72px]"}
@@ -518,21 +539,23 @@ export function ProfileV2Content({
           No experience added yet.
         </p>
       ) : (
-        <ul className="space-y-3 text-[var(--color-text-secondary)]">
+        <ul className="flex flex-col gap-5 text-[var(--color-text-secondary)]">
           {experienceList.map((e) => (
-            <li key={e.id} className="border-b border-white/10 pb-3 last:border-0" style={interBody12}>
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <p className="text-[var(--color-text-primary)]">{e.title}</p>
-                  {e.company && <p className="mt-0.5">{e.company}</p>}
-                </div>
-                {(e.startDate || e.endDate) && (
-                  <p className="shrink-0 whitespace-nowrap text-[var(--color-text-muted)]">
-                    {e.startDate || "—"} — {e.endDate || "Present"}
-                  </p>
+            <li key={e.id} className="flex items-start justify-between gap-4 border-b border-white/10 pb-5 last:border-0 last:pb-0" style={interBody12}>
+              <div className="min-w-0 flex-1 space-y-1">
+                {e.company && (
+                  <p className="break-words font-semibold text-[var(--color-text-primary)] leading-snug">{e.company}</p>
+                )}
+                <p className="break-words text-[var(--color-text-secondary)] leading-snug">{e.title}</p>
+                {e.description && (
+                  <p className="mt-2 whitespace-pre-wrap text-[var(--color-text-secondary)] leading-relaxed opacity-75">{e.description}</p>
                 )}
               </div>
-              {e.description && <p className="mt-2 whitespace-pre-wrap">{e.description}</p>}
+              {(e.startDate || e.endDate) && (
+                <p className="shrink-0 whitespace-nowrap text-[var(--color-text-muted)] leading-snug">
+                  {fmtMonthYear(e.startDate) || "—"} — {fmtMonthYear(e.endDate) || "Present"}
+                </p>
+              )}
             </li>
           ))}
         </ul>
@@ -541,7 +564,7 @@ export function ProfileV2Content({
   );
 
   const skillsCard = (
-    <div className={cn(profileSectionCardClass, "flex min-h-[258px] flex-col p-4")}>
+    <div className={cn(profileSectionCardClass, "flex min-h-[258px] w-full min-w-0 flex-col p-4")}>
       <h3 className="mb-3 text-[var(--color-text-primary)]" style={kodeMono15}>
         Skills
       </h3>
@@ -577,7 +600,7 @@ export function ProfileV2Content({
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,6fr)_minmax(0,4fr)] gap-6 items-start">
-      <section className="bg-black/60 border border-white/10 rounded-xl overflow-hidden">
+      <section className="overflow-hidden rounded-none border border-white/10 bg-black/60">
         <div className="relative h-32 sm:h-40 bg-[var(--color-surface)]">
           {user.banner_url && <Image src={user.banner_url} alt="Profile banner" fill className="object-cover" unoptimized />}
         </div>
@@ -601,19 +624,15 @@ export function ProfileV2Content({
             {skillsCard}
           </div>
 
-          {/* Desktop: Figma spacing — nickname↔About 100px; Connections↔Experience 34px; About↔Skills 116px */}
-          <div className="hidden md:flex md:flex-row md:items-start md:gap-x-[100px]">
-            <div className="flex min-w-0 flex-1 flex-col">
-              {identityBlock}
-              <div className="mt-[34px] min-w-0">{experienceCard}</div>
-            </div>
-            <div className="flex w-[300px] shrink-0 flex-col">
-              {aboutCard}
-              <div className="mt-[116px] w-full">{skillsCard}</div>
-            </div>
+          {/* Desktop: 2×2 grid — stable columns, no crushed Experience */}
+          <div className="hidden md:grid md:grid-cols-[minmax(280px,1fr)_300px] md:gap-x-[100px] md:items-start">
+            <div className="min-w-0">{identityBlock}</div>
+            <div className="min-w-0">{aboutCard}</div>
+            <div className="mt-[34px] min-w-0">{experienceCard}</div>
+            <div className="mt-[116px] min-w-0 w-full">{skillsCard}</div>
           </div>
 
-          <div className="mt-6 flex flex-wrap items-center gap-3">
+          <div className="mt-8 flex flex-wrap items-center gap-3 border-t border-white/10 pt-6">
             {!isOwnProfile && (
               <Button
                 type="button"
@@ -633,6 +652,7 @@ export function ProfileV2Content({
               <Button
                 type="button"
                 variant="outline"
+                className="border-white/35 text-[var(--color-text-primary)] hover:bg-white/10"
                 onClick={() => {
                   setIsEditingProfile(true);
                   setSaveMessage(null);
