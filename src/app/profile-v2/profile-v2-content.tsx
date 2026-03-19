@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { Avatar, AuthRequiredModal, Button, Modal, ModalContent, ModalHeader, ModalTitle } from "@/components/ui";
 import { formControlFocusClasses } from "@/components/ui/form-control-focus";
-import { Loader2, MapPin, Plus, Trash2, UserPlus, Users } from "lucide-react";
+import { Loader2, MapPin, Plus, Trash2, Users } from "lucide-react";
 import type { User } from "@/types";
 import type { FriendshipStatus } from "@/types/profile";
 import {
@@ -49,9 +49,17 @@ const interBody12: CSSProperties = {
   letterSpacing: 0,
 };
 
-/** Figma: white primary actions (Connect / Save), Kode Mono via style */
-const figmaProfileActionClass =
-  "h-11 min-h-[44px] rounded-md border-0 bg-white px-6 text-black shadow-none hover:bg-white/90 focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]";
+/** Figma: Connect — Kode Mono 25px Bold, 195×44, radius 5px */
+const kodeMono25Bold: CSSProperties = {
+  fontFamily: "var(--font-kode-mono), monospace",
+  fontWeight: 700,
+  fontSize: 25,
+  lineHeight: 1,
+  letterSpacing: 0,
+};
+
+const figmaConnectButtonClass =
+  "flex h-[44px] w-[195px] shrink-0 items-center justify-center rounded-[5px] border-0 bg-white p-0 text-black shadow-none hover:bg-white/90 focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]";
 
 interface ProfileV2ContentProps {
   user: User;
@@ -106,6 +114,20 @@ const inputClass = cn(
 
 /** Figma: fill #121212, radius 6px */
 const profileSectionCardClass = "rounded-[6px] border border-white/10 bg-[#121212]";
+
+function ProfileSectionContentLoader() {
+  return (
+    <div
+      className="flex min-h-0 flex-1 flex-col items-center justify-center py-6"
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      <Loader2 className="h-6 w-6 shrink-0 animate-spin text-white/40" aria-hidden />
+      <span className="sr-only">Loading</span>
+    </div>
+  );
+}
 
 export function ProfileV2Content({
   user,
@@ -360,21 +382,21 @@ export function ProfileV2Content({
 
   const identityBlock = (
     <div>
-      <h1 className="text-[var(--color-text-primary)]" style={interDisplayName}>
+      <h1 className="mb-[16px] text-[var(--color-text-primary)]" style={interDisplayName}>
         {user.twitter_name}
       </h1>
-      <p className="mb-3 text-[var(--color-text-muted)]" style={kodeMono15}>
+      <p className="mb-[13px] text-[var(--color-text-muted)]" style={kodeMono15}>
         @{user.twitter_handle}
       </p>
 
       {user.role && (
-        <p className="mb-2 flex items-center gap-2 text-[var(--color-text-secondary)] capitalize" style={kodeMono15}>
+        <p className="mb-[13px] flex items-center gap-2 text-[var(--color-text-secondary)] capitalize" style={kodeMono15}>
           <Users className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
           <span>{user.role}</span>
         </p>
       )}
 
-      <p className="mb-3 flex items-center gap-2 text-[var(--color-text-secondary)]" style={kodeMono15}>
+      <p className="mb-[22px] flex items-center gap-2 text-[var(--color-text-secondary)]" style={kodeMono15}>
         <MapPin className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
         <span>{location}</span>
       </p>
@@ -407,9 +429,7 @@ export function ProfileV2Content({
           disabled={detailsLoading}
         />
       ) : detailsLoading ? (
-        <p className="text-[var(--color-text-muted)]" style={interBody12}>
-          Loading...
-        </p>
+        <ProfileSectionContentLoader />
       ) : (
         <p className="whitespace-pre-wrap text-[var(--color-text-secondary)]" style={interBody12}>
           {aboutDisplay || "No information yet."}
@@ -419,7 +439,7 @@ export function ProfileV2Content({
   );
 
   const experienceCard = (
-    <div className={cn(profileSectionCardClass, "min-h-[258px] p-4")}>
+    <div className={cn(profileSectionCardClass, "flex min-h-[258px] flex-col p-4")}>
       <h3 className="mb-3 text-[var(--color-text-primary)]" style={kodeMono15}>
         Experience
       </h3>
@@ -492,9 +512,7 @@ export function ProfileV2Content({
           </Button>
         </div>
       ) : detailsLoading ? (
-        <p className="text-[var(--color-text-muted)]" style={interBody12}>
-          Loading...
-        </p>
+        <ProfileSectionContentLoader />
       ) : experienceList.length === 0 ? (
         <p className="text-[var(--color-text-secondary)]" style={interBody12}>
           No experience added yet.
@@ -523,7 +541,7 @@ export function ProfileV2Content({
   );
 
   const skillsCard = (
-    <div className={cn(profileSectionCardClass, "min-h-[258px] p-4")}>
+    <div className={cn(profileSectionCardClass, "flex min-h-[258px] flex-col p-4")}>
       <h3 className="mb-3 text-[var(--color-text-primary)]" style={kodeMono15}>
         Skills
       </h3>
@@ -542,9 +560,7 @@ export function ProfileV2Content({
           />
         </div>
       ) : detailsLoading ? (
-        <p className="text-[var(--color-text-muted)]" style={interBody12}>
-          Loading...
-        </p>
+        <ProfileSectionContentLoader />
       ) : skillsList.length === 0 ? (
         <p className="text-[var(--color-text-secondary)]" style={interBody12}>
           No skills added yet.
@@ -602,21 +618,21 @@ export function ProfileV2Content({
               <Button
                 type="button"
                 variant="primary"
-                className={figmaProfileActionClass}
-                style={kodeMono15}
+                className={figmaConnectButtonClass}
+                style={kodeMono25Bold}
                 onClick={handleConnectClick}
                 disabled={isConnectLoading}
               >
-                {isConnectLoading ? <Loader2 className="mr-2 h-4 w-4 shrink-0 animate-spin" aria-hidden /> : null}
+                {isConnectLoading ? (
+                  <Loader2 className="mr-2 h-5 w-5 shrink-0 animate-spin" aria-hidden />
+                ) : null}
                 {connectButtonLabel}
               </Button>
             )}
             {isOwnProfile && !isEditingProfile && (
               <Button
                 type="button"
-                variant="primary"
-                className={figmaProfileActionClass}
-                style={kodeMono15}
+                variant="outline"
                 onClick={() => {
                   setIsEditingProfile(true);
                   setSaveMessage(null);
@@ -628,25 +644,11 @@ export function ProfileV2Content({
             )}
             {isOwnProfile && isEditingProfile && (
               <>
-                <Button
-                  type="button"
-                  variant="primary"
-                  className={figmaProfileActionClass}
-                  style={kodeMono15}
-                  onClick={handleSave}
-                  disabled={isSaving || detailsLoading}
-                >
+                <Button type="button" variant="primary" onClick={handleSave} disabled={isSaving || detailsLoading}>
                   {isSaving ? <Loader2 className="mr-2 h-4 w-4 shrink-0 animate-spin" aria-hidden /> : null}
                   Save
                 </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-11 min-h-[44px] rounded-md border-white/25 bg-transparent px-6 text-[var(--color-text-primary)] hover:bg-white/5"
-                  style={kodeMono15}
-                  onClick={handleCancelEdit}
-                  disabled={isSaving}
-                >
+                <Button type="button" variant="outline" onClick={handleCancelEdit} disabled={isSaving}>
                   Cancel
                 </Button>
               </>
