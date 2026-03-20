@@ -158,7 +158,7 @@ function StepPreview({ type }: { type: (typeof stepCards)[number]["previewType"]
                 <img src={figmaAssets.cardEventMiami} alt="Event" className="h-full w-full object-cover" />
               </div>
             </div>
-            <p className="whitespace-nowrap text-center text-[9px] font-bold leading-[100%] tracking-[-0.27px] text-white/90" style={kodeMonoStyle}>
+            <p className="text-center text-[9px] font-bold leading-[100%] tracking-[-0.27px] text-white/90" style={kodeMonoStyle}>
               Solana accelerate USA
             </p>
           </div>
