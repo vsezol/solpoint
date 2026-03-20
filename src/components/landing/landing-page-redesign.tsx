@@ -143,7 +143,7 @@ function StepPreview({ type }: { type: (typeof stepCards)[number]["previewType"]
   if (type === "events") {
     return (
       <div className="h-[112px] w-[116px] shrink-0 rounded-[4px] bg-[linear-gradient(135deg,#9B45FE_0%,#00F68B_100%)] p-[1px]">
-        <div className="h-full w-full rounded-[3px] bg-[#121212] p-1.5">
+        <div className="flex h-full w-full flex-col rounded-[3px] bg-[#121212] px-1.5 pb-2 pt-1.5">
           {/* Triangle arrangement: two icons top row, one larger icon below-center */}
           <div className="relative h-[62px] w-full">
             <div className="absolute left-[6px] top-0 h-[28px] w-[28px] overflow-hidden rounded-[6px] border border-[#2a2a2a] bg-[#131313]">
@@ -156,7 +156,7 @@ function StepPreview({ type }: { type: (typeof stepCards)[number]["previewType"]
               <img src={figmaAssets.cardEventMiami} alt="Event" className="h-full w-full object-cover" />
             </div>
           </div>
-          <p className="mt-1.5 whitespace-nowrap text-[9px] font-bold leading-[100%] tracking-[-0.27px] text-white/90" style={kodeMonoStyle}>
+          <p className="mt-auto whitespace-nowrap text-[9px] font-bold leading-[100%] tracking-[-0.27px] text-white/90" style={kodeMonoStyle}>
             Solana accelerate USA
           </p>
         </div>
