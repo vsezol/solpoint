@@ -416,6 +416,8 @@ export function Header() {
     pathname.startsWith("/map-v1/") ||
     pathname === "/profile" ||
     pathname.startsWith("/profile/") ||
+    pathname === "/profile-v1" ||
+    pathname.startsWith("/profile-v1/") ||
     pathname === "/profile-v2" ||
     pathname.startsWith("/profile-v2/");
 

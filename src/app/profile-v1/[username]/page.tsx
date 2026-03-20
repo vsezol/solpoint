@@ -1,24 +1,19 @@
 import { notFound } from "next/navigation";
 import { Header, Footer } from "@/components/layout";
 import { createClient } from "@/lib/supabase/server";
-import { ProfileViewTracker } from "@/components/analytics/profile-view-tracker";
-import { ProfileV2Content } from "@/app/profile-v2/profile-v2-content";
+import { isProfileQrEnabled } from "@/lib/qr/feature-flags";
+import { ProfileContent } from "@/app/profile/profile-content";
+import { ProfileEditProvider } from "@/app/profile/profile-edit-provider";
 import type { Metadata } from "next";
 import { getAppUrl } from "@/lib/utils";
+import { ProfileViewTracker } from "@/components/analytics/profile-view-tracker";
 import type { User } from "@/types";
 
-interface ProfilePageProps {
+interface ProfileV1PageProps {
   params: Promise<{ username: string }>;
 }
 
-function mapFollowToFriendshipStatus(status: string | null): "none" | "pending_sent" | "pending_received" | "accepted" {
-  if (status === "mutual") return "accepted";
-  if (status === "following") return "pending_sent";
-  if (status === "follower") return "pending_received";
-  return "none";
-}
-
-export async function generateMetadata({ params }: ProfilePageProps): Promise<Metadata> {
+export async function generateMetadata({ params }: ProfileV1PageProps): Promise<Metadata> {
   const { username } = await params;
   const supabase = await createClient();
   const cleanUsername = username.startsWith("@") ? username.slice(1) : username;
@@ -41,7 +36,7 @@ export async function generateMetadata({ params }: ProfilePageProps): Promise<Me
   }
 
   const appUrl = getAppUrl();
-  const profileUrl = `${appUrl}/profile/${cleanUsername}`;
+  const profileUrl = `${appUrl}/profile-v1/${cleanUsername}`;
   const imageUrl = `${appUrl}/logo.svg`;
 
   const location = user.city && user.countries?.name
@@ -81,7 +76,7 @@ export async function generateMetadata({ params }: ProfilePageProps): Promise<Me
   };
 }
 
-export default async function ProfilePage({ params }: ProfilePageProps) {
+export default async function ProfileV1Page({ params }: ProfileV1PageProps) {
   const { username } = await params;
   const supabase = await createClient();
   const cleanUsername = username.startsWith("@") ? username.slice(1) : username;
@@ -109,27 +104,19 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
 
   const isOwnProfile = Boolean(authUser?.id && user.id && authUser.id === user.id);
 
-  let initialFriendshipStatus: "none" | "pending_sent" | "pending_received" | "accepted" = "none";
-  if (!isOwnProfile && authUser) {
-    const { data: status } = await supabase.rpc("get_follow_status", {
-      p_user_id: authUser.id,
-      p_other_user_id: user.id,
-    });
-    initialFriendshipStatus = mapFollowToFriendshipStatus((status as string | null) || null);
-  }
-
   return (
     <>
       <Header />
       <ProfileViewTracker user={user as User} isOwnProfile={isOwnProfile} />
-      <main className="min-h-screen bg-black pt-20 pb-6">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <ProfileV2Content
-            user={user as User}
-            isOwnProfile={isOwnProfile}
-            isAuthenticated={Boolean(authUser)}
-            initialFriendshipStatus={initialFriendshipStatus}
-          />
+      <main className="min-h-screen pt-16 pb-16 bg-[var(--color-background)]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+          <ProfileEditProvider>
+            <ProfileContent
+              user={user}
+              isOwnProfile={isOwnProfile}
+              profileQrEnabled={isProfileQrEnabled()}
+            />
+          </ProfileEditProvider>
         </div>
       </main>
       <Footer />

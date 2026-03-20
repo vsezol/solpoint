@@ -36,7 +36,7 @@ const badges = [
 
 const kodeMonoStyle = { fontFamily: "var(--font-kode-mono), monospace" } as const;
 const contactFieldBaseClass =
-  "w-full rounded-[4px] border border-[#5e5e5e] bg-black px-2.5 text-[14px] font-semibold text-white placeholder:text-[#a4a7ac] outline-none ring-0 transition-[border-color] duration-200 focus:border-white focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:border-white focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 md:w-[266px]";
+  "footer-contact-field w-full rounded-[4px] border border-[#5e5e5e] bg-black px-2.5 text-[14px] font-semibold text-white placeholder:text-[#a4a7ac] outline-none ring-0 transition-[border-color] duration-200 focus:border-white focus:outline-none focus:ring-0 focus:ring-offset-0 md:w-[266px]";
 
 export function Footer() {
   const [form, setForm] = useState<FeedbackFormState>({ name: "", email: "", message: "" });
@@ -170,7 +170,7 @@ export function Footer() {
               placeholder="name"
               required
               maxLength={120}
-              className={`h-[30px] ${contactFieldBaseClass} sm:text-[16px]`}
+              className={`h-[50px] md:h-[30px] ${contactFieldBaseClass} sm:text-[16px]`}
             />
             <input
               type="email"
@@ -180,7 +180,7 @@ export function Footer() {
               placeholder="email"
               required
               maxLength={255}
-              className={`h-[30px] ${contactFieldBaseClass} sm:text-[16px]`}
+              className={`h-[50px] md:h-[30px] ${contactFieldBaseClass} sm:text-[16px]`}
             />
             <textarea
               name="message"

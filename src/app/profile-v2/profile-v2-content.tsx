@@ -142,12 +142,12 @@ function detailsToExpDrafts(d: ProfileDetailsResponse): ExpFormRow[] {
 }
 
 const textareaClass = cn(
-  "w-full min-h-[100px] rounded-lg border border-[var(--color-surface-border)] bg-[var(--color-background)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)]",
+  "profile-v2-field w-full min-h-[100px] rounded-[4px] border border-[#5e5e5e] bg-black px-2.5 py-2 text-[14px] font-semibold text-white placeholder:text-[#a4a7ac]",
   formControlFocusClasses
 );
 
 const inputClass = cn(
-  "w-full rounded-lg border border-[var(--color-surface-border)] bg-[var(--color-background)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)]",
+  "profile-v2-field w-full rounded-[4px] border border-[#5e5e5e] bg-black px-2.5 py-2 text-[14px] font-semibold text-white placeholder:text-[#a4a7ac]",
   formControlFocusClasses
 );
 
@@ -750,7 +750,7 @@ export function ProfileV2Content({
               <div className="flex min-h-[48px] items-center">
                 {mutualConnections.slice(0, 3).map((item, i) => (
                   <Link
-                    href={`/profile-v2/${item.twitter_handle}`}
+                    href={`/profile/${item.twitter_handle}`}
                     key={item.id}
                     className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full border-2 border-black bg-[var(--color-surface)] transition-transform hover:z-10 hover:scale-105"
                     style={{ marginLeft: i === 0 ? 0 : "-14px", zIndex: i }}
@@ -820,7 +820,7 @@ export function ProfileV2Content({
                 {mutualConnectionsItems.map((item) => (
                   <li key={item.id}>
                     <Link
-                      href={`/profile-v2/${item.twitter_handle}`}
+                      href={`/profile/${item.twitter_handle}`}
                       className="flex items-center gap-3 py-3 transition-opacity hover:opacity-80"
                       onClick={() => setIsConnectionsModalOpen(false)}
                     >
@@ -937,7 +937,7 @@ export function ProfileV2Content({
                 {allConnections.map((item) => (
                   <li key={item.id}>
                     <Link
-                      href={`/profile-v2/${item.twitter_handle}`}
+                      href={`/profile/${item.twitter_handle}`}
                       className="flex items-center gap-3 py-3 transition-opacity hover:opacity-80"
                       onClick={() => setIsAllConnectionsModalOpen(false)}
                     >

@@ -19,7 +19,7 @@ export function LandingHeader() {
 
   const profileHref =
     isAuthenticated && user?.twitter_handle
-      ? `/profile-v2/${user.twitter_handle}`
+      ? `/profile/${user.twitter_handle}`
       : "/login";
 
   return (

@@ -3,4 +3,4 @@
  * Avoid focus rings — they read as a second, thicker outline on dark UI.
  */
 export const formControlFocusClasses =
-  "transition-[border-color] duration-200 ease-out focus:outline-none focus:border-white";
+  "transition-[border-color] duration-200 ease-out focus:outline-none focus:border-white focus-visible:outline-none focus-visible:border-white focus-visible:ring-0 focus-visible:ring-offset-0";
