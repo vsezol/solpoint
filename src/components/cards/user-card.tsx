@@ -137,19 +137,19 @@ export function UserCard({
               <span className="text-xs text-white/40" style={kmFont}>Socials:</span>
               {(user.socials?.twitter || user.twitter_handle) && (
                 <a href={user.socials?.twitter || `https://twitter.com/${user.twitter_handle}`} target="_blank" rel="noopener noreferrer"
-                  className="p-1.5 rounded-full bg-white/10 text-white/60 hover:text-white transition-colors">
+                  className="p-1.5 rounded-[5px] bg-white/10 text-white/60 hover:text-white transition-colors">
                   <Twitter className="w-4 h-4" />
                 </a>
               )}
               {user.socials?.instagram && (
                 <a href={user.socials.instagram} target="_blank" rel="noopener noreferrer"
-                  className="p-1.5 rounded-full bg-white/10 text-white/60 hover:text-white transition-colors">
+                  className="p-1.5 rounded-[5px] bg-white/10 text-white/60 hover:text-white transition-colors">
                   <Instagram className="w-4 h-4" />
                 </a>
               )}
               {user.socials?.facebook && (
                 <a href={user.socials.facebook} target="_blank" rel="noopener noreferrer"
-                  className="p-1.5 rounded-full bg-white/10 text-white/60 hover:text-white transition-colors">
+                  className="p-1.5 rounded-[5px] bg-white/10 text-white/60 hover:text-white transition-colors">
                   <Facebook className="w-4 h-4" />
                 </a>
               )}
@@ -167,32 +167,32 @@ export function UserCard({
             </div>
             <div className={cn("pointer-events-none opacity-50", isUnauthorized && "blur-sm")}>
               <div className="flex gap-2">
-                <button className="flex-1 rounded-full border border-[#14f195] py-2 text-sm font-bold text-[#14f195]" style={kmFont}>Add Fren</button>
-                <button className="flex-1 rounded-full border border-white/20 py-2 text-sm font-bold text-white/80" style={kmFont}>Send Message</button>
+                <button className="flex-1 rounded-[7px] border border-[#14f195] py-2 text-sm font-bold text-[#14f195]" style={kmFont}>Connect</button>
+                <button className="flex-1 rounded-[7px] border border-white/20 py-2 text-sm font-bold text-white/80" style={kmFont}>Send Message</button>
               </div>
             </div>
           </div>
         ) : (
           <div className="flex gap-2">
             {(isFriend || friendshipStatus === "accepted") ? (
-              <button disabled className="flex flex-1 items-center justify-center gap-1.5 rounded-full border border-white/20 py-2 text-sm font-bold text-white/50 cursor-default" style={kmFont}>
+              <button disabled className="flex flex-1 items-center justify-center gap-1.5 rounded-[7px] border border-white/20 py-2 text-sm font-bold text-white/50 cursor-default" style={kmFont}>
                 <Check className="w-4 h-4" />
                 Friends
               </button>
             ) : friendshipStatus === "pending_sent" && onRemoveFriend ? (
-              <button onClick={onRemoveFriend} className="flex flex-1 items-center justify-center gap-1.5 rounded-full border border-white/20 py-2 text-sm font-bold text-white/70 transition-opacity hover:opacity-80 cursor-pointer" style={kmFont}>
+              <button onClick={onRemoveFriend} className="flex flex-1 items-center justify-center gap-1.5 rounded-[7px] border border-white/20 py-2 text-sm font-bold text-white/70 transition-opacity hover:opacity-80 cursor-pointer" style={kmFont}>
                 <X className="w-4 h-4" />
                 Cancel Request
               </button>
             ) : onAddFriend ? (
-              <button onClick={onAddFriend} className="flex flex-1 items-center justify-center gap-1.5 rounded-full border border-[#14f195] py-2 text-sm font-bold text-[#14f195] transition-opacity hover:opacity-80 cursor-pointer" style={kmFont}>
-                Add Fren
+              <button onClick={onAddFriend} className="flex flex-1 items-center justify-center gap-1.5 rounded-[7px] border border-[#14f195] py-2 text-sm font-bold text-[#14f195] transition-opacity hover:opacity-80 cursor-pointer" style={kmFont}>
+                Connect
               </button>
             ) : null}
             <button
               onClick={handleMessage}
               disabled={isChatLoading}
-              className="flex flex-1 items-center justify-center rounded-full border border-white/20 py-2 text-sm font-bold text-white/80 transition-opacity hover:opacity-80 cursor-pointer disabled:opacity-50"
+              className="flex flex-1 items-center justify-center rounded-[7px] border border-white/20 py-2 text-sm font-bold text-white/80 transition-opacity hover:opacity-80 cursor-pointer disabled:opacity-50"
               style={kmFont}
             >
               {isChatLoading ? "..." : "Send Message"}
@@ -342,7 +342,7 @@ export function UserCard({
                 style={{ fontFamily: 'var(--font-inter)' }}
               >
                 {/* <UserPlus className="w-4 h-4 mr-2" /> */}
-                Add Fren
+                Connect
               </Button>
               <Button variant="outline" className="flex-1 font-semibold text-sm leading-none tracking-normal border border-white" style={{ fontFamily: 'var(--font-inter)' }}>
                 {/* <MessageCircle className="w-4 h-4 mr-2" /> */}
@@ -376,7 +376,7 @@ export function UserCard({
               Cancel Request
             </Button>
           ) : onAddFriend ? (
-            // Показываем Add Fren если нет дружбы
+            // Показываем Connect если нет дружбы
               <Button
               variant="outline"
               onClick={onAddFriend}
@@ -384,7 +384,7 @@ export function UserCard({
               style={{ fontFamily: 'var(--font-inter)' }}
             >
               {/* <UserPlus className="w-4 h-4 mr-2" /> */}
-              Add Fren
+              Connect
             </Button>
           ) : null}
           <Button 

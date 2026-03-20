@@ -2,9 +2,10 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Footer } from "@/components/layout";
 
 const kodeMonoStyle = {
   fontFamily: "var(--font-kode-mono), monospace",
@@ -21,24 +22,24 @@ const figmaAssets = {
 const badges = [
   {
     title: "Member",
+    logoSrc: "/monkedao.jpg",
     nameTop: "Monke",
     nameBottom: "DAO",
-    circleClass: "bg-[#1f6f47]",
-    mark: "M",
+    nameStyle: { fontFamily: "var(--font-lalezar), cursive", fontWeight: 400 } as const,
   },
   {
     title: "Supported by",
+    logoSrc: "/superteamkz.png",
     nameTop: "Superteam",
     nameBottom: "Kazakhstan",
-    circleClass: "bg-[#11b8dc]",
-    mark: "S+",
+    nameStyle: { fontFamily: "var(--font-iceland), sans-serif", fontWeight: 400 } as const,
   },
   {
     title: "Alumni",
+    logoSrc: "/encodeclb.jpg",
     nameTop: "Encode",
     nameBottom: "Club",
-    circleClass: "bg-gradient-to-br from-[#2db2ff] to-[#1b29ff]",
-    mark: "e",
+    nameStyle: { fontFamily: "var(--font-iceland), sans-serif", fontWeight: 400 } as const,
   },
 ] as const;
 
@@ -75,71 +76,30 @@ const faqItems = [
   "What makes SolPoint different?",
 ] as const;
 
-interface FeedbackFormState {
-  name: string;
-  email: string;
-  message: string;
-}
-
 function BadgeRow({ className }: { className?: string }) {
   return (
     <div className={cn("grid grid-cols-1 gap-4 md:grid-cols-3", className)}>
       {badges.map((badge) => (
         <article
           key={badge.title}
-          className="rounded-[11px] border border-[#303030] bg-black px-3 py-2.5"
+          className="flex flex-col items-center rounded-[11px] border border-[#303030] bg-black px-3 py-2.5"
         >
-          <p className="text-[12px] leading-[1.1] text-white/85" style={kodeMonoStyle}>
+          <p className="self-center text-[12px] leading-[1.1] text-white/70" style={kodeMonoStyle}>
             {badge.title}
           </p>
           <div className="mt-1.5 flex items-center gap-2">
-            <div
-              className={cn(
-                "flex h-10 w-10 items-center justify-center rounded-full text-[17px] font-semibold text-white",
-                badge.circleClass
-              )}
-              style={kodeMonoStyle}
-            >
-              {badge.mark}
+            <div className="relative h-7 w-7 shrink-0 overflow-hidden rounded-full border border-white/25 sm:h-10 sm:w-10">
+              <img
+                src={badge.logoSrc}
+                alt={`${badge.nameTop} ${badge.nameBottom} logo`}
+                className="h-full w-full object-cover"
+              />
             </div>
             <div>
-              <p className="text-[17px] font-bold leading-[0.95] text-white" style={kodeMonoStyle}>
+              <p className="text-[17px] font-bold leading-[0.95] text-white" style={badge.nameStyle}>
                 {badge.nameTop}
               </p>
-              <p className="text-[17px] font-bold leading-[0.95] text-white" style={kodeMonoStyle}>
-                {badge.nameBottom}
-              </p>
-            </div>
-          </div>
-        </article>
-      ))}
-    </div>
-  );
-}
-
-function FooterBadgeStrip() {
-  return (
-    <div className="grid grid-cols-3 gap-6">
-      {badges.map((badge) => (
-        <article key={`footer-${badge.title}`}>
-          <p className="text-[12px] leading-[1.1] text-white/85" style={kodeMonoStyle}>
-            {badge.title}
-          </p>
-          <div className="mt-1.5 flex items-center gap-2">
-            <div
-              className={cn(
-                "flex h-10 w-10 items-center justify-center rounded-full text-[17px] font-semibold text-white",
-                badge.circleClass
-              )}
-              style={kodeMonoStyle}
-            >
-              {badge.mark}
-            </div>
-            <div>
-              <p className="text-[17px] font-bold leading-[0.95] text-white" style={kodeMonoStyle}>
-                {badge.nameTop}
-              </p>
-              <p className="text-[17px] font-bold leading-[0.95] text-white" style={kodeMonoStyle}>
+              <p className="text-[17px] font-bold leading-[0.95] text-white" style={badge.nameStyle}>
                 {badge.nameBottom}
               </p>
             </div>
@@ -153,20 +113,28 @@ function FooterBadgeStrip() {
 function StepPreview({ type }: { type: (typeof stepCards)[number]["previewType"] }) {
   if (type === "profile") {
     return (
-      <div className="h-[112px] w-[116px] rounded-[4px] bg-[linear-gradient(135deg,#9B45FE_0%,#00F68B_100%)] p-[1px]">
-        <div className="h-full w-full rounded-[3px] bg-[#121212] p-1.5">
-          <p className="text-center text-[9px] leading-none tracking-[-0.27px] text-white/85" style={kodeMonoStyle}>
-            SolPoint
-          </p>
-          <div className="mx-auto mt-1 h-[50px] w-[50px] overflow-hidden rounded-full border border-[#00f58d]">
-            <img src={figmaAssets.cardDanielAvatar} alt="Daniel" className="h-full w-full object-cover" />
+      <div className="h-[112px] w-[116px] shrink-0 rounded-[4px] bg-[linear-gradient(135deg,#9B45FE_0%,#00F68B_100%)] p-[1px]">
+        <div className="relative h-full w-full overflow-hidden rounded-[3px] bg-[#121212]">
+          {/* Map as background layer, overlapped by avatar */}
+          <img
+            src="/mapbase.svg"
+            alt=""
+            aria-hidden
+            className="absolute inset-x-0 w-full object-cover opacity-65"
+            style={{ top: "28px", height: "54px" }}
+          />
+          {/* Foreground content */}
+          <div className="relative z-10 flex h-full flex-col items-center justify-between p-1.5">
+            <p className="text-center text-[9px] leading-none tracking-[-0.27px] text-white/85" style={kodeMonoStyle}>
+              SolPoint
+            </p>
+            <div className="h-[46px] w-[46px] overflow-hidden rounded-full border border-[#00f58d]">
+              <img src={figmaAssets.cardDanielAvatar} alt="Daniel" className="h-full w-full object-cover" />
+            </div>
+            <p className="text-center text-[9px] leading-none tracking-[-0.27px] text-white/85" style={kodeMonoStyle}>
+              Daniel
+            </p>
           </div>
-          <div className="mx-auto mt-1 h-[12px] w-[84px] overflow-hidden">
-            <img src="/mapbase.svg" alt="" className="h-full w-full object-cover" aria-hidden />
-          </div>
-          <p className="mt-2 text-center text-[9px] leading-none tracking-[-0.27px] text-white/85" style={kodeMonoStyle}>
-            Daniel
-          </p>
         </div>
       </div>
     );
@@ -174,28 +142,21 @@ function StepPreview({ type }: { type: (typeof stepCards)[number]["previewType"]
 
   if (type === "events") {
     return (
-      <div className="h-[112px] w-[116px] rounded-[4px] bg-[linear-gradient(135deg,#9B45FE_0%,#00F68B_100%)] p-[1px]">
+      <div className="h-[112px] w-[116px] shrink-0 rounded-[4px] bg-[linear-gradient(135deg,#9B45FE_0%,#00F68B_100%)] p-[1px]">
         <div className="h-full w-full rounded-[3px] bg-[#121212] p-1.5">
-          <div className="mt-1 flex items-center justify-center gap-1.5">
-            <div className="h-[30px] w-[30px] overflow-hidden rounded-md border border-[#2a2a2a] bg-[#131313]">
-              <img
-                src={figmaAssets.cardEventMtndao}
-                alt="Event icon"
-                className="h-full w-full object-cover opacity-85"
-              />
+          {/* Triangle arrangement: two icons top row, one larger icon below-center */}
+          <div className="relative h-[62px] w-full">
+            <div className="absolute left-[6px] top-0 h-[28px] w-[28px] overflow-hidden rounded-[6px] border border-[#2a2a2a] bg-[#131313]">
+              <img src={figmaAssets.cardEventBreakpoint} alt="Event" className="h-full w-full object-cover opacity-85" />
             </div>
-            <div className="h-[30px] w-[30px] overflow-hidden rounded-md border border-[#2a2a2a] bg-[#131313]">
-              <img
-                src={figmaAssets.cardEventBreakpoint}
-                alt="Event icon"
-                className="h-full w-full object-cover opacity-85"
-              />
+            <div className="absolute right-[6px] top-0 h-[28px] w-[28px] overflow-hidden rounded-[6px] border border-[#2a2a2a] bg-[#131313]">
+              <img src={figmaAssets.cardEventMtndao} alt="Event" className="h-full w-full object-cover opacity-85" />
+            </div>
+            <div className="absolute bottom-0 left-1/2 h-[34px] w-[34px] -translate-x-1/2 overflow-hidden rounded-[8px] border border-[#2a2a2a]">
+              <img src={figmaAssets.cardEventMiami} alt="Event" className="h-full w-full object-cover" />
             </div>
           </div>
-          <div className="mt-1 h-[45px] w-[45px] overflow-hidden rounded-[9px] border border-[#2a2a2a]">
-            <img src={figmaAssets.cardEventMiami} alt="Miami event" className="h-full w-full object-cover" />
-          </div>
-          <p className="mt-2 text-[9px] leading-[1.05] tracking-[-0.27px] text-white/90" style={kodeMonoStyle}>
+          <p className="mt-1.5 text-[8px] leading-tight tracking-[-0.24px] text-white/90" style={kodeMonoStyle}>
             Solana accelerate USA
           </p>
         </div>
@@ -204,20 +165,20 @@ function StepPreview({ type }: { type: (typeof stepCards)[number]["previewType"]
   }
 
   return (
-    <div className="h-[112px] w-[116px] rounded-[4px] bg-[linear-gradient(135deg,#9B45FE_0%,#00F68B_100%)] p-[1px]">
-      <div className="h-full w-full rounded-[3px] bg-[#121212] p-1.5">
-        <div className="mx-auto h-[45px] w-[45px] overflow-hidden rounded-full border border-[#9b45fe]">
+    <div className="h-[112px] w-[116px] shrink-0 rounded-[4px] bg-[linear-gradient(135deg,#9B45FE_0%,#00F68B_100%)] p-[1px]">
+      <div className="flex h-full w-full flex-col items-center justify-center rounded-[3px] bg-[#121212] px-1.5">
+        <div className="h-[44px] w-[44px] overflow-hidden rounded-full border border-[#9b45fe]">
           <img src={figmaAssets.cardJoshAvatar} alt="Josh" className="h-full w-full object-cover" />
         </div>
         <p className="mt-1.5 text-center text-[9px] leading-none text-white/85" style={kodeMonoStyle}>
           Josh
         </p>
-        <p className="mt-0.5 text-center text-[9px] leading-[1.05] text-white/70" style={kodeMonoStyle}>
+        <p className="mt-0.5 text-center text-[9px] leading-[1.1] text-white/70" style={kodeMonoStyle}>
           Developer/Frontend
         </p>
-        <div className="mt-1 flex justify-center">
+        <div className="mt-2 flex justify-center">
           <span
-            className="rounded-[5px] bg-white px-2 py-0.5 text-[9px] leading-none text-black"
+            className="rounded-[5px] bg-white px-2.5 py-[3px] text-[8px] leading-none text-black"
             style={kodeMonoStyle}
           >
             Connect
@@ -243,62 +204,11 @@ function WorldConnectionsMap() {
 
 export function LandingPageRedesign() {
   const [openItems, setOpenItems] = useState<number[]>([]);
-  const [form, setForm] = useState<FeedbackFormState>({ name: "", email: "", message: "" });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error">("idle");
-  const [submitError, setSubmitError] = useState("");
 
   const toggleFaq = (index: number) => {
     setOpenItems((prev) =>
       prev.includes(index) ? prev.filter((item) => item !== index) : [...prev, index]
     );
-  };
-
-  const onSubmitFeedback = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    if (isSubmitting) {
-      return;
-    }
-
-    setIsSubmitting(true);
-    setSubmitStatus("idle");
-    setSubmitError("");
-
-    try {
-      const response = await fetch("/api/feedback", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: form.name,
-          email: form.email,
-          message: form.message,
-          source: "landing_contact_support",
-        }),
-      });
-
-      const payload = await response.json().catch(() => null);
-
-      if (!response.ok) {
-        setSubmitStatus("error");
-        setSubmitError(
-          payload && typeof payload.error === "string"
-            ? payload.error
-            : "Could not send your message."
-        );
-        return;
-      }
-
-      setSubmitStatus("success");
-      setForm({ name: "", email: "", message: "" });
-    } catch {
-      setSubmitStatus("error");
-      setSubmitError("Could not send your message.");
-    } finally {
-      setIsSubmitting(false);
-    }
   };
 
   return (
@@ -412,94 +322,7 @@ export function LandingPageRedesign() {
         </div>
       </section>
 
-      <section className="border-t border-[#595959] bg-[#101010]">
-        <div className="mx-auto grid w-full max-w-[860px] gap-10 px-6 py-12 md:grid-cols-[220px_170px_266px] md:px-8 md:py-14">
-          <div>
-            <h3 className="text-[26px] font-bold leading-none text-white">Socials</h3>
-            <a
-              href="https://twitter.com/solpointxyz"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-4 inline-flex h-8 w-8 items-center justify-center rounded border border-transparent text-white transition-colors hover:border-white/30"
-              aria-label="SolPoint Twitter"
-            >
-              <svg viewBox="0 0 24 24" className="h-6 w-6 fill-current" aria-hidden>
-                <path d="M18.901 1.153h3.68l-8.043 9.191L24 22.847h-7.406l-5.804-7.59-6.639 7.59H.468l8.603-9.83L0 1.154h7.594l5.247 6.932L18.9 1.153Zm-1.291 19.492h2.04L6.486 3.24H4.298L17.61 20.645Z" />
-              </svg>
-            </a>
-          </div>
-
-          <div>
-            <h3 className="text-[26px] font-bold leading-none text-white">Navigation</h3>
-            <div className="mt-4 flex flex-col gap-3">
-              <Link href="/events" className="text-[18px] font-bold text-white hover:text-white/85">
-                Events
-              </Link>
-              <Link href="/map" className="text-[18px] font-bold text-white hover:text-white/85">
-                Map
-              </Link>
-            </div>
-          </div>
-
-          <div>
-            <h3 className="text-[26px] font-bold leading-none text-white">Contact &amp; Support</h3>
-            <form className="mt-4 space-y-4" onSubmit={onSubmitFeedback}>
-              <input
-                type="text"
-                name="name"
-                value={form.name}
-                onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-                placeholder="name"
-                required
-                maxLength={120}
-                className="h-[30px] w-full rounded-[4px] border border-[#5e5e5e] bg-black px-2.5 text-[14px] font-bold text-white placeholder:text-[#a4a7ac] outline-none focus:border-[#00f58d]"
-              />
-              <input
-                type="email"
-                name="email"
-                value={form.email}
-                onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))}
-                placeholder="email"
-                required
-                maxLength={255}
-                className="h-[30px] w-full rounded-[4px] border border-[#5e5e5e] bg-black px-2.5 text-[14px] font-bold text-white placeholder:text-[#a4a7ac] outline-none focus:border-[#00f58d]"
-              />
-              <textarea
-                name="message"
-                value={form.message}
-                onChange={(event) => setForm((prev) => ({ ...prev, message: event.target.value }))}
-                placeholder="message"
-                required
-                maxLength={2000}
-                className="h-[65px] w-full resize-none rounded-[4px] border border-[#5e5e5e] bg-black px-2.5 py-2 text-[14px] font-bold text-white placeholder:text-[#a4a7ac] outline-none focus:border-[#00f58d]"
-              />
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="inline-flex h-[44px] w-full items-center justify-center rounded-[5px] bg-white text-[25px] font-bold leading-none text-black disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isSubmitting ? "SENDING..." : "SEND"}
-              </button>
-            </form>
-            {submitStatus === "success" && (
-              <p className="mt-3 text-[13px] font-bold text-[#00f58d]">
-                Message sent. Thank you.
-              </p>
-            )}
-            {submitStatus === "error" && (
-              <p className="mt-3 text-[13px] font-bold text-[#ff6b6b]">
-                {submitError}
-              </p>
-            )}
-          </div>
-        </div>
-
-        <div className="mx-auto w-full max-w-[860px] px-6 pb-12 md:px-8">
-          <div className="max-w-[520px]">
-            <FooterBadgeStrip />
-          </div>
-        </div>
-      </section>
+      <Footer />
     </main>
   );
 }

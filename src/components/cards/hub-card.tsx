@@ -160,19 +160,19 @@ export function HubCard({ hub, compact = false, entityType, isBlurred = false }:
         <span className="text-xs text-white/40" style={kmFont}>Socials:</span>
         {hub.socials?.twitter && (
           <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); trackEvent("hub_social_link_click", { event_category: "Hubs", event_label: hub.slug || hub.id, hub_id: hub.id, hub_slug: hub.slug, social_platform: "twitter", source: "hub_card_compact" }); window.open(hub.socials!.twitter!, "_blank", "noopener,noreferrer"); }}
-            className="p-1.5 rounded-full bg-white/10 text-white/60 hover:text-white transition-colors">
+            className="p-1.5 rounded-[5px] bg-white/10 text-white/60 hover:text-white transition-colors">
             <Twitter className="w-4 h-4" />
           </button>
         )}
         {hub.socials?.instagram && (
           <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); trackEvent("hub_social_link_click", { event_category: "Hubs", event_label: hub.slug || hub.id, hub_id: hub.id, hub_slug: hub.slug, social_platform: "instagram", source: "hub_card_compact" }); window.open(hub.socials!.instagram!, "_blank", "noopener,noreferrer"); }}
-            className="p-1.5 rounded-full bg-white/10 text-white/60 hover:text-white transition-colors">
+            className="p-1.5 rounded-[5px] bg-white/10 text-white/60 hover:text-white transition-colors">
             <Instagram className="w-4 h-4" />
           </button>
         )}
         {hub.socials?.facebook && (
           <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); trackEvent("hub_social_link_click", { event_category: "Hubs", event_label: hub.slug || hub.id, hub_id: hub.id, hub_slug: hub.slug, social_platform: "facebook", source: "hub_card_compact" }); window.open(hub.socials!.facebook!, "_blank", "noopener,noreferrer"); }}
-            className="p-1.5 rounded-full bg-white/10 text-white/60 hover:text-white transition-colors">
+            className="p-1.5 rounded-[5px] bg-white/10 text-white/60 hover:text-white transition-colors">
             <Facebook className="w-4 h-4" />
           </button>
         )}
@@ -190,7 +190,7 @@ export function HubCard({ hub, compact = false, entityType, isBlurred = false }:
             <div className="flex gap-2">
               <button
                 onClick={handleShare}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-full border border-[#14f195] py-2 text-sm font-bold text-[#14f195] transition-opacity hover:opacity-80 cursor-pointer"
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-[7px] border border-[#14f195] py-2 text-sm font-bold text-[#14f195] transition-opacity hover:opacity-80 cursor-pointer"
                 style={kmFont}
               >
                 {copied ? <><Check className="w-4 h-4" />Copied!</> : <><Share2 className="w-4 h-4" />Share</>}
@@ -205,7 +205,7 @@ export function HubCard({ hub, compact = false, entityType, isBlurred = false }:
               </div>
               <div className="blur-sm pointer-events-none opacity-50">
                 <div className="flex gap-2">
-                  <button className="flex-1 rounded-full border border-[#14f195] py-2 text-sm font-bold text-[#14f195]" style={kmFont}>Share</button>
+                  <button className="flex-1 rounded-[7px] border border-[#14f195] py-2 text-sm font-bold text-[#14f195]" style={kmFont}>Share</button>
                 </div>
               </div>
             </div>
@@ -223,7 +223,7 @@ export function HubCard({ hub, compact = false, entityType, isBlurred = false }:
         <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
           <button
             onClick={handleShare}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-full border border-[#14f195] py-2 text-sm font-bold text-[#14f195] transition-opacity hover:opacity-80 cursor-pointer"
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-[7px] border border-[#14f195] py-2 text-sm font-bold text-[#14f195] transition-opacity hover:opacity-80 cursor-pointer"
             style={kmFont}
           >
             {copied ? <><Check className="w-4 h-4" />Copied!</> : <><Share2 className="w-4 h-4" />Share</>}
@@ -231,7 +231,7 @@ export function HubCard({ hub, compact = false, entityType, isBlurred = false }:
           <Link
             href={path}
             onClick={(e) => { e.stopPropagation(); setTimeout(() => { trackEvent("hub_card_click", { event_category: "Hubs", event_label: hub.slug || hub.id, hub_id: hub.id, hub_slug: hub.slug, hub_name: hub.name, source: "hub_card_compact_details_button" }); }, 0); }}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-full border border-white/20 py-2 text-sm font-bold text-white/80 transition-opacity hover:opacity-80"
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-[7px] border border-white/20 py-2 text-sm font-bold text-white/80 transition-opacity hover:opacity-80"
             style={kmFont}
           >
             <ExternalLink className="w-4 h-4" />

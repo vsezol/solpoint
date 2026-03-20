@@ -143,21 +143,21 @@ export function EventCard({
             {event.socials?.twitter && (
               <a href={event.socials.twitter} target="_blank" rel="noopener noreferrer"
                 onClick={(e) => { e.stopPropagation(); trackEvent("event_social_link_click", { event_category: "Events", event_label: event.slug || event.id, event_id: event.id, social_platform: "twitter", source: "event_card_compact" }); }}
-                className="p-1.5 rounded-full bg-white/10 text-white/60 hover:text-white transition-colors">
+                className="p-1.5 rounded-[5px] bg-white/10 text-white/60 hover:text-white transition-colors">
                 <Twitter className="w-4 h-4" />
               </a>
             )}
             {event.socials?.instagram && (
               <a href={event.socials.instagram} target="_blank" rel="noopener noreferrer"
                 onClick={(e) => { e.stopPropagation(); trackEvent("event_social_link_click", { event_category: "Events", event_label: event.slug || event.id, event_id: event.id, social_platform: "instagram", source: "event_card_compact" }); }}
-                className="p-1.5 rounded-full bg-white/10 text-white/60 hover:text-white transition-colors">
+                className="p-1.5 rounded-[5px] bg-white/10 text-white/60 hover:text-white transition-colors">
                 <Instagram className="w-4 h-4" />
               </a>
             )}
             {event.socials?.facebook && (
               <a href={event.socials.facebook} target="_blank" rel="noopener noreferrer"
                 onClick={(e) => { e.stopPropagation(); trackEvent("event_social_link_click", { event_category: "Events", event_label: event.slug || event.id, event_id: event.id, social_platform: "facebook", source: "event_card_compact" }); }}
-                className="p-1.5 rounded-full bg-white/10 text-white/60 hover:text-white transition-colors">
+                className="p-1.5 rounded-[5px] bg-white/10 text-white/60 hover:text-white transition-colors">
                 <Facebook className="w-4 h-4" />
               </a>
             )}
@@ -168,7 +168,7 @@ export function EventCard({
         {canViewDetails ? (
           <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
             <button
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-full border border-[#14f195] py-2 text-sm font-bold text-[#14f195] transition-opacity hover:opacity-80"
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-[7px] border border-[#14f195] py-2 text-sm font-bold text-[#14f195] transition-opacity hover:opacity-80"
               style={kmFont}
               onClick={(e) => {
                 e.stopPropagation();
@@ -180,7 +180,7 @@ export function EventCard({
               Share
             </button>
             <button
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-full border border-white/20 py-2 text-sm font-bold text-white/80 transition-opacity hover:opacity-80"
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-[7px] border border-white/20 py-2 text-sm font-bold text-white/80 transition-opacity hover:opacity-80"
               style={kmFont}
               onClick={(e) => {
                 e.stopPropagation();
@@ -202,8 +202,8 @@ export function EventCard({
             </div>
             <div className="blur-sm pointer-events-none opacity-50">
               <div className="flex gap-2">
-                <button className="flex-1 rounded-full border border-[#14f195] py-2 text-sm font-bold text-[#14f195]" style={kmFont}>Share</button>
-                <button className="flex-1 rounded-full border border-white/20 py-2 text-sm font-bold text-white/80" style={kmFont}>Details</button>
+                <button className="flex-1 rounded-[7px] border border-[#14f195] py-2 text-sm font-bold text-[#14f195]" style={kmFont}>Share</button>
+                <button className="flex-1 rounded-[7px] border border-white/20 py-2 text-sm font-bold text-white/80" style={kmFont}>Details</button>
               </div>
             </div>
           </div>
