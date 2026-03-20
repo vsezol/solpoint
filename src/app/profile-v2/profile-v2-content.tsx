@@ -680,60 +680,74 @@ export function ProfileV2Content({
         </div>
       </section>
 
-      <aside className="border border-white/10 rounded-xl bg-black p-4 sm:p-5">
-        <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-4">Mutual context</h3>
+      <aside className="rounded-xl bg-black px-5 py-6 sm:px-8 sm:py-8" style={{ border: "1px solid rgba(255,255,255,0.10)" }}>
+        <h3 className="mb-6 text-center text-base font-semibold text-white">Mutual context</h3>
         {isOwnProfile ? (
-          <p className="text-sm text-[var(--color-text-secondary)]">Mutual context is shown when someone else views your profile.</p>
+          <p className="text-center text-sm text-[var(--color-text-secondary)]">Mutual context is shown when someone else views your profile.</p>
         ) : !isAuthenticated ? (
-          <p className="text-sm text-[var(--color-text-secondary)]">Sign in to see mutual connections and shared events.</p>
+          <p className="text-center text-sm text-[var(--color-text-secondary)]">Sign in to see mutual connections and shared events.</p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <div>
-              <p className="text-sm text-[var(--color-text-secondary)] mb-2">Mutual connections: {mutualConnectionsCount}</p>
-              <div className="flex -space-x-2 mb-3 min-h-9">
-                {mutualConnections.slice(0, 3).map((item) => (
+          <div className="grid grid-cols-2 gap-4">
+            {/* Mutual connections */}
+            <div className="flex flex-col items-center gap-4">
+              <p className="text-sm text-[var(--color-text-secondary)]">
+                Mutual connections: <span className="font-bold text-white">{mutualConnectionsCount}</span>
+              </p>
+              <div className="flex min-h-[48px] items-center">
+                {mutualConnections.slice(0, 3).map((item, i) => (
                   <Link
                     href={`/profile-v2/${item.twitter_handle}`}
                     key={item.id}
-                    className="w-9 h-9 rounded-full overflow-hidden border-2 border-[var(--color-background)] bg-[var(--color-surface)]"
+                    className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full border-2 border-black bg-[var(--color-surface)] transition-transform hover:z-10 hover:scale-105"
+                    style={{ marginLeft: i === 0 ? 0 : "-14px", zIndex: i }}
                   >
                     {item.avatar_url ? (
-                      <Image src={item.avatar_url} alt={item.twitter_name} width={36} height={36} className="object-cover w-full h-full" />
+                      <Image src={item.avatar_url} alt={item.twitter_name} width={48} height={48} className="h-full w-full object-cover" />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-xs text-[var(--color-text-primary)]">
+                      <div className="flex h-full w-full items-center justify-center text-xs text-white">
                         {item.twitter_name?.[0]?.toUpperCase() || "?"}
                       </div>
                     )}
                   </Link>
                 ))}
               </div>
-              <Button variant="outline" size="sm" onClick={handleOpenConnectionsList}>
+              <button
+                onClick={handleOpenConnectionsList}
+                className="w-full rounded-[5px] bg-white py-3 text-sm font-bold text-black transition-opacity hover:opacity-90"
+              >
                 Show list
-              </Button>
+              </button>
             </div>
 
-            <div>
-              <p className="text-sm text-[var(--color-text-secondary)] mb-2">Same event attendee: {mutualEventsCount}</p>
-              <div className="flex -space-x-2 mb-3 min-h-9">
-                {mutualEvents.slice(0, 3).map((event) => (
+            {/* Same event attendee */}
+            <div className="flex flex-col items-center gap-4">
+              <p className="text-sm text-[var(--color-text-secondary)]">
+                Same event attendee: <span className="font-bold text-white">{mutualEventsCount}</span>
+              </p>
+              <div className="flex min-h-[48px] items-center">
+                {mutualEvents.slice(0, 3).map((event, i) => (
                   <Link
                     href={`/events/${event.slug || event.id}`}
                     key={event.id}
-                    className="w-9 h-9 rounded-full overflow-hidden border-2 border-[var(--color-background)] bg-[var(--color-surface)]"
+                    className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full border-2 border-black bg-[var(--color-surface)] transition-transform hover:z-10 hover:scale-105"
+                    style={{ marginLeft: i === 0 ? 0 : "-14px", zIndex: i }}
                   >
                     {event.image_url ? (
-                      <Image src={event.image_url} alt={event.name} width={36} height={36} className="object-cover w-full h-full" unoptimized />
+                      <Image src={event.image_url} alt={event.name} width={48} height={48} className="h-full w-full object-cover" unoptimized />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-[10px] text-[var(--color-text-primary)] px-1 text-center">
+                      <div className="flex h-full w-full items-center justify-center px-1 text-center text-[10px] text-white">
                         Event
                       </div>
                     )}
                   </Link>
                 ))}
               </div>
-              <Button variant="outline" size="sm" onClick={handleOpenEventsList}>
+              <button
+                onClick={handleOpenEventsList}
+                className="w-full rounded-[5px] bg-white py-3 text-sm font-bold text-black transition-opacity hover:opacity-90"
+              >
                 Show list
-              </Button>
+              </button>
             </div>
           </div>
         )}

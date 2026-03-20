@@ -85,7 +85,7 @@ export function Footer() {
     <footer className="border-t border-[#595959] bg-[#101010] pb-20 md:pb-0">
       <div className="mx-auto flex w-full max-w-[980px] flex-col gap-8 px-4 py-7 sm:px-6 sm:py-10 md:flex-row md:items-start md:px-8 md:py-12">
         <div className="flex min-w-0 flex-1 flex-col gap-6 sm:gap-8">
-          <div className="flex flex-row gap-8 sm:gap-[148px]">
+          <div className="flex flex-row justify-center gap-8 sm:justify-start sm:gap-[148px]">
             <div>
               <h3 className="text-[18px] font-bold leading-none tracking-normal text-white sm:text-[26px]" style={kodeMonoStyle}>
                 Socials
@@ -126,7 +126,7 @@ export function Footer() {
 
           <div className="grid grid-cols-3 gap-3 sm:gap-x-[43px]">
             {badges.map((badge) => (
-              <article key={badge.title} className="flex w-fit flex-col">
+              <article key={badge.title} className="mx-auto flex w-fit flex-col sm:mx-0">
                 <p
                   className="self-center text-[10px] font-normal leading-none tracking-normal text-white/70 sm:text-[12px]"
                   style={kodeMonoStyle}

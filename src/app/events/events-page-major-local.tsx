@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -45,18 +45,20 @@ function formatLocation(city?: string | null, country?: string | null): string {
 
 function EventPoster({
   event,
-  sizeClassName,
+  className,
+  sizes,
   onClick,
 }: {
   event: ShowcaseEvent;
-  sizeClassName: string;
+  className?: string;
+  sizes?: string;
   onClick: () => void;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`relative overflow-hidden bg-[#101319] border border-white/10 ${sizeClassName}`}
+      className={`relative overflow-hidden bg-[#101319] border border-white/10 ${className ?? ""}`}
       aria-label={`Open ${event.name}`}
     >
       {event.image_url ? (
@@ -65,7 +67,7 @@ function EventPoster({
           alt={event.name}
           fill
           className="object-cover"
-          sizes="(max-width: 768px) 45vw, 280px"
+          sizes={sizes ?? "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"}
         />
       ) : (
         <div className="flex h-full w-full items-center justify-center text-white/45">
@@ -86,7 +88,7 @@ function AttendeesSummary({
   centered?: boolean;
 }) {
   return (
-    <div className={`flex flex-col gap-2 ${centered ? "items-center" : "items-start"}`}>
+    <div className={`flex flex-col gap-1.5 ${centered ? "items-center" : "items-start"}`}>
       <div className={`flex items-center ${centered ? "justify-center" : "pl-2"}`}>
         {attendees.length > 0 ? (
           attendees.slice(0, 3).map((attendee, index) => (
@@ -116,47 +118,49 @@ function MajorEventCard({ event }: { event: ShowcaseEvent }) {
   const router = useRouter();
 
   return (
-    <article className="flex flex-col items-start gap-3">
+    <article className="flex h-full flex-col">
       <EventPoster
         event={event}
-        sizeClassName="h-[200px] w-[200px] sm:h-[240px] sm:w-[240px] lg:h-[280px] lg:w-[280px]"
+        className="aspect-square w-full"
         onClick={() => router.push(`/events/${event.slug}`)}
       />
 
-      <div className="space-y-2">
-        <h3
-          className="text-lg leading-tight text-white sm:text-xl"
-          style={{ fontFamily: "var(--font-kode-mono), monospace" }}
-        >
-          {event.name}
-        </h3>
-        <p className="text-sm text-white/95" style={{ fontFamily: "var(--font-kode-mono), monospace" }}>
-          {formatLocation(event.city, event.country)}
-        </p>
-        <p className="text-xs text-[#70767d]" style={{ fontFamily: "var(--font-kode-mono), monospace" }}>
-          {formatDateRange(event.start_date, event.end_date)}
-        </p>
-      </div>
+      <div className="flex flex-1 flex-col gap-3 pt-4">
+        <div className="space-y-1.5">
+          <h3
+            className="line-clamp-2 text-lg leading-snug text-white sm:text-xl"
+            style={{ fontFamily: "var(--font-kode-mono), monospace" }}
+          >
+            {event.name}
+          </h3>
+          <p className="text-sm text-white/95" style={{ fontFamily: "var(--font-kode-mono), monospace" }}>
+            {formatLocation(event.city, event.country)}
+          </p>
+          <p className="text-xs text-[#70767d]" style={{ fontFamily: "var(--font-kode-mono), monospace" }}>
+            {formatDateRange(event.start_date, event.end_date)}
+          </p>
+        </div>
 
-      <AttendeesSummary attendees={event.attendee_previews} peopleGoing={event.people_going} centered />
+        <div className="mt-auto flex flex-col items-center gap-3">
+          <AttendeesSummary attendees={event.attendee_previews} peopleGoing={event.people_going} centered />
 
-      <div className="flex items-center gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-9 w-[92px] border-white bg-white text-black hover:bg-white/90"
-          onClick={() => router.push(`/events/${event.slug}`)}
-        >
-          Attend
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-9 w-[118px] border-[#00d084] bg-black text-white hover:bg-[#0f1411]"
-          onClick={() => router.push(`/events/${event.slug}`)}
-        >
-          Show list
-        </Button>
+          <div className="flex w-full items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-[49px] flex-1 rounded-[7px] border-white bg-white text-black hover:bg-white/90"
+              onClick={() => router.push(`/events/${event.slug}`)}
+            >
+              Attend
+            </Button>
+            <GradientBorderButton
+              className="flex-1"
+              onClick={() => router.push(`/events/${event.slug}`)}
+            >
+              Show list
+            </GradientBorderButton>
+          </div>
+        </div>
       </div>
     </article>
   );
@@ -166,16 +170,17 @@ function LocalEventRow({ event }: { event: ShowcaseEvent }) {
   const router = useRouter();
 
   return (
-    <article className="grid grid-cols-1 items-start gap-4 border-b border-white/10 pb-6 md:grid-cols-[220px_1fr_auto]">
+    <article className="grid grid-cols-[120px_1fr] items-start gap-4 border-b border-white/10 pb-6 sm:grid-cols-[160px_1fr_auto] md:grid-cols-[200px_1fr_auto]">
       <EventPoster
         event={event}
-        sizeClassName="h-[140px] w-[140px] sm:h-[160px] sm:w-[160px] md:h-[200px] md:w-[200px]"
+        className="aspect-square w-full"
+        sizes="(max-width: 640px) 120px, (max-width: 768px) 160px, 200px"
         onClick={() => router.push(`/events/${event.slug}`)}
       />
 
-      <div className="space-y-2 md:pt-1">
+      <div className="min-w-0 space-y-1.5">
         <h3
-          className="text-xl leading-tight text-white"
+          className="text-base leading-tight text-white sm:text-lg md:text-xl"
           style={{ fontFamily: "var(--font-kode-mono), monospace" }}
         >
           {event.name}
@@ -188,18 +193,49 @@ function LocalEventRow({ event }: { event: ShowcaseEvent }) {
         </p>
       </div>
 
-      <div className="flex flex-col gap-3 md:items-start">
-        <AttendeesSummary attendees={event.attendee_previews} peopleGoing={event.people_going} />
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-9 w-[118px] border-white bg-white text-black hover:bg-white/90"
-          onClick={() => router.push(`/events/${event.slug}`)}
-        >
-          Show list
-        </Button>
+      <div className="col-span-2 flex items-center justify-between gap-3 sm:col-span-1 sm:flex-col sm:items-center sm:justify-start">
+        <AttendeesSummary attendees={event.attendee_previews} peopleGoing={event.people_going} centered />
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-[49px] rounded-[7px] border-white bg-white text-black hover:bg-white/90"
+            onClick={() => router.push(`/events/${event.slug}`)}
+          >
+            Attend
+          </Button>
+          <GradientBorderButton onClick={() => router.push(`/events/${event.slug}`)}>
+            Show list
+          </GradientBorderButton>
+        </div>
       </div>
     </article>
+  );
+}
+
+function GradientBorderButton({
+  onClick,
+  children,
+  className,
+}: {
+  onClick: () => void;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`rounded-[7px] p-px ${className ?? ""}`}
+      style={{ background: "linear-gradient(to right, #9849FC, #01F48B)" }}
+    >
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-[49px] w-full rounded-[6px] bg-black text-white hover:bg-white/5"
+        onClick={onClick}
+      >
+        {children}
+      </Button>
+    </div>
   );
 }
 
@@ -245,15 +281,15 @@ export default function EventsPageMajorLocal() {
   return (
     <>
       <Header />
-      <main className="min-h-screen bg-black pt-20 pb-16 text-white">
-        <section className="mx-auto w-full px-4 sm:px-8 lg:px-[238px]">
+      <main className="min-h-screen bg-black pb-16 pt-20 text-white">
+        <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
           {loading ? (
             <div className="space-y-8 pt-10">
               <div className="h-8 w-56 animate-pulse rounded bg-white/10" />
-              <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
                 {Array.from({ length: 3 }).map((_, index) => (
                   <div key={index} className="space-y-4">
-                    <div className="h-[220px] animate-pulse rounded bg-white/10 sm:h-[260px]" />
+                    <div className="aspect-square w-full animate-pulse rounded bg-white/10" />
                     <div className="h-6 w-44 animate-pulse rounded bg-white/10" />
                     <div className="h-4 w-28 animate-pulse rounded bg-white/10" />
                   </div>
@@ -275,7 +311,7 @@ export default function EventsPageMajorLocal() {
                 </h2>
 
                 {data.majorEvents.length > 0 ? (
-                  <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+                  <div className="grid items-stretch gap-8 sm:grid-cols-2 lg:grid-cols-3">
                     {data.majorEvents.map((event) => (
                       <MajorEventCard key={event.id} event={event} />
                     ))}
@@ -294,7 +330,7 @@ export default function EventsPageMajorLocal() {
                 </h2>
 
                 {data.localEvents.length > 0 ? (
-                  <div className="space-y-8">
+                  <div className="space-y-6 sm:px-8 lg:px-16">
                     {data.localEvents.map((event) => (
                       <LocalEventRow key={event.id} event={event} />
                     ))}
@@ -329,7 +365,7 @@ export default function EventsPageMajorLocal() {
               </Link>
             </div>
           )}
-        </section>
+        </div>
       </main>
       <Footer />
     </>
