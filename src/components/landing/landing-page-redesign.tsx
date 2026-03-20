@@ -115,13 +115,13 @@ function StepPreview({ type }: { type: (typeof stepCards)[number]["previewType"]
     return (
       <div className="h-[112px] w-[116px] shrink-0 rounded-[4px] bg-[linear-gradient(135deg,#9B45FE_0%,#00F68B_100%)] p-[1px]">
         <div className="relative h-full w-full overflow-hidden rounded-[3px] bg-[#121212]">
-          {/* Map starts just below the avatar, peeks from behind its bottom edge */}
+          {/* Map at full natural width — Americas left edge, Japan right edge */}
           <img
             src="/mapbase.svg"
             alt=""
             aria-hidden
-            className="absolute inset-x-0 w-full object-cover opacity-65"
-            style={{ top: "52px", height: "58px" }}
+            className="absolute inset-x-0 w-full opacity-65"
+            style={{ top: "50px" }}
           />
           {/* Foreground: SolPoint → avatar → Daniel pushed to bottom */}
           <div className="relative z-10 flex h-full flex-col items-center p-1.5">
@@ -144,21 +144,24 @@ function StepPreview({ type }: { type: (typeof stepCards)[number]["previewType"]
     return (
       <div className="h-[112px] w-[116px] shrink-0 rounded-[4px] bg-[linear-gradient(135deg,#9B45FE_0%,#00F68B_100%)] p-[1px]">
         <div className="flex h-full w-full flex-col rounded-[3px] bg-[#121212] px-1.5 pb-2 pt-1.5">
-          {/* Triangle arrangement: two icons top row, one larger icon below-center */}
-          <div className="relative h-[62px] w-full">
-            <div className="absolute left-[6px] top-0 h-[28px] w-[28px] overflow-hidden rounded-[6px] border border-[#2a2a2a] bg-[#131313]">
-              <img src={figmaAssets.cardEventBreakpoint} alt="Event" className="h-full w-full object-cover opacity-85" />
+          {/* Icons + text grouped together, pushed to bottom */}
+          <div className="mt-auto flex flex-col gap-2">
+            {/* Triangle: two icons top row, one larger below-center */}
+            <div className="relative h-[70px] w-full">
+              <div className="absolute left-[4px] top-0 h-[30px] w-[30px] overflow-hidden rounded-[6px] border border-[#2a2a2a] bg-[#131313]">
+                <img src={figmaAssets.cardEventBreakpoint} alt="Event" className="h-full w-full object-cover opacity-85" />
+              </div>
+              <div className="absolute right-[4px] top-0 h-[30px] w-[30px] overflow-hidden rounded-[6px] border border-[#2a2a2a] bg-[#131313]">
+                <img src={figmaAssets.cardEventMtndao} alt="Event" className="h-full w-full object-cover opacity-85" />
+              </div>
+              <div className="absolute bottom-0 left-1/2 h-[38px] w-[38px] -translate-x-1/2 overflow-hidden rounded-[8px] border border-[#2a2a2a]">
+                <img src={figmaAssets.cardEventMiami} alt="Event" className="h-full w-full object-cover" />
+              </div>
             </div>
-            <div className="absolute right-[6px] top-0 h-[28px] w-[28px] overflow-hidden rounded-[6px] border border-[#2a2a2a] bg-[#131313]">
-              <img src={figmaAssets.cardEventMtndao} alt="Event" className="h-full w-full object-cover opacity-85" />
-            </div>
-            <div className="absolute bottom-0 left-1/2 h-[34px] w-[34px] -translate-x-1/2 overflow-hidden rounded-[8px] border border-[#2a2a2a]">
-              <img src={figmaAssets.cardEventMiami} alt="Event" className="h-full w-full object-cover" />
-            </div>
+            <p className="whitespace-nowrap text-center text-[9px] font-bold leading-[100%] tracking-[-0.27px] text-white/90" style={kodeMonoStyle}>
+              Solana accelerate USA
+            </p>
           </div>
-          <p className="mt-auto whitespace-nowrap text-[9px] font-bold leading-[100%] tracking-[-0.27px] text-white/90" style={kodeMonoStyle}>
-            Solana accelerate USA
-          </p>
         </div>
       </div>
     );
