@@ -61,6 +61,15 @@ const kodeMono25Bold: CSSProperties = {
 
 const figmaConnectButtonClass =
   "flex h-[44px] w-[195px] shrink-0 items-center justify-center rounded-[5px] border-0 bg-white p-0 text-black shadow-none hover:bg-white/90 focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]";
+const figmaCancelButtonClass =
+  "flex h-[44px] w-[195px] shrink-0 items-center justify-center rounded-[5px] border border-white/35 bg-transparent p-0 text-[var(--color-text-primary)] shadow-none hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]";
+
+// Compact sizes: match the default `Button` sizing (same as "Edit profile")
+// Keep Connect-like colors + focus behavior, but without fixed h/w.
+const figmaConnectButtonCompactClass =
+  "rounded-[5px] border-0 bg-white text-black shadow-none hover:bg-white/90 focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]";
+const figmaCancelButtonCompactClass =
+  "rounded-[5px] border border-white/35 bg-transparent text-[var(--color-text-primary)] shadow-none hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]";
 
 /** Shared overrides for profile-v2 modals — matches events/map-filter aesthetic */
 const v2ModalClass = "!bg-[#101319] !border-white/[0.08] !rounded-[10px]";
@@ -716,11 +725,23 @@ export function ProfileV2Content({
             )}
             {isOwnProfile && isEditingProfile && (
               <>
-                <Button type="button" variant="primary" onClick={handleSave} disabled={isSaving || detailsLoading}>
+                <Button
+                  type="button"
+                  variant="primary"
+                  className={figmaConnectButtonCompactClass}
+                  onClick={handleSave}
+                  disabled={isSaving || detailsLoading}
+                >
                   {isSaving ? <Loader2 className="mr-2 h-4 w-4 shrink-0 animate-spin" aria-hidden /> : null}
                   Save
                 </Button>
-                <Button type="button" variant="outline" onClick={handleCancelEdit} disabled={isSaving}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className={figmaCancelButtonCompactClass}
+                  onClick={handleCancelEdit}
+                  disabled={isSaving}
+                >
                   Cancel
                 </Button>
               </>
