@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { Avatar, AuthRequiredModal, Button, Modal, ModalContent, ModalHeader, ModalTitle } from "@/components/ui";
 import { formControlFocusClasses } from "@/components/ui/form-control-focus";
-import { Loader2, MapPin, Plus, Trash2, Users } from "lucide-react";
+import { Calendar, Loader2, MapPin, Plus, Trash2, Users } from "lucide-react";
 import type { User } from "@/types";
 import type { FriendshipStatus } from "@/types/profile";
 import {
@@ -14,6 +14,7 @@ import {
   getProfileDetails,
   getProfileMutualConnections,
   getProfileMutualEvents,
+  getProfileConnections,
   saveProfileDetails,
   type MutualConnection,
   type MutualEvent,
@@ -60,6 +61,31 @@ const kodeMono25Bold: CSSProperties = {
 
 const figmaConnectButtonClass =
   "flex h-[44px] w-[195px] shrink-0 items-center justify-center rounded-[5px] border-0 bg-white p-0 text-black shadow-none hover:bg-white/90 focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]";
+
+/** Shared overrides for profile-v2 modals — matches events/map-filter aesthetic */
+const v2ModalClass = "!bg-[#101319] !border-white/[0.08] !rounded-[10px]";
+const v2ModalHeaderClass = "!border-white/[0.08]";
+const v2ModalTitleStyle: CSSProperties = {
+  fontFamily: "var(--font-kode-mono), monospace",
+  fontWeight: 600,
+  fontSize: 15,
+  lineHeight: 1,
+  letterSpacing: 0,
+};
+const v2CloseButtonClass =
+  "!text-white/40 hover:!text-white hover:!bg-white/10 !rounded-[5px]";
+
+function formatEventDate(startDate: string, endDate?: string | null): string {
+  const start = new Date(startDate);
+  const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
+  const s = start.toLocaleDateString("en-US", opts);
+  if (!endDate) return s;
+  const end = new Date(endDate);
+  if (start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear()) {
+    return `${s} – ${end.getDate()}`;
+  }
+  return `${s} – ${end.toLocaleDateString("en-US", opts)}`;
+}
 
 interface ProfileV2ContentProps {
   user: User;
@@ -176,6 +202,10 @@ export function ProfileV2Content({
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isConnectionsModalOpen, setIsConnectionsModalOpen] = useState(false);
   const [isEventsModalOpen, setIsEventsModalOpen] = useState(false);
+
+  const [isAllConnectionsModalOpen, setIsAllConnectionsModalOpen] = useState(false);
+  const [allConnections, setAllConnections] = useState<MutualConnection[]>([]);
+  const [allConnectionsLoading, setAllConnectionsLoading] = useState(false);
 
   const applyDetails = useCallback(
     (d: ProfileDetailsResponse) => {
@@ -317,6 +347,25 @@ export function ProfileV2Content({
     setIsEventsModalOpen(true);
   };
 
+  const handleOpenAllConnectionsList = async () => {
+    if (!isAuthenticated) {
+      setIsAuthModalOpen(true);
+      return;
+    }
+    setIsAllConnectionsModalOpen(true);
+    if (allConnections.length === 0) {
+      setAllConnectionsLoading(true);
+      try {
+        const result = await getProfileConnections(user.id);
+        setAllConnections(result.data || []);
+      } catch (error) {
+        console.error("Failed to load connections:", error);
+      } finally {
+        setAllConnectionsLoading(false);
+      }
+    }
+  };
+
   const handleSave = async () => {
     if (!isAuthenticated || !isOwnProfile || isSaving) {
       if (!isAuthenticated) {
@@ -414,9 +463,14 @@ export function ProfileV2Content({
         <span>{location}</span>
       </p>
 
-      <p className="text-[var(--color-text-secondary)]" style={kodeMono15}>
+      <button
+        type="button"
+        className="text-[var(--color-text-secondary)] transition-opacity hover:opacity-70 cursor-pointer"
+        style={kodeMono15}
+        onClick={handleOpenAllConnectionsList}
+      >
         {friendsCount} connections
-      </p>
+      </button>
     </div>
   );
 
@@ -753,20 +807,40 @@ export function ProfileV2Content({
         )}
       </aside>
 
-      <Modal isOpen={isConnectionsModalOpen} onClose={() => setIsConnectionsModalOpen(false)} size="md" ariaLabel="Mutual connections">
-        <ModalHeader>
-          <ModalTitle>Mutual connections</ModalTitle>
+      <Modal isOpen={isConnectionsModalOpen} onClose={() => setIsConnectionsModalOpen(false)} size="md" ariaLabel="Mutual connections" className={v2ModalClass} closeButtonClassName={v2CloseButtonClass}>
+        <ModalHeader className={v2ModalHeaderClass}>
+          <ModalTitle style={v2ModalTitleStyle}>Mutual connections</ModalTitle>
         </ModalHeader>
         <ModalContent>
-          <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+          <div className="max-h-[60vh] overflow-y-auto">
             {mutualConnectionsCount === 0 ? (
-              <p className="text-sm text-[var(--color-text-secondary)]">No mutual connections.</p>
+              <p className="py-4 text-center text-sm text-white/50" style={kodeMono15}>No mutual connections.</p>
             ) : (
-              <ul className="space-y-2">
+              <ul className="divide-y divide-white/10">
                 {mutualConnectionsItems.map((item) => (
                   <li key={item.id}>
-                    <Link href={`/profile-v2/${item.twitter_handle}`} className="text-[var(--color-primary)] hover:underline">
-                      {item.twitter_name} @{item.twitter_handle}
+                    <Link
+                      href={`/profile-v2/${item.twitter_handle}`}
+                      className="flex items-center gap-3 py-3 transition-opacity hover:opacity-80"
+                      onClick={() => setIsConnectionsModalOpen(false)}
+                    >
+                      <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border border-white/10 bg-[#101319]">
+                        {item.avatar_url ? (
+                          <Image src={item.avatar_url} alt={item.twitter_name} fill className="object-cover" />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-xs text-white/60">
+                            {item.twitter_name?.[0]?.toUpperCase() || "?"}
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-white" style={{ fontFamily: "var(--font-kode-mono), monospace" }}>
+                          {item.twitter_name}
+                        </p>
+                        <p className="truncate text-xs text-white/50" style={{ fontFamily: "var(--font-kode-mono), monospace" }}>
+                          @{item.twitter_handle}
+                        </p>
+                      </div>
                     </Link>
                   </li>
                 ))}
@@ -776,20 +850,114 @@ export function ProfileV2Content({
         </ModalContent>
       </Modal>
 
-      <Modal isOpen={isEventsModalOpen} onClose={() => setIsEventsModalOpen(false)} size="md" ariaLabel="Mutual events">
-        <ModalHeader>
-          <ModalTitle>Same event attendee</ModalTitle>
+      <Modal isOpen={isEventsModalOpen} onClose={() => setIsEventsModalOpen(false)} size="md" ariaLabel="Mutual events" className={v2ModalClass} closeButtonClassName={v2CloseButtonClass}>
+        <ModalHeader className={v2ModalHeaderClass}>
+          <ModalTitle style={v2ModalTitleStyle}>Same event attendee</ModalTitle>
         </ModalHeader>
         <ModalContent>
-          <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+          <div className="max-h-[60vh] overflow-y-auto">
             {mutualEventsCount === 0 ? (
-              <p className="text-sm text-[var(--color-text-secondary)]">No shared upcoming events.</p>
+              <p className="py-4 text-center text-sm text-white/50" style={kodeMono15}>No shared upcoming events.</p>
             ) : (
-              <ul className="space-y-2">
+              <ul className="divide-y divide-white/10">
                 {mutualEventsItems.map((event) => (
                   <li key={event.id}>
-                    <Link href={`/events/${event.slug || event.id}`} className="text-[var(--color-primary)] hover:underline">
-                      {event.name}
+                    <Link
+                      href={`/events/${event.slug || event.id}`}
+                      className="flex items-center gap-3 py-3 transition-opacity hover:opacity-80"
+                      onClick={() => setIsEventsModalOpen(false)}
+                    >
+                      <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-[5px] border border-white/10 bg-[#101319]">
+                        {event.image_url ? (
+                          <Image
+                            src={event.image_url}
+                            alt={event.name}
+                            fill
+                            className="object-cover"
+                            unoptimized
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-white/30">
+                            <Calendar className="h-5 w-5" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p
+                          className="truncate text-sm font-medium text-white"
+                          style={{ fontFamily: "var(--font-kode-mono), monospace" }}
+                        >
+                          {event.name}
+                        </p>
+                        {event.city && (
+                          <p
+                            className="mt-0.5 truncate text-xs text-white/70"
+                            style={{ fontFamily: "var(--font-kode-mono), monospace" }}
+                          >
+                            {event.city}
+                          </p>
+                        )}
+                        <p
+                          className="mt-0.5 truncate text-xs text-white/40"
+                          style={{ fontFamily: "var(--font-kode-mono), monospace" }}
+                        >
+                          {formatEventDate(event.start_date, event.end_date)}
+                        </p>
+                      </div>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </ModalContent>
+      </Modal>
+
+      <Modal
+        isOpen={isAllConnectionsModalOpen}
+        onClose={() => setIsAllConnectionsModalOpen(false)}
+        size="md"
+        ariaLabel="Connections list"
+        className={v2ModalClass}
+        closeButtonClassName={v2CloseButtonClass}
+      >
+        <ModalHeader className={v2ModalHeaderClass}>
+          <ModalTitle style={v2ModalTitleStyle}>
+            {isOwnProfile ? "My Connections" : `${user.twitter_name}'s Connections`}
+          </ModalTitle>
+        </ModalHeader>
+        <ModalContent>
+          <div className="max-h-[60vh] overflow-y-auto">
+            {allConnectionsLoading ? (
+              <ProfileSectionContentLoader />
+            ) : allConnections.length === 0 ? (
+              <p className="py-4 text-center text-sm text-white/50" style={kodeMono15}>No connections yet.</p>
+            ) : (
+              <ul className="divide-y divide-white/10">
+                {allConnections.map((item) => (
+                  <li key={item.id}>
+                    <Link
+                      href={`/profile-v2/${item.twitter_handle}`}
+                      className="flex items-center gap-3 py-3 transition-opacity hover:opacity-80"
+                      onClick={() => setIsAllConnectionsModalOpen(false)}
+                    >
+                      <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border border-white/10 bg-[#101319]">
+                        {item.avatar_url ? (
+                          <Image src={item.avatar_url} alt={item.twitter_name} fill className="object-cover" />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-xs text-white/60">
+                            {item.twitter_name?.[0]?.toUpperCase() || "?"}
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-white" style={{ fontFamily: "var(--font-kode-mono), monospace" }}>
+                          {item.twitter_name}
+                        </p>
+                        <p className="truncate text-xs text-white/50" style={{ fontFamily: "var(--font-kode-mono), monospace" }}>
+                          @{item.twitter_handle}
+                        </p>
+                      </div>
                     </Link>
                   </li>
                 ))}

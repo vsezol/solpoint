@@ -195,16 +195,19 @@ function LocalEventRow({ event }: { event: ShowcaseEvent }) {
 
       <div className="col-span-2 flex items-center justify-between gap-3 sm:col-span-1 sm:flex-col sm:items-center sm:justify-start">
         <AttendeesSummary attendees={event.attendee_previews} peopleGoing={event.people_going} centered />
-        <div className="flex gap-2">
+        <div className="flex w-full gap-2 sm:w-auto">
           <Button
             variant="outline"
             size="sm"
-            className="h-[49px] rounded-[7px] border-white bg-white text-black hover:bg-white/90"
+            className="h-[49px] flex-1 rounded-[7px] border-white bg-white text-black hover:bg-white/90 sm:flex-none sm:w-[125px]"
             onClick={() => router.push(`/events/${event.slug}`)}
           >
             Attend
           </Button>
-          <GradientBorderButton onClick={() => router.push(`/events/${event.slug}`)}>
+          <GradientBorderButton
+            className="flex-1 sm:flex-none sm:w-[125px]"
+            onClick={() => router.push(`/events/${event.slug}`)}
+          >
             Show list
           </GradientBorderButton>
         </div>
@@ -321,7 +324,7 @@ export default function EventsPageMajorLocal() {
                 )}
               </section>
 
-              <section className="space-y-6">
+              <section className="space-y-0">
                 <h2
                   className="text-center text-[28px] font-semibold"
                   style={{ fontFamily: "var(--font-kode-mono), monospace" }}
@@ -330,7 +333,7 @@ export default function EventsPageMajorLocal() {
                 </h2>
 
                 {data.localEvents.length > 0 ? (
-                  <div className="space-y-6 sm:px-8 lg:px-16">
+                  <div className="mt-10 space-y-6 sm:px-8 lg:px-16">
                     {data.localEvents.map((event) => (
                       <LocalEventRow key={event.id} event={event} />
                     ))}

@@ -137,7 +137,7 @@ export function MapPageV2() {
                   </div>
                 ) : (
                   <Card className="mapcn-map-container h-full overflow-hidden rounded-none border-0 p-0" style={{ background: "#18E3C5" }}>
-                    <Map center={[55, 72]} zoom={3.35}>
+                    <Map center={[20, 10]} zoom={1}>
                       <WaterLayer />
                       <CountriesLayer landColor="#4A31AA" />
                       <MapMarkersLayer

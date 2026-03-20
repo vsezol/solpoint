@@ -199,3 +199,10 @@ export async function getMutualFollowers(): Promise<User[]> {
   const data = (await parseJsonOrThrow(response)) as { mutualFollowers?: User[] };
   return data.mutualFollowers || [];
 }
+
+export async function getProfileConnections(userId: string): Promise<{ data: MutualConnection[]; count: number }> {
+  const response = await fetch(`/api/friends/list?user_id=${encodeURIComponent(userId)}&type=mutual`, {
+    cache: "no-store",
+  });
+  return (await parseJsonOrThrow(response)) as { data: MutualConnection[]; count: number };
+}
