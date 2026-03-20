@@ -115,23 +115,23 @@ function StepPreview({ type }: { type: (typeof stepCards)[number]["previewType"]
     return (
       <div className="h-[112px] w-[116px] shrink-0 rounded-[4px] bg-[linear-gradient(135deg,#9B45FE_0%,#00F68B_100%)] p-[1px]">
         <div className="relative h-full w-full overflow-hidden rounded-[3px] bg-[#121212]">
-          {/* Map as background layer, overlapped by avatar */}
+          {/* Map starts just below the avatar, peeks from behind its bottom edge */}
           <img
             src="/mapbase.svg"
             alt=""
             aria-hidden
             className="absolute inset-x-0 w-full object-cover opacity-65"
-            style={{ top: "28px", height: "54px" }}
+            style={{ top: "52px", height: "58px" }}
           />
-          {/* Foreground content */}
-          <div className="relative z-10 flex h-full flex-col items-center justify-between p-1.5">
-            <p className="text-center text-[9px] leading-none tracking-[-0.27px] text-white/85" style={kodeMonoStyle}>
+          {/* Foreground: SolPoint → avatar → Daniel pushed to bottom */}
+          <div className="relative z-10 flex h-full flex-col items-center p-1.5">
+            <p className="text-center text-[9px] font-bold leading-[100%] text-white/85" style={kodeMonoStyle}>
               SolPoint
             </p>
-            <div className="h-[46px] w-[46px] overflow-hidden rounded-full border border-[#00f58d]">
+            <div className="mt-1 h-[46px] w-[46px] overflow-hidden rounded-full border border-[#00f58d]">
               <img src={figmaAssets.cardDanielAvatar} alt="Daniel" className="h-full w-full object-cover" />
             </div>
-            <p className="text-center text-[9px] leading-none tracking-[-0.27px] text-white/85" style={kodeMonoStyle}>
+            <p className="mt-auto text-center text-[9px] font-bold leading-[100%] text-white/85" style={kodeMonoStyle}>
               Daniel
             </p>
           </div>
@@ -156,7 +156,7 @@ function StepPreview({ type }: { type: (typeof stepCards)[number]["previewType"]
               <img src={figmaAssets.cardEventMiami} alt="Event" className="h-full w-full object-cover" />
             </div>
           </div>
-          <p className="mt-1.5 text-[8px] leading-tight tracking-[-0.24px] text-white/90" style={kodeMonoStyle}>
+          <p className="mt-1.5 whitespace-nowrap text-[9px] font-bold leading-[100%] tracking-[-0.27px] text-white/90" style={kodeMonoStyle}>
             Solana accelerate USA
           </p>
         </div>
@@ -170,15 +170,15 @@ function StepPreview({ type }: { type: (typeof stepCards)[number]["previewType"]
         <div className="h-[44px] w-[44px] overflow-hidden rounded-full border border-[#9b45fe]">
           <img src={figmaAssets.cardJoshAvatar} alt="Josh" className="h-full w-full object-cover" />
         </div>
-        <p className="mt-1.5 text-center text-[9px] leading-none text-white/85" style={kodeMonoStyle}>
+        <p className="mt-1.5 text-center text-[9px] font-bold leading-[100%] text-white/85" style={kodeMonoStyle}>
           Josh
         </p>
-        <p className="mt-0.5 text-center text-[9px] leading-[1.1] text-white/70" style={kodeMonoStyle}>
+        <p className="mt-0.5 text-center text-[9px] font-bold leading-[100%] text-white/70" style={kodeMonoStyle}>
           Developer/Frontend
         </p>
         <div className="mt-2 flex justify-center">
           <span
-            className="rounded-[5px] bg-white px-2.5 py-[3px] text-[8px] leading-none text-black"
+            className="flex h-[16px] w-[59px] items-center justify-center rounded-[5px] bg-white text-center text-[9px] font-bold leading-[100%] text-black"
             style={kodeMonoStyle}
           >
             Connect
