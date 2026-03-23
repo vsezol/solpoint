@@ -191,7 +191,7 @@ function MajorEventCard({ event }: { event: ShowcaseEvent }) {
           </p>
         </div>
 
-        <div className="mt-auto flex flex-col items-center gap-3">
+        <div className="mt-auto flex flex-col items-center gap-[22px]">
           <AttendeesSummary
             attendees={event.attendee_previews}
             peopleGoing={event.people_going}
