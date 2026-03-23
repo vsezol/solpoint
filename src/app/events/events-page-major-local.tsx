@@ -166,7 +166,7 @@ function AttendeesSummary({
   majorTypography?: boolean;
 }) {
   return (
-    <div className={`flex flex-col gap-1.5 ${centered ? "items-center" : "items-start"}`}>
+    <div className={`flex flex-col gap-[11px] ${centered ? "items-center" : "items-start"}`}>
       <div className={`flex items-center ${centered ? "justify-center" : "pl-2"}`}>
         {attendees.length > 0 ? (
           attendees.slice(0, 3).map((attendee, index) => (
@@ -306,7 +306,7 @@ function LocalEventRow({
         </p>
       </div>
 
-      <div className="ml-[34px] flex shrink-0 flex-col items-center gap-[34px] pt-4 pb-[25px]">
+      <div className="ml-[34px] flex shrink-0 flex-col items-center gap-[29px] pt-4 pb-[25px]">
         <AttendeesSummary
           attendees={event.attendee_previews}
           peopleGoing={event.people_going}
