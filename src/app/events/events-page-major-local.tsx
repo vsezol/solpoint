@@ -47,6 +47,9 @@ const majorEventButtonTypography: React.CSSProperties = {
   letterSpacing: "-0.05em",
 };
 
+/** Poster, title, meta, attendees, and buttons share one 280px-wide column (Figma). */
+const majorCardColumnClass = "mx-auto w-full min-w-0 max-w-[280px]";
+
 function formatDateRange(startDate: string, endDate?: string | null): string {
   const start = new Date(startDate);
   const startText = start.toLocaleDateString("en-US", {
@@ -166,24 +169,26 @@ function MajorEventCard({ event }: { event: ShowcaseEvent }) {
   const router = useRouter();
 
   return (
-    <article className="flex h-full flex-col">
+    <article className="flex h-full min-w-0 flex-col">
       <EventPoster
         event={event}
         frame="hairline"
-        className="mx-auto aspect-square w-full max-w-[280px]"
+        className={cn(majorCardColumnClass, "aspect-square")}
         sizes="280px"
         onClick={() => router.push(`/events/${event.slug}`)}
       />
 
-      <div className="flex flex-1 flex-col gap-3 pt-4">
-        <div className="space-y-1.5">
-          <h3 className="line-clamp-2 text-white" style={majorEventTitleStyle}>
+      <div className={cn(majorCardColumnClass, "flex flex-1 flex-col gap-3 pt-4")}>
+        <div className="min-w-0 space-y-1.5">
+          <h3 className="line-clamp-2 wrap-break-word text-white" style={majorEventTitleStyle}>
             {event.name}
           </h3>
-          <p className="text-white" style={majorEventMeta18Style}>
+          <p className="wrap-break-word text-white" style={majorEventMeta18Style}>
             {formatLocation(event.city, event.country)}
           </p>
-          <p style={majorEventDateStyle}>{formatDateRange(event.start_date, event.end_date)}</p>
+          <p className="wrap-break-word" style={majorEventDateStyle}>
+            {formatDateRange(event.start_date, event.end_date)}
+          </p>
         </div>
 
         <div className="mt-auto flex flex-col items-center gap-3">
