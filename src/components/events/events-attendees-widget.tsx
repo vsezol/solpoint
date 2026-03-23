@@ -55,6 +55,14 @@ type MultiSelectPopupProps = {
   onChange: (values: string[]) => void;
 };
 
+type SingleSelectPopupProps = {
+  label: string;
+  placeholder: string;
+  options: MultiSelectOption[];
+  value?: string;
+  onChange: (value?: string) => void;
+};
+
 const kodeMonoStyle = {
   fontFamily: "var(--font-kode-mono), monospace",
 } as const;
@@ -174,6 +182,139 @@ function MultiSelectPopup({
                   className="flex w-full items-center justify-between px-2 py-1.5 text-left text-[12px] text-white hover:bg-white/5"
                   style={kodeMonoStyle}
                   onClick={() => toggleOption(option.value)}
+                >
+                  <span>{option.label}</span>
+                  <span className={cn("h-3.5 w-3.5 border", checked ? "border-white bg-white" : "border-white/30")} />
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function SingleSelectPopup({
+  label,
+  placeholder,
+  options,
+  value,
+  onChange,
+}: SingleSelectPopupProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const onDocClick = (event: MouseEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    const onEsc = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", onDocClick);
+    document.addEventListener("keydown", onEsc);
+    return () => {
+      document.removeEventListener("mousedown", onDocClick);
+      document.removeEventListener("keydown", onEsc);
+    };
+  }, [isOpen]);
+
+  const filteredOptions = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return options;
+    return options.filter((option) => option.label.toLowerCase().includes(q));
+  }, [options, query]);
+
+  const selectedLabel = useMemo(() => {
+    if (!value) return placeholder;
+    const selected = options.find((option) => option.value === value);
+    return selected?.label || placeholder;
+  }, [options, placeholder, value]);
+
+  return (
+    <div ref={rootRef} className="relative">
+      <div className="mb-2 flex items-center justify-between">
+        <label className="block text-[12px] text-white/80" style={kodeMonoStyle}>
+          {label}
+        </label>
+        <button
+          type="button"
+          className={cn(
+            "text-[11px] transition-colors",
+            value ? "text-white/70 hover:text-white" : "cursor-default text-white/35"
+          )}
+          style={kodeMonoStyle}
+          onClick={() => {
+            if (!value) return;
+            onChange(undefined);
+            setQuery("");
+          }}
+          disabled={!value}
+        >
+          clear
+        </button>
+      </div>
+      <button
+        type="button"
+        className="flex h-10 w-full items-center justify-between border border-[#2A2A2A] bg-[#0E0F11] px-3 text-left text-[13px] font-semibold text-white"
+        style={kodeMonoStyle}
+        onClick={() => setIsOpen((open) => !open)}
+      >
+        <span className={cn("truncate", !value && "text-white/60")}>{selectedLabel}</span>
+        <ChevronDown
+          className={cn("h-4 w-4 text-white/70 transition-transform", isOpen && "rotate-180")}
+        />
+      </button>
+
+      {isOpen ? (
+        <div className="absolute left-0 right-0 top-full z-30 mt-1 border border-[#2A2A2A] bg-[#0E0F11] p-2 shadow-[0_12px_40px_rgba(0,0,0,0.6)]">
+          <div className="mb-2 flex h-9 items-center gap-2 border border-[#2A2A2A] bg-black px-2">
+            <Search className="h-3.5 w-3.5 text-white/55" />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={`find ${label.toLowerCase()}`}
+              className="w-full bg-transparent text-[12px] text-white placeholder:text-white/45 focus:outline-none"
+              style={kodeMonoStyle}
+            />
+          </div>
+
+          <div className="max-h-56 space-y-1 overflow-y-auto pr-1">
+            <button
+              type="button"
+              className="flex w-full items-center justify-between px-2 py-1.5 text-left text-[12px] font-semibold text-white hover:bg-white/5"
+              style={kodeMonoStyle}
+              onClick={() => {
+                onChange(undefined);
+                setIsOpen(false);
+              }}
+            >
+              <span>All</span>
+              <span className={cn("h-3.5 w-3.5 border", !value ? "border-white bg-white" : "border-white/30")} />
+            </button>
+
+            {filteredOptions.map((option) => {
+              const checked = option.value === value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  className="flex w-full items-center justify-between px-2 py-1.5 text-left text-[12px] text-white hover:bg-white/5"
+                  style={kodeMonoStyle}
+                  onClick={() => {
+                    onChange(option.value);
+                    setIsOpen(false);
+                  }}
                 >
                   <span>{option.label}</span>
                   <span className={cn("h-3.5 w-3.5 border", checked ? "border-white bg-white" : "border-white/30")} />
@@ -391,8 +532,8 @@ export function EventsAttendeesWidget({
         See who&apos;s going to <span className="text-white">{selectedEventName}</span>
       </p>
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-[240px_1fr]">
-        <aside className="border border-[#2A2A2A] bg-[#171A1E] p-3">
+      <div className="mt-6 grid gap-4 lg:grid-cols-[300px_1fr]">
+        <aside className="w-full border border-[#2A2A2A] bg-[#171A1E] p-3 lg:h-[401px] lg:w-[300px]">
           <div className="mb-3 flex items-center justify-between border-b border-[#2A2A2A] pb-2">
             <p className="text-[16px] font-bold text-white" style={kodeMonoStyle}>
               Filters
@@ -416,31 +557,23 @@ export function EventsAttendeesWidget({
               onChange={(roles) => onFiltersChange({ roles: roles as UserRole[] }, true)}
             />
 
-            <div>
-              <label className="mb-2 block text-[12px] text-white/80" style={kodeMonoStyle}>
-                country
-              </label>
-              <select
-                value={filters.countryCode || ""}
-                onChange={(event) =>
-                  onFiltersChange(
-                    {
-                      countryCode: event.target.value || undefined,
-                    },
-                    true
-                  )
-                }
-                className="h-10 w-full border border-[#2A2A2A] bg-[#0E0F11] px-3 text-[13px] font-semibold text-white focus:border-[#14f195] focus:outline-none"
-                style={kodeMonoStyle}
-              >
-                <option value="">choose country</option>
-                {countryOptions.map((country) => (
-                  <option key={country.code} value={country.code}>
-                    {country.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <SingleSelectPopup
+              label="country"
+              placeholder="choose country"
+              options={countryOptions.map((country) => ({
+                value: country.code,
+                label: country.name,
+              }))}
+              value={filters.countryCode}
+              onChange={(countryCode) =>
+                onFiltersChange(
+                  {
+                    countryCode,
+                  },
+                  true
+                )
+              }
+            />
 
             <MultiSelectPopup
               label="user's interests"
@@ -495,7 +628,7 @@ export function EventsAttendeesWidget({
               {Array.from({ length: 4 }).map((_, index) => (
                 <div
                   key={index}
-                  className="h-[320px] w-full max-w-[256px] animate-pulse rounded-[3px] border border-[#919191] bg-[#0B0B0B] sm:h-[374px]"
+                  className="h-[420px] w-full max-w-[256px] animate-pulse rounded-[3px] border border-[#919191] bg-[#0B0B0B] sm:h-[374px]"
                 />
               ))}
             </div>
@@ -520,7 +653,7 @@ export function EventsAttendeesWidget({
                   return (
                     <article
                       key={item.id}
-                      className="flex h-full w-full max-w-[256px] flex-col rounded-[3px] border border-[#919191] bg-[#0B0B0B] p-[14px] sm:mx-auto sm:min-h-[374px]"
+                      className="flex h-full w-full max-w-[256px] min-h-[420px] flex-col rounded-[3px] border border-[#919191] bg-[#0B0B0B] p-4 sm:mx-auto sm:min-h-[374px] sm:p-[14px]"
                     >
                       <div className="flex flex-col items-center">
                         <Avatar
@@ -531,7 +664,7 @@ export function EventsAttendeesWidget({
                           isVerified={item.isVerified}
                         />
                         <h4
-                          className="mt-[15px] max-w-full truncate text-center text-[20px] font-extrabold leading-none tracking-normal text-white"
+                          className="mt-6 max-w-full truncate text-center text-[20px] font-extrabold leading-none tracking-normal text-white sm:mt-[15px]"
                           style={interStyle}
                           title={item.name}
                         >
@@ -539,7 +672,7 @@ export function EventsAttendeesWidget({
                         </h4>
                       </div>
 
-                      <div className="mt-[8px] w-full min-w-0 space-y-[15px] text-[15px] font-medium leading-none tracking-normal text-white">
+                      <div className="mt-3 w-full min-w-0 space-y-5 text-[15px] font-medium leading-none tracking-normal text-white sm:mt-[8px] sm:space-y-[15px]">
                         <p className="flex items-start gap-2" style={kodeMonoStyle}>
                           <User
                             className="mt-px h-[15px] w-[15px] shrink-0 text-white"
@@ -558,7 +691,7 @@ export function EventsAttendeesWidget({
                         </p>
                       </div>
 
-                      <div className="mt-[11px] flex min-h-0 flex-col">
+                      <div className="mt-4 flex min-h-0 flex-col sm:mt-[11px]">
                         <p
                           className="text-center text-[15px] font-medium leading-none tracking-normal text-white"
                           style={kodeMonoStyle}
@@ -566,7 +699,7 @@ export function EventsAttendeesWidget({
                           About
                         </p>
                         <p
-                          className="mt-[9px] line-clamp-5 text-left text-[12px] font-medium leading-none tracking-normal text-white"
+                          className="mt-3 line-clamp-5 text-left text-[12px] font-medium leading-none tracking-normal text-white sm:mt-[9px]"
                           style={interStyle}
                         >
                           {about}

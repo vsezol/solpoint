@@ -270,15 +270,15 @@ function LocalEventRow({
   onShowList: (event: ShowcaseEvent) => void;
 }) {
   return (
-    <article className="grid grid-cols-[120px_1fr] items-start gap-4 border-b border-white/10 pb-6 sm:grid-cols-[160px_1fr_auto] md:grid-cols-[200px_1fr_auto]">
+    <article className="flex flex-row items-stretch gap-4 border-b border-white/10 pb-6">
       <EventPoster
         event={event}
-        className="aspect-square w-full"
+        className="aspect-square w-[120px] shrink-0 sm:w-[160px] md:w-[200px]"
         sizes="(max-width: 640px) 120px, (max-width: 768px) 160px, 200px"
         onClick={() => onAttend(event)}
       />
 
-      <div className="min-w-0 space-y-1.5">
+      <div className="flex min-w-0 flex-1 flex-col gap-[22px]">
         <h3
           className="text-base leading-tight text-white sm:text-lg md:text-xl"
           style={{ fontFamily: "var(--font-kode-mono), monospace" }}
@@ -293,19 +293,19 @@ function LocalEventRow({
         </p>
       </div>
 
-      <div className="col-span-2 flex items-center justify-between gap-3 sm:col-span-1 sm:flex-col sm:items-center sm:justify-start">
+      <div className="flex shrink-0 flex-col items-center justify-between pt-4 pb-[25px] ml-[34px]">
         <AttendeesSummary attendees={event.attendee_previews} peopleGoing={event.people_going} centered />
-        <div className="flex w-full gap-2 sm:w-auto">
+        <div className="flex gap-2">
           <Button
             variant="outline"
             size="sm"
-            className="h-[49px] flex-1 rounded-[7px] border-white bg-white text-black hover:bg-white/90 sm:flex-none sm:w-[125px]"
+            className="h-[49px] w-[125px] shrink-0 rounded-[7px] border-white bg-white text-black hover:bg-white/90"
             onClick={() => onAttend(event)}
           >
             Attend
           </Button>
           <GradientBorderButton
-            className="flex-1 sm:flex-none sm:w-[125px]"
+            className="w-[125px] shrink-0"
             onClick={() => onShowList(event)}
           >
             Show list

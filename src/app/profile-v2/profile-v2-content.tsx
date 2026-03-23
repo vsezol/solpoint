@@ -1,12 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { Avatar, AuthRequiredModal, Button, Modal, ModalContent, ModalHeader, ModalTitle } from "@/components/ui";
 import { formControlFocusClasses } from "@/components/ui/form-control-focus";
-import { Calendar, Loader2, MapPin, Plus, Trash2, Users } from "lucide-react";
+import { Calendar, ChevronDown, Loader2, MapPin, Plus, Search, Trash2, Users } from "lucide-react";
 import type { User } from "@/types";
 import type { FriendshipStatus } from "@/types/profile";
 import {
@@ -170,6 +170,160 @@ const inputClass = cn(
 
 /** Figma: fill #121212, radius 6px */
 const profileSectionCardClass = "rounded-[6px] border border-white/10 bg-[#121212]";
+const profileFilterTriggerClass =
+  "flex h-10 w-full items-center justify-between border border-[#5e5e5e] bg-black px-2.5 text-left text-[14px] font-semibold text-white";
+
+type PopupSelectOption = {
+  value: string;
+  label: string;
+  icon?: string;
+};
+
+type SearchableSingleSelectProps = {
+  label: string;
+  placeholder: string;
+  value: string;
+  options: PopupSelectOption[];
+  onChange: (nextValue: string) => void;
+  searchPlaceholder?: string;
+};
+
+function countryCodeToFlagEmoji(code: string): string {
+  if (!code || code.length !== 2) return "🌍";
+  return code
+    .toUpperCase()
+    .split("")
+    .map((char) => String.fromCodePoint(127397 + char.charCodeAt(0)))
+    .join("");
+}
+
+function SearchableSingleSelect({
+  label,
+  placeholder,
+  value,
+  options,
+  onChange,
+  searchPlaceholder,
+}: SearchableSingleSelectProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const onDocClick = (event: MouseEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    const onEsc = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", onDocClick);
+    document.addEventListener("keydown", onEsc);
+    return () => {
+      document.removeEventListener("mousedown", onDocClick);
+      document.removeEventListener("keydown", onEsc);
+    };
+  }, [isOpen]);
+
+  const selected = useMemo(() => options.find((option) => option.value === value), [options, value]);
+
+  const filteredOptions = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    if (!normalized) return options;
+    return options.filter((option) => option.label.toLowerCase().includes(normalized));
+  }, [options, query]);
+
+  return (
+    <div ref={rootRef} className="relative">
+      <div className="mb-1 flex items-center justify-between">
+        <label className="text-xs text-[var(--color-text-muted)]">{label}</label>
+        <button
+          type="button"
+          className={cn(
+            "text-[11px] transition-colors",
+            value ? "text-white/70 hover:text-white" : "cursor-default text-white/35"
+          )}
+          onClick={() => {
+            if (!value) return;
+            onChange("");
+            setQuery("");
+          }}
+          disabled={!value}
+        >
+          clear
+        </button>
+      </div>
+
+      <button
+        type="button"
+        className={profileFilterTriggerClass}
+        onClick={() => setIsOpen((open) => !open)}
+      >
+        <span className={cn("flex min-w-0 items-center gap-2 truncate", !selected && "text-white/55")}>
+          {selected?.icon ? <span aria-hidden>{selected.icon}</span> : null}
+          <span className="truncate">{selected?.label ?? placeholder}</span>
+        </span>
+        <ChevronDown className={cn("h-4 w-4 text-white/70 transition-transform", isOpen && "rotate-180")} />
+      </button>
+
+      {isOpen ? (
+        <div className="absolute left-0 right-0 top-full z-40 mt-1 border border-[#2A2A2A] bg-[#0E0F11] p-2 shadow-[0_12px_40px_rgba(0,0,0,0.6)]">
+          <div className="mb-2 flex h-9 items-center gap-2 border border-[#2A2A2A] bg-black px-2">
+            <Search className="h-3.5 w-3.5 text-white/55" />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={searchPlaceholder ?? `find ${label.toLowerCase()}`}
+              className="w-full bg-transparent text-[12px] text-white placeholder:text-white/45 focus:outline-none"
+            />
+          </div>
+
+          <div className="max-h-56 space-y-1 overflow-y-auto pr-1">
+            <button
+              type="button"
+              className="flex w-full items-center justify-between px-2 py-1.5 text-left text-[12px] font-semibold text-white hover:bg-white/5"
+              onClick={() => {
+                onChange("");
+                setIsOpen(false);
+              }}
+            >
+              <span>All</span>
+              <span className={cn("h-3.5 w-3.5 border", !value ? "border-white bg-white" : "border-white/30")} />
+            </button>
+
+            {filteredOptions.map((option) => {
+              const checked = option.value === value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  className="flex w-full items-center justify-between gap-2 px-2 py-1.5 text-left text-[12px] text-white hover:bg-white/5"
+                  onClick={() => {
+                    onChange(option.value);
+                    setIsOpen(false);
+                  }}
+                >
+                  <span className="flex min-w-0 items-center gap-2 truncate">
+                    {option.icon ? <span aria-hidden>{option.icon}</span> : null}
+                    <span className="truncate">{option.label}</span>
+                  </span>
+                  <span className={cn("h-3.5 w-3.5 border", checked ? "border-white bg-white" : "border-white/30")} />
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 function ProfileSectionContentLoader() {
   return (
@@ -213,6 +367,8 @@ export function ProfileV2Content({
   /** Own profile: view (lists) vs edit (inputs). Guests always see view. */
   const [isEditingProfile, setIsEditingProfile] = useState(false);
 
+  const MAX_INTERESTS = 3;
+
   const [mutualConnections, setMutualConnections] = useState<MutualConnection[]>([]);
   const [mutualConnectionsItems, setMutualConnectionsItems] = useState<MutualConnection[]>([]);
   const [mutualConnectionsCount, setMutualConnectionsCount] = useState(0);
@@ -237,10 +393,10 @@ export function ProfileV2Content({
         setExpDrafts(detailsToExpDrafts(d));
         setRoleDraft((d.role as UserRole | null) ?? "");
         setCountryCodeDraft(d.countryCode ?? "");
-        setInterestSlugsDraft(d.interestSlugs ?? []);
+        setInterestSlugsDraft((d.interestSlugs ?? []).slice(0, MAX_INTERESTS));
       }
     },
-    [isOwnProfile]
+    [MAX_INTERESTS, isOwnProfile]
   );
 
   useEffect(() => {
@@ -376,6 +532,28 @@ export function ProfileV2Content({
           slug: interest.slug,
           name: interest.name,
         }));
+  const roleSelectOptions = useMemo<PopupSelectOption[]>(
+    () =>
+      USER_ROLE_OPTIONS.map((option) => ({
+        value: option.value,
+        label: option.label,
+      })),
+    []
+  );
+  const countrySelectOptions = useMemo<PopupSelectOption[]>(
+    () =>
+      countries.map((country) => ({
+        value: country.code,
+        label: country.name,
+        icon: countryCodeToFlagEmoji(country.code),
+      })),
+    []
+  );
+  const selectedDraftInterests = useMemo(
+    () =>
+      editableInterestOptions.filter((interest) => interestSlugsDraft.includes(interest.slug)),
+    [editableInterestOptions, interestSlugsDraft]
+  );
 
   const handleConnectClick = async () => {
     if (!isAuthenticated) {
@@ -472,7 +650,7 @@ export function ProfileV2Content({
         experience: experiencePayload,
         role: roleDraft || null,
         countryCode: countryCodeDraft || null,
-        interestSlugs: interestSlugsDraft,
+        interestSlugs: interestSlugsDraft.slice(0, MAX_INTERESTS),
       });
       applyDetails(saved);
       await queryClient.invalidateQueries({ queryKey: ["auth", "profile"] });
@@ -545,42 +723,58 @@ export function ProfileV2Content({
       {showProfileForm ? (
         <div className="mb-5 space-y-3 rounded-[6px] border border-white/10 bg-[#121212] p-3">
           <div>
-            <label className="mb-1 block text-xs text-[var(--color-text-muted)]">Role</label>
-            <select
-              className={inputClass}
+            <SearchableSingleSelect
+              label="Role"
+              placeholder="choose role"
               value={roleDraft}
-              onChange={(event) => setRoleDraft(event.target.value as UserRole | "")}
-            >
-              <option value="">Not specified</option>
-              {USER_ROLE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+              onChange={(nextValue) => setRoleDraft(nextValue as UserRole | "")}
+              options={roleSelectOptions}
+              searchPlaceholder="find role"
+            />
           </div>
 
           <div>
-            <label className="mb-1 block text-xs text-[var(--color-text-muted)]">Country</label>
-            <select
-              className={inputClass}
+            <SearchableSingleSelect
+              label="Country"
+              placeholder="choose country"
               value={countryCodeDraft}
-              onChange={(event) => setCountryCodeDraft(event.target.value)}
-            >
-              <option value="">Not specified</option>
-              {countries.map((country) => (
-                <option key={country.code} value={country.code}>
-                  {country.name}
-                </option>
-              ))}
-            </select>
+              onChange={setCountryCodeDraft}
+              options={countrySelectOptions}
+              searchPlaceholder="find your country"
+            />
           </div>
 
           <div>
-            <label className="mb-2 block text-xs text-[var(--color-text-muted)]">Interests</label>
+            <div className="mb-2 flex items-center justify-between">
+              <label className="block text-xs text-[var(--color-text-muted)]">Interests</label>
+              <span className="text-[11px] text-white/60">
+                Selected {interestSlugsDraft.length}/{MAX_INTERESTS}
+              </span>
+            </div>
+
+            {selectedDraftInterests.length > 0 ? (
+              <div className="mb-2 flex flex-wrap gap-1.5">
+                {selectedDraftInterests.map((interest) => (
+                  <button
+                    key={`selected-${interest.slug}`}
+                    type="button"
+                    className="rounded-full border border-[#14f195] bg-[#14f195]/15 px-2.5 py-1 text-[11px] text-[#14f195] transition-colors hover:bg-[#14f195]/25"
+                    onClick={() =>
+                      setInterestSlugsDraft((prev) => prev.filter((slug) => slug !== interest.slug))
+                    }
+                  >
+                    {interest.name}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="mb-2 text-[11px] text-white/50">No interests selected yet.</p>
+            )}
+
             <div className="flex flex-wrap gap-2">
               {editableInterestOptions.map((interest) => {
                 const isSelected = interestSlugsDraft.includes(interest.slug);
+                const limitReached = !isSelected && interestSlugsDraft.length >= MAX_INTERESTS;
                 return (
                   <button
                     key={interest.slug}
@@ -589,21 +783,27 @@ export function ProfileV2Content({
                       "rounded-full border px-2.5 py-1 text-[11px] transition-colors",
                       isSelected
                         ? "border-[var(--color-primary)] bg-[var(--color-primary)]/15 text-[var(--color-primary)]"
-                        : "border-white/20 text-white/70 hover:border-white/50 hover:text-white"
+                        : limitReached
+                          ? "cursor-not-allowed border-white/10 text-white/35"
+                          : "border-white/20 text-white/70 hover:border-white/50 hover:text-white"
                     )}
                     onClick={() =>
                       setInterestSlugsDraft((prev) =>
                         prev.includes(interest.slug)
                           ? prev.filter((slug) => slug !== interest.slug)
-                          : [...prev, interest.slug]
+                          : prev.length >= MAX_INTERESTS
+                            ? prev
+                            : [...prev, interest.slug]
                       )
                     }
+                    disabled={limitReached}
                   >
                     {interest.name}
                   </button>
                 );
               })}
             </div>
+            <p className="mt-2 text-[11px] text-white/50">You can choose up to {MAX_INTERESTS} interests.</p>
           </div>
         </div>
       ) : interestsList.length > 0 ? (
@@ -712,7 +912,7 @@ export function ProfileV2Content({
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs text-[var(--color-text-muted)]">End (leave blank = present)</label>
+                  <label className="mb-1 block text-xs text-[var(--color-text-muted)]">End (blank = present)</label>
                   <input
                     type="month"
                     className={inputClass}
