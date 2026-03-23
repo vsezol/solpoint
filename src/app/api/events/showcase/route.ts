@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 type EventRow = {
@@ -61,6 +62,17 @@ type ShowcaseEvent = {
   is_major: boolean;
   is_attending: boolean;
 };
+
+const DEFAULT_LOCAL_PAGE_SIZE = 8;
+const MAX_LOCAL_PAGE_SIZE = 50;
+
+function parsePositiveInt(value: string | null, fallback: number): number {
+  const parsed = Number.parseInt(value || "", 10);
+  if (Number.isNaN(parsed) || parsed < 1) {
+    return fallback;
+  }
+  return parsed;
+}
 
 function isMissingIsMajorError(error: { message?: string } | null): boolean {
   if (!error?.message) return false;
@@ -144,7 +156,15 @@ function toSingle<T>(value: T | T[] | null): T | null {
   return Array.isArray(value) ? (value[0] ?? null) : value;
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const requestedLocalPage = parsePositiveInt(searchParams.get("local_page"), 1);
+  const requestedLocalPageSize = parsePositiveInt(
+    searchParams.get("local_page_size"),
+    DEFAULT_LOCAL_PAGE_SIZE
+  );
+  const localPageSize = Math.min(requestedLocalPageSize, MAX_LOCAL_PAGE_SIZE);
+
   const supabase = await createClient();
   const {
     data: { user: authUser },
@@ -176,21 +196,27 @@ export async function GET() {
 
   const upcomingEvents = upcomingResult.events;
   const majorEvents = upcomingEvents.filter((event) => event.is_major === true).slice(0, 3);
-  let localEvents = upcomingEvents.filter((event) => event.is_major !== true);
+  let allLocalEvents = upcomingEvents.filter((event) => event.is_major !== true);
 
   // Fallback: if there are no upcoming local events, show non-major events regardless of date.
-  if (localEvents.length === 0) {
+  if (allLocalEvents.length === 0) {
     const allEventsResult = await fetchEventsWithFallback(supabase, {
       isVip,
       upcomingOnly: false,
     });
 
     if (!allEventsResult.error) {
-      localEvents = allEventsResult.events.filter((event) => event.is_major !== true);
+      allLocalEvents = allEventsResult.events.filter((event) => event.is_major !== true);
     }
   }
 
-  const displayedEvents = [...majorEvents, ...localEvents];
+  const localTotal = allLocalEvents.length;
+  const localTotalPages = localTotal === 0 ? 0 : Math.ceil(localTotal / localPageSize);
+  const localPage = localTotalPages === 0 ? 1 : Math.min(requestedLocalPage, localTotalPages);
+  const localOffset = (localPage - 1) * localPageSize;
+  const pagedLocalEvents = allLocalEvents.slice(localOffset, localOffset + localPageSize);
+
+  const displayedEvents = [...majorEvents, ...pagedLocalEvents];
 
   const previewMap = new Map<string, AttendeePreview[]>();
   const displayedEventIds = displayedEvents.map((event) => event.id);
@@ -327,7 +353,13 @@ export async function GET() {
   return NextResponse.json(
     {
       majorEvents: majorEvents.map(mapShowcaseEvent),
-      localEvents: localEvents.map(mapShowcaseEvent),
+      localEvents: pagedLocalEvents.map(mapShowcaseEvent),
+      localPagination: {
+        page: localPage,
+        page_size: localPageSize,
+        total: localTotal,
+        total_pages: localTotalPages,
+      },
       hasIsMajorColumn: upcomingResult.hasIsMajorColumn,
     },
     { status: 200 }

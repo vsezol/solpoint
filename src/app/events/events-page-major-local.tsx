@@ -64,6 +64,7 @@ const majorEventButtonTypography: React.CSSProperties = {
 const majorCardColumnClass = "mx-auto w-full min-w-0 max-w-[280px]";
 
 const ATTENDEES_PAGE_SIZE = 4;
+const LOCAL_EVENTS_PAGE_SIZE = 8;
 
 function parseBool(value: string | null): boolean {
   if (!value) return false;
@@ -392,6 +393,12 @@ export default function EventsPageMajorLocal() {
   const [data, setData] = useState<EventsShowcaseResponse>({
     majorEvents: [],
     localEvents: [],
+    localPagination: {
+      page: 1,
+      page_size: LOCAL_EVENTS_PAGE_SIZE,
+      total: 0,
+      total_pages: 0,
+    },
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -400,13 +407,24 @@ export default function EventsPageMajorLocal() {
   const [isAttendSubmitting, setIsAttendSubmitting] = useState(false);
   const [attendError, setAttendError] = useState<string | null>(null);
 
+  const localPage = useMemo(() => {
+    const pageRaw = Number.parseInt(searchParams.get("local_page") || "1", 10);
+    if (Number.isNaN(pageRaw) || pageRaw < 1) {
+      return 1;
+    }
+    return pageRaw;
+  }, [searchParams]);
+
   const loadShowcase = useCallback(async (showLoadingState = true) => {
     if (showLoadingState) {
       setLoading(true);
     }
     setError(null);
     try {
-      const response = await getEventsShowcase();
+      const response = await getEventsShowcase({
+        localPage,
+        localPageSize: LOCAL_EVENTS_PAGE_SIZE,
+      });
       setData(response);
     } catch (err) {
       console.error("Failed to load events showcase:", err);
@@ -416,7 +434,7 @@ export default function EventsPageMajorLocal() {
         setLoading(false);
       }
     }
-  }, []);
+  }, [localPage]);
 
   useEffect(() => {
     loadShowcase();
@@ -606,6 +624,20 @@ export default function EventsPageMajorLocal() {
   }, [updateEventsQuery]);
 
   const showAttendeesWidget = Boolean(selectedEvent && isAuthenticated);
+  const canGoLocalPrev = data.localPagination.page > 1;
+  const canGoLocalNext =
+    data.localPagination.total_pages > 0 &&
+    data.localPagination.page < data.localPagination.total_pages;
+
+  const handleLocalPageChange = useCallback(
+    (nextPage: number) => {
+      if (nextPage < 1) return;
+      updateEventsQuery({
+        local_page: String(nextPage),
+      });
+    },
+    [updateEventsQuery]
+  );
 
   useEffect(() => {
     if (!showAttendeesWidget || !selectedEventId) {
@@ -701,15 +733,60 @@ export default function EventsPageMajorLocal() {
                     </h2>
 
                     {data.localEvents.length > 0 ? (
-                      <div className="mt-10 space-y-6 sm:px-8 lg:px-16">
-                        {data.localEvents.map((event) => (
-                          <LocalEventRow
-                            key={event.id}
-                            event={event}
-                            onAttend={handleAttend}
-                            onShowList={handleShowList}
-                          />
-                        ))}
+                      <div className="mt-10 sm:px-8 lg:px-16">
+                        <div className="space-y-6">
+                          {data.localEvents.map((event) => (
+                            <LocalEventRow
+                              key={event.id}
+                              event={event}
+                              onAttend={handleAttend}
+                              onShowList={handleShowList}
+                            />
+                          ))}
+                        </div>
+
+                        {data.localPagination.total_pages > 1 ? (
+                          <div className="mt-6 flex flex-col items-center justify-between gap-3 border-t border-white/10 pt-3 sm:flex-row">
+                            <p
+                              className="text-[12px] text-white/65"
+                              style={{ fontFamily: "var(--font-kode-mono), monospace" }}
+                            >
+                              {data.localPagination.total} local events
+                            </p>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-8 border-white/25 text-white hover:bg-white/10"
+                                style={{ fontFamily: "var(--font-kode-mono), monospace" }}
+                                onClick={() =>
+                                  handleLocalPageChange(Math.max(data.localPagination.page - 1, 1))
+                                }
+                                disabled={!canGoLocalPrev}
+                              >
+                                Prev
+                              </Button>
+                              <span
+                                className="text-[12px] text-white/80"
+                                style={{ fontFamily: "var(--font-kode-mono), monospace" }}
+                              >
+                                Page {data.localPagination.page} of {data.localPagination.total_pages}
+                              </span>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-8 border-white/25 text-white hover:bg-white/10"
+                                style={{ fontFamily: "var(--font-kode-mono), monospace" }}
+                                onClick={() => handleLocalPageChange(data.localPagination.page + 1)}
+                                disabled={!canGoLocalNext}
+                              >
+                                Next
+                              </Button>
+                            </div>
+                          </div>
+                        ) : null}
                       </div>
                     ) : (
                       <EmptyState label="No local upcoming events." />
