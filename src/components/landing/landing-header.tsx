@@ -59,7 +59,7 @@ export function LandingHeader() {
             <Link
               href={profileHref}
               aria-label="Profile"
-              className="group flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border border-[#2f2f2f] bg-[#0f0f0f] transition-colors hover:border-[#00f58d]"
+              className="group flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border border-[#2f2f2f] bg-[#0f0f0f] transition-colors"
             >
               {user?.avatar_url ? (
                 <div className="relative h-full w-full">
