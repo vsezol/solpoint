@@ -14,6 +14,38 @@ import {
   type EventsShowcaseResponse,
 } from "@/lib/api/events-showcase";
 
+const KM = "var(--font-kode-mono), monospace" as const;
+
+/** Major events card — Figma typography */
+const majorEventTitleStyle: React.CSSProperties = {
+  fontFamily: KM,
+  fontWeight: 600,
+  fontSize: 25,
+  lineHeight: "100%",
+  letterSpacing: 0,
+};
+
+const majorEventMeta18Style: React.CSSProperties = {
+  fontFamily: KM,
+  fontWeight: 600,
+  fontSize: 18,
+  lineHeight: "100%",
+  letterSpacing: "-0.05em",
+};
+
+const majorEventDateStyle: React.CSSProperties = {
+  ...majorEventMeta18Style,
+  color: "#70767D",
+};
+
+const majorEventButtonTypography: React.CSSProperties = {
+  fontFamily: KM,
+  fontWeight: 700,
+  fontSize: 20,
+  lineHeight: "100%",
+  letterSpacing: "-0.05em",
+};
+
 function formatDateRange(startDate: string, endDate?: string | null): string {
   const start = new Date(startDate);
   const startText = start.toLocaleDateString("en-US", {
@@ -82,10 +114,13 @@ function AttendeesSummary({
   attendees,
   peopleGoing,
   centered = false,
+  majorTypography = false,
 }: {
   attendees: ShowcaseEvent["attendee_previews"];
   peopleGoing: number;
   centered?: boolean;
+  /** Figma: Kode Mono 18px / 600 / line-height 100% / -5% tracking */
+  majorTypography?: boolean;
 }) {
   return (
     <div className={`flex flex-col gap-1.5 ${centered ? "items-center" : "items-start"}`}>
@@ -105,8 +140,12 @@ function AttendeesSummary({
         )}
       </div>
       <p
-        className={`text-[11px] text-white tracking-tight ${centered ? "text-center" : ""}`}
-        style={{ fontFamily: "var(--font-kode-mono), monospace" }}
+        className={
+          majorTypography
+            ? `font-semibold text-white ${centered ? "text-center" : ""}`
+            : `text-[11px] text-white tracking-tight ${centered ? "text-center" : ""}`
+        }
+        style={majorTypography ? majorEventMeta18Style : { fontFamily: KM }}
       >
         {peopleGoing} people going!
       </p>
@@ -121,40 +160,43 @@ function MajorEventCard({ event }: { event: ShowcaseEvent }) {
     <article className="flex h-full flex-col">
       <EventPoster
         event={event}
-        className="aspect-square w-full"
+        className="mx-auto aspect-square w-full max-w-[280px]"
+        sizes="280px"
         onClick={() => router.push(`/events/${event.slug}`)}
       />
 
       <div className="flex flex-1 flex-col gap-3 pt-4">
         <div className="space-y-1.5">
-          <h3
-            className="line-clamp-2 text-lg leading-snug text-white sm:text-xl"
-            style={{ fontFamily: "var(--font-kode-mono), monospace" }}
-          >
+          <h3 className="line-clamp-2 text-white" style={majorEventTitleStyle}>
             {event.name}
           </h3>
-          <p className="text-sm text-white/95" style={{ fontFamily: "var(--font-kode-mono), monospace" }}>
+          <p className="text-white" style={majorEventMeta18Style}>
             {formatLocation(event.city, event.country)}
           </p>
-          <p className="text-xs text-[#70767d]" style={{ fontFamily: "var(--font-kode-mono), monospace" }}>
-            {formatDateRange(event.start_date, event.end_date)}
-          </p>
+          <p style={majorEventDateStyle}>{formatDateRange(event.start_date, event.end_date)}</p>
         </div>
 
         <div className="mt-auto flex flex-col items-center gap-3">
-          <AttendeesSummary attendees={event.attendee_previews} peopleGoing={event.people_going} centered />
+          <AttendeesSummary
+            attendees={event.attendee_previews}
+            peopleGoing={event.people_going}
+            centered
+            majorTypography
+          />
 
           <div className="flex w-full items-center gap-2">
             <Button
               variant="outline"
               size="sm"
-              className="h-[49px] flex-1 rounded-[7px] border-white bg-white text-black hover:bg-white/90"
+              className="h-[49px] flex-1 rounded-[7px] border-white bg-white text-black! hover:bg-white/90"
+              style={majorEventButtonTypography}
               onClick={() => router.push(`/events/${event.slug}`)}
             >
               Attend
             </Button>
             <GradientBorderButton
               className="flex-1"
+              buttonStyle={majorEventButtonTypography}
               onClick={() => router.push(`/events/${event.slug}`)}
             >
               Show list
@@ -220,10 +262,12 @@ function GradientBorderButton({
   onClick,
   children,
   className,
+  buttonStyle,
 }: {
   onClick: () => void;
   children: React.ReactNode;
   className?: string;
+  buttonStyle?: React.CSSProperties;
 }) {
   return (
     <div
@@ -234,6 +278,7 @@ function GradientBorderButton({
         variant="ghost"
         size="sm"
         className="h-[49px] w-full rounded-[6px] bg-black text-white hover:bg-white/5"
+        style={buttonStyle}
         onClick={onClick}
       >
         {children}
