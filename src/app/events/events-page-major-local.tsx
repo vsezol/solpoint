@@ -349,7 +349,7 @@ export default function EventsPageMajorLocal() {
           {loading ? (
             <div className="space-y-8 pt-10">
               <div className="h-8 w-56 animate-pulse rounded bg-white/10" />
-              <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-[62px] sm:grid-cols-2 lg:grid-cols-3">
                 {Array.from({ length: 3 }).map((_, index) => (
                   <div key={index} className="space-y-4">
                     <div className="aspect-square w-full animate-pulse rounded bg-white/10" />
@@ -374,7 +374,7 @@ export default function EventsPageMajorLocal() {
                 </h2>
 
                 {data.majorEvents.length > 0 ? (
-                  <div className="grid items-stretch gap-8 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="grid items-stretch gap-[62px] sm:grid-cols-2 lg:grid-cols-3">
                     {data.majorEvents.map((event) => (
                       <MajorEventCard key={event.id} event={event} />
                     ))}
