@@ -142,7 +142,7 @@ function AttendeesSummary({
       <p
         className={
           majorTypography
-            ? `font-semibold text-white ${centered ? "text-center" : ""}`
+            ? `text-white ${centered ? "text-center" : ""}`
             : `text-[11px] text-white tracking-tight ${centered ? "text-center" : ""}`
         }
         style={majorTypography ? majorEventMeta18Style : { fontFamily: KM }}
