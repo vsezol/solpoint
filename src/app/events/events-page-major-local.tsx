@@ -199,18 +199,18 @@ function MajorEventCard({ event }: { event: ShowcaseEvent }) {
             majorTypography
           />
 
-          <div className="flex w-full items-center gap-2">
+          <div className="flex w-full items-center justify-center gap-3">
             <Button
               variant="outline"
               size="sm"
-              className="h-[49px] flex-1 rounded-[7px] border-white bg-white text-black! hover:bg-white/90"
+              className="h-[49px] w-[125px] shrink-0 rounded-[7px] border border-white bg-white px-0 text-black! hover:bg-white/90"
               style={majorEventButtonTypography}
               onClick={() => router.push(`/events/${event.slug}`)}
             >
               Attend
             </Button>
             <GradientBorderButton
-              className="flex-1"
+              className="w-[125px] shrink-0"
               buttonStyle={majorEventButtonTypography}
               onClick={() => router.push(`/events/${event.slug}`)}
             >
