@@ -1,13 +1,16 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import { CircleHelp } from "lucide-react";
 
-import type { ContentTypeFilter, MapFilters, UserRole } from "@/types";
+import type { ContentTypeFilter, Interest, MapFilters, UserRole } from "@/types";
 import { cn } from "@/lib/utils";
-import { USER_ROLE_OPTIONS } from "@/lib/profile-taxonomy";
+import { getInterests } from "@/lib/api/interests";
+import { INTEREST_DEFINITIONS, USER_ROLE_OPTIONS } from "@/lib/profile-taxonomy";
 
 import countries from "../../../supabase/coutries";
 
+import { MapFilterMultiSelect } from "./map-filter-multi-select";
 import { MapFilterSelect } from "./map-filter-select";
 
 type MapV2FiltersProps = {
@@ -24,24 +27,23 @@ const roleOptions: { value: UserRole; label: string }[] = USER_ROLE_OPTIONS.map(
   label: option.label.toLowerCase(),
 }));
 
-const interestOptions: { value: ContentTypeFilter; label: string }[] = [
-  { value: "all", label: "all interests" },
-  { value: "users", label: "users" },
-  { value: "events", label: "events" },
+const mapContentSelectOptions: { value: ContentTypeFilter; label: string }[] = [
+  { value: "all", label: "everything on map" },
+  { value: "users", label: "users only" },
+  { value: "events", label: "events only" },
   { value: "hubs", label: "hubs & communities" },
 ];
 
 const roleSelectOptions = [{ value: "", label: "choose role" }, ...roleOptions.map((r) => ({ value: r.value, label: r.label }))];
 
-const countrySelectOptions = [
-  { value: "", label: "choose country" },
-  ...countries.map((c) => ({ value: c.code, label: c.name })),
-];
-
-const interestSelectOptions = interestOptions.map((o) => ({
-  value: o.value,
-  label: o.value === "all" ? "choose interests" : o.label,
-}));
+function countryCodeToFlagEmoji(code: string): string {
+  if (!code || code.length !== 2) return "🌍";
+  return code
+    .toUpperCase()
+    .split("")
+    .map((char) => String.fromCodePoint(127397 + char.charCodeAt(0)))
+    .join("");
+}
 
 export const MAP_V2_DEFAULT_FILTERS: MapFilters = {
   showUsers: true,
@@ -50,6 +52,7 @@ export const MAP_V2_DEFAULT_FILTERS: MapFilters = {
   showCommunities: true,
   showWorkspaces: true,
   contentType: "all",
+  interestSlugs: undefined,
   userRoles: undefined,
   activeOnly: undefined,
   openToMeet: undefined,
@@ -113,9 +116,47 @@ function FieldLabel({ children }: { children: string }) {
 }
 
 export function MapFiltersPanelV2({ filters, onFiltersChange }: MapV2FiltersProps) {
+  const [interestDictionary, setInterestDictionary] = useState<Interest[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getInterests()
+      .then((items) => {
+        if (!cancelled) setInterestDictionary(items);
+      })
+      .catch(() => {
+        /* fallback to INTEREST_DEFINITIONS */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const countrySelectOptions = useMemo(
+    () =>
+      countries.map((c) => ({
+        value: c.code,
+        label: c.name,
+        icon: countryCodeToFlagEmoji(c.code),
+      })),
+    []
+  );
+
+  const interestFilterOptions = useMemo(() => {
+    const source =
+      interestDictionary.length > 0
+        ? interestDictionary
+        : INTEREST_DEFINITIONS.map((i) => ({
+            id: i.slug,
+            slug: i.slug,
+            name: i.name,
+          }));
+    return source.map((i) => ({ value: i.slug, label: i.name }));
+  }, [interestDictionary]);
+
   const selectedRole = filters.userRoles?.[0] ?? "";
   const selectedCountryCode = filters.countryCode ?? "";
-  const selectedInterest = filters.contentType ?? "all";
+  const selectedMapContent: ContentTypeFilter = filters.contentType ?? "all";
 
   const onReset = () => {
     onFiltersChange({
@@ -150,10 +191,10 @@ export function MapFiltersPanelV2({ filters, onFiltersChange }: MapV2FiltersProp
     });
   };
 
-  const onInterestChange = (contentType: ContentTypeFilter) => {
+  const onMapContentChange = (contentType: string) => {
     onFiltersChange({
       ...filters,
-      ...buildContentTypePayload(contentType),
+      ...buildContentTypePayload(contentType as ContentTypeFilter),
     });
   };
 
@@ -193,17 +234,36 @@ export function MapFiltersPanelV2({ filters, onFiltersChange }: MapV2FiltersProp
             onChange={onCountryChange}
             options={countrySelectOptions}
             placeholder="choose country"
+            searchable
+            searchPlaceholder="find your country"
+          />
+        </div>
+
+        <div>
+          <FieldLabel>map content</FieldLabel>
+          <MapFilterSelect
+            className="mb-[20px]"
+            value={selectedMapContent}
+            onChange={onMapContentChange}
+            options={mapContentSelectOptions}
+            placeholder="everything on map"
           />
         </div>
 
         <div>
           <FieldLabel>user&apos;s interests</FieldLabel>
-          <MapFilterSelect
+          <MapFilterMultiSelect
             className="mb-[20px]"
-            value={selectedInterest}
-            onChange={(v) => onInterestChange(v as ContentTypeFilter)}
-            options={interestSelectOptions}
+            values={filters.interestSlugs ?? []}
+            onChange={(interestSlugs) =>
+              onFiltersChange({
+                ...filters,
+                interestSlugs: interestSlugs.length > 0 ? interestSlugs : undefined,
+              })
+            }
+            options={interestFilterOptions}
             placeholder="choose interests"
+            searchPlaceholder="find interests"
           />
         </div>
 

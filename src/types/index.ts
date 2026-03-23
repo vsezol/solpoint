@@ -346,6 +346,8 @@ export interface MapFilters {
   showProjects?: boolean;
   showWorkspaces?: boolean;
   contentType?: ContentTypeFilter; // Переключатель: all | users | events | hubs | communities | projects | workspaces
+  /** Profile interest slugs (same taxonomy as profile editor); OR match when multiple */
+  interestSlugs?: string[];
   userRoles?: UserRole[];
   eventType?: EventType;
   openToMeet?: boolean;

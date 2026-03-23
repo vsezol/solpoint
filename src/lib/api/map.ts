@@ -60,6 +60,10 @@ export async function getMapMarkers(
         userParams.append("active_only", "true");
       }
 
+      if (filters.interestSlugs && filters.interestSlugs.length > 0) {
+        userParams.append("interest_slugs", filters.interestSlugs.join(","));
+      }
+
       fetchPromises.push(
         fetch(`/api/users?${userParams.toString()}`)
           .then(async (usersResponse) => {
