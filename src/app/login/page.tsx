@@ -3,7 +3,7 @@
 import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import { Button, Card, Badge } from "@/components/ui";
+import { Button, Card } from "@/components/ui";
 import { Header, Footer } from "@/components/layout";
 import { Twitter, AlertCircle } from "lucide-react";
 import Link from "next/link";
@@ -14,6 +14,7 @@ function LoginPageContent() {
   const [isLoading, setIsLoading] = useState(false);
   const searchParams = useSearchParams();
   const error = searchParams.get("error");
+  const redirectTo = searchParams.get("redirect_to");
 
   const handleTwitterLogin = async () => {
     try {
@@ -23,7 +24,10 @@ function LoginPageContent() {
         method: "twitter",
       });
       // Редиректим на API route для инициации Twitter OAuth
-      window.location.href = "/api/auth/twitter";
+      const loginUrl = redirectTo
+        ? `/api/auth/twitter?redirect_to=${encodeURIComponent(redirectTo)}`
+        : "/api/auth/twitter";
+      window.location.href = loginUrl;
     } catch (error) {
       setIsLoading(false);
       trackEvent("login_error", {
@@ -130,7 +134,11 @@ function LoginPageContent() {
           <p className="text-center text-[var(--color-text-secondary)]">
             Don&apos;t have an account?{" "}
             <Link
-              href="/signup"
+              href={
+                redirectTo
+                  ? `/signup?redirect_to=${encodeURIComponent(redirectTo)}`
+                  : "/signup"
+              }
               className="text-[var(--color-primary)] hover:underline"
             >
               Sign up
@@ -160,4 +168,3 @@ export default function LoginPage() {
     </Suspense>
   );
 }
-

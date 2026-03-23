@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { isValidCountryCode, normalizeCountryCode } from "@/lib/countries";
+import { INTEREST_SLUGS, USER_ROLE_VALUES } from "@/lib/profile-taxonomy";
 
 const MAX_ABOUT = 4000;
 const MAX_SKILLS = 50;
@@ -26,6 +28,12 @@ export interface ProfileDetailsExperienceRow {
   sort_order: number;
 }
 
+export interface ProfileDetailsInterestRow {
+  id: string;
+  slug: string;
+  name: string;
+}
+
 function mapSkills(rows: ProfileDetailsSkillRow[]) {
   return rows.map((r) => ({
     id: r.id,
@@ -46,6 +54,14 @@ function mapExperience(rows: ProfileDetailsExperienceRow[]) {
   }));
 }
 
+function mapInterests(rows: ProfileDetailsInterestRow[]) {
+  return rows.map((r) => ({
+    id: r.id,
+    slug: r.slug,
+    name: r.name,
+  }));
+}
+
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
@@ -56,8 +72,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "user_id parameter is required" }, { status: 400 });
     }
 
-    const [profileResult, skillsResult, expResult] = await Promise.all([
-      supabase.from("profiles").select("about, bio").eq("id", userId).maybeSingle(),
+    const [profileResult, skillsResult, expResult, interestsResult] = await Promise.all([
+      supabase.from("profiles").select("about, bio, role, country, country_code, city").eq("id", userId).maybeSingle(),
       supabase
         .from("profile_skills")
         .select("id, name, sort_order")
@@ -68,6 +84,10 @@ export async function GET(request: NextRequest) {
         .select("id, title, company, start_date, end_date, description, sort_order")
         .eq("user_id", userId)
         .order("sort_order", { ascending: true }),
+      supabase
+        .from("profile_interests")
+        .select("interest:interests(id, slug, name)")
+        .eq("user_id", userId),
     ]);
 
     if (profileResult.error) {
@@ -79,17 +99,32 @@ export async function GET(request: NextRequest) {
     if (expResult.error) {
       throw expResult.error;
     }
+    if (interestsResult.error) {
+      throw interestsResult.error;
+    }
 
     const profile = profileResult.data;
     const about =
       (profile?.about as string | null | undefined) ??
       (profile?.bio as string | null | undefined) ??
       null;
+    const interestsRows = (interestsResult.data || [])
+      .map((row: { interest: ProfileDetailsInterestRow | ProfileDetailsInterestRow[] | null }) =>
+        Array.isArray(row.interest) ? row.interest[0] : row.interest
+      )
+      .filter((row: ProfileDetailsInterestRow | null): row is ProfileDetailsInterestRow => Boolean(row));
+    const interests = mapInterests(interestsRows);
 
     return NextResponse.json({
       about,
       skills: mapSkills((skillsResult.data || []) as ProfileDetailsSkillRow[]),
       experience: mapExperience((expResult.data || []) as ProfileDetailsExperienceRow[]),
+      role: (profile?.role as string | null | undefined) ?? null,
+      country: (profile?.country as string | null | undefined) ?? null,
+      countryCode: (profile?.country_code as string | null | undefined) ?? null,
+      city: (profile?.city as string | null | undefined) ?? null,
+      interests,
+      interestSlugs: interests.map((interest) => interest.slug),
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed to load profile details";
@@ -133,10 +168,13 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
-    const { about, skills, experience } = body as {
+    const { about, skills, experience, role, countryCode, interestSlugs } = body as {
       about?: string | null;
       skills?: IncomingSkill[];
       experience?: IncomingExperience[];
+      role?: string | null;
+      countryCode?: string | null;
+      interestSlugs?: string[] | null;
     };
 
     if (about === undefined || skills === undefined || experience === undefined) {
@@ -151,6 +189,52 @@ export async function PUT(request: NextRequest) {
     }
     if (typeof about === "string" && about.length > MAX_ABOUT) {
       return NextResponse.json({ error: `about must be ${MAX_ABOUT} characters or less` }, { status: 400 });
+    }
+
+    let normalizedRole: string | null | undefined;
+    if (role !== undefined) {
+      if (role === null || role === "") {
+        normalizedRole = null;
+      } else if (typeof role !== "string" || !USER_ROLE_VALUES.includes(role as (typeof USER_ROLE_VALUES)[number])) {
+        return NextResponse.json({ error: "Invalid role" }, { status: 400 });
+      } else {
+        normalizedRole = role;
+      }
+    }
+
+    let normalizedCountryCode: string | null | undefined;
+    if (countryCode !== undefined) {
+      if (countryCode === null || countryCode === "") {
+        normalizedCountryCode = null;
+      } else if (typeof countryCode !== "string") {
+        return NextResponse.json({ error: "countryCode must be a string or null" }, { status: 400 });
+      } else {
+        const code = normalizeCountryCode(countryCode);
+        if (!isValidCountryCode(code)) {
+          return NextResponse.json({ error: "countryCode must be a valid ISO alpha-2 code" }, { status: 400 });
+        }
+        normalizedCountryCode = code;
+      }
+    }
+
+    let normalizedInterestSlugs: string[] | undefined;
+    if (interestSlugs !== undefined && interestSlugs !== null) {
+      if (!Array.isArray(interestSlugs)) {
+        return NextResponse.json({ error: "interestSlugs must be an array of strings" }, { status: 400 });
+      }
+      const deduped = Array.from(
+        new Set(
+          interestSlugs
+            .map((slug) => (typeof slug === "string" ? slug.trim().toLowerCase() : ""))
+            .filter(Boolean)
+        )
+      );
+      if (deduped.some((slug) => !INTEREST_SLUGS.has(slug))) {
+        return NextResponse.json({ error: "Invalid interest slug provided" }, { status: 400 });
+      }
+      normalizedInterestSlugs = deduped;
+    } else if (interestSlugs === null) {
+      normalizedInterestSlugs = [];
     }
 
     if (!Array.isArray(skills)) {
@@ -263,9 +347,41 @@ export async function PUT(request: NextRequest) {
       }
     }
 
+    const profileUpdatePayload: {
+      about: string | null;
+      role?: string | null;
+      country_code?: string | null;
+      country?: string | null;
+    } = {
+      about: about === null || about === "" ? null : about,
+    };
+
+    if (normalizedRole !== undefined) {
+      profileUpdatePayload.role = normalizedRole;
+    }
+
+    if (normalizedCountryCode !== undefined) {
+      profileUpdatePayload.country_code = normalizedCountryCode;
+      if (normalizedCountryCode === null) {
+        profileUpdatePayload.country = null;
+      } else {
+        const { data: countryRow, error: countryLookupError } = await supabase
+          .from("countries")
+          .select("name")
+          .eq("code", normalizedCountryCode)
+          .maybeSingle();
+
+        if (countryLookupError) {
+          throw countryLookupError;
+        }
+
+        profileUpdatePayload.country = (countryRow?.name as string | undefined) || null;
+      }
+    }
+
     const { error: upErr } = await supabase
       .from("profiles")
-      .update({ about: about === null || about === "" ? null : about })
+      .update(profileUpdatePayload)
       .eq("id", authUser.id);
 
     if (upErr) {
@@ -310,8 +426,47 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    const [profileResult, skillsResult, expResult] = await Promise.all([
-      supabase.from("profiles").select("about, bio").eq("id", authUser.id).maybeSingle(),
+    if (normalizedInterestSlugs !== undefined) {
+      const { error: delI } = await supabase.from("profile_interests").delete().eq("user_id", authUser.id);
+      if (delI) {
+        throw delI;
+      }
+
+      if (normalizedInterestSlugs.length > 0) {
+        const { data: interestsRows, error: interestsLookupError } = await supabase
+          .from("interests")
+          .select("id, slug")
+          .in("slug", normalizedInterestSlugs);
+
+        if (interestsLookupError) {
+          throw interestsLookupError;
+        }
+
+        const interestBySlug = new Map(
+          (interestsRows || []).map((row: { id: string; slug: string }) => [row.slug, row.id])
+        );
+        const missing = normalizedInterestSlugs.filter((slug) => !interestBySlug.has(slug));
+        if (missing.length > 0) {
+          return NextResponse.json(
+            { error: `Unknown interest slugs: ${missing.join(", ")}` },
+            { status: 400 }
+          );
+        }
+
+        const { error: insI } = await supabase.from("profile_interests").insert(
+          normalizedInterestSlugs.map((slug) => ({
+            user_id: authUser.id,
+            interest_id: interestBySlug.get(slug)!,
+          }))
+        );
+        if (insI) {
+          throw insI;
+        }
+      }
+    }
+
+    const [profileResult, skillsResult, expResult, interestsResult] = await Promise.all([
+      supabase.from("profiles").select("about, bio, role, country, country_code, city").eq("id", authUser.id).maybeSingle(),
       supabase
         .from("profile_skills")
         .select("id, name, sort_order")
@@ -322,6 +477,10 @@ export async function PUT(request: NextRequest) {
         .select("id, title, company, start_date, end_date, description, sort_order")
         .eq("user_id", authUser.id)
         .order("sort_order", { ascending: true }),
+      supabase
+        .from("profile_interests")
+        .select("interest:interests(id, slug, name)")
+        .eq("user_id", authUser.id),
     ]);
 
     if (profileResult.error) {
@@ -333,17 +492,32 @@ export async function PUT(request: NextRequest) {
     if (expResult.error) {
       throw expResult.error;
     }
+    if (interestsResult.error) {
+      throw interestsResult.error;
+    }
 
     const profile = profileResult.data;
     const aboutOut =
       (profile?.about as string | null | undefined) ??
       (profile?.bio as string | null | undefined) ??
       null;
+    const interestsRows = (interestsResult.data || [])
+      .map((row: { interest: ProfileDetailsInterestRow | ProfileDetailsInterestRow[] | null }) =>
+        Array.isArray(row.interest) ? row.interest[0] : row.interest
+      )
+      .filter((row: ProfileDetailsInterestRow | null): row is ProfileDetailsInterestRow => Boolean(row));
+    const interests = mapInterests(interestsRows);
 
     return NextResponse.json({
       about: aboutOut,
       skills: mapSkills((skillsResult.data || []) as ProfileDetailsSkillRow[]),
       experience: mapExperience((expResult.data || []) as ProfileDetailsExperienceRow[]),
+      role: (profile?.role as string | null | undefined) ?? null,
+      country: (profile?.country as string | null | undefined) ?? null,
+      countryCode: (profile?.country_code as string | null | undefined) ?? null,
+      city: (profile?.city as string | null | undefined) ?? null,
+      interests,
+      interestSlugs: interests.map((interest) => interest.slug),
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed to save profile details";

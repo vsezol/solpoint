@@ -3,12 +3,18 @@
 import { Card, Badge } from "@/components/ui";
 import { MapPin, Users } from "lucide-react";
 import type { User } from "@/types";
+import { USER_ROLE_LABELS } from "@/lib/profile-taxonomy";
 
 interface ProfileViewProps {
   user: User;
 }
 
 export function ProfileView({ user }: ProfileViewProps) {
+  const countryName =
+    (user as User & { countries?: { name?: string } }).countries?.name ||
+    user.country ||
+    "Not specified";
+
   return (
     <>
       {/* Bio */}
@@ -31,13 +37,13 @@ export function ProfileView({ user }: ProfileViewProps) {
             <MapPin className="w-4 h-4 text-[var(--color-primary)]" />
             <span>
               {user.city && `${user.city}, `}
-              {(user as any).countries?.name || user.country || "Not specified"}
+              {countryName}
             </span>
           </div>
           {user.role && (
             <div className="flex items-center gap-3 text-[var(--color-text-secondary)]">
               <Users className="w-4 h-4 text-[var(--color-primary)]" />
-              <span className="capitalize">{user.role}</span>
+              <span>{USER_ROLE_LABELS[user.role] || user.role}</span>
             </div>
           )}
           {user.is_open_to_meet && (
@@ -48,4 +54,3 @@ export function ProfileView({ user }: ProfileViewProps) {
     </>
   );
 }
-

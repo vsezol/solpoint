@@ -9,16 +9,9 @@ import CountrySelect from "@/app/map/country-select";
 import { useMapStore } from "@/store/map-store";
 import { trackEvent } from "@/lib/analytics";
 import { useAuth } from "@/hooks/use-auth";
+import { USER_ROLE_OPTIONS } from "@/lib/profile-taxonomy";
 
-const userRoles: { value: UserRole; label: string; description?: string }[] = [
-  { value: "developer", label: "Developer" },
-  { value: "trader", label: "Trader" },
-  { value: "investor", label: "Investor" },
-  { value: "designer", label: "Designer" },
-  { value: "founder", label: "Founder" },
-  { value: "degen", label: "Degen" },
-  { value: "other", label: "Other" },
-];
+const userRoles: { value: UserRole; label: string; description?: string }[] = USER_ROLE_OPTIONS;
 
 const eventTypes: { value: EventType; label: string }[] = [
   { value: "official", label: "Official" },
@@ -537,4 +530,3 @@ export function MapFiltersPanel({
     </div>
   );
 }
-

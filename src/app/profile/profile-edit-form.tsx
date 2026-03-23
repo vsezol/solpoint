@@ -12,16 +12,9 @@ import { trackEvent } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 import countries from "../../../supabase/coutries";
 import type { Country } from "@/store/map-store";
+import { USER_ROLE_OPTIONS } from "@/lib/profile-taxonomy";
 
-const ROLES: UserRole[] = [
-  "degen",
-  "developer",
-  "trader",
-  "investor",
-  "designer",
-  "founder",
-  "other",
-];
+const ROLES: UserRole[] = USER_ROLE_OPTIONS.map((option) => option.value);
 
 interface ProfileEditFormProps {
   user: User;
@@ -39,7 +32,7 @@ export function ProfileEditForm({ user, onCancel, onUpdate }: ProfileEditFormPro
 
   // Form state
   const [bio, setBio] = useState(user.bio || "");
-  const [role, setRole] = useState<UserRole>(user.role || "degen");
+  const [role, setRole] = useState<UserRole>(user.role || "other");
   const [isOpenToMeet, setIsOpenToMeet] = useState(user.is_open_to_meet || false);
   const [country, setCountry] = useState(user.country || "");
   const [countryCode, setCountryCode] = useState<string | undefined>(user.country_code);
@@ -220,7 +213,7 @@ export function ProfileEditForm({ user, onCancel, onUpdate }: ProfileEditFormPro
             >
               {ROLES.map((r) => (
                 <option key={r} value={r}>
-                  {r.charAt(0).toUpperCase() + r.slice(1)}
+                  {USER_ROLE_OPTIONS.find((option) => option.value === r)?.label || r}
                 </option>
               ))}
             </select>
@@ -559,4 +552,3 @@ export function ProfileEditForm({ user, onCancel, onUpdate }: ProfileEditFormPro
     </form>
   );
 }
-

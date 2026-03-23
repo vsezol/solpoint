@@ -20,6 +20,7 @@ interface AuthRequiredModalProps {
   title?: string;
   description?: string;
   requirePro?: boolean;
+  redirectTo?: string;
 }
 
 export function AuthRequiredModal({
@@ -28,6 +29,7 @@ export function AuthRequiredModal({
   title,
   description,
   requirePro = false,
+  redirectTo,
 }: AuthRequiredModalProps) {
   const defaultTitle = requirePro
     ? "This feature is available only for Pro users"
@@ -36,6 +38,12 @@ export function AuthRequiredModal({
   const defaultDescription = requirePro
     ? "Please upgrade to Pro subscription to access this feature."
     : "Please sign up or log in to use this feature.";
+
+  const withRedirect = (basePath: string) => {
+    if (!redirectTo) return basePath;
+    const query = new URLSearchParams({ redirect_to: redirectTo });
+    return `${basePath}?${query.toString()}`;
+  };
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="md" className={modalClass} closeButtonClassName={closeButtonClass}>
@@ -59,12 +67,12 @@ export function AuthRequiredModal({
           ) : (
             <div className="flex flex-col gap-3">
               <Button variant="primary" className="w-full" asChild>
-                <Link href="/signup" onClick={onClose}>
+                <Link href={withRedirect("/signup")} onClick={onClose}>
                   Sign up
                 </Link>
               </Button>
               <Button variant="outline" className="w-full" asChild>
-                <Link href="/login" onClick={onClose}>
+                <Link href={withRedirect("/login")} onClick={onClose}>
                   Log in
                 </Link>
               </Button>
@@ -75,4 +83,3 @@ export function AuthRequiredModal({
     </Modal>
   );
 }
-

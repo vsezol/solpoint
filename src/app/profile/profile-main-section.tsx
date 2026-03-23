@@ -15,7 +15,6 @@ import {
   Linkedin,
   BookOpen,
   Rss,
-  Wallet, 
   LogOut, 
   MapPin, 
   Users,
@@ -30,6 +29,7 @@ import { useProfileEdit } from "./profile-edit-provider";
 import { EditProfileButton } from "./edit-profile-button";
 import type { User, Invite } from "@/types";
 import { getAppUrl } from "@/lib/utils";
+import { USER_ROLE_LABELS } from "@/lib/profile-taxonomy";
 
 interface ProfileMainSectionProps {
   user: User;
@@ -117,7 +117,7 @@ export function ProfileMainSection({ user, isOwnProfile, friendsCount = 0 }: Pro
         throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
 
-      const { profile } = await response.json();
+      await response.json();
       setCurrentUser({ ...currentUser, is_open_to_meet: newValue });
     } catch (error) {
       console.error("Error updating open to meet:", error);
@@ -343,7 +343,7 @@ export function ProfileMainSection({ user, isOwnProfile, friendsCount = 0 }: Pro
         {currentUser.role && (
           <div className="flex items-center gap-2 text-[var(--color-text-secondary)]">
             <Users className="w-4 h-4" />
-            <span className="capitalize">{currentUser.role}</span>
+            <span>{USER_ROLE_LABELS[currentUser.role] || currentUser.role}</span>
           </div>
         )}
 

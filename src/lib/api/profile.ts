@@ -1,4 +1,11 @@
-import type { Event, ProfileExperienceItem, ProfileSkillItem, User } from "@/types";
+import type {
+  Event,
+  Interest,
+  ProfileExperienceItem,
+  ProfileSkillItem,
+  User,
+  UserRole,
+} from "@/types";
 import type { ProfileAffiliation } from "@/types/profile";
 
 export interface ProfileDataResponse {
@@ -45,6 +52,12 @@ export interface ProfileDetailsResponse {
   about: string | null;
   skills: ProfileSkillItem[];
   experience: ProfileExperienceItem[];
+  role: UserRole | null;
+  country: string | null;
+  countryCode: string | null;
+  city: string | null;
+  interests: Interest[];
+  interestSlugs: string[];
 }
 
 export interface SaveProfileDetailsPayload {
@@ -57,6 +70,9 @@ export interface SaveProfileDetailsPayload {
     endDate?: string | null;
     description?: string | null;
   }[];
+  role?: UserRole | null;
+  countryCode?: string | null;
+  interestSlugs?: string[];
 }
 
 export interface ProfileStatsResponse {

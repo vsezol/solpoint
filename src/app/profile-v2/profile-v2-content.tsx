@@ -20,8 +20,16 @@ import {
   type MutualEvent,
   type ProfileDetailsResponse,
 } from "@/lib/api/profile";
+import { getInterests } from "@/lib/api/interests";
+import {
+  INTEREST_DEFINITIONS,
+  USER_ROLE_LABELS,
+  USER_ROLE_OPTIONS,
+} from "@/lib/profile-taxonomy";
 import { addFriend, removeFriend } from "@/lib/api/friends";
 import { cn } from "@/lib/utils";
+import type { Interest, UserRole } from "@/types";
+import countries from "../../../supabase/coutries";
 
 /** Figma: Kode Mono 15px / Medium / line-height 100% */
 const kodeMono15: CSSProperties = {
@@ -195,6 +203,10 @@ export function ProfileV2Content({
   const [aboutDraft, setAboutDraft] = useState("");
   const [skillsDraft, setSkillsDraft] = useState("");
   const [expDrafts, setExpDrafts] = useState<ExpFormRow[]>([emptyExpRow()]);
+  const [roleDraft, setRoleDraft] = useState<UserRole | "">("");
+  const [countryCodeDraft, setCountryCodeDraft] = useState("");
+  const [interestSlugsDraft, setInterestSlugsDraft] = useState<string[]>([]);
+  const [interestDictionary, setInterestDictionary] = useState<Interest[]>([]);
 
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
@@ -223,10 +235,34 @@ export function ProfileV2Content({
         setAboutDraft(d.about ?? "");
         setSkillsDraft(d.skills.map((s) => s.name).join("\n"));
         setExpDrafts(detailsToExpDrafts(d));
+        setRoleDraft((d.role as UserRole | null) ?? "");
+        setCountryCodeDraft(d.countryCode ?? "");
+        setInterestSlugsDraft(d.interestSlugs ?? []);
       }
     },
     [isOwnProfile]
   );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadInterestDictionary = async () => {
+      try {
+        const list = await getInterests();
+        if (!cancelled) {
+          setInterestDictionary(list);
+        }
+      } catch (error) {
+        console.error("Failed to load interests:", error);
+      }
+    };
+
+    loadInterestDictionary();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -257,11 +293,20 @@ export function ProfileV2Content({
             about: user.bio ?? null,
             skills: [],
             experience: [],
+            role: user.role ?? null,
+            country: user.country ?? null,
+            countryCode: user.country_code ?? null,
+            city: user.city ?? null,
+            interests: [],
+            interestSlugs: [],
           });
           if (isOwnProfile) {
             setAboutDraft(user.bio ?? "");
             setSkillsDraft("");
             setExpDrafts([emptyExpRow()]);
+            setRoleDraft((user.role as UserRole | null) ?? "");
+            setCountryCodeDraft(user.country_code ?? "");
+            setInterestSlugsDraft([]);
           }
         }
       } finally {
@@ -300,18 +345,37 @@ export function ProfileV2Content({
     };
   }, [applyDetails, initialFriendshipStatus, isAuthenticated, isOwnProfile, user.bio, user.id]);
 
+  const showProfileForm = isOwnProfile && isEditingProfile;
+
+  const countryNameByCode = useMemo(
+    () => new Map(countries.map((country) => [country.code, country.name])),
+    []
+  );
+
+  const displayCountryName = showProfileForm
+    ? countryNameByCode.get(countryCodeDraft) || details?.country || user.country || null
+    : details?.country || (user as User & { countries?: { name?: string } }).countries?.name || user.country || null;
+
   const location = useMemo(() => {
-    const countryName = (user as User & { countries?: { name?: string } }).countries?.name || user.country;
-    if (user.city && countryName) return `${user.city}, ${countryName}`;
+    if (user.city && displayCountryName) return `${user.city}, ${displayCountryName}`;
     if (user.city) return user.city;
-    if (countryName) return countryName;
+    if (displayCountryName) return displayCountryName;
     return "Location not specified";
-  }, [user]);
+  }, [displayCountryName, user.city]);
 
   const aboutDisplay = details?.about ?? user.about ?? user.bio ?? null;
   const skillsList = details?.skills ?? [];
   const experienceList = details?.experience ?? [];
-  const showProfileForm = isOwnProfile && isEditingProfile;
+  const interestsList = details?.interests ?? [];
+  const displayedRole = (details?.role ?? user.role ?? null) as UserRole | null;
+  const editableInterestOptions =
+    interestDictionary.length > 0
+      ? interestDictionary
+      : INTEREST_DEFINITIONS.map((interest) => ({
+          id: interest.slug,
+          slug: interest.slug,
+          name: interest.name,
+        }));
 
   const handleConnectClick = async () => {
     if (!isAuthenticated) {
@@ -406,6 +470,9 @@ export function ProfileV2Content({
         about: aboutDraft.trim() || null,
         skills: skillNames,
         experience: experiencePayload,
+        role: roleDraft || null,
+        countryCode: countryCodeDraft || null,
+        interestSlugs: interestSlugsDraft,
       });
       applyDetails(saved);
       await queryClient.invalidateQueries({ queryKey: ["auth", "profile"] });
@@ -426,6 +493,9 @@ export function ProfileV2Content({
       setAboutDraft(user.bio ?? "");
       setSkillsDraft("");
       setExpDrafts([emptyExpRow()]);
+      setRoleDraft((user.role as UserRole | null) ?? "");
+      setCountryCodeDraft(user.country_code ?? "");
+      setInterestSlugsDraft([]);
     }
     setIsEditingProfile(false);
     setSaveMessage(null);
@@ -460,10 +530,10 @@ export function ProfileV2Content({
         @{user.twitter_handle}
       </p>
 
-      {user.role && (
-        <p className="mb-[13px] flex items-center gap-2 text-[var(--color-text-secondary)] capitalize" style={kodeMono15}>
+      {displayedRole && (
+        <p className="mb-[13px] flex items-center gap-2 text-[var(--color-text-secondary)]" style={kodeMono15}>
           <Users className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
-          <span>{user.role}</span>
+          <span>{USER_ROLE_LABELS[displayedRole] || displayedRole}</span>
         </p>
       )}
 
@@ -471,6 +541,84 @@ export function ProfileV2Content({
         <MapPin className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
         <span>{location}</span>
       </p>
+
+      {showProfileForm ? (
+        <div className="mb-5 space-y-3 rounded-[6px] border border-white/10 bg-[#121212] p-3">
+          <div>
+            <label className="mb-1 block text-xs text-[var(--color-text-muted)]">Role</label>
+            <select
+              className={inputClass}
+              value={roleDraft}
+              onChange={(event) => setRoleDraft(event.target.value as UserRole | "")}
+            >
+              <option value="">Not specified</option>
+              {USER_ROLE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs text-[var(--color-text-muted)]">Country</label>
+            <select
+              className={inputClass}
+              value={countryCodeDraft}
+              onChange={(event) => setCountryCodeDraft(event.target.value)}
+            >
+              <option value="">Not specified</option>
+              {countries.map((country) => (
+                <option key={country.code} value={country.code}>
+                  {country.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-xs text-[var(--color-text-muted)]">Interests</label>
+            <div className="flex flex-wrap gap-2">
+              {editableInterestOptions.map((interest) => {
+                const isSelected = interestSlugsDraft.includes(interest.slug);
+                return (
+                  <button
+                    key={interest.slug}
+                    type="button"
+                    className={cn(
+                      "rounded-full border px-2.5 py-1 text-[11px] transition-colors",
+                      isSelected
+                        ? "border-[var(--color-primary)] bg-[var(--color-primary)]/15 text-[var(--color-primary)]"
+                        : "border-white/20 text-white/70 hover:border-white/50 hover:text-white"
+                    )}
+                    onClick={() =>
+                      setInterestSlugsDraft((prev) =>
+                        prev.includes(interest.slug)
+                          ? prev.filter((slug) => slug !== interest.slug)
+                          : [...prev, interest.slug]
+                      )
+                    }
+                  >
+                    {interest.name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      ) : interestsList.length > 0 ? (
+        <div className="mb-5 flex flex-wrap gap-2">
+          {interestsList.map((interest) => (
+            <span
+              key={interest.slug}
+              className="rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-[11px] text-white/80"
+              style={kodeMono15}
+            >
+              {interest.name}
+            </span>
+          ))}
+        </div>
+      ) : null}
 
       <button
         type="button"

@@ -4,6 +4,7 @@ import { CircleHelp } from "lucide-react";
 
 import type { ContentTypeFilter, MapFilters, UserRole } from "@/types";
 import { cn } from "@/lib/utils";
+import { USER_ROLE_OPTIONS } from "@/lib/profile-taxonomy";
 
 import countries from "../../../supabase/coutries";
 
@@ -18,15 +19,10 @@ const kodeMonoStyle = {
   fontFamily: "var(--font-kode-mono), monospace",
 } as const;
 
-const roleOptions: { value: UserRole; label: string }[] = [
-  { value: "developer", label: "developer" },
-  { value: "trader", label: "trader" },
-  { value: "investor", label: "investor" },
-  { value: "designer", label: "designer" },
-  { value: "founder", label: "founder" },
-  { value: "degen", label: "degen" },
-  { value: "other", label: "other" },
-];
+const roleOptions: { value: UserRole; label: string }[] = USER_ROLE_OPTIONS.map((option) => ({
+  value: option.value,
+  label: option.label.toLowerCase(),
+}));
 
 const interestOptions: { value: ContentTypeFilter; label: string }[] = [
   { value: "all", label: "all interests" },

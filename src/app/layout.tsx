@@ -81,9 +81,7 @@ export const metadata: Metadata = {
       "Connect with Solana enthusiasts, find local hubs, and discover events worldwide.",
   },
   icons: {
-    icon: "/logo_solpoint.svg",
-    shortcut: "/logo_solpoint.svg",
-    apple: "/icons/icon-192x192.png",
+    apple: "/apple-touch-icon.png",
   },
 };
 
@@ -97,7 +95,7 @@ export default function RootLayout({
       <head>
         <meta name="theme-color" content="#0a0f14" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>
       <body
         className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} ${inter.variable} ${kodeMono.variable} ${iceland.variable} ${lalezar.variable} antialiased`}

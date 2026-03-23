@@ -8,6 +8,7 @@ import { cn, getSubscriptionDisplayName } from "@/lib/utils";
 import Link from "next/link";
 import { useChat } from "@/hooks/use-chat";
 import { useAuth } from "@/hooks/use-auth";
+import { USER_ROLE_LABELS } from "@/lib/profile-taxonomy";
 
 interface UserCardProps {
   user: User;
@@ -57,16 +58,6 @@ export function UserCard({
     }
   };
 
-  const roleLabels: Record<string, string> = {
-    developer: "Developer",
-    trader: "Trader",
-    investor: "Investor",
-    designer: "Designer",
-    founder: "Founder",
-    degen: "Degen",
-    other: "Other",
-  };
-
   const kmFont = { fontFamily: "var(--font-kode-mono), monospace" } as const;
 
   if (compact) {
@@ -98,7 +89,7 @@ export function UserCard({
                 <div className="flex items-center gap-2 mt-1">
                   {user.role && (
                     <Badge variant="primary" className="w-fit">
-                      {roleLabels[user.role] || user.role}
+                      {USER_ROLE_LABELS[user.role] || user.role}
                     </Badge>
                   )}
                   {user.subscription_tier === "vip" && <Badge variant="warning">Pro</Badge>}
@@ -234,7 +225,7 @@ export function UserCard({
               <div className="flex items-center gap-2 mt-2">
                 {user.role && (
                   <Badge variant="primary" className="w-fit">
-                    {roleLabels[user.role] || user.role}
+                    {USER_ROLE_LABELS[user.role] || user.role}
                   </Badge>
                 )}
                 {user.subscription_tier === "vip" && (
@@ -255,7 +246,7 @@ export function UserCard({
         {user.role && (
           <div className="text-[var(--color-text-secondary)]">
             <span className="text-[var(--color-text-muted)]">Who:</span>{" "}
-            <span>{roleLabels[user.role] || user.role}</span>
+            <span>{USER_ROLE_LABELS[user.role] || user.role}</span>
           </div>
         )}
         <div className="text-[var(--color-text-secondary)]">
@@ -411,4 +402,3 @@ export function UserCard({
     </div>
   );
 }
-

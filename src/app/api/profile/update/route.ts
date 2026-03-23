@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { isValidCountryCode, normalizeCountryCode } from "@/lib/countries";
+import { INTEREST_SLUGS, USER_ROLE_VALUES } from "@/lib/profile-taxonomy";
 
 export async function PATCH(request: Request) {
   const supabase = await createClient();
@@ -21,12 +22,13 @@ export async function PATCH(request: Request) {
   try {
     const body = await request.json();
     const { bio, about, role, is_open_to_meet, country, country_code, city, socials } = body;
+    const interestsRaw = body.interest_slugs ?? body.interests;
 
     // Валидация
     const updates: {
       bio?: string | null;
       about?: string | null;
-      role?: string;
+      role?: string | null;
       is_open_to_meet?: boolean;
       country?: string | null;
       country_code?: string | null;
@@ -44,6 +46,8 @@ export async function PATCH(request: Request) {
         substack?: string | null;
       } | null;
     } = {};
+    let interestSlugsToSave: string[] | undefined;
+    let hasInterestsPayload = false;
 
     // Long-form about (separate from short bio)
     if (about !== undefined) {
@@ -75,22 +79,41 @@ export async function PATCH(request: Request) {
 
     // Валидация role
     if (role !== undefined) {
-      const validRoles = [
-        "degen",
-        "developer",
-        "trader",
-        "investor",
-        "designer",
-        "founder",
-        "other",
-      ];
-      if (!validRoles.includes(role)) {
+      if (role === null || role === "") {
+        updates.role = null;
+      } else if (typeof role !== "string" || !USER_ROLE_VALUES.includes(role as (typeof USER_ROLE_VALUES)[number])) {
         return NextResponse.json(
           { error: "Invalid role" },
           { status: 400 }
         );
+      } else {
+        updates.role = role;
       }
-      updates.role = role;
+    }
+
+    // Валидация interest_slugs
+    if (interestsRaw !== undefined) {
+      hasInterestsPayload = true;
+      if (!Array.isArray(interestsRaw)) {
+        return NextResponse.json(
+          { error: "interest_slugs must be an array of strings" },
+          { status: 400 }
+        );
+      }
+
+      const normalized = interestsRaw
+        .map((slug: unknown) => (typeof slug === "string" ? slug.trim().toLowerCase() : ""))
+        .filter(Boolean);
+      const deduped = Array.from(new Set(normalized));
+
+      if (deduped.some((slug) => !INTEREST_SLUGS.has(slug))) {
+        return NextResponse.json(
+          { error: "Invalid interest slug provided" },
+          { status: 400 }
+        );
+      }
+
+      interestSlugsToSave = deduped;
     }
 
     // Валидация is_open_to_meet
@@ -327,30 +350,130 @@ export async function PATCH(request: Request) {
     }
 
     // Если нет полей для обновления
-    if (Object.keys(updates).length === 0) {
+    if (Object.keys(updates).length === 0 && !hasInterestsPayload) {
       return NextResponse.json(
         { error: "No fields to update" },
         { status: 400 }
       );
     }
 
-    // Обновляем профиль
-    const { data: profile, error: updateError } = await supabase
-      .from("profiles")
-      .update(updates)
-      .eq("id", authUser.id)
-      .select()
-      .single();
+    let profile: Record<string, unknown> | null = null;
 
-    if (updateError) {
-      console.error("Error updating profile:", updateError);
+    // Обновляем профиль
+    if (Object.keys(updates).length > 0) {
+      const { data: updatedProfile, error: updateError } = await supabase
+        .from("profiles")
+        .update(updates)
+        .eq("id", authUser.id)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error("Error updating profile:", updateError);
+        return NextResponse.json(
+          { error: updateError.message || "Failed to update profile" },
+          { status: 500 }
+        );
+      }
+
+      profile = updatedProfile as Record<string, unknown>;
+    } else {
+      const { data: currentProfile, error: profileError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", authUser.id)
+        .single();
+
+      if (profileError) {
+        console.error("Error loading profile:", profileError);
+        return NextResponse.json(
+          { error: profileError.message || "Failed to load profile" },
+          { status: 500 }
+        );
+      }
+
+      profile = currentProfile as Record<string, unknown>;
+    }
+
+    if (hasInterestsPayload) {
+      const { error: deleteInterestsError } = await supabase
+        .from("profile_interests")
+        .delete()
+        .eq("user_id", authUser.id);
+
+      if (deleteInterestsError) {
+        console.error("Error clearing profile interests:", deleteInterestsError);
+        return NextResponse.json(
+          { error: deleteInterestsError.message || "Failed to update profile interests" },
+          { status: 500 }
+        );
+      }
+
+      if (interestSlugsToSave && interestSlugsToSave.length > 0) {
+        const { data: interests, error: interestsError } = await supabase
+          .from("interests")
+          .select("id, slug")
+          .in("slug", interestSlugsToSave);
+
+        if (interestsError) {
+          console.error("Error loading interests:", interestsError);
+          return NextResponse.json(
+            { error: interestsError.message || "Failed to load interests" },
+            { status: 500 }
+          );
+        }
+
+        const interestIdBySlug = new Map(
+          (interests || []).map((interest: { id: string; slug: string }) => [interest.slug, interest.id])
+        );
+
+        const missingSlugs = interestSlugsToSave.filter((slug) => !interestIdBySlug.has(slug));
+        if (missingSlugs.length > 0) {
+          return NextResponse.json(
+            { error: `Unknown interest slugs: ${missingSlugs.join(", ")}` },
+            { status: 400 }
+          );
+        }
+
+        const payload = interestSlugsToSave.map((slug) => ({
+          user_id: authUser.id,
+          interest_id: interestIdBySlug.get(slug)!,
+        }));
+
+        const { error: insertInterestsError } = await supabase
+          .from("profile_interests")
+          .insert(payload);
+
+        if (insertInterestsError) {
+          console.error("Error saving profile interests:", insertInterestsError);
+          return NextResponse.json(
+            { error: insertInterestsError.message || "Failed to update profile interests" },
+            { status: 500 }
+          );
+        }
+      }
+    }
+
+    const { data: interestsOut, error: interestsOutError } = await supabase
+      .from("profile_interests")
+      .select("interest:interests(slug)")
+      .eq("user_id", authUser.id);
+
+    if (interestsOutError) {
+      console.error("Error loading saved interests:", interestsOutError);
       return NextResponse.json(
-        { error: updateError.message || "Failed to update profile" },
+        { error: interestsOutError.message || "Failed to load saved interests" },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ profile }, { status: 200 });
+    const interest_slugs = (interestsOut || [])
+      .map((row: { interest: { slug: string } | { slug: string }[] | null }) =>
+        Array.isArray(row.interest) ? row.interest[0]?.slug : row.interest?.slug
+      )
+      .filter((slug: string | undefined): slug is string => Boolean(slug));
+
+    return NextResponse.json({ profile, interest_slugs }, { status: 200 });
   } catch (error) {
     console.error("Unexpected error:", error);
     return NextResponse.json(
@@ -359,4 +482,3 @@ export async function PATCH(request: Request) {
     );
   }
 }
-

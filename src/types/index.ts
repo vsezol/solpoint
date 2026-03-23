@@ -3,7 +3,19 @@ import type {
 } from "./profile";
 
 // User types
-export type UserRole = "degen" | "developer" | "trader" | "investor" | "designer" | "founder" | "other";
+export type UserRole =
+  | "marketing_or_bd"
+  | "non_tech_founder"
+  | "tech_founder"
+  | "designer_ui_ux"
+  | "graphics_designer"
+  | "vc"
+  | "angel_investor"
+  | "artist"
+  | "influencer"
+  | "developer"
+  | "validator"
+  | "other";
 export type SubscriptionTier = "free" | "vip";
 
 // Country type
@@ -25,7 +37,7 @@ export interface User {
   country?: string; // @deprecated Use country_code instead
   country_code?: string; // ISO 3166-1 alpha-2 (e.g., "US", "RU")
   city?: string; // Max 150 characters
-  role?: UserRole;
+  role?: UserRole | null;
   is_open_to_meet: boolean;
   subscription_tier: SubscriptionTier;
   is_verified: boolean;
@@ -53,6 +65,21 @@ export interface ProfileSkillItem {
   id: string;
   name: string;
   sortOrder: number;
+}
+
+/** Interest row from interests/profile_interests */
+export interface Interest {
+  id: string;
+  slug: string;
+  name: string;
+}
+
+export interface ProfileInterest {
+  id: string;
+  user_id: string;
+  interest_id: string;
+  created_at?: string;
+  interest?: Interest;
 }
 
 /** Experience row from profile_experience */
@@ -326,6 +353,17 @@ export interface MapFilters {
   country?: string;
   countryCode?: string;
   city?: string;
+}
+
+export interface AttendeeFilterState {
+  selectedEventId?: string;
+  roles: UserRole[];
+  countryCode?: string;
+  interestSlugs: string[];
+  bestMatches: boolean;
+  completeProfiles: boolean;
+  page: number;
+  pageSize: number;
 }
 
 // Message types

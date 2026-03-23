@@ -12,6 +12,7 @@ import { ProfileEditForm } from "../profile-edit-form";
 import { AddFriendButton } from "../add-friend-button";
 import { EditProfileButton } from "../edit-profile-button";
 import { ProfileSocialLinks } from "./profile-social-links";
+import { USER_ROLE_LABELS } from "@/lib/profile-taxonomy";
 
 interface ProfileMainColumnProps {
   user: User;
@@ -193,7 +194,7 @@ export function ProfileMainColumn({
           {currentUser.role && (
             <div className="flex items-center gap-2 text-[var(--color-text-secondary)]">
               <Users className="w-4 h-4" />
-              <span className="capitalize">{currentUser.role}</span>
+              <span>{USER_ROLE_LABELS[currentUser.role] || currentUser.role}</span>
             </div>
           )}
 

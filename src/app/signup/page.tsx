@@ -16,6 +16,8 @@ import { cn } from "@/lib/utils";
 import countries from "../../../supabase/coutries";
 import type { Country } from "@/store/map-store";
 import { MAJOR_CITIES } from "@/lib/countries";
+import { INTEREST_DEFINITIONS, USER_ROLE_OPTIONS } from "@/lib/profile-taxonomy";
+import type { User } from "@/types";
 
 type Step = "twitter" | "location" | "profile" | "complete";
 
@@ -47,6 +49,7 @@ function SignupPageContent() {
     city: "" as string | null,
     bio: "",
     role: "",
+    interests: [] as string[],
     isOpenToMeet: false,
   });
 
@@ -94,6 +97,8 @@ function SignupPageContent() {
           // Сохраняем данные из БД, но не перезаписываем если они уже были введены в форме
           const shouldKeepCountryCode = prev.country_code && prev.country_code !== "";
           const shouldKeepCity = prev.city && prev.city !== "";
+          const userInterestSlugs =
+            (user as User & { interest_slugs?: string[] }).interest_slugs || [];
           const newCity = shouldKeepCity ? prev.city : (user.city || prev.city || "");
           
           // Синхронизируем citySearchQuery с загруженным городом
@@ -108,6 +113,7 @@ function SignupPageContent() {
             city: newCity,
             bio: user.bio || prev.bio || "",
             role: user.role || prev.role || "",
+            interests: prev.interests.length > 0 ? prev.interests : userInterestSlugs,
             isOpenToMeet: user.is_open_to_meet !== undefined ? user.is_open_to_meet : prev.isOpenToMeet,
           };
         });
@@ -276,6 +282,7 @@ function SignupPageContent() {
           city: formData.city || null,
           bio: formData.bio.trim() || null,
           role: formData.role || null,
+          interest_slugs: formData.interests,
           is_open_to_meet: formData.isOpenToMeet,
         }),
       });
@@ -290,6 +297,7 @@ function SignupPageContent() {
         event_category: "Authentication",
         has_bio: !!formData.bio,
         has_role: !!formData.role,
+        interests_count: formData.interests.length,
         is_open_to_meet: formData.isOpenToMeet,
         has_invite: !!inviteCode,
       });
@@ -311,15 +319,8 @@ function SignupPageContent() {
     }
   };
 
-  const roles = [
-    { value: "developer", label: "Developer" },
-    { value: "trader", label: "Trader" },
-    { value: "investor", label: "Investor" },
-    { value: "designer", label: "Designer" },
-    { value: "founder", label: "Founder" },
-    { value: "degen", label: "Degen" },
-    { value: "other", label: "Other" },
-  ];
+  const roles = USER_ROLE_OPTIONS;
+  const interests = INTEREST_DEFINITIONS;
 
   return (
     <>
@@ -623,6 +624,38 @@ function SignupPageContent() {
                     </div>
                   </div>
 
+                  {/* Interests */}
+                  <div>
+                    <label className="block text-sm text-[var(--color-text-muted)] mb-2">
+                      Interests (optional)
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {interests.map((interest) => {
+                        const selected = formData.interests.includes(interest.slug);
+                        return (
+                          <button
+                            key={interest.slug}
+                            onClick={() =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                interests: selected
+                                  ? prev.interests.filter((slug) => slug !== interest.slug)
+                                  : [...prev.interests, interest.slug],
+                              }))
+                            }
+                            className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${
+                              selected
+                                ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
+                                : "border-[var(--color-surface-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-text-muted)]"
+                            }`}
+                          >
+                            {interest.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                   {/* Open to meet */}
                   <label className="flex items-center justify-between cursor-pointer">
                     <span className="text-sm text-[var(--color-text-secondary)]">
@@ -739,4 +772,3 @@ export default function SignupPage() {
     </Suspense>
   );
 }
-

@@ -85,10 +85,31 @@ export async function GET(request: Request) {
     return NextResponse.json({ user: authUser, profile: null });
   }
 
+  const { data: profileInterests } = await serviceRoleClient
+    .from("profile_interests")
+    .select("interest:interests(slug)")
+    .eq("user_id", authUser.id);
+
+  const interest_slugs = (profileInterests || [])
+    .map((row: { interest: { slug: string } | { slug: string }[] | null }) =>
+      Array.isArray(row.interest) ? row.interest[0]?.slug : row.interest?.slug
+    )
+    .filter((slug: string | undefined): slug is string => Boolean(slug));
+
+  const profileRecord = profile as Record<string, unknown> & {
+    id?: string;
+    twitter_handle?: string | null;
+  };
+
+  const profileWithInterests = {
+    ...profileRecord,
+    interest_slugs,
+  };
+
   authDebugLog("me", "response_user_with_profile", {
     auth_user_id: authUser.id,
-    profile_id: profile.id,
-    twitter_handle: profile.twitter_handle ?? null,
+    profile_id: profileRecord.id ?? null,
+    twitter_handle: profileRecord.twitter_handle ?? null,
   });
-  return NextResponse.json({ user: authUser, profile });
+  return NextResponse.json({ user: authUser, profile: profileWithInterests });
 }

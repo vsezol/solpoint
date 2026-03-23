@@ -12,7 +12,7 @@ export const mockUsers: User[] = [
     country: "Argentina",
     country_code: "AR",
     city: "Buenos Aires",
-    role: "trader",
+    role: "marketing_or_bd",
     is_open_to_meet: true,
     subscription_tier: "vip",
     is_verified: true,
@@ -55,7 +55,7 @@ export const mockUsers: User[] = [
     country: "UAE",
     country_code: "AE",
     city: "Dubai",
-    role: "investor",
+    role: "angel_investor",
     is_open_to_meet: false,
     subscription_tier: "vip",
     is_verified: true,
@@ -76,7 +76,7 @@ export const mockUsers: User[] = [
     country: "Turkey",
     country_code: "TR",
     city: "Istanbul",
-    role: "degen",
+    role: "other",
     is_open_to_meet: true,
     subscription_tier: "free",
     is_verified: false,
@@ -97,7 +97,7 @@ export const mockUsers: User[] = [
     country: "Thailand",
     country_code: "TH",
     city: "Bangkok",
-    role: "designer",
+    role: "designer_ui_ux",
     is_open_to_meet: true,
     subscription_tier: "vip",
     is_verified: false,
@@ -356,4 +356,3 @@ export function createMapMarkers(
 export function getMockMarkers(): MapMarker[] {
   return createMapMarkers(mockUsers, mockEvents, mockHubs);
 }
-

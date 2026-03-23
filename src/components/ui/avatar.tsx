@@ -7,7 +7,7 @@ import { useState } from "react";
 interface AvatarProps {
   src?: string | null;
   alt: string;
-  size?: "xs" | "sm" | "md" | "lg" | "xl";
+  size?: "xs" | "sm" | "md" | "lg" | "xl" | "card";
   className?: string;
   isVerified?: boolean;
   isVip?: boolean;
@@ -19,6 +19,7 @@ const sizeClasses = {
   md: "w-10 h-10 text-sm",
   lg: "w-14 h-14 text-base",
   xl: "w-20 h-20 text-lg",
+  card: "h-[70px] w-[70px] text-lg",
 };
 
 const badgeSizes = {
@@ -27,6 +28,7 @@ const badgeSizes = {
   md: "w-4 h-4 -right-1 -bottom-1",
   lg: "w-5 h-5 -right-1 -bottom-1",
   xl: "w-6 h-6 -right-1 -bottom-1",
+  card: "w-5 h-5 -right-0.5 -bottom-0.5",
 };
 
 export function Avatar({

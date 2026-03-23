@@ -10,7 +10,7 @@ import type { NextRequest } from "next/server";
  * - country: фильтр по стране
  * - country_code: фильтр по коду страны (ISO 3166-1 alpha-2)
  * - city: фильтр по городу
- * - role: фильтр по роли (developer, trader, investor, designer, founder, degen, other)
+ * - role: фильтр по роли (см. USER_ROLE_OPTIONS в profile-taxonomy)
  * - open_to_meet: true - только открытые к встречам
  * - active_only: true - только активные (за последние 30 дней)
  * - mutual_friends_only: true - только взаимные друзья (требует current_user_id)
@@ -145,4 +145,3 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({ users: usersWithTier }, { status: 200 });
 }
-
