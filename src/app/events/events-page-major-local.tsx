@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { Header, Footer } from "@/components/layout";
 import { Button } from "@/components/ui";
 import { Avatar } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
 import { Calendar } from "lucide-react";
 import {
   getEventsShowcase,
@@ -80,17 +81,25 @@ function EventPoster({
   className,
   sizes,
   onClick,
+  /** `border` eats 2px from content (278×278 inside 280×280). `hairline` uses box-shadow so the image is full 280×280. */
+  frame = "border",
 }: {
   event: ShowcaseEvent;
   className?: string;
   sizes?: string;
   onClick: () => void;
+  frame?: "border" | "hairline";
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`relative overflow-hidden bg-[#101319] border border-white/10 ${className ?? ""}`}
+      className={cn(
+        "relative overflow-hidden bg-[#101319]",
+        frame === "border" && "border border-white/10",
+        frame === "hairline" && "shadow-[0_0_0_1px_rgba(255,255,255,0.1)]",
+        className
+      )}
       aria-label={`Open ${event.name}`}
     >
       {event.image_url ? (
@@ -160,6 +169,7 @@ function MajorEventCard({ event }: { event: ShowcaseEvent }) {
     <article className="flex h-full flex-col">
       <EventPoster
         event={event}
+        frame="hairline"
         className="mx-auto aspect-square w-full max-w-[280px]"
         sizes="280px"
         onClick={() => router.push(`/events/${event.slug}`)}
