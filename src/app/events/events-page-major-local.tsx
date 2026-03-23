@@ -178,8 +178,8 @@ function MajorEventCard({ event }: { event: ShowcaseEvent }) {
         onClick={() => router.push(`/events/${event.slug}`)}
       />
 
-      <div className={cn(majorCardColumnClass, "flex flex-1 flex-col gap-3 pt-4")}>
-        <div className="min-w-0 space-y-1.5">
+      <div className={cn(majorCardColumnClass, "flex flex-1 flex-col gap-3 pt-[22px]")}>
+        <div className="min-w-0 space-y-[22px]">
           <h3 className="line-clamp-2 wrap-break-word text-white" style={majorEventTitleStyle}>
             {event.name}
           </h3>
