@@ -542,7 +542,9 @@ export default function EventsPageMajorLocal() {
       if (!selectedEventId) return;
 
       const nextRoles = patch.roles ?? attendeeFilters.roles;
-      const nextCountryCode = patch.countryCode ?? attendeeFilters.countryCode;
+      // `undefined` means "all countries" in the widget; `??` would wrongly keep the previous code.
+      const nextCountryCode =
+        "countryCode" in patch ? patch.countryCode : attendeeFilters.countryCode;
       const nextInterestSlugs = patch.interestSlugs ?? attendeeFilters.interestSlugs;
       const nextBestMatches = patch.bestMatches ?? attendeeFilters.bestMatches;
       const nextCompleteProfiles = patch.completeProfiles ?? attendeeFilters.completeProfiles;
