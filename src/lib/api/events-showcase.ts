@@ -18,6 +18,7 @@ export interface ShowcaseEvent {
   people_going: number;
   attendee_previews: ShowcaseAttendeePreview[];
   is_major: boolean;
+  is_attending: boolean;
 }
 
 export interface EventsShowcaseResponse {

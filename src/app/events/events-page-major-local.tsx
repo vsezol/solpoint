@@ -205,6 +205,8 @@ function MajorEventCard({
   onAttend: (event: ShowcaseEvent) => void;
   onShowList: (event: ShowcaseEvent) => void;
 }) {
+  const isAttending = event.is_attending;
+
   return (
     <article className="flex h-full min-w-0 flex-col">
       <EventPoster
@@ -240,11 +242,20 @@ function MajorEventCard({
             <Button
               variant="outline"
               size="sm"
-              className="h-[49px] w-[125px] shrink-0 rounded-[7px] border border-white bg-white px-0 text-black! hover:bg-white/90"
+              className={cn(
+                "h-[49px] w-[125px] shrink-0 rounded-[7px] border px-0",
+                isAttending
+                  ? "cursor-default border-white/30 bg-[#1A1A1A] text-white/75! hover:bg-[#1A1A1A]"
+                  : "border-white bg-white text-black! hover:bg-white/90"
+              )}
               style={majorEventButtonTypography}
-              onClick={() => onAttend(event)}
+              onClick={() => {
+                if (isAttending) return;
+                onAttend(event);
+              }}
+              disabled={isAttending}
             >
-              Attend
+              {isAttending ? "Attending" : "Attend"}
             </Button>
             <GradientBorderButton
               className="w-[125px] shrink-0"
@@ -269,6 +280,8 @@ function LocalEventRow({
   onAttend: (event: ShowcaseEvent) => void;
   onShowList: (event: ShowcaseEvent) => void;
 }) {
+  const isAttending = event.is_attending;
+
   return (
     <article className="flex flex-row items-stretch gap-4 border-b border-white/10 pb-6">
       <EventPoster
@@ -293,19 +306,35 @@ function LocalEventRow({
         </p>
       </div>
 
-      <div className="flex shrink-0 flex-col items-center justify-between pt-4 pb-[25px] ml-[34px]">
-        <AttendeesSummary attendees={event.attendee_previews} peopleGoing={event.people_going} centered />
-        <div className="flex gap-2">
+      <div className="ml-[34px] flex shrink-0 flex-col items-center gap-[34px] pt-4 pb-[25px]">
+        <AttendeesSummary
+          attendees={event.attendee_previews}
+          peopleGoing={event.people_going}
+          centered
+          majorTypography
+        />
+        <div className="flex w-full items-center justify-center gap-3">
           <Button
             variant="outline"
             size="sm"
-            className="h-[49px] w-[125px] shrink-0 rounded-[7px] border-white bg-white text-black hover:bg-white/90"
-            onClick={() => onAttend(event)}
+            className={cn(
+              "h-[49px] w-[125px] shrink-0 rounded-[7px] border px-0",
+              isAttending
+                ? "cursor-default border-white/30 bg-[#1A1A1A] text-white/75! hover:bg-[#1A1A1A]"
+                : "border-white bg-white text-black! hover:bg-white/90"
+            )}
+            style={majorEventButtonTypography}
+            onClick={() => {
+              if (isAttending) return;
+              onAttend(event);
+            }}
+            disabled={isAttending}
           >
-            Attend
+            {isAttending ? "Attending" : "Attend"}
           </Button>
           <GradientBorderButton
             className="w-[125px] shrink-0"
+            buttonStyle={majorEventButtonTypography}
             onClick={() => onShowList(event)}
           >
             Show list

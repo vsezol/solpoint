@@ -59,6 +59,7 @@ type ShowcaseEvent = {
   people_going: number;
   attendee_previews: AttendeePreview[];
   is_major: boolean;
+  is_attending: boolean;
 };
 
 function isMissingIsMajorError(error: { message?: string } | null): boolean {
@@ -193,6 +194,26 @@ export async function GET() {
 
   const previewMap = new Map<string, AttendeePreview[]>();
   const displayedEventIds = displayedEvents.map((event) => event.id);
+  const attendingEventIds = new Set<string>();
+
+  if (authUser && displayedEventIds.length > 0) {
+    const { data: selfAttendanceRows, error: selfAttendanceError } = await supabase
+      .from("event_members")
+      .select("event_id")
+      .in("event_id", displayedEventIds)
+      .eq("user_id", authUser.id)
+      .eq("status", "going");
+
+    if (selfAttendanceError) {
+      console.error("Error fetching current user attendance in showcase:", selfAttendanceError);
+    } else {
+      for (const row of selfAttendanceRows || []) {
+        if (row.event_id) {
+          attendingEventIds.add(row.event_id);
+        }
+      }
+    }
+  }
 
   if (displayedEventIds.length > 0) {
     const { data: internalRowsRaw, error: internalError } = await supabase
@@ -300,6 +321,7 @@ export async function GET() {
     people_going: event.attendees_count || 0,
     attendee_previews: previewMap.get(event.id) || [],
     is_major: event.is_major === true,
+    is_attending: attendingEventIds.has(event.id),
   });
 
   return NextResponse.json(
