@@ -2,6 +2,9 @@
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
+import { isMobileBottomNavHidden } from "@/lib/mobile-bottom-nav";
 import { Twitter } from "lucide-react";
 
 interface FeedbackFormState {
@@ -39,6 +42,7 @@ const contactFieldBaseClass =
   "footer-contact-field w-full rounded-[4px] border border-[#5e5e5e] bg-black px-2.5 text-[14px] font-semibold text-white placeholder:text-[#a4a7ac] outline-none ring-0 transition-[border-color] duration-200 focus:border-white focus:outline-none focus:ring-0 focus:ring-offset-0 md:w-[266px]";
 
 export function Footer() {
+  const pathname = usePathname();
   const [form, setForm] = useState<FeedbackFormState>({ name: "", email: "", message: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error">("idle");
@@ -84,7 +88,12 @@ export function Footer() {
   };
 
   return (
-    <footer className="border-t border-[#595959] bg-[#101010] pb-20 md:pb-0">
+    <footer
+      className={cn(
+        "border-t border-[#595959] bg-[#101010] md:pb-0",
+        isMobileBottomNavHidden(pathname) ? "pb-8" : "pb-20"
+      )}
+    >
       <div className="mx-auto flex w-full max-w-[980px] flex-col gap-8 px-4 py-7 sm:px-6 sm:py-10 md:flex-row md:items-start md:px-8 md:py-12">
         <div className="flex min-w-0 flex-1 flex-col gap-6 sm:gap-8">
           <div className="flex flex-row justify-center gap-8 sm:justify-start sm:gap-[148px]">

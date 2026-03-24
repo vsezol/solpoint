@@ -8,6 +8,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useAuth } from "@/hooks/use-auth";
 import { trackEvent } from "@/lib/analytics";
+import { isMobileBottomNavHidden } from "@/lib/mobile-bottom-nav";
 
 const navItems = [
   { href: "/map", label: "Map", icon: Map },
@@ -35,6 +36,10 @@ export function MobileNav() {
     if (href === "/") return pathname === "/";
     return pathname.startsWith(href);
   };
+
+  if (isMobileBottomNavHidden(pathname)) {
+    return null;
+  }
 
   return (
     <>
