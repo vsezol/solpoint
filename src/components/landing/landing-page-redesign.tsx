@@ -19,13 +19,13 @@ const stepPreviewOuterClassName =
 const stepPreviewCaptionClassName =
   "text-[9px] font-bold leading-[100%] tracking-[-0.03em]";
 
-/** Step preview rasters — `public/icons` (names match design exports). */
+/** Step preview assets in `public/icons` (PNG + SVG per exports). */
 const stepPreviewAssets = {
   profileDaniel: "/icons/monke.png",
   peopleJosh: "/icons/josh-nft.png",
-  eventAccelerateUsa: "/icons/accelerarteUSA.png",
-  eventBreakpoint: "/icons/breakpoint.png",
-  eventMtnDao: "/icons/mtn_dao.png",
+  eventAccelerateUsa: "/icons/accelerateUSA.svg",
+  eventBreakpoint: "/icons/breakpoint.svg",
+  eventMtnDao: "/icons/mnt_dao.svg",
 } as const;
 
 const badges = [
@@ -35,13 +35,17 @@ const badges = [
     nameTop: "Monke",
     nameBottom: "DAO",
     nameStyle: { fontFamily: "var(--font-lalezar), cursive", fontWeight: 400 } as const,
+    logoFrame: "circle" as const,
+    logoImgClassName: "h-full w-full object-cover",
   },
   {
     title: "Supported by",
-    logoSrc: "/superteamkz.png",
-    nameTop: "Superteam",
+    logoSrc: "/icons/superteamlogo.svg",
+    nameTop: "",
     nameBottom: "Kazakhstan",
     nameStyle: { fontFamily: "var(--font-iceland), sans-serif", fontWeight: 400 } as const,
+    logoFrame: "inline" as const,
+    logoImgClassName: "h-[22px] w-auto max-w-[118px] object-contain object-center",
   },
   {
     title: "Alumni",
@@ -49,6 +53,8 @@ const badges = [
     nameTop: "Encode",
     nameBottom: "Club",
     nameStyle: { fontFamily: "var(--font-iceland), sans-serif", fontWeight: 400 } as const,
+    logoFrame: "circle" as const,
+    logoImgClassName: "h-full w-full object-cover",
   },
 ] as const;
 
@@ -87,34 +93,60 @@ const faqItems = [
 
 function BadgeRow({ className }: { className?: string }) {
   return (
-    <div className={cn("grid grid-cols-1 gap-4 md:grid-cols-3", className)}>
-      {badges.map((badge) => (
-        <article
-          key={badge.title}
-          className="flex flex-col items-center rounded-[11px] border border-[#303030] bg-black px-3 py-2.5"
-        >
-          <p className="self-center text-[12px] leading-[1.1] text-white/70" style={kodeMonoStyle}>
-            {badge.title}
-          </p>
-          <div className="mt-1.5 flex items-center gap-2">
-            <div className="relative h-7 w-7 shrink-0 overflow-hidden rounded-full border border-white/25 sm:h-10 sm:w-10">
-              <img
-                src={badge.logoSrc}
-                alt={`${badge.nameTop} ${badge.nameBottom} logo`}
-                className="h-full w-full object-cover"
-              />
+    <div
+      className={cn(
+        "flex flex-col items-center gap-6 md:flex-row md:justify-center md:gap-[105px]",
+        className
+      )}
+    >
+      {badges.map((badge) => {
+        const alt =
+          [badge.nameTop, badge.nameBottom].filter(Boolean).join(" ").trim() || badge.title;
+        return (
+          <article
+            key={badge.title}
+            className="flex h-[75px] w-[148px] shrink-0 flex-col rounded-[11px] border border-[#303030] bg-[#121212] px-[14px] py-2"
+          >
+            <p
+              className="shrink-0 text-center text-[12px] font-normal leading-[100%] text-white"
+              style={kodeMonoStyle}
+            >
+              {badge.title}
+            </p>
+            <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-0.5">
+              <div
+                className={cn(
+                  "flex shrink-0 items-center justify-center",
+                  badge.logoFrame === "circle" &&
+                    "h-[26px] w-[26px] overflow-hidden rounded-full border border-white/25"
+                )}
+              >
+                <img src={badge.logoSrc} alt={`${alt} logo`} className={badge.logoImgClassName} />
+              </div>
+              {(badge.nameTop || badge.nameBottom) && (
+                <div className="flex flex-col items-center gap-0.5 leading-none">
+                  {badge.nameTop ? (
+                    <p
+                      className="text-center text-[10px] font-bold leading-[1] text-white sm:text-[11px]"
+                      style={badge.nameStyle}
+                    >
+                      {badge.nameTop}
+                    </p>
+                  ) : null}
+                  {badge.nameBottom ? (
+                    <p
+                      className="text-center text-[10px] font-bold leading-[1] text-white sm:text-[11px]"
+                      style={badge.nameStyle}
+                    >
+                      {badge.nameBottom}
+                    </p>
+                  ) : null}
+                </div>
+              )}
             </div>
-            <div>
-              <p className="text-[17px] font-bold leading-[0.95] text-white" style={badge.nameStyle}>
-                {badge.nameTop}
-              </p>
-              <p className="text-[17px] font-bold leading-[0.95] text-white" style={badge.nameStyle}>
-                {badge.nameBottom}
-              </p>
-            </div>
-          </div>
-        </article>
-      ))}
+          </article>
+        );
+      })}
     </div>
   );
 }
