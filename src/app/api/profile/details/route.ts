@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { isValidCountryCode, normalizeCountryCode } from "@/lib/countries";
 import { INTEREST_SLUGS, USER_ROLE_VALUES } from "@/lib/profile-taxonomy";
+import { isUUID } from "@/lib/utils";
 
 const MAX_ABOUT = 4000;
 const MAX_SKILLS = 50;
@@ -70,6 +71,13 @@ export async function GET(request: NextRequest) {
 
     if (!userId) {
       return NextResponse.json({ error: "user_id parameter is required" }, { status: 400 });
+    }
+
+    if (!isUUID(userId)) {
+      return NextResponse.json(
+        { error: "user_id must be a valid UUID" },
+        { status: 400 }
+      );
     }
 
     const [profileResult, skillsResult, expResult, interestsResult] = await Promise.all([

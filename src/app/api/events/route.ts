@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { parseBoundedInt } from "@/lib/security/request-guards";
 
 /**
  * GET /api/events
@@ -24,6 +25,13 @@ export async function GET(request: NextRequest) {
   const { data: { user: authUser } } = await supabase.auth.getUser();
 
   const visibility = searchParams.get("visibility");
+  if (visibility && !["public", "vip_only"].includes(visibility)) {
+    return NextResponse.json(
+      { error: "Invalid visibility filter" },
+      { status: 400 }
+    );
+  }
+
   let isVip = false;
   if (authUser && (visibility === "vip_only" || !visibility)) {
     const { data: profile } = await supabase
@@ -32,6 +40,13 @@ export async function GET(request: NextRequest) {
       .eq("id", authUser.id)
       .single();
     isVip = profile?.subscription_tier === "vip";
+  }
+
+  if (visibility === "vip_only" && !isVip) {
+    return NextResponse.json(
+      { error: "VIP access required for vip_only events" },
+      { status: 403 }
+    );
   }
 
   let query = supabase
@@ -59,6 +74,12 @@ export async function GET(request: NextRequest) {
 
   const eventType = searchParams.get("event_type");
   if (eventType) {
+    if (!["official", "community", "private", "meetup"].includes(eventType)) {
+      return NextResponse.json(
+        { error: "Invalid event_type filter" },
+        { status: 400 }
+      );
+    }
     query = query.eq("event_type", eventType);
   }
 
@@ -91,8 +112,8 @@ export async function GET(request: NextRequest) {
   }
 
   // Пагинация
-  const limit = parseInt(searchParams.get("limit") || "50", 10);
-  const offset = parseInt(searchParams.get("offset") || "0", 10);
+  const limit = parseBoundedInt(searchParams.get("limit"), 50, 1, 200);
+  const offset = parseBoundedInt(searchParams.get("offset"), 0, 0, 10_000);
   query = query.range(offset, offset + limit - 1);
 
   const { data: events, error } = await query;
@@ -349,4 +370,3 @@ export async function POST(request: Request) {
     );
   }
 }
-

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { isUUID } from "@/lib/utils";
 
 // GET /api/friends/list?user_id=xxx&type=mutual|followers|following
 // Получить список друзей/подписчиков/подписок
@@ -21,6 +22,13 @@ export async function GET(request: NextRequest) {
     if (!user_id) {
       return NextResponse.json(
         { error: "user_id is required" },
+        { status: 400 }
+      );
+    }
+
+    if (!isUUID(user_id)) {
+      return NextResponse.json(
+        { error: "user_id must be a valid UUID" },
         { status: 400 }
       );
     }
@@ -73,7 +81,6 @@ export async function GET(request: NextRequest) {
             is_open_to_meet,
             subscription_tier,
             is_verified,
-            wallet_address,
             socials,
             last_active_at,
             created_at,
@@ -108,7 +115,6 @@ export async function GET(request: NextRequest) {
             is_open_to_meet,
             subscription_tier,
             is_verified,
-            wallet_address,
             socials,
             last_active_at,
             created_at,
@@ -149,7 +155,6 @@ export async function GET(request: NextRequest) {
             is_open_to_meet,
             subscription_tier,
             is_verified,
-            wallet_address,
             socials,
             last_active_at,
             created_at,
@@ -189,7 +194,6 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-
 
 
 
