@@ -296,7 +296,7 @@ export function LandingPageRedesign() {
     <main className="bg-black text-white" style={kodeMonoStyle}>
       <section className="mx-auto w-full max-w-[1440px] px-4 pb-14 pt-[108px] md:px-10 md:pb-20">
         <div className="mx-auto max-w-[912px] text-center">
-          <h1 className="mt-[89px] text-[29px] font-bold leading-[1.05] text-white md:text-[35px]">
+          <h1 className="mt-[89px] text-[25px] font-bold leading-[1.05] text-white md:text-[35px]">
             Find the right connections in minutes
           </h1>
           <p className="mt-3 text-[16px] font-bold leading-tight text-white md:text-[20px]">
