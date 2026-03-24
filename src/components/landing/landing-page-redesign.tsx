@@ -106,7 +106,7 @@ function BadgeRow({ className }: { className?: string }) {
         return (
           <article
             key={badge.title}
-            className="flex h-[75px] w-[148px] shrink-0 flex-col rounded-[11px] border border-[#303030] px-[14px] pt-[13px] pb-[3px]"
+            className="flex h-[75px] w-[148px] shrink-0 flex-col rounded-[11px] border border-[#303030] px-[14px] pt-1 pb-2"
           >
             <p
               className="shrink-0 text-center text-[12px] font-normal leading-[100%] text-white"
@@ -114,7 +114,7 @@ function BadgeRow({ className }: { className?: string }) {
             >
               {badge.title}
             </p>
-            <div className="flex min-h-0 flex-1 items-center justify-center gap-2">
+            <div className="mt-3 flex min-h-0 flex-1 items-center justify-center gap-2">
               <div
                 className={cn(
                   "flex shrink-0 items-center justify-center",
@@ -125,10 +125,10 @@ function BadgeRow({ className }: { className?: string }) {
                 <img src={badge.logoSrc} alt={`${alt} logo`} className={badge.logoImgClassName} />
               </div>
               {hasNames ? (
-                <div className="flex min-w-0 flex-col items-center justify-center gap-0 leading-none text-center">
+                <div className="flex min-w-0 flex-col items-start justify-center gap-0 leading-none text-left">
                   {badge.nameTop ? (
                     <p
-                      className="text-center text-[13px] font-bold leading-[0.95] text-white sm:text-[15px]"
+                      className="text-left text-[13px] font-bold leading-[0.95] text-white sm:text-[15px]"
                       style={badge.nameStyle}
                     >
                       {badge.nameTop}
@@ -136,7 +136,7 @@ function BadgeRow({ className }: { className?: string }) {
                   ) : null}
                   {badge.nameBottom ? (
                     <p
-                      className="text-center text-[13px] font-bold leading-[0.95] text-white sm:text-[15px]"
+                      className="text-left text-[13px] font-bold leading-[0.95] text-white sm:text-[15px]"
                       style={badge.nameStyle}
                     >
                       {badge.nameBottom}
