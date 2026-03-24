@@ -91,23 +91,34 @@ async function fetchEventsWithFallback(
   error: { message?: string } | null;
 }> {
   const buildQuery = (includeMajor: boolean) => {
-    const selectColumns = includeMajor
-      ? "id, name, slug, image_url, city, country, start_date, end_date, attendees_count, visibility, is_major, luma_event_id"
-      : "id, name, slug, image_url, city, country, start_date, end_date, attendees_count, visibility, luma_event_id";
+    if (includeMajor) {
+      let query = supabase
+        .from("events")
+        .select(
+          "id, name, slug, image_url, city, country, start_date, end_date, attendees_count, visibility, is_major, luma_event_id"
+        )
+        .order("start_date", { ascending: true });
+      if (options.upcomingOnly) {
+        query = query.gte("start_date", new Date().toISOString());
+      }
+      if (!options.isVip) {
+        query = query.eq("visibility", "public");
+      }
+      return query;
+    }
 
     let query = supabase
       .from("events")
-      .select(selectColumns)
+      .select(
+        "id, name, slug, image_url, city, country, start_date, end_date, attendees_count, visibility, luma_event_id"
+      )
       .order("start_date", { ascending: true });
-
     if (options.upcomingOnly) {
       query = query.gte("start_date", new Date().toISOString());
     }
-
     if (!options.isVip) {
       query = query.eq("visibility", "public");
     }
-
     return query;
   };
 

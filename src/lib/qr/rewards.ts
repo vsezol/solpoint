@@ -3,7 +3,9 @@
  * Off-chain first: earned/claimable in DB; NFT minting can be added later.
  */
 
-import { createClient, type SupabaseClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
+
+type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 
 export type RewardDefinitionKind = "badge" | "nft";
 export type RewardGrantStatus =
@@ -50,7 +52,7 @@ export async function ensureEventRewardDefinition(
     title?: string;
     description?: string;
     createdBy?: string | null;
-    supabase?: SupabaseClient;
+    supabase?: SupabaseServerClient;
   }
 ): Promise<RewardDefinitionRecord> {
   const supabase = options?.supabase ?? (await createClient());
@@ -115,7 +117,7 @@ export async function grantReward(params: {
   sourceType: RewardGrantSourceType;
   sourceRefId?: string | null;
   status?: RewardGrantStatus;
-  supabase?: SupabaseClient;
+  supabase?: SupabaseServerClient;
 }): Promise<RewardGrantRecord> {
   const supabase = params.supabase ?? (await createClient());
   const status = params.status ?? "earned";
@@ -142,7 +144,7 @@ export async function grantReward(params: {
         supabase,
       });
       if (existing) {
-        return existing;
+        return existing.grant;
       }
     }
     throw insertError;
@@ -163,7 +165,7 @@ export async function getRewardState(params: {
   rewardDefinitionId: string;
   userId: string;
   eventId: string | null;
-  supabase?: SupabaseClient;
+  supabase?: SupabaseServerClient;
 }): Promise<RewardStateResult | null> {
   const supabase = params.supabase ?? (await createClient());
 

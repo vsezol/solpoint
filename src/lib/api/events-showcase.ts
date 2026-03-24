@@ -84,7 +84,7 @@ export async function getEventsShowcase(
       EventsShowcaseResponse & { localPagination?: Partial<ShowcaseLocalPagination> }
     >;
 
-    const localPagination = data.localPagination || {};
+    const localPagination: Partial<ShowcaseLocalPagination> = data.localPagination ?? {};
     return {
       majorEvents: Array.isArray(data.majorEvents) ? data.majorEvents : [],
       localEvents: Array.isArray(data.localEvents) ? data.localEvents : [],

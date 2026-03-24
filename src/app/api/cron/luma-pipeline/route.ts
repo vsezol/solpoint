@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { isCronRequest } from "@/lib/cron-auth";
 import { NextRequest, NextResponse } from "next/server";
-import parser from "cron-parser";
+import { CronExpressionParser } from "cron-parser";
 
 type LumaWorkflowType = "full_pipeline" | "attendees_only";
 
@@ -29,7 +29,7 @@ function isDue(config: WorkflowConfigRow, now: Date): boolean {
 
   if (config.schedule_type === "cron" && config.cron_expression?.trim()) {
     try {
-      const interval = parser.parseExpression(config.cron_expression.trim(), {
+      const interval = CronExpressionParser.parse(config.cron_expression.trim(), {
         currentDate: new Date(now.getTime() - 2 * 60 * 1000),
       });
       const next = interval.next().toDate();

@@ -27,7 +27,7 @@ const FALLBACK_TIMEZONES = [
   "Pacific/Auckland",
 ] as const;
 
-export function isValidIanaTimezone(value: string | null | undefined): boolean {
+export function isValidIanaTimezone(value: string | null | undefined): value is string {
   if (!value || typeof value !== "string") return false;
   try {
     Intl.DateTimeFormat("en-US", { timeZone: value });

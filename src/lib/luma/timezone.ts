@@ -51,10 +51,18 @@ export function offsetToEtcGmt(offset: number): string | null {
 export function resolveTimezoneWithSource(
   input: ResolveTimezoneInput
 ): TimezoneResolutionResult {
-  return runtimeResolveTimezoneWithSource(input) as TimezoneResolutionResult;
+  return runtimeResolveTimezoneWithSource({
+    lat: input.lat,
+    lng: input.lng,
+    rawDateTimeDisplay: input.rawDateTimeDisplay ?? null,
+  }) as TimezoneResolutionResult;
 }
 
 export function resolveTimezone(input: ResolveTimezoneInput): string | null {
-  const value = runtimeResolveTimezone(input);
+  const value = runtimeResolveTimezone({
+    lat: input.lat,
+    lng: input.lng,
+    rawDateTimeDisplay: input.rawDateTimeDisplay ?? null,
+  });
   return typeof value === "string" ? value : null;
 }

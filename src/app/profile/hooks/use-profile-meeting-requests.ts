@@ -115,37 +115,38 @@ export function useProfileMeetingRequests({
   const approvedMeetingCalendarEvents = useMemo<MeetingCalendarEvent[]>(() => {
     return meetingRequests
       .filter((request) => request.status === "approved")
-      .map((request) => {
+      .flatMap((request): MeetingCalendarEvent[] => {
         const proposal = request.current_proposal;
         if (!proposal?.start_at || !proposal.end_at) {
-          return null;
+          return [];
         }
 
         const startAt = new Date(proposal.start_at);
         const endAt = new Date(proposal.end_at);
         if (Number.isNaN(startAt.getTime()) || Number.isNaN(endAt.getTime()) || endAt <= startAt) {
-          return null;
+          return [];
         }
 
         const eventLink = request.event?.slug || request.event?.id;
         const counterpartyName = request.counterparty?.twitter_name || "Unknown user";
 
-        return {
-          id: request.id,
-          title: `Meetup with ${counterpartyName}`,
-          start: proposal.start_at,
-          end: proposal.end_at,
-          location: proposal.place || undefined,
-          description: request.event?.name || proposal.message || undefined,
-          color: "var(--color-background)",
-          backgroundColor: "var(--color-primary)",
-          data: {
-            meetingRequestId: request.id,
-            eventLink: eventLink || undefined,
+        return [
+          {
+            id: request.id,
+            title: `Meetup with ${counterpartyName}`,
+            start: proposal.start_at,
+            end: proposal.end_at,
+            location: proposal.place || undefined,
+            description: request.event?.name || proposal.message || undefined,
+            color: "var(--color-background)",
+            backgroundColor: "var(--color-primary)",
+            data: {
+              meetingRequestId: request.id,
+              eventLink: eventLink || undefined,
+            },
           },
-        };
+        ];
       })
-      .filter((event): event is MeetingCalendarEvent => event !== null)
       .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
   }, [meetingRequests]);
 
