@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { Event } from "@/types";
+import { isUUID } from "@/lib/utils";
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,6 +14,13 @@ export async function GET(request: NextRequest) {
     if (!targetUserId) {
       return NextResponse.json(
         { error: "user_id parameter is required" },
+        { status: 400 }
+      );
+    }
+
+    if (!isUUID(targetUserId)) {
+      return NextResponse.json(
+        { error: "user_id must be a valid UUID" },
         { status: 400 }
       );
     }

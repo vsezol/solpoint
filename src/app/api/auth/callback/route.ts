@@ -110,12 +110,21 @@ export async function GET(request: NextRequest) {
 
   const cookieStore = await cookies();
   const redirectToFromCookie = cookieStore.get("oauth_redirect_to")?.value;
+  const oauthFlowNonce = cookieStore.get("oauth_flow_nonce")?.value;
+  const expectedProviderState = cookieStore.get("oauth_provider_state")?.value;
+  const returnedProviderState = searchParams.get("state");
   const redirectTarget = normalizeOAuthRedirectTarget(
     redirectToFromCookie || searchParams.get("redirect_to")
   );
 
   if (redirectToFromCookie) {
     cookieStore.delete("oauth_redirect_to");
+  }
+  if (oauthFlowNonce) {
+    cookieStore.delete("oauth_flow_nonce");
+  }
+  if (expectedProviderState) {
+    cookieStore.delete("oauth_provider_state");
   }
 
   const requestUrl = new URL(request.url);
@@ -155,6 +164,17 @@ export async function GET(request: NextRequest) {
       `${origin}/login?error=${encodeURIComponent(errorMessage)}`
     );
   };
+
+  if (!oauthFlowNonce) {
+    return redirectWithError("oauth_flow_expired");
+  }
+
+  if (
+    expectedProviderState &&
+    (!returnedProviderState || returnedProviderState !== expectedProviderState)
+  ) {
+    return redirectWithError("oauth_state_mismatch");
+  }
 
   if (!code) {
     return redirectWithError("no_code");

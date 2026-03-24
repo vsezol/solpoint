@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { parseBoundedInt } from "@/lib/security/request-guards";
 
 /**
  * GET /api/admin/submissions
@@ -39,8 +40,8 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const status = searchParams.get("status");
   const entityType = searchParams.get("entity_type");
-  const limit = parseInt(searchParams.get("limit") || "50", 10);
-  const offset = parseInt(searchParams.get("offset") || "0", 10);
+  const limit = parseBoundedInt(searchParams.get("limit"), 50, 1, 100);
+  const offset = parseBoundedInt(searchParams.get("offset"), 0, 0, 10_000);
 
   let query = supabase
     .from("entity_submissions")
@@ -95,4 +96,3 @@ export async function GET(request: NextRequest) {
     { status: 200 }
   );
 }
-

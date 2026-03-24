@@ -27,11 +27,19 @@ export async function GET(request: Request) {
 
   // Сохраняем redirect_to в cookie, чтобы восстановить его в callback
   const cookieStore = await cookies();
+  const oauthFlowNonce = crypto.randomUUID();
   cookieStore.set("oauth_redirect_to", redirectTo, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     maxAge: 600, // 10 минут
+    path: "/",
+  });
+  cookieStore.set("oauth_flow_nonce", oauthFlowNonce, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 600,
     path: "/",
   });
 
@@ -58,6 +66,22 @@ export async function GET(request: Request) {
 
   // Supabase вернет URL для редиректа на Twitter
   if (data?.url) {
+    try {
+      const providerUrl = new URL(data.url);
+      const providerState = providerUrl.searchParams.get("state");
+      if (providerState) {
+        cookieStore.set("oauth_provider_state", providerState, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
+          maxAge: 600,
+          path: "/",
+        });
+      }
+    } catch {
+      // Ignore provider URL parsing errors and fallback to nonce-only validation.
+    }
+
     authDebugLog("twitter", "oauth_redirect_to_provider", {
       callback_url: callbackUrl,
       has_provider_url: true,

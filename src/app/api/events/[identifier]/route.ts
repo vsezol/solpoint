@@ -130,7 +130,6 @@ export async function GET(
         is_open_to_meet,
         subscription_tier,
         is_verified,
-        wallet_address,
         socials,
         last_active_at,
         created_at,
@@ -161,7 +160,6 @@ export async function GET(
     is_open_to_meet?: boolean;
     subscription_tier?: string;
     is_verified?: boolean;
-    wallet_address?: string;
     socials?: unknown;
     last_active_at?: string;
     created_at?: string;
@@ -209,4 +207,3 @@ export async function GET(
 
   return NextResponse.json({ event: eventWithSource }, { status: 200 });
 }
-
