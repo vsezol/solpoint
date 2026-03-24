@@ -107,7 +107,7 @@ function BadgeRow({ className }: { className?: string }) {
         return (
           <article
             key={badge.title}
-            className="flex h-[64px] min-w-0 flex-1 flex-col rounded-[8px] border border-[#303030] px-1.5 pt-1.5 pb-1.5 sm:h-[75px] sm:max-w-[148px] sm:flex-none sm:rounded-[11px] sm:px-[14px] sm:pt-2 sm:pb-2 md:flex-initial"
+            className="flex h-[64px] flex-none flex-col rounded-[8px] border border-[#303030] px-1.5 pt-1.5 pb-1.5 sm:h-[75px] sm:max-w-[148px] sm:flex-1 sm:rounded-[11px] sm:px-[14px] sm:pt-2 sm:pb-2"
           >
             <p
               className="shrink-0 text-center text-[8px] font-normal leading-[100%] text-white sm:text-[10px] md:text-[12px]"
@@ -126,10 +126,10 @@ function BadgeRow({ className }: { className?: string }) {
                 <img src={badge.logoSrc} alt={`${alt} logo`} className={badge.logoImgClassName} />
               </div>
               {hasNames ? (
-                <div className="flex min-w-0 flex-col items-center justify-center gap-0 text-center leading-none sm:flex-1 sm:items-start sm:text-left">
+                <div className="flex min-w-0 flex-col items-center justify-center gap-0 text-center leading-none">
                   {badge.nameTop ? (
                     <p
-                      className="text-center text-[10px] font-bold leading-[0.95] text-white sm:text-left sm:text-[13px] md:text-[15px]"
+                      className="text-center text-[10px] font-bold leading-[0.95] text-white sm:text-[13px] md:text-[15px]"
                       style={badge.nameStyle}
                     >
                       {badge.nameTop}
@@ -137,7 +137,7 @@ function BadgeRow({ className }: { className?: string }) {
                   ) : null}
                   {badge.nameBottom ? (
                     <p
-                      className="text-center text-[10px] font-bold leading-[0.95] text-white sm:text-left sm:text-[13px] md:text-[15px]"
+                      className="text-center text-[10px] font-bold leading-[0.95] text-white sm:text-[13px] md:text-[15px]"
                       style={badge.nameStyle}
                     >
                       {badge.nameBottom}
@@ -306,7 +306,7 @@ export function LandingPageRedesign() {
 
         <WorldConnectionsMap />
 
-        <BadgeRow className="mx-auto mt-7 w-full max-w-[min(100%,380px)] sm:max-w-[654px]" />
+        <BadgeRow className="mx-auto mt-7 w-auto sm:w-full sm:max-w-[654px]" />
 
         <div className="mx-auto mt-8 flex w-full max-w-[230px] flex-row flex-nowrap items-stretch justify-center gap-2 sm:mt-11 sm:max-w-none sm:gap-[105px]">
           <Link
