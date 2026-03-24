@@ -36,6 +36,143 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
+type SubmissionSocialLinks = {
+  twitter?: string;
+  instagram?: string;
+  facebook?: string;
+  website?: string;
+};
+
+type SubmissionContacts = {
+  email?: string;
+  telegram?: string;
+  phone?: string;
+  other?: string;
+};
+
+type SubmissionEntityData = {
+  name?: string;
+  description?: string;
+  image_url?: string;
+  start_date?: string;
+  end_date?: string;
+  event_type?: string;
+  visibility?: string;
+  is_paid?: boolean;
+  price_sol?: number;
+  price_usd?: number;
+  max_attendees?: number;
+  is_online?: boolean;
+  timezone?: string;
+  registration_deadline?: string;
+  address?: string;
+  venue_name?: string;
+  latitude?: number;
+  longitude?: number;
+  socials?: SubmissionSocialLinks;
+  contacts?: SubmissionContacts;
+  hub_id?: string;
+  community_id?: string;
+  project_id?: string;
+  city?: string;
+  country?: string;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function asString(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined;
+}
+
+function asNumber(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string") {
+    const parsed = Number.parseFloat(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+  return undefined;
+}
+
+function asBoolean(value: unknown): boolean | undefined {
+  if (typeof value === "boolean") {
+    return value;
+  }
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "true") return true;
+    if (normalized === "false") return false;
+  }
+  return undefined;
+}
+
+function normalizeSocialLinks(value: unknown): SubmissionSocialLinks | undefined {
+  if (!isRecord(value)) return undefined;
+
+  const socials: SubmissionSocialLinks = {
+    twitter: asString(value.twitter),
+    instagram: asString(value.instagram),
+    facebook: asString(value.facebook),
+    website: asString(value.website),
+  };
+
+  if (!socials.twitter && !socials.instagram && !socials.facebook && !socials.website) {
+    return undefined;
+  }
+
+  return socials;
+}
+
+function normalizeContacts(value: unknown): SubmissionContacts | undefined {
+  if (!isRecord(value)) return undefined;
+
+  const contacts: SubmissionContacts = {
+    email: asString(value.email),
+    telegram: asString(value.telegram),
+    phone: asString(value.phone),
+    other: asString(value.other),
+  };
+
+  if (!contacts.email && !contacts.telegram && !contacts.phone && !contacts.other) {
+    return undefined;
+  }
+
+  return contacts;
+}
+
+function normalizeEntityData(value: Record<string, unknown>): SubmissionEntityData {
+  return {
+    name: asString(value.name),
+    description: asString(value.description),
+    image_url: asString(value.image_url),
+    start_date: asString(value.start_date),
+    end_date: asString(value.end_date),
+    event_type: asString(value.event_type),
+    visibility: asString(value.visibility),
+    is_paid: asBoolean(value.is_paid),
+    price_sol: asNumber(value.price_sol),
+    price_usd: asNumber(value.price_usd),
+    max_attendees: asNumber(value.max_attendees),
+    is_online: asBoolean(value.is_online),
+    timezone: asString(value.timezone),
+    registration_deadline: asString(value.registration_deadline),
+    address: asString(value.address),
+    venue_name: asString(value.venue_name),
+    latitude: asNumber(value.latitude),
+    longitude: asNumber(value.longitude),
+    socials: normalizeSocialLinks(value.socials),
+    contacts: normalizeContacts(value.contacts),
+    hub_id: asString(value.hub_id),
+    community_id: asString(value.community_id),
+    project_id: asString(value.project_id),
+    city: asString(value.city),
+    country: asString(value.country),
+  };
+}
+
 export default function AdminSubmissionsPage() {
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuth();
@@ -147,7 +284,7 @@ export default function AdminSubmissionsPage() {
   const filteredSubmissions = submissions.filter((submission) => {
     if (!searchQuery.trim()) return true;
     const query = searchQuery.toLowerCase();
-    const entityData = submission.entity_data;
+    const entityData = normalizeEntityData(submission.entity_data);
     const name = entityData?.name?.toLowerCase() || "";
     const description = entityData?.description?.toLowerCase() || "";
     const submitterName =
@@ -330,7 +467,7 @@ export default function AdminSubmissionsPage() {
                 {/* Submissions List */}
                 <div className="space-y-4 mb-8">
                   {filteredSubmissions.map((submission) => {
-                    const entityData = submission.entity_data;
+                    const entityData = normalizeEntityData(submission.entity_data);
                     const isProcessing = processingId === submission.id;
 
                     return (
@@ -1004,4 +1141,3 @@ export default function AdminSubmissionsPage() {
     </>
   );
 }
-

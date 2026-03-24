@@ -401,20 +401,27 @@ export function LandingPageRedesign() {
                   </span>
                   <ChevronDown
                     className={cn(
-                      "h-5 w-5 flex-shrink-0 text-white transition-transform duration-200",
+                      "h-5 w-5 flex-shrink-0 text-white transition-transform duration-300 ease-out",
                       isOpen && "rotate-180"
                     )}
                   />
                 </button>
                 <div
                   className={cn(
-                    "overflow-hidden transition-[max-height] duration-300 ease-out",
-                    isOpen ? "max-h-[560px]" : "max-h-0"
+                    "grid transition-[grid-template-rows] duration-300 ease-out",
+                    isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
                   )}
                 >
-                  <p className="pb-5 text-[14px] font-normal leading-relaxed tracking-[-0.02em] text-[#c7c7c7] md:text-[15px]">
-                    {item.answer}
-                  </p>
+                  <div className="min-h-0 overflow-hidden">
+                    <p
+                      className={cn(
+                        "pb-5 text-[14px] font-normal leading-relaxed tracking-[-0.02em] text-[#c7c7c7] transition-opacity duration-300 ease-out md:text-[15px]",
+                        isOpen ? "opacity-100" : "opacity-0"
+                      )}
+                    >
+                      {item.answer}
+                    </p>
+                  </div>
                 </div>
               </article>
             );
