@@ -308,7 +308,7 @@ export function LandingPageRedesign() {
 
         <BadgeRow className="mx-auto mt-7 w-auto sm:w-full sm:max-w-[654px]" />
 
-        <div className="mx-auto mt-[52px] flex w-full max-w-[230px] flex-row flex-nowrap items-stretch justify-center gap-2 sm:mt-[64px] sm:max-w-none sm:gap-[105px]">
+        <div className="mx-auto mt-[72px] flex w-full max-w-[230px] flex-row flex-nowrap items-stretch justify-center gap-2 sm:mt-[84px] sm:max-w-none sm:gap-[105px]">
           <Link
             href="/events"
             className="inline-flex h-10 min-w-0 flex-1 items-center justify-center rounded-[6px] border border-white bg-white px-2 text-[12px] font-bold leading-none text-black transition-colors duration-200 ease-out hover:bg-black hover:text-white sm:h-[49px] sm:w-[194px] sm:shrink-0 sm:flex-none sm:rounded-[7px] sm:px-[13px] sm:text-[20px] sm:tracking-normal sm:whitespace-nowrap"
