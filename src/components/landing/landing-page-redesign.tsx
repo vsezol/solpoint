@@ -114,12 +114,7 @@ function BadgeRow({ className }: { className?: string }) {
             >
               {badge.title}
             </p>
-            <div
-              className={cn(
-                "flex min-h-0 flex-1 items-center gap-2",
-                !hasNames && "justify-center"
-              )}
-            >
+            <div className="flex min-h-0 flex-1 items-center justify-center gap-2">
               <div
                 className={cn(
                   "flex shrink-0 items-center justify-center",
@@ -130,10 +125,10 @@ function BadgeRow({ className }: { className?: string }) {
                 <img src={badge.logoSrc} alt={`${alt} logo`} className={badge.logoImgClassName} />
               </div>
               {hasNames ? (
-                <div className="flex min-w-0 flex-col justify-center gap-0 leading-none">
+                <div className="flex min-w-0 flex-col items-center justify-center gap-0 leading-none text-center">
                   {badge.nameTop ? (
                     <p
-                      className="text-left text-[13px] font-bold leading-[0.95] text-white sm:text-[15px]"
+                      className="text-center text-[13px] font-bold leading-[0.95] text-white sm:text-[15px]"
                       style={badge.nameStyle}
                     >
                       {badge.nameTop}
@@ -141,7 +136,7 @@ function BadgeRow({ className }: { className?: string }) {
                   ) : null}
                   {badge.nameBottom ? (
                     <p
-                      className="text-left text-[13px] font-bold leading-[0.95] text-white sm:text-[15px]"
+                      className="text-center text-[13px] font-bold leading-[0.95] text-white sm:text-[15px]"
                       style={badge.nameStyle}
                     >
                       {badge.nameBottom}
