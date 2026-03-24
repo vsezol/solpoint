@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CircleHelp } from "lucide-react";
 
 import type { ContentTypeFilter, Interest, MapFilters, UserRole } from "@/types";
@@ -16,6 +16,7 @@ import { MapFilterSelect } from "./map-filter-select";
 type MapV2FiltersProps = {
   filters: MapFilters;
   onFiltersChange: (filters: MapFilters) => void;
+  isAuthenticated: boolean;
 };
 
 const kodeMonoStyle = {
@@ -33,8 +34,6 @@ const mapContentSelectOptions: { value: ContentTypeFilter; label: string }[] = [
   { value: "events", label: "events only" },
   { value: "hubs", label: "hubs & communities" },
 ];
-
-const roleSelectOptions = [{ value: "", label: "choose role" }, ...roleOptions.map((r) => ({ value: r.value, label: r.label }))];
 
 function countryCodeToFlagEmoji(code: string): string {
   if (!code || code.length !== 2) return "🌍";
@@ -54,6 +53,9 @@ export const MAP_V2_DEFAULT_FILTERS: MapFilters = {
   contentType: "all",
   interestSlugs: undefined,
   userRoles: undefined,
+  bestMatches: undefined,
+  completeProfiles: undefined,
+  // Legacy filters stay undefined in v2 unless explicitly used elsewhere.
   activeOnly: undefined,
   openToMeet: undefined,
   country: undefined,
@@ -115,7 +117,101 @@ function FieldLabel({ children }: { children: string }) {
   );
 }
 
-export function MapFiltersPanelV2({ filters, onFiltersChange }: MapV2FiltersProps) {
+function prefersCoarseOrNoHover(): boolean {
+  if (typeof window === "undefined") return false;
+  return (
+    window.matchMedia("(hover: none)").matches || window.matchMedia("(pointer: coarse)").matches
+  );
+}
+
+function AdditionalFiltersHeading() {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [tipVisible, setTipVisible] = useState(false);
+  const hoverLeaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const tipId = "map-v2-additional-filters-tooltip";
+
+  const isFinePointerHover = () =>
+    typeof window !== "undefined" &&
+    window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+
+  const clearHoverLeaveTimer = () => {
+    if (hoverLeaveTimerRef.current) {
+      clearTimeout(hoverLeaveTimerRef.current);
+      hoverLeaveTimerRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    if (!tipVisible) return;
+    if (!prefersCoarseOrNoHover()) return;
+    const onDocPointerDown = (e: PointerEvent) => {
+      const node = e.target;
+      if (!(node instanceof Node)) return;
+      if (rootRef.current?.contains(node)) return;
+      setTipVisible(false);
+    };
+    document.addEventListener("pointerdown", onDocPointerDown);
+    return () => document.removeEventListener("pointerdown", onDocPointerDown);
+  }, [tipVisible]);
+
+  return (
+    <div ref={rootRef} className="relative mb-[12px] inline-flex max-w-full flex-wrap items-center gap-1">
+      <p
+        className="text-[15px] font-normal leading-none tracking-normal text-white/90"
+        style={kodeMonoStyle}
+      >
+        additional filters
+      </p>
+      <button
+        type="button"
+        aria-label="About additional filters"
+        aria-expanded={tipVisible}
+        aria-controls={tipId}
+        className="inline-flex shrink-0 rounded p-0.5 text-white/60 transition-colors hover:text-white/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#14f195]/80"
+        onMouseEnter={() => {
+          if (!isFinePointerHover()) return;
+          clearHoverLeaveTimer();
+          setTipVisible(true);
+        }}
+        onMouseLeave={() => {
+          if (!isFinePointerHover()) return;
+          clearHoverLeaveTimer();
+          hoverLeaveTimerRef.current = setTimeout(() => setTipVisible(false), 140);
+        }}
+        onFocus={() => {
+          if (!prefersCoarseOrNoHover()) setTipVisible(true);
+        }}
+        onBlur={() => {
+          if (prefersCoarseOrNoHover()) return;
+          clearHoverLeaveTimer();
+          hoverLeaveTimerRef.current = setTimeout(() => setTipVisible(false), 120);
+        }}
+        onClick={() => {
+          if (prefersCoarseOrNoHover()) setTipVisible((v) => !v);
+        }}
+      >
+        <CircleHelp className="h-3.5 w-3.5" aria-hidden />
+      </button>
+      {tipVisible ? (
+        <div
+          id={tipId}
+          role="tooltip"
+          className="pointer-events-none absolute left-0 top-full z-50 mt-2 w-[min(300px,calc(100vw-2rem))] border border-[#2A2A2A] bg-[#0f1216] px-3 py-2 text-left text-[11px] font-normal leading-snug tracking-normal text-white/90 shadow-lg sm:left-1/2 sm:-translate-x-1/2"
+          style={kodeMonoStyle}
+        >
+          <p className="mb-2 text-white/90">
+            <span className="font-bold text-white">Best matches:</span> Shows people with the highest overlap in interests, roles, and shared events. More overlap in interests, skills, and events → stronger match.
+          </p>
+          <p className="mb-0 text-white/90">
+            <span className="font-bold text-white">Complete profiles:</span> Shows users with filled profiles: About, country, skills, at least one interest, role, and experience.
+          </p>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+export function MapFiltersPanelV2({ filters, onFiltersChange, isAuthenticated }: MapV2FiltersProps) {
   const [interestDictionary, setInterestDictionary] = useState<Interest[]>([]);
 
   useEffect(() => {
@@ -154,20 +250,12 @@ export function MapFiltersPanelV2({ filters, onFiltersChange }: MapV2FiltersProp
     return source.map((i) => ({ value: i.slug, label: i.name }));
   }, [interestDictionary]);
 
-  const selectedRole = filters.userRoles?.[0] ?? "";
   const selectedCountryCode = filters.countryCode ?? "";
   const selectedMapContent: ContentTypeFilter = filters.contentType ?? "all";
 
   const onReset = () => {
     onFiltersChange({
       ...MAP_V2_DEFAULT_FILTERS,
-    });
-  };
-
-  const onRoleChange = (nextRole: UserRole | "") => {
-    onFiltersChange({
-      ...filters,
-      userRoles: nextRole ? [nextRole] : undefined,
     });
   };
 
@@ -217,12 +305,18 @@ export function MapFiltersPanelV2({ filters, onFiltersChange }: MapV2FiltersProp
       <div className="px-4 pb-4 pt-[23px]">
         <div>
           <FieldLabel>user&apos;s role</FieldLabel>
-          <MapFilterSelect
+          <MapFilterMultiSelect
             className="mb-[20px]"
-            value={selectedRole}
-            onChange={(v) => onRoleChange(v as UserRole | "")}
-            options={roleSelectOptions}
-            placeholder="choose role"
+            values={filters.userRoles ?? []}
+            onChange={(roles) =>
+              onFiltersChange({
+                ...filters,
+                userRoles: roles.length > 0 ? (roles as UserRole[]) : undefined,
+              })
+            }
+            options={roleOptions}
+            placeholder="choose roles"
+            searchPlaceholder="find roles"
           />
         </div>
 
@@ -268,31 +362,33 @@ export function MapFiltersPanelV2({ filters, onFiltersChange }: MapV2FiltersProp
         </div>
 
         <div>
-          <p className="mb-[12px] flex items-center gap-1 text-[15px] font-normal leading-none tracking-normal text-white/90" style={kodeMonoStyle}>
-            additional filters
-            <CircleHelp className="h-3.5 w-3.5 text-white/60" />
-          </p>
+          <AdditionalFiltersHeading />
 
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={() => onFiltersChange({ ...filters, activeOnly: !filters.activeOnly })}
+              onClick={() => onFiltersChange({ ...filters, bestMatches: !filters.bestMatches })}
+              disabled={!isAuthenticated}
               className={cn(
                 "h-9 w-[109px] border px-0 text-center text-[12px] font-bold leading-none tracking-[0] transition-colors",
-                filters.activeOnly
+                filters.bestMatches
                   ? "border-[#14f195] bg-[#0A201A] text-[#14f195]"
-                  : "border-[#555] text-white hover:border-white/80"
+                  : "border-[#555] text-white hover:border-white/80",
+                !isAuthenticated && "cursor-not-allowed opacity-50 hover:border-[#555]"
               )}
               style={kodeMonoStyle}
+              title={!isAuthenticated ? "Sign in to use Best matches." : undefined}
             >
               Best matches
             </button>
             <button
               type="button"
-              onClick={() => onFiltersChange({ ...filters, openToMeet: !filters.openToMeet })}
+              onClick={() =>
+                onFiltersChange({ ...filters, completeProfiles: !filters.completeProfiles })
+              }
               className={cn(
                 "h-9 w-[141px] border px-0 text-center text-[12px] font-bold leading-none tracking-[0] transition-colors",
-                filters.openToMeet
+                filters.completeProfiles
                   ? "border-[#14f195] bg-[#0A201A] text-[#14f195]"
                   : "border-[#555] text-white hover:border-white/80"
               )}

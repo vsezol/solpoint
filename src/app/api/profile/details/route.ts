@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { isValidCountryCode, normalizeCountryCode } from "@/lib/countries";
-import { INTEREST_SLUGS, USER_ROLE_VALUES } from "@/lib/profile-taxonomy";
+import { INTEREST_SLUGS, MAX_PROFILE_SKILLS, USER_ROLE_VALUES } from "@/lib/profile-taxonomy";
+import {
+  mapProfileSkillRowsToResponse,
+  normalizeIncomingSkillSlugs,
+  normalizeLegacySkillNames,
+  validateAndPersistSkills,
+} from "@/lib/profile-skills";
 
 const MAX_ABOUT = 4000;
-const MAX_SKILLS = 50;
-const MAX_SKILL_NAME = 120;
 const MAX_EXPERIENCE_ITEMS = 25;
 const MAX_TITLE = 300;
 const MAX_COMPANY = 200;
@@ -35,11 +39,7 @@ export interface ProfileDetailsInterestRow {
 }
 
 function mapSkills(rows: ProfileDetailsSkillRow[]) {
-  return rows.map((r) => ({
-    id: r.id,
-    name: r.name,
-    sortOrder: r.sort_order,
-  }));
+  return mapProfileSkillRowsToResponse(rows);
 }
 
 function mapExperience(rows: ProfileDetailsExperienceRow[]) {
@@ -144,13 +144,6 @@ interface IncomingExperience {
   description?: string | null;
 }
 
-function normalizeSkillName(raw: string): string | null {
-  const t = raw.trim();
-  if (!t) return null;
-  if (t.length > MAX_SKILL_NAME) return null;
-  return t;
-}
-
 export async function PUT(request: NextRequest) {
   try {
     const supabase = await createClient();
@@ -168,8 +161,9 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
-    const { about, skills, experience, role, countryCode, interestSlugs } = body as {
+    const { about, skillSlugs, skills, experience, role, countryCode, interestSlugs } = body as {
       about?: string | null;
+      skillSlugs?: string[] | null;
       skills?: IncomingSkill[];
       experience?: IncomingExperience[];
       role?: string | null;
@@ -177,9 +171,9 @@ export async function PUT(request: NextRequest) {
       interestSlugs?: string[] | null;
     };
 
-    if (about === undefined || skills === undefined || experience === undefined) {
+    if (about === undefined || (skillSlugs === undefined && skills === undefined) || experience === undefined) {
       return NextResponse.json(
-        { error: "about, skills, and experience are required (use null or [] for empty)" },
+        { error: "about, skillSlugs, and experience are required (use null or [] for empty)" },
         { status: 400 }
       );
     }
@@ -237,36 +231,38 @@ export async function PUT(request: NextRequest) {
       normalizedInterestSlugs = [];
     }
 
-    if (!Array.isArray(skills)) {
+    if (skillSlugs !== undefined && skillSlugs !== null && !Array.isArray(skillSlugs)) {
+      return NextResponse.json({ error: "skillSlugs must be an array of strings" }, { status: 400 });
+    }
+    if (skills !== undefined && !Array.isArray(skills)) {
       return NextResponse.json({ error: "skills must be an array" }, { status: 400 });
     }
     if (!Array.isArray(experience)) {
       return NextResponse.json({ error: "experience must be an array" }, { status: 400 });
     }
 
-    if (skills.length > MAX_SKILLS) {
-      return NextResponse.json({ error: `At most ${MAX_SKILLS} skills allowed` }, { status: 400 });
+    let normalizedSkillSlugs: string[] = [];
+    if (Array.isArray(skillSlugs)) {
+      const normalized = normalizeIncomingSkillSlugs(skillSlugs);
+      if (normalized.invalidValues.length > 0) {
+        return NextResponse.json(
+          { error: `Unknown skill slugs: ${normalized.invalidValues.join(", ")}` },
+          { status: 400 }
+        );
+      }
+      normalizedSkillSlugs = normalized.skillSlugs;
+    } else if (Array.isArray(skills)) {
+      normalizedSkillSlugs = normalizeLegacySkillNames(skills);
+    }
+
+    if (normalizedSkillSlugs.length > MAX_PROFILE_SKILLS) {
+      return NextResponse.json({ error: `At most ${MAX_PROFILE_SKILLS} skills allowed` }, { status: 400 });
     }
     if (experience.length > MAX_EXPERIENCE_ITEMS) {
       return NextResponse.json(
         { error: `At most ${MAX_EXPERIENCE_ITEMS} experience entries allowed` },
         { status: 400 }
       );
-    }
-
-    const normalizedSkills: { name: string; sort_order: number }[] = [];
-    {
-      for (let i = 0; i < skills.length; i++) {
-        const s = skills[i];
-        if (!s || typeof s !== "object" || typeof s.name !== "string") {
-          return NextResponse.json({ error: "Each skill must have a name string" }, { status: 400 });
-        }
-        const name = normalizeSkillName(s.name);
-        if (!name) {
-          return NextResponse.json({ error: "Skill names must be non-empty" }, { status: 400 });
-        }
-        normalizedSkills.push({ name, sort_order: i });
-      }
     }
 
     const normalizedExp: {
@@ -388,22 +384,11 @@ export async function PUT(request: NextRequest) {
       throw upErr;
     }
 
-    const { error: delS } = await supabase.from("profile_skills").delete().eq("user_id", authUser.id);
-    if (delS) {
-      throw delS;
-    }
-    if (normalizedSkills.length > 0) {
-      const { error: insS } = await supabase.from("profile_skills").insert(
-        normalizedSkills.map((s) => ({
-          user_id: authUser.id,
-          name: s.name,
-          sort_order: s.sort_order,
-        }))
-      );
-      if (insS) {
-        throw insS;
-      }
-    }
+    await validateAndPersistSkills({
+      supabase,
+      userId: authUser.id,
+      skillSlugs: normalizedSkillSlugs,
+    });
 
     const { error: delE } = await supabase.from("profile_experience").delete().eq("user_id", authUser.id);
     if (delE) {

@@ -87,9 +87,21 @@ const stepCards = [
 ] as const;
 
 const faqItems = [
-  "What is SolPoint?",
-  "How does SolPoint work?",
-  "What makes SolPoint different?",
+  {
+    question: "What is SolPoint?",
+    answer:
+      "SolPoint helps turn events into real community experiences instead of just crowded spaces full of strangers. You can find people with similar interests, join the vibe early, and build genuine connections before meeting in person.",
+  },
+  {
+    question: "How does SolPoint work?",
+    answer:
+      "You choose the event you want to attend, open the attendee list, and discover people you'd like to connect with. This lets you start conversations and get to know each other before the event even begins.",
+  },
+  {
+    question: "What makes SolPoint different?",
+    answer:
+      "Instead of scrolling through social media trying to figure out who's attending an event, or looking at attendee lists with no real context, SolPoint gives you instant access to the people going — along with rich profiles that make it easier to understand who they are. This helps you connect faster and more naturally, whether you just want to have a fun time with new friends or you're a serious networker looking for specific people.",
+  },
 ] as const;
 
 function BadgeRow({ className }: { className?: string }) {
@@ -373,11 +385,11 @@ export function LandingPageRedesign() {
         </h2>
 
         <div className="mx-auto mt-10 w-full max-w-[849px]">
-          {faqItems.map((question, index) => {
+          {faqItems.map((item, index) => {
             const isOpen = openItems.includes(index);
 
             return (
-              <article key={question} className="border-b border-[#8e8e8e]">
+              <article key={item.question} className="border-b border-[#8e8e8e]">
                 <button
                   type="button"
                   onClick={() => toggleFaq(index)}
@@ -385,7 +397,7 @@ export function LandingPageRedesign() {
                   aria-expanded={isOpen}
                 >
                   <span className="text-[20px] font-bold leading-none tracking-[-0.03em] text-white">
-                    {question}
+                    {item.question}
                   </span>
                   <ChevronDown
                     className={cn(
@@ -396,11 +408,13 @@ export function LandingPageRedesign() {
                 </button>
                 <div
                   className={cn(
-                    "overflow-hidden transition-[max-height] duration-200 ease-out",
-                    isOpen ? "max-h-12" : "max-h-0"
+                    "overflow-hidden transition-[max-height] duration-300 ease-out",
+                    isOpen ? "max-h-[560px]" : "max-h-0"
                   )}
                 >
-                  <div className="h-6" />
+                  <p className="pb-5 text-[14px] font-normal leading-relaxed tracking-[-0.02em] text-[#c7c7c7] md:text-[15px]">
+                    {item.answer}
+                  </p>
                 </div>
               </article>
             );

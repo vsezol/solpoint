@@ -2,6 +2,12 @@ import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { isValidCountryCode, normalizeCountryCode } from "@/lib/countries";
 import { INTEREST_SLUGS, USER_ROLE_VALUES } from "@/lib/profile-taxonomy";
+import {
+  ensureSkillLimit,
+  mapProfileSkillRowsToResponse,
+  normalizeIncomingSkillSlugs,
+  validateAndPersistSkills,
+} from "@/lib/profile-skills";
 
 export async function PATCH(request: Request) {
   const supabase = await createClient();
@@ -23,6 +29,7 @@ export async function PATCH(request: Request) {
     const body = await request.json();
     const { bio, about, role, is_open_to_meet, country, country_code, city, socials } = body;
     const interestsRaw = body.interest_slugs ?? body.interests;
+    const skillsRaw = body.skill_slugs ?? body.skillSlugs;
 
     // Валидация
     const updates: {
@@ -48,6 +55,8 @@ export async function PATCH(request: Request) {
     } = {};
     let interestSlugsToSave: string[] | undefined;
     let hasInterestsPayload = false;
+    let skillSlugsToSave: string[] | undefined;
+    let hasSkillsPayload = false;
 
     // Long-form about (separate from short bio)
     if (about !== undefined) {
@@ -114,6 +123,36 @@ export async function PATCH(request: Request) {
       }
 
       interestSlugsToSave = deduped;
+    }
+
+    // Валидация skill_slugs
+    if (skillsRaw !== undefined) {
+      hasSkillsPayload = true;
+      if (skillsRaw === null) {
+        skillSlugsToSave = [];
+      } else if (!Array.isArray(skillsRaw)) {
+        return NextResponse.json(
+          { error: "skill_slugs must be an array of strings" },
+          { status: 400 }
+        );
+      } else {
+        const normalized = normalizeIncomingSkillSlugs(skillsRaw as string[]);
+        if (normalized.invalidValues.length > 0) {
+          return NextResponse.json(
+            { error: `Unknown skill slugs: ${normalized.invalidValues.join(", ")}` },
+            { status: 400 }
+          );
+        }
+        try {
+          ensureSkillLimit(normalized.skillSlugs);
+        } catch (error) {
+          return NextResponse.json(
+            { error: error instanceof Error ? error.message : "Too many skills" },
+            { status: 400 }
+          );
+        }
+        skillSlugsToSave = normalized.skillSlugs;
+      }
     }
 
     // Валидация is_open_to_meet
@@ -350,7 +389,7 @@ export async function PATCH(request: Request) {
     }
 
     // Если нет полей для обновления
-    if (Object.keys(updates).length === 0 && !hasInterestsPayload) {
+    if (Object.keys(updates).length === 0 && !hasInterestsPayload && !hasSkillsPayload) {
       return NextResponse.json(
         { error: "No fields to update" },
         { status: 400 }
@@ -454,6 +493,21 @@ export async function PATCH(request: Request) {
       }
     }
 
+    if (hasSkillsPayload) {
+      try {
+        await validateAndPersistSkills({
+          supabase,
+          userId: authUser.id,
+          skillSlugs: skillSlugsToSave || [],
+        });
+      } catch (error) {
+        return NextResponse.json(
+          { error: error instanceof Error ? error.message : "Failed to update profile skills" },
+          { status: 500 }
+        );
+      }
+    }
+
     const { data: interestsOut, error: interestsOutError } = await supabase
       .from("profile_interests")
       .select("interest:interests(slug)")
@@ -473,7 +527,25 @@ export async function PATCH(request: Request) {
       )
       .filter((slug: string | undefined): slug is string => Boolean(slug));
 
-    return NextResponse.json({ profile, interest_slugs }, { status: 200 });
+    const { data: skillsOut, error: skillsOutError } = await supabase
+      .from("profile_skills")
+      .select("name, sort_order")
+      .eq("user_id", authUser.id)
+      .order("sort_order", { ascending: true });
+
+    if (skillsOutError) {
+      console.error("Error loading saved skills:", skillsOutError);
+      return NextResponse.json(
+        { error: skillsOutError.message || "Failed to load saved skills" },
+        { status: 500 }
+      );
+    }
+
+    const skill_slugs = mapProfileSkillRowsToResponse(
+      ((skillsOut || []) as Array<{ name: string; sort_order: number }>)
+    ).map((skill) => skill.slug);
+
+    return NextResponse.json({ profile, interest_slugs, skill_slugs }, { status: 200 });
   } catch (error) {
     console.error("Unexpected error:", error);
     return NextResponse.json(

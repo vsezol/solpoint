@@ -175,12 +175,12 @@ function AttendeesSummary({
               key={attendee.id}
               src={attendee.avatar_url}
               alt={attendee.name}
-              size="xs"
-              className={index > 0 ? "-ml-2 border-2 border-black" : "border-2 border-black"}
+              size="sm"
+              className={index > 0 ? "-ml-2.5" : ""}
             />
           ))
         ) : (
-          <span className="h-6 w-6 rounded-full border border-white/20 bg-white/10" />
+          <span className="h-8 w-8 rounded-full border border-white/20 bg-white/10" />
         )}
       </div>
       <p
@@ -644,7 +644,7 @@ export default function EventsPageMajorLocal() {
       return;
     }
 
-    if (typeof window === "undefined" || !window.matchMedia("(max-width: 1023px)").matches) {
+    if (typeof window === "undefined") {
       return;
     }
 

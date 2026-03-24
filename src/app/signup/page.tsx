@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Button, Card, Input } from "@/components/ui";
+import { SkillTagPicker } from "@/components/ui/skill-tag-picker";
 import { Header, Footer } from "@/components/layout";
 import { Twitter, MapPin, Globe, AlertCircle, Loader2 } from "lucide-react";
 import Link from "next/link";
@@ -16,10 +17,17 @@ import { cn } from "@/lib/utils";
 import countries from "../../../supabase/coutries";
 import type { Country } from "@/store/map-store";
 import { MAJOR_CITIES } from "@/lib/countries";
-import { INTEREST_DEFINITIONS, USER_ROLE_OPTIONS } from "@/lib/profile-taxonomy";
+import {
+  INTEREST_DEFINITIONS,
+  MAX_PROFILE_SKILLS,
+  SKILL_CATEGORIES,
+  SKILL_DEFINITIONS,
+  USER_ROLE_OPTIONS,
+} from "@/lib/profile-taxonomy";
+import { getSkills } from "@/lib/api/skills";
 import type { User } from "@/types";
 
-type Step = "twitter" | "location" | "profile" | "complete";
+type Step = "twitter" | "location" | "profile" | "skills" | "complete";
 
 function SignupPageContent() {
   const searchParams = useSearchParams();
@@ -34,6 +42,7 @@ function SignupPageContent() {
   const [step, setStep] = useState<Step>(
     (stepFromUrl === "location" ? "location" : 
      stepFromUrl === "profile" ? "profile" : 
+     stepFromUrl === "skills" ? "skills" :
      "twitter") as Step
   );
   const [isLoading, setIsLoading] = useState(false);
@@ -50,8 +59,11 @@ function SignupPageContent() {
     bio: "",
     role: "",
     interests: [] as string[],
+    skill_slugs: [] as string[],
     isOpenToMeet: false,
   });
+  const [skillDictionary, setSkillDictionary] = useState(SKILL_DEFINITIONS);
+  const [skillCategories, setSkillCategories] = useState(SKILL_CATEGORIES);
 
   // Сохраняем invite код в localStorage для использования после регистрации
   useEffect(() => {
@@ -73,6 +85,30 @@ function SignupPageContent() {
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadSkills = async () => {
+      try {
+        const dictionary = await getSkills();
+        if (cancelled) return;
+        if (dictionary.items.length > 0) {
+          setSkillDictionary(dictionary.items);
+        }
+        if (dictionary.categories.length > 0) {
+          setSkillCategories(dictionary.categories);
+        }
+      } catch (error) {
+        console.error("Failed to load skills dictionary:", error);
+      }
+    };
+
+    loadSkills();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Загружаем данные профиля при загрузке, если пользователь авторизован
@@ -99,6 +135,8 @@ function SignupPageContent() {
           const shouldKeepCity = prev.city && prev.city !== "";
           const userInterestSlugs =
             (user as User & { interest_slugs?: string[] }).interest_slugs || [];
+          const userSkillSlugs =
+            (user as User & { skill_slugs?: string[] }).skill_slugs || [];
           const newCity = shouldKeepCity ? prev.city : (user.city || prev.city || "");
           
           // Синхронизируем citySearchQuery с загруженным городом
@@ -114,6 +152,7 @@ function SignupPageContent() {
             bio: user.bio || prev.bio || "",
             role: user.role || prev.role || "",
             interests: prev.interests.length > 0 ? prev.interests : userInterestSlugs,
+            skill_slugs: prev.skill_slugs.length > 0 ? prev.skill_slugs : userSkillSlugs,
             isOpenToMeet: user.is_open_to_meet !== undefined ? user.is_open_to_meet : prev.isOpenToMeet,
           };
         });
@@ -293,8 +332,8 @@ function SignupPageContent() {
         throw new Error(data.error || "Failed to save profile");
       }
 
-      trackEvent("signup_success", {
-        event_category: "Authentication",
+      trackEvent("signup_profile_step_complete", {
+        event_category: "Signup",
         has_bio: !!formData.bio,
         has_role: !!formData.role,
         interests_count: formData.interests.length,
@@ -302,18 +341,54 @@ function SignupPageContent() {
         has_invite: !!inviteCode,
       });
 
-      // Переходим к завершающему шагу
+      // Переходим к шагу навыков
+      setStep("skills");
+    } catch (error) {
+      // Можно добавить отображение ошибки пользователю
+      alert(error instanceof Error ? error.message : "Failed to save profile");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSkillsSubmit = async (skip: boolean) => {
+    setIsLoading(true);
+    try {
+      const response = await fetch("/api/profile/update", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          skill_slugs: skip ? [] : formData.skill_slugs,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to save skills");
+      }
+
+      trackEvent("signup_success", {
+        event_category: "Authentication",
+        has_bio: !!formData.bio,
+        has_role: !!formData.role,
+        interests_count: formData.interests.length,
+        skills_count: skip ? 0 : formData.skill_slugs.length,
+        is_open_to_meet: formData.isOpenToMeet,
+        has_invite: !!inviteCode,
+        skills_skipped: skip,
+      });
+
       setStep("complete");
-      
-      // Если есть redirect_to, редиректим после небольшой задержки
+
       if (redirectTo) {
         setTimeout(() => {
           router.push(redirectTo);
         }, 2000);
       }
     } catch (error) {
-      // Можно добавить отображение ошибки пользователю
-      alert(error instanceof Error ? error.message : "Failed to save profile");
+      alert(error instanceof Error ? error.message : "Failed to save skills");
     } finally {
       setIsLoading(false);
     }
@@ -343,11 +418,11 @@ function SignupPageContent() {
 
           {/* Progress */}
           <div className="flex items-center justify-center gap-2 mb-8">
-            {["twitter", "location", "profile", "complete"].map((s, i) => (
+            {["twitter", "location", "profile", "skills", "complete"].map((s, i) => (
               <div
                 key={s}
                 className={`w-2 h-2 rounded-full transition-colors ${
-                  ["twitter", "location", "profile", "complete"].indexOf(step) >= i
+                  ["twitter", "location", "profile", "skills", "complete"].indexOf(step) >= i
                     ? "bg-[var(--color-primary)]"
                     : "bg-[var(--color-surface-border)]"
                 }`}
@@ -688,13 +763,67 @@ function SignupPageContent() {
                     className="w-full"
                     size="lg"
                   >
-                    Complete Setup
+                    Continue
                   </Button>
                 </div>
               </motion.div>
             )}
 
-            {/* Step 4: Complete */}
+            {/* Step 4: Skills */}
+            {step === "skills" && (
+              <motion.div
+                key="skills"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+              >
+                <h1 className="text-2xl font-bold text-center text-[var(--color-text-primary)] mb-2">
+                  Add Your Skills
+                </h1>
+                <p className="text-center text-[var(--color-text-secondary)] mb-6">
+                  Pick up to {MAX_PROFILE_SKILLS} tags so people can find you faster
+                </p>
+
+                <div className="space-y-4">
+                  <SkillTagPicker
+                    categories={skillCategories}
+                    items={skillDictionary}
+                    selectedSlugs={formData.skill_slugs}
+                    onChange={(next) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        skill_slugs: next,
+                      }))
+                    }
+                    maxSelected={MAX_PROFILE_SKILLS}
+                    searchPlaceholder="Search skills"
+                    disabled={isLoading}
+                  />
+
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <Button
+                      onClick={() => handleSkillsSubmit(false)}
+                      isLoading={isLoading}
+                      className="w-full"
+                      size="lg"
+                    >
+                      Continue
+                    </Button>
+                    <Button
+                      onClick={() => handleSkillsSubmit(true)}
+                      variant="outline"
+                      className="w-full"
+                      size="lg"
+                      disabled={isLoading}
+                    >
+                      Skip
+                    </Button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Step 5: Complete */}
             {step === "complete" && (
               <motion.div
                 key="complete"

@@ -2,7 +2,12 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 import { createClient } from "@/lib/supabase/server";
-import { INTEREST_SLUGS, USER_ROLE_VALUES } from "@/lib/profile-taxonomy";
+import { INTEREST_SLUGS, USER_ROLE_VALUES, resolveSkillSlug } from "@/lib/profile-taxonomy";
+import {
+  computeBestMatchScore,
+  countSetOverlap,
+  isCompleteProfile,
+} from "@/lib/matching/profile-matching";
 import { getEntityIdByIdentifier } from "@/lib/utils/entity-identifier";
 
 type ProfileRow = {
@@ -55,7 +60,20 @@ type AttendeeItem = {
   interests: InterestRow[];
   is_complete_profile: boolean;
   match_score: number;
+  interest_overlap_count: number;
+  skill_overlap_count: number;
+  shared_events_count: number;
   registered_at: string;
+};
+
+type ProfileSkillRow = {
+  user_id: string;
+  name: string | null;
+};
+
+type EventMemberEventRow = {
+  user_id: string;
+  event_id: string;
 };
 
 function toSingle<T>(value: T | T[] | null): T | null {
@@ -74,17 +92,6 @@ function parseCsv(value: string | null): string[] {
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
-}
-
-function hasAtLeastOneSocial(socials: unknown): boolean {
-  if (!socials || typeof socials !== "object" || Array.isArray(socials)) {
-    return false;
-  }
-
-  return Object.values(socials).some((value) => {
-    if (typeof value !== "string") return false;
-    return value.trim().length > 0;
-  });
 }
 
 export async function GET(
@@ -207,28 +214,49 @@ export async function GET(
 
   const userIds = Array.from(new Set(members.map((member) => member.user.id)));
 
-  const [skillsResult, experienceResult, interestsResult, currentUserProfileResult, currentUserInterestsResult] =
-    await Promise.all([
-      supabase.from("profile_skills").select("user_id").in("user_id", userIds),
-      supabase.from("profile_experience").select("user_id").in("user_id", userIds),
-      supabase
-        .from("profile_interests")
-        .select("user_id, interest:interests(id, slug, name)")
-        .in("user_id", userIds),
-      bestMatches
-        ? supabase
-            .from("profiles")
-            .select("role, country_code")
-            .eq("id", authUser.id)
-            .maybeSingle()
-        : Promise.resolve({ data: null, error: null }),
-      bestMatches
-        ? supabase
-            .from("profile_interests")
-            .select("interest:interests(slug)")
-            .eq("user_id", authUser.id)
-        : Promise.resolve({ data: [], error: null }),
-    ]);
+  const [
+    skillsResult,
+    experienceResult,
+    interestsResult,
+    currentUserProfileResult,
+    currentUserInterestsResult,
+    currentUserSkillsResult,
+    attendeeEventsResult,
+    currentUserEventsResult,
+  ] = await Promise.all([
+    supabase.from("profile_skills").select("user_id, name").in("user_id", userIds),
+    supabase.from("profile_experience").select("user_id").in("user_id", userIds),
+    supabase
+      .from("profile_interests")
+      .select("user_id, interest:interests(id, slug, name)")
+      .in("user_id", userIds),
+    bestMatches
+      ? supabase.from("profiles").select("role").eq("id", authUser.id).maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+    bestMatches
+      ? supabase
+          .from("profile_interests")
+          .select("interest:interests(slug)")
+          .eq("user_id", authUser.id)
+      : Promise.resolve({ data: [], error: null }),
+    bestMatches
+      ? supabase.from("profile_skills").select("name").eq("user_id", authUser.id)
+      : Promise.resolve({ data: [], error: null }),
+    bestMatches
+      ? supabase
+          .from("event_members")
+          .select("user_id, event_id")
+          .in("user_id", userIds)
+          .eq("status", "going")
+      : Promise.resolve({ data: [], error: null }),
+    bestMatches
+      ? supabase
+          .from("event_members")
+          .select("event_id")
+          .eq("user_id", authUser.id)
+          .eq("status", "going")
+      : Promise.resolve({ data: [], error: null }),
+  ]);
 
   if (skillsResult.error) {
     return NextResponse.json(
@@ -265,9 +293,34 @@ export async function GET(
     );
   }
 
-  const skillsByUser = new Map<string, number>();
-  for (const row of (skillsResult.data || []) as { user_id: string }[]) {
-    skillsByUser.set(row.user_id, (skillsByUser.get(row.user_id) || 0) + 1);
+  if (currentUserSkillsResult.error) {
+    return NextResponse.json(
+      { error: currentUserSkillsResult.error.message || "Failed to fetch current user skills" },
+      { status: 500 }
+    );
+  }
+
+  if (attendeeEventsResult.error) {
+    return NextResponse.json(
+      { error: attendeeEventsResult.error.message || "Failed to fetch attendee events" },
+      { status: 500 }
+    );
+  }
+
+  if (currentUserEventsResult.error) {
+    return NextResponse.json(
+      { error: currentUserEventsResult.error.message || "Failed to fetch current user events" },
+      { status: 500 }
+    );
+  }
+
+  const skillsByUser = new Map<string, Set<string>>();
+  for (const row of (skillsResult.data || []) as ProfileSkillRow[]) {
+    const skillSlug = resolveSkillSlug(row.name);
+    if (!skillSlug) continue;
+    const set = skillsByUser.get(row.user_id) || new Set<string>();
+    set.add(skillSlug);
+    skillsByUser.set(row.user_id, set);
   }
 
   const experienceByUser = new Map<string, number>();
@@ -284,9 +337,14 @@ export async function GET(
     interestsByUser.set(row.user_id, list);
   }
 
+  const eventIdsByUser = new Map<string, Set<string>>();
+  for (const row of (attendeeEventsResult.data || []) as EventMemberEventRow[]) {
+    const set = eventIdsByUser.get(row.user_id) || new Set<string>();
+    set.add(row.event_id);
+    eventIdsByUser.set(row.user_id, set);
+  }
+
   const currentUserRole = (currentUserProfileResult.data as { role?: string | null } | null)?.role || null;
-  const currentUserCountryCode =
-    (currentUserProfileResult.data as { country_code?: string | null } | null)?.country_code || null;
   const currentUserInterestSlugs = new Set(
     ((currentUserInterestsResult.data || []) as Array<{ interest: { slug: string } | { slug: string }[] | null }>)
       .map((row) => {
@@ -295,37 +353,53 @@ export async function GET(
       })
       .filter((slug: string | undefined): slug is string => Boolean(slug))
   );
+  const currentUserSkillSet = new Set(
+    ((currentUserSkillsResult.data || []) as Array<{ name: string | null }>)
+      .map((row) => resolveSkillSlug(row.name))
+      .filter((slug): slug is string => Boolean(slug))
+  );
+  const currentUserEventIds = new Set(
+    ((currentUserEventsResult.data || []) as Array<{ event_id: string }>).map((row) => row.event_id)
+  );
+  // Exclude the currently selected event from shared-events scoring.
+  currentUserEventIds.delete(eventId);
 
   const attendees: AttendeeItem[] = members.map((member) => {
     const user = member.user;
     const countriesRel = toSingle(user.countries || null);
     const interests = interestsByUser.get(user.id) || [];
     const interestSlugSet = new Set(interests.map((interest) => interest.slug));
-    const overlapCount = Array.from(currentUserInterestSlugs).reduce((count, slug) => {
-      return interestSlugSet.has(slug) ? count + 1 : count;
-    }, 0);
+    const skillSet = skillsByUser.get(user.id) || new Set<string>();
+    const attendeeEventIds = eventIdsByUser.get(user.id) || new Set<string>();
+    attendeeEventIds.delete(eventId);
 
-    const about = (user.about || user.bio || null)?.trim() || null;
+    const about = user.about?.trim() || null;
     const countryCode = user.country_code ? user.country_code.toUpperCase() : null;
 
-    const isCompleteProfile =
-      hasAtLeastOneSocial(user.socials) &&
-      (skillsByUser.get(user.id) || 0) > 0 &&
-      (experienceByUser.get(user.id) || 0) > 0 &&
-      Boolean(about) &&
-      Boolean(user.role) &&
-      interests.length > 0 &&
-      Boolean(countryCode);
+    const hasCompleteProfile = isCompleteProfile({
+      about,
+      countryCode,
+      role: user.role,
+      skillCount: skillSet.size,
+      interestCount: interests.length,
+      experienceCount: experienceByUser.get(user.id) || 0,
+    });
 
     let matchScore = 0;
+    let interestOverlapCount = 0;
+    let skillOverlapCount = 0;
+    let sharedEventsCount = 0;
     if (bestMatches) {
-      if (currentUserRole && user.role && currentUserRole === user.role) {
-        matchScore += 2;
-      }
-      if (currentUserCountryCode && countryCode && currentUserCountryCode === countryCode) {
-        matchScore += 2;
-      }
-      matchScore += overlapCount;
+      interestOverlapCount = countSetOverlap(currentUserInterestSlugs, interestSlugSet);
+      skillOverlapCount = countSetOverlap(currentUserSkillSet, skillSet);
+      sharedEventsCount = countSetOverlap(currentUserEventIds, attendeeEventIds);
+
+      matchScore = computeBestMatchScore({
+        hasRoleMatch: Boolean(currentUserRole && user.role && currentUserRole === user.role),
+        interestOverlapCount,
+        skillOverlapCount,
+        sharedEventsCount,
+      });
     }
 
     return {
@@ -341,8 +415,11 @@ export async function GET(
       city: user.city,
       about,
       interests,
-      is_complete_profile: isCompleteProfile,
+      is_complete_profile: hasCompleteProfile,
       match_score: matchScore,
+      interest_overlap_count: interestOverlapCount,
+      skill_overlap_count: skillOverlapCount,
+      shared_events_count: sharedEventsCount,
       registered_at: member.registered_at,
     };
   });
@@ -365,6 +442,10 @@ export async function GET(
     }
 
     if (completeProfilesOnly && !attendee.is_complete_profile) {
+      return false;
+    }
+
+    if (bestMatches && attendee.match_score <= 0) {
       return false;
     }
 
