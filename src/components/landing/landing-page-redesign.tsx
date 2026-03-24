@@ -11,12 +11,21 @@ const kodeMonoStyle = {
   fontFamily: "var(--font-kode-mono), monospace",
 };
 
-const figmaAssets = {
-  cardDanielAvatar: "https://www.figma.com/api/mcp/asset/0844cdcf-2228-44b0-bcf0-f997c8936992",
-  cardJoshAvatar: "https://www.figma.com/api/mcp/asset/3c8f969c-9c0e-4a9d-a2fc-cc6d8cf6a256",
-  cardEventMiami: "https://www.figma.com/api/mcp/asset/ad83ac00-97fd-4845-b61e-9692151d0a25",
-  cardEventBreakpoint: "https://www.figma.com/api/mcp/asset/0eee1837-daf3-477c-ab3d-f0e754211c26",
-  cardEventMtndao: "https://www.figma.com/api/mcp/asset/6dcdcefb-fde1-4a90-887d-7625a49a71a9",
+/** Step preview mini-cards: 116×112, 4px radius, 1px gradient rim (Figma). */
+const stepPreviewOuterClassName =
+  "h-[112px] w-[116px] shrink-0 rounded-[4px] bg-[linear-gradient(135deg,#9B45FE_0%,#00F68B_100%)] p-px";
+
+/** Single caption line inside previews (not the people name/role pair). */
+const stepPreviewCaptionClassName =
+  "text-[9px] font-bold leading-[100%] tracking-[-0.03em]";
+
+/** Step preview rasters — `public/icons` (names match design exports). */
+const stepPreviewAssets = {
+  profileDaniel: "/icons/monke.png",
+  peopleJosh: "/icons/josh-nft.png",
+  eventAccelerateUsa: "/icons/accelerarteUSA.png",
+  eventBreakpoint: "/icons/breakpoint.png",
+  eventMtnDao: "/icons/mtn_dao.png",
 } as const;
 
 const badges = [
@@ -113,7 +122,7 @@ function BadgeRow({ className }: { className?: string }) {
 function StepPreview({ type }: { type: (typeof stepCards)[number]["previewType"] }) {
   if (type === "profile") {
     return (
-      <div className="h-[112px] w-[116px] shrink-0 rounded-[4px] bg-[linear-gradient(135deg,#9B45FE_0%,#00F68B_100%)] p-[1px]">
+      <div className={stepPreviewOuterClassName}>
         <div className="relative h-full w-full overflow-hidden rounded-[3px] bg-[#121212]">
           {/* Map at full natural width — Americas left edge, Japan right edge */}
           <img
@@ -125,13 +134,23 @@ function StepPreview({ type }: { type: (typeof stepCards)[number]["previewType"]
           />
           {/* Foreground: SolPoint → avatar → Daniel pushed to bottom */}
           <div className="relative z-10 flex h-full flex-col items-center p-1.5">
-            <p className="text-center text-[9px] font-bold leading-[100%] text-white/85" style={kodeMonoStyle}>
+            <p
+              className={cn("text-center text-white", stepPreviewCaptionClassName)}
+              style={kodeMonoStyle}
+            >
               SolPoint
             </p>
             <div className="mt-1 h-[46px] w-[46px] overflow-hidden rounded-full border border-[#00f58d]">
-              <img src={figmaAssets.cardDanielAvatar} alt="Daniel" className="h-full w-full object-cover" />
+              <img
+                src={stepPreviewAssets.profileDaniel}
+                alt="Daniel"
+                className="h-full w-full object-cover"
+              />
             </div>
-            <p className="mt-auto text-center text-[9px] font-bold leading-[100%] text-white/85" style={kodeMonoStyle}>
+            <p
+              className={cn("mt-auto text-center text-white", stepPreviewCaptionClassName)}
+              style={kodeMonoStyle}
+            >
               Daniel
             </p>
           </div>
@@ -142,23 +161,38 @@ function StepPreview({ type }: { type: (typeof stepCards)[number]["previewType"]
 
   if (type === "events") {
     return (
-      <div className="h-[112px] w-[116px] shrink-0 rounded-[4px] bg-[linear-gradient(135deg,#9B45FE_0%,#00F68B_100%)] p-[1px]">
+      <div className={stepPreviewOuterClassName}>
         <div className="flex h-full w-full flex-col rounded-[3px] bg-[#121212] px-1.5 pb-2 pt-1.5">
           {/* Icons + text grouped together, pushed to bottom */}
           <div className="mt-auto flex flex-col gap-2">
-            {/* Triangle: two icons top row, one larger below-center */}
-            <div className="relative h-[70px] w-full">
-              <div className="absolute left-[4px] top-0 h-[30px] w-[30px] overflow-hidden rounded-[6px] border border-[#2a2a2a] bg-[#131313]">
-                <img src={figmaAssets.cardEventBreakpoint} alt="Event" className="h-full w-full object-cover opacity-85" />
+            {/* Center event raised; side icons smaller and aligned to bottom */}
+            <div className="relative flex h-[70px] w-full items-end justify-between px-1">
+              <div className="h-[30px] w-[30px] shrink-0 overflow-hidden rounded-[6px] border border-[#2a2a2a] bg-[#131313]">
+                <img
+                  src={stepPreviewAssets.eventMtnDao}
+                  alt=""
+                  className="h-full w-full object-cover opacity-90"
+                />
               </div>
-              <div className="absolute right-[4px] top-0 h-[30px] w-[30px] overflow-hidden rounded-[6px] border border-[#2a2a2a] bg-[#131313]">
-                <img src={figmaAssets.cardEventMtndao} alt="Event" className="h-full w-full object-cover opacity-85" />
+              <div className="absolute left-1/2 top-0 h-[38px] w-[38px] -translate-x-1/2 overflow-hidden rounded-[8px] border border-[#2a2a2a]">
+                <img
+                  src={stepPreviewAssets.eventAccelerateUsa}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
               </div>
-              <div className="absolute bottom-0 left-1/2 h-[38px] w-[38px] -translate-x-1/2 overflow-hidden rounded-[8px] border border-[#2a2a2a]">
-                <img src={figmaAssets.cardEventMiami} alt="Event" className="h-full w-full object-cover" />
+              <div className="h-[30px] w-[30px] shrink-0 overflow-hidden rounded-[6px] border border-[#2a2a2a] bg-[#131313]">
+                <img
+                  src={stepPreviewAssets.eventBreakpoint}
+                  alt=""
+                  className="h-full w-full object-cover opacity-90"
+                />
               </div>
             </div>
-            <p className="text-center text-[9px] font-bold leading-[100%] tracking-[-0.27px] text-white/90" style={kodeMonoStyle}>
+            <p
+              className={cn("text-center text-white", stepPreviewCaptionClassName)}
+              style={kodeMonoStyle}
+            >
               Solana accelerate USA
             </p>
           </div>
@@ -168,15 +202,25 @@ function StepPreview({ type }: { type: (typeof stepCards)[number]["previewType"]
   }
 
   return (
-    <div className="h-[112px] w-[116px] shrink-0 rounded-[4px] bg-[linear-gradient(135deg,#9B45FE_0%,#00F68B_100%)] p-[1px]">
+    <div className={stepPreviewOuterClassName}>
       <div className="flex h-full w-full flex-col items-center justify-center rounded-[3px] bg-[#121212] px-1.5">
-        <div className="h-[44px] w-[44px] overflow-hidden rounded-full border border-[#9b45fe]">
-          <img src={figmaAssets.cardJoshAvatar} alt="Josh" className="h-full w-full object-cover" />
+        <div className="h-[45px] w-[45px] overflow-hidden rounded-full border border-[#9b45fe]">
+          <img
+            src={stepPreviewAssets.peopleJosh}
+            alt="Josh"
+            className="h-full w-full object-cover"
+          />
         </div>
-        <p className="mt-1.5 text-center text-[9px] font-bold leading-[100%] text-white/85" style={kodeMonoStyle}>
+        <p
+          className="mt-1.5 text-center text-[9px] font-bold leading-[100%] text-white"
+          style={kodeMonoStyle}
+        >
           Josh
         </p>
-        <p className="mt-0.5 text-center text-[9px] font-bold leading-[100%] text-white/70" style={kodeMonoStyle}>
+        <p
+          className="mt-0.5 text-center text-[9px] font-bold leading-[100%] text-[#C7C7C7]"
+          style={kodeMonoStyle}
+        >
           Developer/Frontend
         </p>
         <div className="mt-2 flex justify-center">
@@ -196,8 +240,8 @@ function WorldConnectionsMap() {
   return (
     <div className="mx-auto mt-2 w-full max-w-[984px]">
       <img
-        src="/map-for-landing.svg"
-        alt="SolPoint world connections map"
+        src="/map-base%203.svg"
+        alt="Illustration of global SolPoint network connections on a world map"
         className="block h-auto w-full select-none"
         draggable={false}
       />
@@ -218,7 +262,7 @@ export function LandingPageRedesign() {
     <main className="bg-black text-white" style={kodeMonoStyle}>
       <section className="mx-auto w-full max-w-[1440px] px-4 pb-14 pt-[108px] md:px-10 md:pb-20">
         <div className="mx-auto max-w-[912px] text-center">
-          <h1 className="text-[29px] font-bold leading-[1.05] text-white md:text-[35px]">
+          <h1 className="mt-[89px] text-[29px] font-bold leading-[1.05] text-white md:text-[35px]">
             Find the right connections in minutes
           </h1>
           <p className="mt-3 text-[16px] font-bold leading-tight text-white md:text-[20px]">
@@ -251,7 +295,7 @@ export function LandingPageRedesign() {
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-[1440px] border-t border-[#2a2a2a] px-4 pt-14 md:px-10 md:pt-20">
+      <section className="mx-auto w-full max-w-[1440px] px-4 pt-14 md:px-10 md:pt-20">
         <h2 className="text-center text-[29px] font-bold leading-[1.05] tracking-[-0.03em] md:text-[35px]">
           Simple steps to Find, Connect, and Grow
         </h2>
@@ -273,7 +317,8 @@ export function LandingPageRedesign() {
               <div className="mt-7 flex items-end justify-between gap-3">
                 <Link
                   href={card.href}
-                  className="inline-flex h-[31px] w-[109px] items-center justify-center rounded-[5px] bg-white px-3 text-[12px] font-bold leading-none tracking-[-0.36px] text-black"
+                  className="inline-flex h-[31px] w-[109px] shrink-0 items-center justify-center rounded-[5px] bg-white text-center text-[12px] font-bold leading-[100%] tracking-[-0.03em] text-black"
+                  style={kodeMonoStyle}
                 >
                   {card.cta}
                 </Link>
