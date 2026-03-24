@@ -106,7 +106,7 @@ function BadgeRow({ className }: { className?: string }) {
         return (
           <article
             key={badge.title}
-            className="flex h-[75px] w-[148px] shrink-0 flex-col rounded-[11px] border border-[#303030] px-[14px] pt-1 pb-2"
+            className="flex h-[75px] w-[148px] shrink-0 flex-col rounded-[11px] border border-[#303030] px-[14px] pt-2 pb-2"
           >
             <p
               className="shrink-0 text-center text-[12px] font-normal leading-[100%] text-white"
@@ -114,7 +114,7 @@ function BadgeRow({ className }: { className?: string }) {
             >
               {badge.title}
             </p>
-            <div className="mt-3 flex min-h-0 flex-1 items-center justify-center gap-2">
+            <div className="mt-2 flex min-h-0 flex-1 items-center justify-center gap-2">
               <div
                 className={cn(
                   "flex shrink-0 items-center justify-center",
@@ -195,7 +195,7 @@ function StepPreview({ type }: { type: (typeof stepCards)[number]["previewType"]
   if (type === "events") {
     return (
       <div className={stepPreviewOuterClassName}>
-        <div className="flex h-full w-full flex-col rounded-[3px] bg-[#121212] px-1.5 pb-2 pt-1.5">
+        <div className="flex h-full w-full flex-col rounded-[3px] bg-[#121212] px-1 pb-2 pt-1.5">
           {/* Icons + text grouped together, pushed to bottom */}
           <div className="mt-auto flex flex-col gap-2">
             {/* Center event raised; side icons smaller and aligned to bottom */}
@@ -223,8 +223,8 @@ function StepPreview({ type }: { type: (typeof stepCards)[number]["previewType"]
               </div>
             </div>
             <p
-              className={cn("text-center text-white", stepPreviewCaptionClassName)}
-              style={kodeMonoStyle}
+              className="block w-full min-w-0 whitespace-nowrap text-center text-[9px] font-bold leading-[100%] text-white"
+              style={{ ...kodeMonoStyle, letterSpacing: "-3%" }}
             >
               Solana accelerate USA
             </p>
@@ -307,23 +307,26 @@ export function LandingPageRedesign() {
 
         <BadgeRow className="mx-auto mt-7 max-w-[654px]" />
 
-        <div className="mt-11 flex flex-col items-center justify-center gap-4 sm:flex-row">
+        <div className="mt-11 flex flex-col items-center justify-center gap-6 sm:flex-row sm:gap-[105px]">
           <Link
             href="/events"
-            className="inline-flex h-[49px] min-w-[194px] items-center justify-center rounded-[7px] bg-white px-4 text-[20px] font-bold leading-none text-black"
+            className="inline-flex h-[49px] min-w-[194px] items-center justify-center rounded-[7px] border border-white bg-white px-4 text-[20px] font-bold leading-none text-black transition-colors duration-200 ease-out hover:bg-black hover:text-white"
           >
             Explore Events
           </Link>
           <Link
             href="/map"
-            className="inline-flex h-[49px] min-w-[162px] items-center justify-center rounded-[7px] border border-[#9b45fe] bg-black px-4 text-[20px] font-bold leading-none text-transparent"
+            className="group inline-flex h-[49px] min-w-[162px] items-stretch rounded-[7px] p-px"
             style={{
-              backgroundImage: "linear-gradient(90deg,#9b45fe 0%, #00f58d 100%)",
-              WebkitBackgroundClip: "text",
-              backgroundClip: "text",
+              background: "linear-gradient(90deg, #9b45fe 0%, #00f58d 100%)",
             }}
           >
-            Explore Map
+            <span
+              className="flex min-w-[160px] flex-1 items-center justify-center rounded-[6px] bg-black px-4 text-[20px] font-bold leading-[100%] tracking-normal text-white transition-colors duration-200 ease-out group-hover:bg-transparent"
+              style={kodeMonoStyle}
+            >
+              Explore Map
+            </span>
           </Link>
         </div>
       </section>
