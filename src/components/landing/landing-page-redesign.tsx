@@ -199,26 +199,26 @@ function StepPreview({ type }: { type: (typeof stepCards)[number]["previewType"]
           {/* Icons + text grouped together, pushed to bottom */}
           <div className="mt-auto flex flex-col gap-2">
             {/* Center event raised; side icons smaller and aligned to bottom */}
-            <div className="relative flex h-[70px] w-full items-end justify-between px-1">
-              <div className="h-[30px] w-[30px] shrink-0 overflow-hidden rounded-[6px] border border-[#2a2a2a] bg-[#131313]">
+            <div className="relative flex h-[72px] w-full items-end justify-between px-1">
+              <div className="h-[30px] w-[30px] shrink-0 overflow-hidden rounded-[9px] border border-[#2a2a2a] bg-[#131313]">
                 <img
                   src={stepPreviewAssets.eventMtnDao}
                   alt=""
-                  className="h-full w-full object-cover opacity-90"
+                  className="h-full w-full object-cover opacity-80"
                 />
               </div>
-              <div className="absolute left-1/2 top-0 h-[38px] w-[38px] -translate-x-1/2 overflow-hidden rounded-[8px] border border-[#2a2a2a]">
+              <div className="absolute left-1/2 top-0 h-[45px] w-[45px] -translate-x-1/2 overflow-hidden rounded-[9px] border border-[#2a2a2a]">
                 <img
                   src={stepPreviewAssets.eventAccelerateUsa}
                   alt=""
                   className="h-full w-full object-cover"
                 />
               </div>
-              <div className="h-[30px] w-[30px] shrink-0 overflow-hidden rounded-[6px] border border-[#2a2a2a] bg-[#131313]">
+              <div className="h-[30px] w-[30px] shrink-0 overflow-hidden rounded-[9px] border border-[#2a2a2a] bg-[#131313]">
                 <img
                   src={stepPreviewAssets.eventBreakpoint}
                   alt=""
-                  className="h-full w-full object-cover opacity-90"
+                  className="h-full w-full object-cover opacity-80"
                 />
               </div>
             </div>
@@ -346,7 +346,7 @@ export function LandingPageRedesign() {
                 </h3>
               </div>
 
-              <p className="mt-7 max-w-[136px] text-[9px] font-bold leading-tight tracking-[-0.27px] text-[#c7c7c7]">
+              <p className="mt-7 max-w-[136px] text-[11px] font-bold leading-tight tracking-[-0.27px] text-[#c7c7c7]">
                 {card.subtitle}
               </p>
 
