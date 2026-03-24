@@ -38,3 +38,7 @@ bd sync               # Sync with git
 - NEVER say "ready to push when you are" - YOU must push
 - If push fails, resolve and retry until it succeeds
 
+## General Coding Rules
+
+- **NEVER make git commits automatically.** Do NOT run `git add`, `git commit`, or `git push` unless the user explicitly asks to commit or push. Just make the code changes and leave them unstaged.
+
