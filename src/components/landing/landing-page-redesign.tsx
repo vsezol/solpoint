@@ -353,7 +353,7 @@ export function LandingPageRedesign() {
               <div className="mt-7 flex items-end justify-between gap-3">
                 <Link
                   href={card.href}
-                  className="inline-flex h-[31px] w-[109px] shrink-0 items-center justify-center rounded-[5px] bg-white text-center text-[12px] font-bold leading-[100%] tracking-[-0.03em] text-black"
+                  className="inline-flex h-[31px] w-[109px] shrink-0 items-center justify-center rounded-[5px] border border-white bg-white text-center text-[12px] font-bold leading-[100%] tracking-[-0.03em] text-black transition-colors duration-200 ease-out hover:bg-black hover:text-white"
                   style={kodeMonoStyle}
                 >
                   {card.cta}
