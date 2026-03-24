@@ -106,7 +106,7 @@ function BadgeRow({ className }: { className?: string }) {
         return (
           <article
             key={badge.title}
-            className="flex h-[75px] w-[148px] shrink-0 flex-col rounded-[11px] border border-[#303030] px-[14px] py-2"
+            className="flex h-[75px] w-[148px] shrink-0 flex-col rounded-[11px] border border-[#303030] px-[14px] pt-[13px] pb-[3px]"
           >
             <p
               className="shrink-0 text-center text-[12px] font-normal leading-[100%] text-white"
