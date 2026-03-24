@@ -45,7 +45,8 @@ const badges = [
     nameBottom: "",
     nameStyle: { fontFamily: "var(--font-iceland), sans-serif", fontWeight: 400 } as const,
     logoFrame: "inline" as const,
-    logoImgClassName: "h-[22px] w-auto max-w-[118px] object-contain object-center",
+    logoImgClassName:
+      "h-[14px] w-auto max-w-[72px] object-contain object-center sm:h-[18px] sm:max-w-[96px] md:h-[22px] md:max-w-[118px]",
   },
   {
     title: "Alumni",
@@ -95,7 +96,7 @@ function BadgeRow({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "flex flex-col items-center gap-6 md:flex-row md:justify-center md:gap-[105px]",
+        "flex w-full flex-row flex-nowrap items-stretch justify-center gap-2 self-center sm:gap-4 md:gap-[105px]",
         className
       )}
     >
@@ -106,29 +107,29 @@ function BadgeRow({ className }: { className?: string }) {
         return (
           <article
             key={badge.title}
-            className="flex h-[75px] w-[148px] shrink-0 flex-col rounded-[11px] border border-[#303030] px-[14px] pt-2 pb-2"
+            className="flex h-[64px] min-w-0 flex-1 flex-col rounded-[8px] border border-[#303030] px-1.5 pt-1.5 pb-1.5 sm:h-[75px] sm:max-w-[148px] sm:flex-none sm:rounded-[11px] sm:px-[14px] sm:pt-2 sm:pb-2 md:flex-initial"
           >
             <p
-              className="shrink-0 text-center text-[12px] font-normal leading-[100%] text-white"
+              className="shrink-0 text-center text-[8px] font-normal leading-[100%] text-white sm:text-[10px] md:text-[12px]"
               style={kodeMonoStyle}
             >
               {badge.title}
             </p>
-            <div className="mt-2 flex min-h-0 flex-1 items-center justify-center gap-2">
+            <div className="mt-1 flex min-h-0 flex-1 items-center justify-center gap-1 sm:mt-2 sm:gap-2">
               <div
                 className={cn(
                   "flex shrink-0 items-center justify-center",
                   badge.logoFrame === "circle" &&
-                    "h-7 w-7 overflow-hidden rounded-full border border-white/25 sm:h-8 sm:w-8"
+                    "h-6 w-6 overflow-hidden rounded-full border border-white/25 sm:h-7 sm:w-7 md:h-8 md:w-8"
                 )}
               >
                 <img src={badge.logoSrc} alt={`${alt} logo`} className={badge.logoImgClassName} />
               </div>
               {hasNames ? (
-                <div className="flex min-w-0 flex-col items-start justify-center gap-0 leading-none text-left">
+                <div className="flex min-w-0 flex-1 flex-col items-start justify-center gap-0 leading-none text-left">
                   {badge.nameTop ? (
                     <p
-                      className="text-left text-[13px] font-bold leading-[0.95] text-white sm:text-[15px]"
+                      className="text-left text-[10px] font-bold leading-[0.95] text-white sm:text-[13px] md:text-[15px]"
                       style={badge.nameStyle}
                     >
                       {badge.nameTop}
@@ -136,7 +137,7 @@ function BadgeRow({ className }: { className?: string }) {
                   ) : null}
                   {badge.nameBottom ? (
                     <p
-                      className="text-left text-[13px] font-bold leading-[0.95] text-white sm:text-[15px]"
+                      className="text-left text-[10px] font-bold leading-[0.95] text-white sm:text-[13px] md:text-[15px]"
                       style={badge.nameStyle}
                     >
                       {badge.nameBottom}
@@ -305,24 +306,24 @@ export function LandingPageRedesign() {
 
         <WorldConnectionsMap />
 
-        <BadgeRow className="mx-auto mt-7 max-w-[654px]" />
+        <BadgeRow className="mx-auto mt-7 w-full max-w-[min(100%,380px)] sm:max-w-[654px]" />
 
-        <div className="mt-11 flex flex-col items-center justify-center gap-6 sm:flex-row sm:gap-[105px]">
+        <div className="mx-auto mt-8 flex w-full max-w-[340px] flex-row flex-nowrap items-stretch justify-center gap-2 sm:mt-11 sm:max-w-none sm:gap-[105px]">
           <Link
             href="/events"
-            className="inline-flex h-[49px] min-w-[194px] items-center justify-center rounded-[7px] border border-white bg-white px-4 text-[20px] font-bold leading-none text-black transition-colors duration-200 ease-out hover:bg-black hover:text-white"
+            className="inline-flex h-10 min-w-0 flex-1 items-center justify-center rounded-[6px] border border-white bg-white px-2 text-[12px] font-bold leading-none text-black transition-colors duration-200 ease-out hover:bg-black hover:text-white sm:h-[49px] sm:min-w-[194px] sm:flex-none sm:rounded-[7px] sm:px-4 sm:text-[20px]"
           >
             Explore Events
           </Link>
           <Link
             href="/map"
-            className="group inline-flex h-[49px] min-w-[162px] items-stretch rounded-[7px] p-px"
+            className="group inline-flex h-10 min-w-0 flex-1 items-stretch rounded-[6px] p-px sm:h-[49px] sm:min-w-[162px] sm:flex-none sm:rounded-[7px]"
             style={{
               background: "linear-gradient(90deg, #9b45fe 0%, #00f58d 100%)",
             }}
           >
             <span
-              className="flex min-w-[160px] flex-1 items-center justify-center rounded-[6px] bg-black px-4 text-[20px] font-bold leading-[100%] tracking-normal text-white transition-colors duration-200 ease-out group-hover:bg-transparent"
+              className="flex min-w-0 flex-1 items-center justify-center rounded-[5px] bg-black px-2 text-center text-[12px] font-bold leading-[100%] tracking-normal text-white transition-colors duration-200 ease-out group-hover:bg-transparent sm:min-w-[160px] sm:rounded-[6px] sm:px-4 sm:text-[20px]"
               style={kodeMonoStyle}
             >
               Explore Map
