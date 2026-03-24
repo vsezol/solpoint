@@ -42,7 +42,7 @@ const badges = [
     title: "Supported by",
     logoSrc: "/icons/superteamlogo.svg",
     nameTop: "",
-    nameBottom: "Kazakhstan",
+    nameBottom: "",
     nameStyle: { fontFamily: "var(--font-iceland), sans-serif", fontWeight: 400 } as const,
     logoFrame: "inline" as const,
     logoImgClassName: "h-[22px] w-auto max-w-[118px] object-contain object-center",
@@ -102,10 +102,11 @@ function BadgeRow({ className }: { className?: string }) {
       {badges.map((badge) => {
         const alt =
           [badge.nameTop, badge.nameBottom].filter(Boolean).join(" ").trim() || badge.title;
+        const hasNames = Boolean(badge.nameTop || badge.nameBottom);
         return (
           <article
             key={badge.title}
-            className="flex h-[75px] w-[148px] shrink-0 flex-col rounded-[11px] border border-[#303030] bg-[#121212] px-[14px] py-2"
+            className="flex h-[75px] w-[148px] shrink-0 flex-col rounded-[11px] border border-[#303030] px-[14px] py-2"
           >
             <p
               className="shrink-0 text-center text-[12px] font-normal leading-[100%] text-white"
@@ -113,21 +114,26 @@ function BadgeRow({ className }: { className?: string }) {
             >
               {badge.title}
             </p>
-            <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-0.5">
+            <div
+              className={cn(
+                "flex min-h-0 flex-1 items-center gap-2",
+                !hasNames && "justify-center"
+              )}
+            >
               <div
                 className={cn(
                   "flex shrink-0 items-center justify-center",
                   badge.logoFrame === "circle" &&
-                    "h-[26px] w-[26px] overflow-hidden rounded-full border border-white/25"
+                    "h-7 w-7 overflow-hidden rounded-full border border-white/25 sm:h-8 sm:w-8"
                 )}
               >
                 <img src={badge.logoSrc} alt={`${alt} logo`} className={badge.logoImgClassName} />
               </div>
-              {(badge.nameTop || badge.nameBottom) && (
-                <div className="flex flex-col items-center gap-0.5 leading-none">
+              {hasNames ? (
+                <div className="flex min-w-0 flex-col justify-center gap-0 leading-none">
                   {badge.nameTop ? (
                     <p
-                      className="text-center text-[10px] font-bold leading-[1] text-white sm:text-[11px]"
+                      className="text-left text-[13px] font-bold leading-[0.95] text-white sm:text-[15px]"
                       style={badge.nameStyle}
                     >
                       {badge.nameTop}
@@ -135,14 +141,14 @@ function BadgeRow({ className }: { className?: string }) {
                   ) : null}
                   {badge.nameBottom ? (
                     <p
-                      className="text-center text-[10px] font-bold leading-[1] text-white sm:text-[11px]"
+                      className="text-left text-[13px] font-bold leading-[0.95] text-white sm:text-[15px]"
                       style={badge.nameStyle}
                     >
                       {badge.nameBottom}
                     </p>
                   ) : null}
                 </div>
-              )}
+              ) : null}
             </div>
           </article>
         );
