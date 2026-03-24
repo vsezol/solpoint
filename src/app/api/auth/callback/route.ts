@@ -349,7 +349,7 @@ export async function GET(request: NextRequest) {
     const handoffCodeHash = hashMobileOAuthCode(handoffCode);
     const handoffExpiresAt = getMobileOAuthHandoffExpiresAt();
 
-    const serviceRoleClient = createServiceRoleClient();
+    const serviceRoleClient = createServiceRoleClient() as any;
     const { error: handoffInsertError } = await serviceRoleClient
       .from("mobile_oauth_handoffs")
       .insert({

@@ -23,7 +23,7 @@ export interface SkillDefinition {
   sortOrder: number;
 }
 
-export const MAX_PROFILE_SKILLS = 5;
+export const MAX_PROFILE_SKILLS = 10;
 
 export const USER_ROLE_OPTIONS: RoleOption[] = [
   { value: "marketing_or_bd", label: "Marketing or BD" },

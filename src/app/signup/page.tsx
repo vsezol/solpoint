@@ -2,17 +2,16 @@
 
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Button, Card, Input } from "@/components/ui";
+import { Button } from "@/components/ui";
 import { SkillTagPicker } from "@/components/ui/skill-tag-picker";
 import { Header, Footer } from "@/components/layout";
-import { Twitter, MapPin, Globe, AlertCircle, Loader2 } from "lucide-react";
+import { Twitter, MapPin, Globe, AlertCircle, Loader2, Search, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
 import { useAuth } from "@/hooks/use-auth";
 // import { useGeolocation } from "@/hooks/use-geolocation";
 import { trackEvent } from "@/lib/analytics";
-import { Search, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import countries from "../../../supabase/coutries";
 import type { Country } from "@/store/map-store";
@@ -28,6 +27,16 @@ import { getSkills } from "@/lib/api/skills";
 import type { User } from "@/types";
 
 type Step = "twitter" | "location" | "profile" | "skills" | "complete";
+
+const kodeMonoStyle = {
+  fontFamily: "var(--font-kode-mono), monospace",
+} as const;
+
+const selectTriggerClass =
+  "flex h-11 w-full items-center justify-between border border-[#2A2A2A] bg-[#0E0F11] px-3 pr-2 text-left text-[14px] font-bold leading-none tracking-[-0.05em] text-white transition-colors hover:border-[#3A3A3A] focus-visible:border-[#14f195] focus-visible:ring-1 focus-visible:ring-[#14f195] focus-visible:outline-none";
+
+const selectPopupClass =
+  "absolute left-0 right-0 top-full z-50 mt-1 border border-[#2A2A2A] bg-[#0E0F11] p-2 shadow-[0_12px_40px_rgba(0,0,0,0.55)]";
 
 function SignupPageContent() {
   const searchParams = useSearchParams();
@@ -136,7 +145,7 @@ function SignupPageContent() {
           const userInterestSlugs =
             (user as User & { interest_slugs?: string[] }).interest_slugs || [];
           const userSkillSlugs =
-            (user as User & { skill_slugs?: string[] }).skill_slugs || [];
+            ((user as User & { skill_slugs?: string[] }).skill_slugs || []).slice(0, MAX_PROFILE_SKILLS);
           const newCity = shouldKeepCity ? prev.city : (user.city || prev.city || "");
           
           // Синхронизируем citySearchQuery с загруженным городом
@@ -360,7 +369,7 @@ function SignupPageContent() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          skill_slugs: skip ? [] : formData.skill_slugs,
+          skill_slugs: skip ? [] : formData.skill_slugs.slice(0, MAX_PROFILE_SKILLS),
         }),
       });
 
@@ -374,7 +383,7 @@ function SignupPageContent() {
         has_bio: !!formData.bio,
         has_role: !!formData.role,
         interests_count: formData.interests.length,
-        skills_count: skip ? 0 : formData.skill_slugs.length,
+        skills_count: skip ? 0 : Math.min(formData.skill_slugs.length, MAX_PROFILE_SKILLS),
         is_open_to_meet: formData.isOpenToMeet,
         has_invite: !!inviteCode,
         skills_skipped: skip,
@@ -396,488 +405,526 @@ function SignupPageContent() {
 
   const roles = USER_ROLE_OPTIONS;
   const interests = INTEREST_DEFINITIONS;
+  const flowSteps: Step[] = ["twitter", "location", "profile", "skills", "complete"];
+  const stepTitles: Record<Step, string> = {
+    twitter: "Account",
+    location: "Location",
+    profile: "Profile",
+    skills: "Skills",
+    complete: "Done",
+  };
+  const activeStepIndex = flowSteps.indexOf(step);
 
   return (
     <>
       <Header />
-      <main className="min-h-screen pt-16 flex items-center justify-center animated-bg px-4 py-12">
-        {/* Background effects */}
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[var(--color-primary)]/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[var(--color-secondary)]/10 rounded-full blur-3xl" />
-
-        <Card variant="bordered" className="w-full max-w-md p-8 relative z-10">
-          {/* Logo */}
-          <div className="flex justify-center mb-6">
-            <Image
-              src="/logo.svg"
-              alt="SolPoint"
-              width={60}
-              height={60}
-            />
-          </div>
-
-          {/* Progress */}
-          <div className="flex items-center justify-center gap-2 mb-8">
-            {["twitter", "location", "profile", "skills", "complete"].map((s, i) => (
-              <div
-                key={s}
-                className={`w-2 h-2 rounded-full transition-colors ${
-                  ["twitter", "location", "profile", "skills", "complete"].indexOf(step) >= i
-                    ? "bg-[var(--color-primary)]"
-                    : "bg-[var(--color-surface-border)]"
-                }`}
-              />
-            ))}
-          </div>
-
-          {/* Message from callback */}
-          {message && (
-            <div className="mb-4 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
-              <div className="flex items-start gap-2 text-blue-500">
-                <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                <p className="text-sm font-medium">{decodeURIComponent(message)}</p>
+      <main className="min-h-screen bg-black pb-16 pt-[90px]" style={kodeMonoStyle}>
+        <section className="mx-auto w-full max-w-[1440px] px-4 md:px-10">
+          <div className="mx-auto w-full max-w-[560px] border border-[#2A2A2A] bg-[#101319] px-5 pb-8 pt-6 sm:px-8 sm:pb-10 sm:pt-8">
+            <div className="mb-7 flex items-center justify-center gap-3">
+              <div className="relative h-[58px] w-[58px] shrink-0">
+                <Image src="/main-logo.svg" alt="SolPoint" fill className="object-contain" priority />
               </div>
+              <span className="text-[28px] font-bold leading-none text-white">SolPoint</span>
             </div>
-          )}
 
-          <AnimatePresence mode="wait">
-            {/* Step 1: Twitter Auth */}
-            {step === "twitter" && (
-              <motion.div
-                key="twitter"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-              >
-                <h1 className="text-2xl font-bold text-center text-[var(--color-text-primary)] mb-2">
-                  Join SolPoint
-                </h1>
-                <p className="text-center text-[var(--color-text-secondary)] mb-8">
-                  Connect with the global Solana community
-                </p>
+            <div className="mb-7">
+              <div className="flex items-center gap-2">
+                {flowSteps.map((flowStep, index) => (
+                  <div key={flowStep} className="flex min-w-0 flex-1 items-center gap-2">
+                    <span
+                      className={cn(
+                        "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[11px] font-bold transition-colors",
+                        activeStepIndex >= index
+                          ? "border-[#14f195] bg-[#14f195] text-black"
+                          : "border-white/25 bg-transparent text-white/60"
+                      )}
+                    >
+                      {index + 1}
+                    </span>
+                    {index < flowSteps.length - 1 ? (
+                      <span
+                        className={cn(
+                          "h-px w-full",
+                          activeStepIndex > index ? "bg-[#14f195]/80" : "bg-white/15"
+                        )}
+                      />
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+              <p className="mt-3 text-center text-[13px] font-medium tracking-wide text-white/70">
+                Step: {stepTitles[step]}
+              </p>
+            </div>
 
-                <Button
-                  onClick={handleTwitterSignup}
-                  isLoading={isLoading}
-                  className="w-full mb-4 bg-[#1DA1F2] hover:bg-[#1a8cd8] text-white"
-                  size="lg"
-                >
-                  <Twitter className="w-5 h-5 mr-2" />
-                  Sign up with Twitter
-                </Button>
-
-                <p className="text-xs text-center text-[var(--color-text-muted)] mb-6">
-                  We&apos;ll import your name, handle, and profile picture.
-                  We never post without permission.
-                </p>
-
-                <p className="text-center text-[var(--color-text-secondary)]">
-                  Already have an account?{" "}
-                  <Link
-                    href="/login"
-                    className="text-[var(--color-primary)] hover:underline"
-                  >
-                    Log in
-                  </Link>
-                </p>
-              </motion.div>
+            {message && (
+              <div className="mb-5 border border-blue-400/40 bg-blue-500/10 px-4 py-3">
+                <div className="flex items-start gap-2 text-blue-100">
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                  <p className="text-[13px] font-semibold leading-snug">{decodeURIComponent(message)}</p>
+                </div>
+              </div>
             )}
 
-            {/* Step 2: Location Entry */}
-            {step === "location" && (
-              <motion.div
-                key="location"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-              >
-                <div className="flex justify-center mb-6">
-                  <div className="w-16 h-16 rounded-full bg-[var(--color-primary)]/20 flex items-center justify-center">
-                    <MapPin className="w-8 h-8 text-[var(--color-primary)]" />
+            <AnimatePresence mode="wait">
+              {step === "twitter" && (
+                <motion.div
+                  key="twitter"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                >
+                  <h1 className="text-center text-[30px] font-bold leading-none text-white">Join SolPoint</h1>
+                  <p className="mx-auto mt-3 max-w-[430px] text-center text-[15px] font-medium leading-snug text-white/70">
+                    Connect with the global Solana community and start meeting the right people.
+                  </p>
+
+                  <Button
+                    onClick={handleTwitterSignup}
+                    isLoading={isLoading}
+                    size="lg"
+                    className="mt-6 h-[49px] w-full rounded-[7px] border border-white bg-white px-4 text-[18px] font-bold leading-none tracking-[-0.03em] text-black hover:bg-white/90"
+                    style={kodeMonoStyle}
+                  >
+                    <Twitter className="mr-2 h-5 w-5" />
+                    Sign up with Twitter
+                  </Button>
+
+                  <p className="mt-4 text-center text-[12px] font-medium leading-snug text-white/60">
+                    We&apos;ll import your name, handle, and profile picture.
+                    We never post without permission.
+                  </p>
+
+                  <p className="mt-6 text-center text-[13px] font-medium text-white/70">
+                    Already have an account?{" "}
+                    <Link
+                      href={
+                        redirectTo
+                          ? `/login?redirect_to=${encodeURIComponent(redirectTo)}`
+                          : "/login"
+                      }
+                      className="text-white underline underline-offset-2 hover:text-white/80"
+                    >
+                      Log in
+                    </Link>
+                  </p>
+                </motion.div>
+              )}
+
+              {step === "location" && (
+                <motion.div
+                  key="location"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                >
+                  <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full border border-[#14f195]/40 bg-[#14f195]/15">
+                    <MapPin className="h-7 w-7 text-[#14f195]" />
                   </div>
-                </div>
 
-                <h1 className="text-2xl font-bold text-center text-[var(--color-text-primary)] mb-2">
-                  Enter Your Location
-                </h1>
-                <p className="text-center text-[var(--color-text-secondary)] mb-6">
-                  Help others find you on the map
-                </p>
+                  <h1 className="text-center text-[30px] font-bold leading-none text-white">Enter your location</h1>
+                  <p className="mx-auto mt-3 max-w-[430px] text-center text-[15px] font-medium leading-snug text-white/70">
+                    Help others discover you on the map and connect faster.
+                  </p>
 
-                <div className="space-y-4">
-                  {/* Country Selection */}
-                  <div>
-                    <label className="block text-sm text-[var(--color-text-muted)] mb-2">
-                      Country *
-                    </label>
+                  <div className="mt-6 space-y-4">
                     <div className="relative" ref={countryDropdownRef}>
-                      <Input
-                        placeholder={formData.country || "Select country"}
-                        icon={<Search className="w-4 h-4" />}
-                        value={countrySearchQuery}
-                        onChange={(e) => {
-                          setCountrySearchQuery(e.target.value);
-                          setIsCountryDropdownOpen(true);
-                        }}
-                        onFocus={() => setIsCountryDropdownOpen(true)}
-                        onKeyDown={handleCountryKeyDown}
-                      />
+                      <label className="mb-2 block text-[13px] font-medium text-white/75">Country *</label>
+                      <button
+                        type="button"
+                        className={selectTriggerClass}
+                        onClick={() => setIsCountryDropdownOpen((open) => !open)}
+                      >
+                        <span className={cn("truncate", !formData.country && "text-white/55")}>
+                          {formData.country || "choose country"}
+                        </span>
+                        <ChevronDown
+                          className={cn(
+                            "h-4 w-4 shrink-0 text-white/70 transition-transform",
+                            isCountryDropdownOpen && "rotate-180"
+                          )}
+                        />
+                      </button>
 
-                      {isCountryDropdownOpen && filteredCountries.length > 0 && (
-                        <div className="absolute z-50 w-full mt-2 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                          {filteredCountries.map((country: Country) => (
-                            <button
-                              key={country.code}
-                              onClick={() => handleSelectCountry(country)}
-                              className={cn(
-                                "w-full px-3 py-2 text-left flex items-center justify-between hover:bg-[var(--color-surface-border)] transition-colors",
-                                formData.country_code === country.code && "bg-[var(--color-primary)]/10"
-                              )}
-                            >
-                              <span
-                                className={cn(
-                                  "text-sm",
-                                  formData.country_code === country.code
-                                    ? "text-[var(--color-primary)] font-medium"
-                                    : "text-[var(--color-text-primary)]"
-                                )}
-                              >
-                                {country.name}
-                              </span>
-                              {formData.country_code === country.code && (
-                                <Check className="w-4 h-4 text-[var(--color-primary)]" />
-                              )}
-                            </button>
-                          ))}
+                      {isCountryDropdownOpen ? (
+                        <div className={selectPopupClass}>
+                          <div className="mb-2 flex h-9 items-center gap-2 border border-[#2A2A2A] bg-black px-2">
+                            <Search className="h-3.5 w-3.5 shrink-0 text-white/55" />
+                            <input
+                              autoFocus
+                              value={countrySearchQuery}
+                              onChange={(event) => setCountrySearchQuery(event.target.value)}
+                              onKeyDown={handleCountryKeyDown}
+                              placeholder="find your country"
+                              className="w-full bg-transparent text-[12px] font-bold text-white placeholder:text-white/45 focus:outline-none"
+                            />
+                          </div>
+                          <div className="max-h-56 space-y-1 overflow-y-auto pr-1">
+                            {filteredCountries.length > 0 ? (
+                              filteredCountries.map((country: Country) => (
+                                <button
+                                  key={country.code}
+                                  type="button"
+                                  className={cn(
+                                    "flex w-full items-center justify-between px-2 py-2 text-left text-[12px] font-bold transition-colors",
+                                    formData.country_code === country.code
+                                      ? "bg-[#14f195]/15 text-[#14f195]"
+                                      : "text-white hover:bg-[#1A1C20] hover:text-[#14f195]"
+                                  )}
+                                  onClick={() => handleSelectCountry(country)}
+                                >
+                                  <span className="truncate">{country.name}</span>
+                                  <span
+                                    className={cn(
+                                      "h-3.5 w-3.5 shrink-0 border",
+                                      formData.country_code === country.code
+                                        ? "border-white bg-white"
+                                        : "border-white/30"
+                                    )}
+                                  />
+                                </button>
+                              ))
+                            ) : (
+                              <p className="px-2 py-2 text-[12px] text-white/50">No countries found.</p>
+                            )}
+                          </div>
                         </div>
-                      )}
+                      ) : null}
                     </div>
-                  </div>
 
-                  {/* City Input */}
-                  <div>
-                    <label className="block text-sm text-[var(--color-text-muted)] mb-2">
-                      City (optional)
-                    </label>
                     <div className="relative" ref={cityDropdownRef}>
-                      <Input
-                        placeholder="Enter city name"
-                        icon={<Search className="w-4 h-4" />}
-                        value={citySearchQuery}
-                        onChange={(e) => {
-                          setCitySearchQuery(e.target.value);
-                          setIsCityDropdownOpen(true);
-                          setFormData((prev) => ({
-                            ...prev,
-                            city: e.target.value,
-                          }));
-                        }}
-                        onFocus={() => {
-                          if (formData.country_code) {
+                      <label className="mb-2 block text-[13px] font-medium text-white/75">City (optional)</label>
+                      <div
+                        className={cn(
+                          "flex h-11 items-center gap-2 border border-[#2A2A2A] bg-[#0E0F11] px-3 transition-colors",
+                          formData.country_code
+                            ? "focus-within:border-[#3A3A3A]"
+                            : "cursor-not-allowed opacity-55"
+                        )}
+                      >
+                        <Search className="h-3.5 w-3.5 shrink-0 text-white/55" />
+                        <input
+                          value={citySearchQuery}
+                          onChange={(event) => {
+                            setCitySearchQuery(event.target.value);
                             setIsCityDropdownOpen(true);
-                          }
-                        }}
-                        onKeyDown={handleCityKeyDown}
-                        disabled={!formData.country_code}
-                      />
+                            setFormData((prev) => ({
+                              ...prev,
+                              city: event.target.value,
+                            }));
+                          }}
+                          onFocus={() => {
+                            if (formData.country_code) {
+                              setIsCityDropdownOpen(true);
+                            }
+                          }}
+                          onKeyDown={handleCityKeyDown}
+                          placeholder={formData.country_code ? "type your city" : "choose country first"}
+                          disabled={!formData.country_code}
+                          className="w-full bg-transparent text-[12px] font-bold text-white placeholder:text-white/45 focus:outline-none"
+                        />
+                      </div>
 
-                      {isCityDropdownOpen && filteredCities.length > 0 && formData.country_code && (
-                        <div className="absolute z-50 w-full mt-2 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                          {filteredCities.map((city) => (
-                            <button
-                              key={`${city.name}-${city.countryCode}`}
-                              onClick={() => handleSelectCity(city.name)}
-                              className={cn(
-                                "w-full px-3 py-2 text-left flex items-center justify-between hover:bg-[var(--color-surface-border)] transition-colors",
-                                formData.city === city.name && "bg-[var(--color-primary)]/10"
-                              )}
-                            >
-                              <span
-                                className={cn(
-                                  "text-sm",
-                                  formData.city === city.name
-                                    ? "text-[var(--color-primary)] font-medium"
-                                    : "text-[var(--color-text-primary)]"
-                                )}
-                              >
-                                {city.name}
-                              </span>
-                              {formData.city === city.name && (
-                                <Check className="w-4 h-4 text-[var(--color-primary)]" />
-                              )}
-                            </button>
-                          ))}
+                      {isCityDropdownOpen && formData.country_code ? (
+                        <div className={selectPopupClass}>
+                          <div className="max-h-56 space-y-1 overflow-y-auto pr-1">
+                            {filteredCities.length > 0 ? (
+                              filteredCities.map((city) => (
+                                <button
+                                  key={`${city.name}-${city.countryCode}`}
+                                  type="button"
+                                  className={cn(
+                                    "flex w-full items-center justify-between px-2 py-2 text-left text-[12px] font-bold transition-colors",
+                                    formData.city === city.name
+                                      ? "bg-[#14f195]/15 text-[#14f195]"
+                                      : "text-white hover:bg-[#1A1C20] hover:text-[#14f195]"
+                                  )}
+                                  onClick={() => handleSelectCity(city.name)}
+                                >
+                                  <span className="truncate">{city.name}</span>
+                                  <span
+                                    className={cn(
+                                      "h-3.5 w-3.5 shrink-0 border",
+                                      formData.city === city.name
+                                        ? "border-white bg-white"
+                                        : "border-white/30"
+                                    )}
+                                  />
+                                </button>
+                              ))
+                            ) : (
+                              <p className="px-2 py-2 text-[12px] text-white/50">
+                                No suggestions. You can type your city manually.
+                              </p>
+                            )}
+                          </div>
                         </div>
-                      )}
+                      ) : null}
                     </div>
-                  </div>
 
-                  <div className="bg-[var(--color-surface-hover)] rounded-lg p-4">
-                    <div className="flex items-start gap-3">
-                      <Globe className="w-5 h-5 text-[var(--color-primary)] mt-0.5 shrink-0" />
-                      <div>
-                        <p className="text-xs text-[var(--color-text-muted)]">
+                    <div className="border border-[#2A2A2A] bg-[#171A1E] px-3 py-3">
+                      <div className="flex items-start gap-2">
+                        <Globe className="mt-0.5 h-4 w-4 shrink-0 text-[#14f195]" />
+                        <p className="text-[12px] font-medium leading-snug text-white/65">
                           Country is visible to everyone. City is visible only to PRO users.
                         </p>
                       </div>
                     </div>
-                  </div>
 
-                  <Button
-                    onClick={handleLocationSubmit}
-                    className="w-full"
-                    size="lg"
-                    disabled={!formData.country_code}
-                  >
-                    Continue
-                  </Button>
-                </div>
-              </motion.div>
-            )}
-
-            {/* Step 3: Profile Setup */}
-            {step === "profile" && (
-              <motion.div
-                key="profile"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-              >
-                <h1 className="text-2xl font-bold text-center text-[var(--color-text-primary)] mb-2">
-                  Complete Your Profile
-                </h1>
-                <p className="text-center text-[var(--color-text-secondary)] mb-6">
-                  Tell the community about yourself
-                </p>
-
-                <div className="space-y-4">
-                  {/* Bio */}
-                  <div>
-                    <label className="block text-sm text-[var(--color-text-muted)] mb-1">
-                      Bio{" "}
-                      <span className="text-[var(--color-text-muted)]">
-                        ({formData.bio.length}/150)
-                      </span>
-                    </label>
-                    <textarea
-                      value={formData.bio}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          bio: e.target.value.slice(0, 150),
-                        }))
-                      }
-                      placeholder="Tell us about yourself..."
-                      className="w-full h-24 px-3 py-2 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] resize-none"
-                    />
-                  </div>
-
-                  {/* Role */}
-                  <div>
-                    <label className="block text-sm text-[var(--color-text-muted)] mb-2">
-                      I am a... (optional)
-                    </label>
-                    <div className="flex flex-wrap gap-2">
-                      {roles.map((role) => (
-                        <button
-                          key={role.value}
-                          onClick={() =>
-                            setFormData((prev) => ({
-                              ...prev,
-                              role: prev.role === role.value ? "" : role.value,
-                            }))
-                          }
-                          className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${
-                            formData.role === role.value
-                              ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
-                              : "border-[var(--color-surface-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-text-muted)]"
-                          }`}
-                        >
-                          {role.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Interests */}
-                  <div>
-                    <label className="block text-sm text-[var(--color-text-muted)] mb-2">
-                      Interests (optional)
-                    </label>
-                    <div className="flex flex-wrap gap-2">
-                      {interests.map((interest) => {
-                        const selected = formData.interests.includes(interest.slug);
-                        return (
-                          <button
-                            key={interest.slug}
-                            onClick={() =>
-                              setFormData((prev) => ({
-                                ...prev,
-                                interests: selected
-                                  ? prev.interests.filter((slug) => slug !== interest.slug)
-                                  : [...prev.interests, interest.slug],
-                              }))
-                            }
-                            className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${
-                              selected
-                                ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
-                                : "border-[var(--color-surface-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-text-muted)]"
-                            }`}
-                          >
-                            {interest.name}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Open to meet */}
-                  <label className="flex items-center justify-between cursor-pointer">
-                    <span className="text-sm text-[var(--color-text-secondary)]">
-                      Open to meet IRL
-                    </span>
-                    <button
-                      onClick={() =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          isOpenToMeet: !prev.isOpenToMeet,
-                        }))
-                      }
-                      className={`w-11 h-6 rounded-full transition-colors relative ${
-                        formData.isOpenToMeet
-                          ? "bg-[var(--color-primary)]"
-                          : "bg-[var(--color-surface-border)]"
-                      }`}
-                    >
-                      <span
-                        className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
-                          formData.isOpenToMeet ? "left-6" : "left-1"
-                        }`}
-                      />
-                    </button>
-                  </label>
-
-                  <Button
-                    onClick={handleProfileSubmit}
-                    isLoading={isLoading}
-                    className="w-full"
-                    size="lg"
-                  >
-                    Continue
-                  </Button>
-                </div>
-              </motion.div>
-            )}
-
-            {/* Step 4: Skills */}
-            {step === "skills" && (
-              <motion.div
-                key="skills"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-              >
-                <h1 className="text-2xl font-bold text-center text-[var(--color-text-primary)] mb-2">
-                  Add Your Skills
-                </h1>
-                <p className="text-center text-[var(--color-text-secondary)] mb-6">
-                  Pick up to {MAX_PROFILE_SKILLS} tags so people can find you faster
-                </p>
-
-                <div className="space-y-4">
-                  <SkillTagPicker
-                    categories={skillCategories}
-                    items={skillDictionary}
-                    selectedSlugs={formData.skill_slugs}
-                    onChange={(next) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        skill_slugs: next,
-                      }))
-                    }
-                    maxSelected={MAX_PROFILE_SKILLS}
-                    searchPlaceholder="Search skills"
-                    disabled={isLoading}
-                  />
-
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     <Button
-                      onClick={() => handleSkillsSubmit(false)}
-                      isLoading={isLoading}
-                      className="w-full"
+                      onClick={handleLocationSubmit}
                       size="lg"
+                      disabled={!formData.country_code}
+                      className="h-[49px] w-full rounded-[7px] border border-white bg-white px-4 text-[18px] font-bold leading-none tracking-[-0.03em] text-black hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
+                      style={kodeMonoStyle}
                     >
                       Continue
                     </Button>
+                  </div>
+                </motion.div>
+              )}
+
+              {step === "profile" && (
+                <motion.div
+                  key="profile"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                >
+                  <h1 className="text-center text-[30px] font-bold leading-none text-white">Complete your profile</h1>
+                  <p className="mx-auto mt-3 max-w-[430px] text-center text-[15px] font-medium leading-snug text-white/70">
+                    Tell the community who you are and what you&apos;re into.
+                  </p>
+
+                  <div className="mt-6 space-y-4">
+                    <div>
+                      <label className="mb-2 block text-[13px] font-medium text-white/75">
+                        Bio <span className="text-white/45">({formData.bio.length}/150)</span>
+                      </label>
+                      <textarea
+                        value={formData.bio}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            bio: e.target.value.slice(0, 150),
+                          }))
+                        }
+                        placeholder="Tell us about yourself..."
+                        className="h-24 w-full resize-none rounded-[4px] border border-[#5e5e5e] bg-black px-2.5 py-2 text-[13px] font-medium leading-snug text-white placeholder:text-[#a4a7ac] focus:border-white focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-[13px] font-medium text-white/75">I am a... (optional)</label>
+                      <div className="flex flex-wrap gap-2">
+                        {roles.map((role) => (
+                          <button
+                            key={role.value}
+                            type="button"
+                            onClick={() =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                role: prev.role === role.value ? "" : role.value,
+                              }))
+                            }
+                            className={cn(
+                              "rounded-full border px-2.5 py-1 text-[11px] font-bold transition-colors",
+                              formData.role === role.value
+                                ? "border-[#14f195] bg-[#0A201A] text-[#14f195]"
+                                : "border-[#555] text-white/85 hover:border-white/70"
+                            )}
+                          >
+                            {role.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-[13px] font-medium text-white/75">Interests (optional)</label>
+                      <div className="flex flex-wrap gap-2">
+                        {interests.map((interest) => {
+                          const selected = formData.interests.includes(interest.slug);
+                          return (
+                            <button
+                              key={interest.slug}
+                              type="button"
+                              onClick={() =>
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  interests: selected
+                                    ? prev.interests.filter((slug) => slug !== interest.slug)
+                                    : [...prev.interests, interest.slug],
+                                }))
+                              }
+                              className={cn(
+                                "rounded-full border px-2.5 py-1 text-[11px] font-bold transition-colors",
+                                selected
+                                  ? "border-[#14f195] bg-[#0A201A] text-[#14f195]"
+                                  : "border-[#555] text-white/85 hover:border-white/70"
+                              )}
+                            >
+                              {interest.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between border border-[#2A2A2A] bg-[#171A1E] px-3 py-2.5">
+                      <span className="text-[13px] font-medium text-white/80">Open to meet IRL</span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            isOpenToMeet: !prev.isOpenToMeet,
+                          }))
+                        }
+                        className={cn(
+                          "relative h-6 w-11 rounded-full border transition-colors",
+                          formData.isOpenToMeet
+                            ? "border-[#14f195] bg-[#14f195]"
+                            : "border-white/30 bg-transparent"
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "absolute top-1 h-4 w-4 rounded-full bg-white transition-transform",
+                            formData.isOpenToMeet ? "left-6" : "left-1"
+                          )}
+                        />
+                      </button>
+                    </div>
+
                     <Button
-                      onClick={() => handleSkillsSubmit(true)}
-                      variant="outline"
-                      className="w-full"
+                      onClick={handleProfileSubmit}
+                      isLoading={isLoading}
                       size="lg"
-                      disabled={isLoading}
+                      className="h-[49px] w-full rounded-[7px] border border-white bg-white px-4 text-[18px] font-bold leading-none tracking-[-0.03em] text-black hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
+                      style={kodeMonoStyle}
                     >
-                      Skip
+                      Continue
                     </Button>
                   </div>
-                </div>
-              </motion.div>
-            )}
+                </motion.div>
+              )}
 
-            {/* Step 5: Complete */}
-            {step === "complete" && (
-              <motion.div
-                key="complete"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="text-center"
-              >
-                <div className="w-20 h-20 rounded-full bg-[var(--color-primary)]/20 flex items-center justify-center mx-auto mb-6">
-                  <svg
-                    className="w-10 h-10 text-[var(--color-primary)]"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                </div>
+              {step === "skills" && (
+                <motion.div
+                  key="skills"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                >
+                  <h1 className="text-center text-[30px] font-bold leading-none text-white">Add your skills</h1>
+                  <p className="mx-auto mt-3 max-w-[430px] text-center text-[15px] font-medium leading-snug text-white/70">
+                    Pick up to {MAX_PROFILE_SKILLS} tags so people can find you faster.
+                  </p>
 
-                <h1 className="text-2xl font-bold text-[var(--color-text-primary)] mb-2">
-                  You&apos;re all set!
-                </h1>
-                <p className="text-[var(--color-text-secondary)] mb-8">
-                  Welcome to the SolPoint community
-                </p>
+                  <div className="mt-6 space-y-4">
+                    <div className="border border-[#2A2A2A] bg-[#0E0F11] p-3">
+                      <SkillTagPicker
+                        categories={skillCategories}
+                        items={skillDictionary}
+                        selectedSlugs={formData.skill_slugs}
+                        onChange={(next) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            skill_slugs: next,
+                          }))
+                        }
+                        maxSelected={MAX_PROFILE_SKILLS}
+                        searchPlaceholder="Search skills"
+                        disabled={isLoading}
+                      />
+                    </div>
 
-                <div className="space-y-3">
-                  {redirectTo ? (
-                    <Button 
-                      onClick={() => router.push(redirectTo)}
-                      className="w-full" 
-                      size="lg"
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      <Button
+                        onClick={() => handleSkillsSubmit(false)}
+                        isLoading={isLoading}
+                        size="lg"
+                        className="h-[49px] w-full rounded-[7px] border border-white bg-white px-4 text-[18px] font-bold leading-none tracking-[-0.03em] text-black hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
+                        style={kodeMonoStyle}
+                      >
+                        Continue
+                      </Button>
+                      <Button
+                        onClick={() => handleSkillsSubmit(true)}
+                        size="lg"
+                        disabled={isLoading}
+                        className="h-[49px] w-full rounded-[7px] border border-white/35 bg-transparent px-4 text-[18px] font-bold leading-none tracking-[-0.03em] text-white hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+                        style={kodeMonoStyle}
+                      >
+                        Skip
+                      </Button>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {step === "complete" && (
+                <motion.div
+                  key="complete"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="text-center"
+                >
+                  <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full border border-[#14f195]/50 bg-[#14f195]/15">
+                    <svg
+                      className="h-10 w-10 text-[#14f195]"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
                     >
-                      Continue to Activation
-                    </Button>
-                  ) : (
-                    <>
-                      <Button asChild className="w-full" size="lg">
-                        <Link href="/map">Explore the Map</Link>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+
+                  <h1 className="text-[30px] font-bold leading-none text-white">You&apos;re all set!</h1>
+                  <p className="mx-auto mt-3 max-w-[420px] text-[15px] font-medium leading-snug text-white/70">
+                    Welcome to the SolPoint community.
+                  </p>
+
+                  <div className="mt-8 space-y-3">
+                    {redirectTo ? (
+                      <Button
+                        onClick={() => router.push(redirectTo)}
+                        size="lg"
+                        className="h-[49px] w-full rounded-[7px] border border-white bg-white px-4 text-[18px] font-bold leading-none tracking-[-0.03em] text-black hover:bg-white/90"
+                        style={kodeMonoStyle}
+                      >
+                        Continue to Activation
                       </Button>
-                      <Button variant="outline" asChild className="w-full">
-                        <Link href="/profile">View My Profile</Link>
-                      </Button>
-                    </>
-                  )}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </Card>
+                    ) : (
+                      <>
+                        <Button
+                          asChild
+                          size="lg"
+                          className="h-[49px] w-full rounded-[7px] border border-white bg-white px-4 text-[18px] font-bold leading-none tracking-[-0.03em] text-black hover:bg-white/90"
+                          style={kodeMonoStyle}
+                        >
+                          <Link href="/map">Explore the Map</Link>
+                        </Button>
+                        <Link
+                          href="/profile"
+                          className="group inline-flex h-[49px] w-full items-stretch rounded-[7px] p-px"
+                          style={{ background: "linear-gradient(90deg, #9b45fe 0%, #00f58d 100%)" }}
+                        >
+                          <span className="flex flex-1 items-center justify-center rounded-[6px] bg-black px-4 text-[18px] font-bold leading-none tracking-[-0.03em] text-white transition-colors group-hover:bg-transparent group-hover:text-black">
+                            View my profile
+                          </span>
+                        </Link>
+                      </>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </section>
       </main>
       <Footer />
     </>
@@ -889,9 +936,9 @@ export default function SignupPage() {
     <Suspense fallback={
       <>
         <Header />
-        <main className="min-h-screen pt-16 flex items-center justify-center animated-bg px-4">
+        <main className="min-h-screen bg-black pt-[90px]">
           <div className="flex flex-col items-center gap-4">
-            <Loader2 className="w-8 h-8 animate-spin text-[var(--color-primary)]" />
+            <Loader2 className="h-8 w-8 animate-spin text-[#14f195]" />
           </div>
         </main>
         <Footer />

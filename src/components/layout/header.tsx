@@ -412,6 +412,12 @@ export function Header() {
     pathname.startsWith("/events/") ||
     pathname === "/map" ||
     pathname.startsWith("/map/") ||
+    pathname === "/login" ||
+    pathname.startsWith("/login/") ||
+    pathname === "/signup" ||
+    pathname.startsWith("/signup/") ||
+    pathname === "/activate" ||
+    pathname.startsWith("/activate/") ||
     pathname === "/map-v1" ||
     pathname.startsWith("/map-v1/") ||
     pathname === "/profile" ||
@@ -419,7 +425,9 @@ export function Header() {
     pathname === "/profile-v1" ||
     pathname.startsWith("/profile-v1/") ||
     pathname === "/profile-v2" ||
-    pathname.startsWith("/profile-v2/");
+    pathname.startsWith("/profile-v2/") ||
+    pathname === "/settings" ||
+    pathname.startsWith("/settings/");
 
   if (shouldUseLandingHeader) {
     return <LandingHeader />;

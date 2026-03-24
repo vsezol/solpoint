@@ -396,7 +396,7 @@ export function ProfileV2Content({
       setDetails(d);
       if (isOwnProfile) {
         setAboutDraft(d.about ?? "");
-        setSkillSlugsDraft(d.skills.map((s) => s.slug));
+        setSkillSlugsDraft(d.skills.map((s) => s.slug).slice(0, MAX_PROFILE_SKILLS));
         setExpDrafts(detailsToExpDrafts(d));
         setRoleDraft((d.role as UserRole | null) ?? "");
         setCountryCodeDraft(d.countryCode ?? "");

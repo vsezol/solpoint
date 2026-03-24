@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = createServiceRoleClient();
+    const supabase = createServiceRoleClient() as any;
     const userAgent = request.headers.get("user-agent") || null;
     const ipAddress = getClientIp(request);
 

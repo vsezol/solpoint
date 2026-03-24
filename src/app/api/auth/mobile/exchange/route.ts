@@ -37,7 +37,7 @@ export async function POST(request: Request) {
   }
 
   const codeHash = hashMobileOAuthCode(code);
-  const serviceRoleClient = createServiceRoleClient();
+  const serviceRoleClient = createServiceRoleClient() as any;
 
   const { data: consumeData, error: consumeError } = await serviceRoleClient.rpc(
     "consume_mobile_oauth_handoff",
