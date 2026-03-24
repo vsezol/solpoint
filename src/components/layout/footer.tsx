@@ -90,7 +90,7 @@ export function Footer() {
   return (
     <footer
       className={cn(
-        "border-t border-[#595959] bg-[#101010] md:pb-0",
+        "bg-[#101010] md:pb-0",
         isMobileBottomNavHidden(pathname) ? "pb-8" : "pb-20"
       )}
     >
@@ -213,15 +213,6 @@ export function Footer() {
             <p className="mt-3 text-[13px] font-bold text-[#00f58d]">Message sent. Thank you.</p>
           )}
           {submitStatus === "error" && <p className="mt-3 text-[13px] font-bold text-[#ff6b6b]">{submitError}</p>}
-        </div>
-      </div>
-
-      <div className="border-t border-[#595959]">
-        <div className="mx-auto flex w-full max-w-[980px] items-center justify-between px-6 py-4 md:px-8">
-          <p className="text-xs text-white/50">&copy; {new Date().getFullYear()} SolPoint. All rights reserved.</p>
-          <Link href="/" className="text-xs text-white/70 hover:text-white">
-            solpoint.xyz
-          </Link>
         </div>
       </div>
     </footer>

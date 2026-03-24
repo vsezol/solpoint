@@ -308,22 +308,23 @@ export function LandingPageRedesign() {
 
         <BadgeRow className="mx-auto mt-7 w-auto sm:w-full sm:max-w-[654px]" />
 
-        <div className="mx-auto mt-8 flex w-full max-w-[230px] flex-row flex-nowrap items-stretch justify-center gap-2 sm:mt-11 sm:max-w-none sm:gap-[105px]">
+        <div className="mx-auto mt-[52px] flex w-full max-w-[230px] flex-row flex-nowrap items-stretch justify-center gap-2 sm:mt-[64px] sm:max-w-none sm:gap-[105px]">
           <Link
             href="/events"
-            className="inline-flex h-10 min-w-0 flex-1 items-center justify-center rounded-[6px] border border-white bg-white px-2 text-[12px] font-bold leading-none text-black transition-colors duration-200 ease-out hover:bg-black hover:text-white sm:h-[49px] sm:w-auto sm:min-w-0 sm:flex-none sm:rounded-[7px] sm:px-8 sm:text-[20px]"
+            className="inline-flex h-10 min-w-0 flex-1 items-center justify-center rounded-[6px] border border-white bg-white px-2 text-[12px] font-bold leading-none text-black transition-colors duration-200 ease-out hover:bg-black hover:text-white sm:h-[49px] sm:w-[194px] sm:shrink-0 sm:flex-none sm:rounded-[7px] sm:px-[13px] sm:text-[20px] sm:tracking-normal sm:whitespace-nowrap"
+            style={kodeMonoStyle}
           >
             Explore Events
           </Link>
           <Link
             href="/map"
-            className="group inline-flex h-10 min-w-0 flex-1 items-stretch rounded-[6px] p-px sm:h-[49px] sm:w-auto sm:min-w-0 sm:flex-none sm:rounded-[7px]"
+            className="group inline-flex h-10 min-w-0 flex-1 items-stretch rounded-[6px] p-px sm:h-[49px] sm:w-[162px] sm:shrink-0 sm:flex-none sm:rounded-[7px]"
             style={{
               background: "linear-gradient(90deg, #9b45fe 0%, #00f58d 100%)",
             }}
           >
             <span
-              className="flex min-w-0 flex-1 items-center justify-center rounded-[5px] bg-black px-2 text-center text-[12px] font-bold leading-[100%] tracking-normal text-white transition-colors duration-200 ease-out group-hover:bg-transparent sm:min-w-0 sm:rounded-[6px] sm:px-8 sm:text-[20px]"
+              className="flex min-w-0 flex-1 items-center justify-center rounded-[5px] bg-black px-2 text-center text-[12px] font-bold leading-none tracking-normal text-white transition-colors duration-200 ease-out group-hover:bg-transparent sm:w-full sm:min-w-0 sm:rounded-[6px] sm:px-[13px] sm:text-[20px] sm:tracking-normal sm:whitespace-nowrap"
               style={kodeMonoStyle}
             >
               Explore Map
