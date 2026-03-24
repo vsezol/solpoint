@@ -126,10 +126,10 @@ function BadgeRow({ className }: { className?: string }) {
                 <img src={badge.logoSrc} alt={`${alt} logo`} className={badge.logoImgClassName} />
               </div>
               {hasNames ? (
-                <div className="flex min-w-0 flex-1 flex-col items-start justify-center gap-0 leading-none text-left">
+                <div className="flex min-w-0 flex-col items-center justify-center gap-0 text-center leading-none sm:flex-1 sm:items-start sm:text-left">
                   {badge.nameTop ? (
                     <p
-                      className="text-left text-[10px] font-bold leading-[0.95] text-white sm:text-[13px] md:text-[15px]"
+                      className="text-center text-[10px] font-bold leading-[0.95] text-white sm:text-left sm:text-[13px] md:text-[15px]"
                       style={badge.nameStyle}
                     >
                       {badge.nameTop}
@@ -137,7 +137,7 @@ function BadgeRow({ className }: { className?: string }) {
                   ) : null}
                   {badge.nameBottom ? (
                     <p
-                      className="text-left text-[10px] font-bold leading-[0.95] text-white sm:text-[13px] md:text-[15px]"
+                      className="text-center text-[10px] font-bold leading-[0.95] text-white sm:text-left sm:text-[13px] md:text-[15px]"
                       style={badge.nameStyle}
                     >
                       {badge.nameBottom}
