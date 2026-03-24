@@ -33,19 +33,49 @@ const supabaseOrigin = (() => {
   }
 })();
 
+const isDevelopment = process.env.NODE_ENV === "development";
+
+const scriptSources = [
+  "'self'",
+  "'unsafe-inline'",
+  isDevelopment ? "'unsafe-eval'" : "",
+  "https://www.googletagmanager.com",
+]
+  .filter(Boolean)
+  .join(" ");
+
+const styleSources = ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"].join(" ");
+
+const fontSources = ["'self'", "data:", "https://fonts.gstatic.com"].join(" ");
+
+const connectSources = [
+  "'self'",
+  supabaseOrigin,
+  "https://api.twitter.com",
+  "https://syndication.twitter.com",
+  "https://basemaps.cartocdn.com",
+  "https://*.cartocdn.com",
+  "https://www.googletagmanager.com",
+  "https://www.google-analytics.com",
+  "https://region1.google-analytics.com",
+]
+  .filter(Boolean)
+  .join(" ");
+
 const cspHeaderValue = [
   "default-src 'self'",
   "base-uri 'self'",
   "form-action 'self'",
   "frame-ancestors 'none'",
   "object-src 'none'",
-  `script-src 'self' 'unsafe-inline'${
-    process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""
-  }`,
-  "style-src 'self' 'unsafe-inline'",
+  `script-src ${scriptSources}`,
+  `script-src-elem ${scriptSources}`,
+  `style-src ${styleSources}`,
+  `style-src-elem ${styleSources}`,
   "img-src 'self' data: blob: https:",
-  "font-src 'self' data:",
-  `connect-src 'self'${supabaseOrigin ? ` ${supabaseOrigin}` : ""} https://api.twitter.com https://syndication.twitter.com`,
+  `font-src ${fontSources}`,
+  "worker-src 'self' blob:",
+  `connect-src ${connectSources}`,
   "frame-src https://platform.twitter.com",
   process.env.NODE_ENV === "production" ? "upgrade-insecure-requests" : "",
 ]
