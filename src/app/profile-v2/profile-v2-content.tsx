@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { Avatar, AuthRequiredModal, Button, Modal, ModalContent, ModalHeader, ModalTitle } from "@/components/ui";
+import { SkillTagPicker } from "@/components/ui/skill-tag-picker";
 import { formControlFocusClasses } from "@/components/ui/form-control-focus";
 import { Calendar, ChevronDown, Loader2, MapPin, Plus, Search, Trash2, Users } from "lucide-react";
 import type { User } from "@/types";
@@ -21,8 +22,12 @@ import {
   type ProfileDetailsResponse,
 } from "@/lib/api/profile";
 import { getInterests } from "@/lib/api/interests";
+import { getSkills } from "@/lib/api/skills";
 import {
   INTEREST_DEFINITIONS,
+  MAX_PROFILE_SKILLS,
+  SKILL_CATEGORIES,
+  SKILL_DEFINITIONS,
   USER_ROLE_LABELS,
   USER_ROLE_OPTIONS,
 } from "@/lib/profile-taxonomy";
@@ -355,12 +360,14 @@ export function ProfileV2Content({
   const [detailsError, setDetailsError] = useState<string | null>(null);
 
   const [aboutDraft, setAboutDraft] = useState("");
-  const [skillsDraft, setSkillsDraft] = useState("");
+  const [skillSlugsDraft, setSkillSlugsDraft] = useState<string[]>([]);
   const [expDrafts, setExpDrafts] = useState<ExpFormRow[]>([emptyExpRow()]);
   const [roleDraft, setRoleDraft] = useState<UserRole | "">("");
   const [countryCodeDraft, setCountryCodeDraft] = useState("");
   const [interestSlugsDraft, setInterestSlugsDraft] = useState<string[]>([]);
   const [interestDictionary, setInterestDictionary] = useState<Interest[]>([]);
+  const [skillDictionary, setSkillDictionary] = useState(SKILL_DEFINITIONS);
+  const [skillCategories, setSkillCategories] = useState(SKILL_CATEGORIES);
 
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
@@ -389,7 +396,7 @@ export function ProfileV2Content({
       setDetails(d);
       if (isOwnProfile) {
         setAboutDraft(d.about ?? "");
-        setSkillsDraft(d.skills.map((s) => s.name).join("\n"));
+        setSkillSlugsDraft(d.skills.map((s) => s.slug));
         setExpDrafts(detailsToExpDrafts(d));
         setRoleDraft((d.role as UserRole | null) ?? "");
         setCountryCodeDraft(d.countryCode ?? "");
@@ -413,7 +420,24 @@ export function ProfileV2Content({
       }
     };
 
+    const loadSkillDictionary = async () => {
+      try {
+        const dictionary = await getSkills();
+        if (!cancelled) {
+          if (dictionary.items.length > 0) {
+            setSkillDictionary(dictionary.items);
+          }
+          if (dictionary.categories.length > 0) {
+            setSkillCategories(dictionary.categories);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load skills:", error);
+      }
+    };
+
     loadInterestDictionary();
+    loadSkillDictionary();
 
     return () => {
       cancelled = true;
@@ -458,7 +482,7 @@ export function ProfileV2Content({
           });
           if (isOwnProfile) {
             setAboutDraft(user.bio ?? "");
-            setSkillsDraft("");
+            setSkillSlugsDraft([]);
             setExpDrafts([emptyExpRow()]);
             setRoleDraft((user.role as UserRole | null) ?? "");
             setCountryCodeDraft(user.country_code ?? "");
@@ -549,12 +573,6 @@ export function ProfileV2Content({
       })),
     []
   );
-  const selectedDraftInterests = useMemo(
-    () =>
-      editableInterestOptions.filter((interest) => interestSlugsDraft.includes(interest.slug)),
-    [editableInterestOptions, interestSlugsDraft]
-  );
-
   const handleConnectClick = async () => {
     if (!isAuthenticated) {
       setIsAuthModalOpen(true);
@@ -628,12 +646,6 @@ export function ProfileV2Content({
     setSaveMessage(null);
     setIsSaving(true);
     try {
-      const skillNames = skillsDraft
-        .split("\n")
-        .map((line) => line.trim())
-        .filter(Boolean)
-        .map((name) => ({ name }));
-
       const experiencePayload = expDrafts
         .filter((row) => row.title.trim())
         .map((row) => ({
@@ -646,7 +658,7 @@ export function ProfileV2Content({
 
       const saved = await saveProfileDetails({
         about: aboutDraft.trim() || null,
-        skills: skillNames,
+        skillSlugs: skillSlugsDraft.slice(0, MAX_PROFILE_SKILLS),
         experience: experiencePayload,
         role: roleDraft || null,
         countryCode: countryCodeDraft || null,
@@ -669,7 +681,7 @@ export function ProfileV2Content({
       applyDetails(details);
     } else {
       setAboutDraft(user.bio ?? "");
-      setSkillsDraft("");
+      setSkillSlugsDraft([]);
       setExpDrafts([emptyExpRow()]);
       setRoleDraft((user.role as UserRole | null) ?? "");
       setCountryCodeDraft(user.country_code ?? "");
@@ -751,25 +763,6 @@ export function ProfileV2Content({
                 Selected {interestSlugsDraft.length}/{MAX_INTERESTS}
               </span>
             </div>
-
-            {selectedDraftInterests.length > 0 ? (
-              <div className="mb-2 flex flex-wrap gap-1.5">
-                {selectedDraftInterests.map((interest) => (
-                  <button
-                    key={`selected-${interest.slug}`}
-                    type="button"
-                    className="rounded-full border border-[#14f195] bg-[#14f195]/15 px-2.5 py-1 text-[11px] text-[#14f195] transition-colors hover:bg-[#14f195]/25"
-                    onClick={() =>
-                      setInterestSlugsDraft((prev) => prev.filter((slug) => slug !== interest.slug))
-                    }
-                  >
-                    {interest.name}
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <p className="mb-2 text-[11px] text-white/50">No interests selected yet.</p>
-            )}
 
             <div className="flex flex-wrap gap-2">
               {editableInterestOptions.map((interest) => {
@@ -974,19 +967,15 @@ export function ProfileV2Content({
         Skills
       </h3>
       {showProfileForm ? (
-        <div>
-          <p className="mb-2 text-[var(--color-text-muted)]" style={interBody12}>
-            One skill per line
-          </p>
-          <textarea
-            className={cn(textareaClass, "min-h-[140px] text-[12px] font-medium leading-none")}
-            style={interBody12}
-            value={skillsDraft}
-            onChange={(e) => setSkillsDraft(e.target.value)}
-            placeholder={"Business development\nHiring"}
-            disabled={detailsLoading}
-          />
-        </div>
+        <SkillTagPicker
+          categories={skillCategories}
+          items={skillDictionary}
+          selectedSlugs={skillSlugsDraft}
+          onChange={setSkillSlugsDraft}
+          maxSelected={MAX_PROFILE_SKILLS}
+          searchPlaceholder="Find skills"
+          disabled={detailsLoading}
+        />
       ) : detailsLoading ? (
         <ProfileSectionContentLoader />
       ) : skillsList.length === 0 ? (
@@ -994,9 +983,14 @@ export function ProfileV2Content({
           No skills added yet.
         </p>
       ) : (
-        <ul className="list-inside list-disc space-y-1 text-[var(--color-text-secondary)]" style={interBody12}>
+        <ul className="flex flex-wrap gap-2 text-[var(--color-text-secondary)]" style={interBody12}>
           {skillsList.map((s) => (
-            <li key={s.id}>{s.name}</li>
+            <li
+              key={s.slug}
+              className="rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-[11px] text-white/80"
+            >
+              {s.label}
+            </li>
           ))}
         </ul>
       )}

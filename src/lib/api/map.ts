@@ -46,7 +46,18 @@ export async function getMapMarkers(
       if (filters.userRoles && filters.userRoles.length > 0) {
         userParams.append("roles", filters.userRoles.join(","));
       }
-      
+
+      // v2 semantic filters
+      if (filters.bestMatches && currentUserId) {
+        userParams.append("best_matches", "true");
+        userParams.append("current_user_id", currentUserId);
+      }
+
+      if (filters.completeProfiles) {
+        userParams.append("complete_profiles", "true");
+      }
+
+      // Legacy map filters (kept for backward compatibility with v1 map flows)
       if (filters.openToMeet) {
         userParams.append("open_to_meet", "true");
         // Если включен openToMeet, показываем только mutual friends
@@ -411,4 +422,3 @@ function getUserCoordinates(user: User, viewerIsPro: boolean = false): { lat: nu
   // Если страна не найдена, возвращаем координаты по умолчанию (центр мира)
   return { lat: 0, lng: 0 };
 }
-

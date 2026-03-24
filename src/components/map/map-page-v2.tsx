@@ -107,7 +107,11 @@ export function MapPageV2() {
 
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-5">
             <aside className="w-full lg:w-[300px] lg:shrink-0">
-              <MapFiltersPanelV2 filters={filters} onFiltersChange={setFilters} />
+              <MapFiltersPanelV2
+                filters={filters}
+                onFiltersChange={setFilters}
+                isAuthenticated={isAuthenticated}
+              />
             </aside>
 
             <div className="w-full flex-1 lg:max-w-[934px]">

@@ -30,6 +30,9 @@ type AttendeeItem = {
   interests: Interest[];
   is_complete_profile: boolean;
   match_score: number;
+  interest_overlap_count: number;
+  skill_overlap_count: number;
+  shared_events_count: number;
   registered_at: string;
 };
 

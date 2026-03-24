@@ -62,7 +62,9 @@ export interface ProfileDetailsResponse {
 
 export interface SaveProfileDetailsPayload {
   about: string | null;
-  skills: { name: string }[];
+  skillSlugs: string[];
+  /** Legacy format (temporary backward compatibility) */
+  skills?: { name: string }[];
   experience: {
     title: string;
     company?: string | null;

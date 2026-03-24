@@ -38,6 +38,8 @@ export interface User {
   country_code?: string; // ISO 3166-1 alpha-2 (e.g., "US", "RU")
   city?: string; // Max 150 characters
   role?: UserRole | null;
+  interest_slugs?: string[];
+  skill_slugs?: string[];
   is_open_to_meet: boolean;
   subscription_tier: SubscriptionTier;
   is_verified: boolean;
@@ -62,8 +64,9 @@ export interface User {
 
 /** Skill row from profile_skills */
 export interface ProfileSkillItem {
-  id: string;
-  name: string;
+  slug: string;
+  label: string;
+  category: string;
   sortOrder: number;
 }
 
@@ -350,7 +353,13 @@ export interface MapFilters {
   interestSlugs?: string[];
   userRoles?: UserRole[];
   eventType?: EventType;
+  /** v2 semantic filter: matching by role/interests/skills/shared events */
+  bestMatches?: boolean;
+  /** v2 semantic filter: about + country + skills + interest + role + experience */
+  completeProfiles?: boolean;
+  /** Legacy map filter (kept for backward compatibility). */
   openToMeet?: boolean;
+  /** Legacy map filter (kept for backward compatibility). */
   activeOnly?: boolean;
   country?: string;
   countryCode?: string;

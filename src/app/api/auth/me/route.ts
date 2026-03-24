@@ -3,6 +3,7 @@ import {
   createServiceRoleClient,
 } from "@/lib/supabase/server";
 import { authDebugLog } from "@/lib/auth/debug";
+import { mapProfileSkillRowsToResponse } from "@/lib/profile-skills";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 
@@ -90,11 +91,21 @@ export async function GET(request: Request) {
     .select("interest:interests(slug)")
     .eq("user_id", authUser.id);
 
+  const { data: profileSkills } = await serviceRoleClient
+    .from("profile_skills")
+    .select("name, sort_order")
+    .eq("user_id", authUser.id)
+    .order("sort_order", { ascending: true });
+
   const interest_slugs = (profileInterests || [])
     .map((row: { interest: { slug: string } | { slug: string }[] | null }) =>
       Array.isArray(row.interest) ? row.interest[0]?.slug : row.interest?.slug
     )
     .filter((slug: string | undefined): slug is string => Boolean(slug));
+
+  const skill_slugs = mapProfileSkillRowsToResponse(
+    ((profileSkills || []) as Array<{ name: string; sort_order: number }>)
+  ).map((skill) => skill.slug);
 
   const profileRecord = profile as Record<string, unknown> & {
     id?: string;
@@ -104,6 +115,7 @@ export async function GET(request: Request) {
   const profileWithInterests = {
     ...profileRecord,
     interest_slugs,
+    skill_slugs,
   };
 
   authDebugLog("me", "response_user_with_profile", {
