@@ -2,7 +2,6 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Header, Footer } from "@/components/layout";
 import {
@@ -811,13 +810,13 @@ export default function EventsPageMajorLocal() {
               >
                 Let us know - we&apos;ll add it.
               </p>
-              <Link
-                href="/about"
+              <a
+                href="#footer-contact"
                 className="mt-5 inline-flex text-sm text-white/70 underline underline-offset-4 hover:text-white"
                 style={{ fontFamily: "var(--font-kode-mono), monospace" }}
               >
                 Contact support
-              </Link>
+              </a>
             </div>
           )}
         </div>

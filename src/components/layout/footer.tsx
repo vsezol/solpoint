@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -41,8 +41,11 @@ const kodeMonoStyle = { fontFamily: "var(--font-kode-mono), monospace" } as cons
 const contactFieldBaseClass =
   "footer-contact-field w-full rounded-[4px] border border-[#5e5e5e] bg-black px-2.5 text-[14px] font-semibold text-white placeholder:text-[#a4a7ac] outline-none ring-0 transition-[border-color] duration-200 focus:border-white focus:outline-none focus:ring-0 focus:ring-offset-0 md:w-[266px]";
 
+const FOOTER_CONTACT_HASH = "#footer-contact";
+
 export function Footer() {
   const pathname = usePathname();
+  const messageFieldRef = useRef<HTMLTextAreaElement>(null);
   const [form, setForm] = useState<FeedbackFormState>({ name: "", email: "", message: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error">("idle");
@@ -86,6 +89,23 @@ export function Footer() {
       setIsSubmitting(false);
     }
   };
+
+  useEffect(() => {
+    const focusMessageField = () => {
+      if (typeof window === "undefined" || window.location.hash !== FOOTER_CONTACT_HASH) {
+        return;
+      }
+      const el = messageFieldRef.current;
+      if (!el) return;
+      window.setTimeout(() => {
+        el.focus({ preventScroll: true });
+      }, 450);
+    };
+
+    focusMessageField();
+    window.addEventListener("hashchange", focusMessageField);
+    return () => window.removeEventListener("hashchange", focusMessageField);
+  }, []);
 
   return (
     <footer
@@ -166,7 +186,10 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="w-full px-5 md:ml-[102px] md:w-[320px] md:shrink-0 md:px-0">
+        <div
+          id="footer-contact"
+          className="scroll-mt-24 w-full px-5 md:ml-[102px] md:w-[320px] md:shrink-0 md:px-0"
+        >
           <h3 className="text-[18px] font-bold leading-none tracking-normal text-white sm:text-[26px]" style={kodeMonoStyle}>
             Contact &amp; Support
           </h3>
@@ -192,6 +215,7 @@ export function Footer() {
               className={`h-[50px] md:h-[30px] ${contactFieldBaseClass} sm:text-[16px]`}
             />
             <textarea
+              ref={messageFieldRef}
               name="message"
               value={form.message}
               onChange={(event) => setForm((prev) => ({ ...prev, message: event.target.value }))}

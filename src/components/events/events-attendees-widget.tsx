@@ -42,6 +42,8 @@ type AttendeesApiResponse = {
   page_size: number;
   total: number;
   total_pages: number;
+  /** Internal "going" members before role/country/interest filters */
+  total_registered?: number;
   error?: string;
 };
 
@@ -355,6 +357,10 @@ export function EventsAttendeesWidget({
   const [error, setError] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+  const [totalRegistered, setTotalRegistered] = useState<number | undefined>(undefined);
+  const [listRefresh, setListRefresh] = useState(0);
+  const [joinSubmitting, setJoinSubmitting] = useState(false);
+  const [joinError, setJoinError] = useState<string | null>(null);
   const [interests, setInterests] = useState<Interest[]>(
     INTEREST_DEFINITIONS.map((interest) => ({
       id: interest.slug,
@@ -392,6 +398,7 @@ export function EventsAttendeesWidget({
         setItems([]);
         setTotal(0);
         setTotalPages(0);
+        setTotalRegistered(undefined);
         return;
       }
 
@@ -429,6 +436,7 @@ export function EventsAttendeesWidget({
             setItems([]);
             setTotal(0);
             setTotalPages(0);
+            setTotalRegistered(undefined);
             setError("Sign in to view attendees.");
           }
           onRequireAuth();
@@ -443,6 +451,9 @@ export function EventsAttendeesWidget({
           setItems(Array.isArray(data.items) ? data.items : []);
           setTotal(typeof data.total === "number" ? data.total : 0);
           setTotalPages(typeof data.total_pages === "number" ? data.total_pages : 0);
+          setTotalRegistered(
+            typeof data.total_registered === "number" ? data.total_registered : undefined
+          );
         }
       } catch (fetchError) {
         if (!cancelled) {
@@ -469,6 +480,7 @@ export function EventsAttendeesWidget({
     filters.completeProfiles,
     filters.page,
     filters.pageSize,
+    listRefresh,
     onRequireAuth,
   ]);
 
@@ -498,6 +510,50 @@ export function EventsAttendeesWidget({
     },
     [isAuthenticated, onRequireAuth]
   );
+
+  const handleBeFirstAttendee = useCallback(async () => {
+    if (!isAuthenticated) {
+      onRequireAuth();
+      return;
+    }
+    if (!selectedEventId || joinSubmitting) return;
+
+    setJoinSubmitting(true);
+    setJoinError(null);
+
+    try {
+      const response = await fetch(`/api/events/${selectedEventId}/members`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "going" }),
+      });
+
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+
+      if (response.status === 401) {
+        onRequireAuth();
+        return;
+      }
+
+      if (!response.ok) {
+        const message = payload.error || "Failed to register for event";
+        if (message.toLowerCase().includes("already registered")) {
+          setListRefresh((n) => n + 1);
+          return;
+        }
+        setJoinError(message);
+        return;
+      }
+
+      setListRefresh((n) => n + 1);
+    } catch (joinRequestError) {
+      setJoinError(
+        joinRequestError instanceof Error ? joinRequestError.message : "Failed to register for event"
+      );
+    } finally {
+      setJoinSubmitting(false);
+    }
+  }, [isAuthenticated, joinSubmitting, onRequireAuth, selectedEventId]);
 
   const canGoPrev = filters.page > 1;
   const canGoNext = totalPages > 0 && filters.page < totalPages;
@@ -641,7 +697,33 @@ export function EventsAttendeesWidget({
             </div>
           ) : items.length === 0 ? (
             <div className="rounded border border-white/15 bg-white/5 px-4 py-5 text-sm text-white/70" style={kodeMonoStyle}>
-              No attendees found for selected filters.
+              {totalRegistered === 0 ? (
+                <div className="space-y-2">
+                  <p className="text-white/80">no attendees found</p>
+                  <p>
+                    <button
+                      type="button"
+                      disabled={joinSubmitting}
+                      onClick={handleBeFirstAttendee}
+                      className={cn(
+                        "text-white underline decoration-white underline-offset-4 transition-colors",
+                        joinSubmitting
+                          ? "cursor-wait text-white/50"
+                          : "hover:text-[#14f195] hover:decoration-[#14f195]"
+                      )}
+                    >
+                      {joinSubmitting ? "Joining…" : "be the first attendee"}
+                    </button>
+                  </p>
+                  {joinError ? (
+                    <p className="text-[12px] text-red-300" role="alert">
+                      {joinError}
+                    </p>
+                  ) : null}
+                </div>
+              ) : (
+                <p>No attendees found for selected filters.</p>
+              )}
             </div>
           ) : (
             <>

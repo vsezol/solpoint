@@ -207,6 +207,7 @@ export async function GET(
         page_size: pageSize,
         total: 0,
         total_pages: 0,
+        total_registered: 0,
       },
       { status: 200 }
     );
@@ -461,6 +462,7 @@ export async function GET(
     return new Date(b.registered_at).getTime() - new Date(a.registered_at).getTime();
   });
 
+  const totalRegistered = attendees.length;
   const total = sorted.length;
   const totalPages = total === 0 ? 0 : Math.ceil(total / pageSize);
   const start = (page - 1) * pageSize;
@@ -473,6 +475,7 @@ export async function GET(
       page_size: pageSize,
       total,
       total_pages: totalPages,
+      total_registered: totalRegistered,
     },
     { status: 200 }
   );
