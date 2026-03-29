@@ -66,6 +66,8 @@ type SingleSelectPopupProps = {
   options: MultiSelectOption[];
   value?: string;
   onChange: (value?: string) => void;
+  /** When false, hide the label-row clear control (e.g. country: use "All" in the list). */
+  showClear?: boolean;
 };
 
 const kodeMonoStyle = {
@@ -206,6 +208,7 @@ function SingleSelectPopup({
   options,
   value,
   onChange,
+  showClear = true,
 }: SingleSelectPopupProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -252,22 +255,24 @@ function SingleSelectPopup({
         <label className="block text-[12px] text-white/80" style={kodeMonoStyle}>
           {label}
         </label>
-        <button
-          type="button"
-          className={cn(
-            "text-[11px] transition-colors",
-            value ? "text-white/70 hover:text-white" : "cursor-default text-white/35"
-          )}
-          style={kodeMonoStyle}
-          onClick={() => {
-            if (!value) return;
-            onChange(undefined);
-            setQuery("");
-          }}
-          disabled={!value}
-        >
-          clear
-        </button>
+        {showClear ? (
+          <button
+            type="button"
+            className={cn(
+              "text-[11px] transition-colors",
+              value ? "text-white/70 hover:text-white" : "cursor-default text-white/35"
+            )}
+            style={kodeMonoStyle}
+            onClick={() => {
+              if (!value) return;
+              onChange(undefined);
+              setQuery("");
+            }}
+            disabled={!value}
+          >
+            clear
+          </button>
+        ) : null}
       </div>
       <button
         type="button"
@@ -619,6 +624,7 @@ export function EventsAttendeesWidget({
             <SingleSelectPopup
               label="country"
               placeholder="choose country"
+              showClear={false}
               options={countryOptions.map((country) => ({
                 value: country.code,
                 label: country.name,

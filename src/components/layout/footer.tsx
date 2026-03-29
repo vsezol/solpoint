@@ -203,6 +203,7 @@ export function Footer() {
               required
               maxLength={120}
               className={`h-[50px] md:h-[30px] ${contactFieldBaseClass} sm:text-[16px]`}
+              style={kodeMonoStyle}
             />
             <input
               type="email"
@@ -213,6 +214,7 @@ export function Footer() {
               required
               maxLength={255}
               className={`h-[50px] md:h-[30px] ${contactFieldBaseClass} sm:text-[16px]`}
+              style={kodeMonoStyle}
             />
             <textarea
               ref={messageFieldRef}
@@ -223,6 +225,7 @@ export function Footer() {
               required
               maxLength={2000}
               className={`h-[65px] resize-none py-2 ${contactFieldBaseClass} sm:text-[16px]`}
+              style={kodeMonoStyle}
             />
             <button
               type="submit"
