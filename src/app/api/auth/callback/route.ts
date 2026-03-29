@@ -14,6 +14,7 @@ import {
   createServiceRoleClient,
 } from "@/lib/supabase/server";
 import { authDebugLog } from "@/lib/auth/debug";
+import { normalizeTwitterAvatarUrl } from "@/lib/twitter-avatar";
 import { getAppOrigin } from "@/lib/utils";
 import { cookies } from "next/headers";
 import type { NextRequest } from "next/server";
@@ -257,8 +258,9 @@ export async function GET(request: NextRequest) {
       metadata?.preferred_username || metadata?.user_name || metadata?.twitter_handle || "";
     const twitterName =
       metadata?.full_name || metadata?.name || metadata?.twitter_name || "";
-    const avatarUrl =
-      metadata?.avatar_url || metadata?.picture || metadata?.profile_image_url || "";
+    const avatarUrl = normalizeTwitterAvatarUrl(
+      metadata?.avatar_url || metadata?.picture || metadata?.profile_image_url || ""
+    );
     const isVerified = metadata?.verified || false;
 
     authDebugLog("callback", "creating_profile", {
@@ -318,8 +320,9 @@ export async function GET(request: NextRequest) {
       updates.twitter_name = metadata.full_name || metadata.name;
     }
     if (metadata?.avatar_url || metadata?.picture || metadata?.profile_image_url) {
-      updates.avatar_url =
-        metadata.avatar_url || metadata.picture || metadata.profile_image_url;
+      updates.avatar_url = normalizeTwitterAvatarUrl(
+        metadata.avatar_url || metadata.picture || metadata.profile_image_url
+      );
     }
     if (metadata?.verified !== undefined) {
       updates.is_verified = metadata.verified;

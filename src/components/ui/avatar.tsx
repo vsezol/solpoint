@@ -1,6 +1,7 @@
 "use client";
 
 import { cn, getInitials } from "@/lib/utils";
+import { normalizeTwitterAvatarUrl } from "@/lib/twitter-avatar";
 import Image from "next/image";
 import { useState } from "react";
 
@@ -32,6 +33,15 @@ const badgeSizes = {
   card: "w-5 h-5 -right-0.5 -bottom-0.5",
 };
 
+const imageSizes = {
+  xs: "24px",
+  sm: "32px",
+  md: "40px",
+  lg: "56px",
+  xl: "80px",
+  card: "70px",
+} as const;
+
 export function Avatar({
   src,
   alt,
@@ -42,6 +52,7 @@ export function Avatar({
   fallbackVariant = "initials",
 }: AvatarProps) {
   const [hasError, setHasError] = useState(false);
+  const normalizedSrc = src ? normalizeTwitterAvatarUrl(src) : null;
 
   return (
     <div className={cn("relative inline-flex shrink-0", className)}>
@@ -52,12 +63,14 @@ export function Avatar({
           isVip && "ring-2 ring-[var(--color-marker-vip)]"
         )}
       >
-        {src && !hasError ? (
+        {normalizedSrc && !hasError ? (
           <Image
-            src={src}
+            src={normalizedSrc}
             alt={alt}
             fill
             className="object-cover"
+            sizes={imageSizes[size]}
+            quality={90}
             onError={() => setHasError(true)}
           />
         ) : fallbackVariant === "branded" ? (

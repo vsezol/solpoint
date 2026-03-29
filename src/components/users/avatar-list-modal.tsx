@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Modal, ModalContent, ModalHeader, ModalTitle } from "@/components/ui";
+import { normalizeTwitterAvatarUrl } from "@/lib/twitter-avatar";
 
 export interface AvatarListItem {
   id: string;
@@ -42,6 +43,7 @@ export function AvatarListModal({
           ) : (
             items.map((item) => {
               const href = getHref ? getHref(item) : item.handle ? `/profile/${item.handle}` : "#";
+              const avatarSrc = item.avatar_url ? normalizeTwitterAvatarUrl(item.avatar_url) : null;
 
               return (
                 <Link
@@ -51,13 +53,14 @@ export function AvatarListModal({
                   className="flex items-center gap-3 p-3 rounded-lg hover:bg-[var(--color-surface-hover)] transition-colors"
                 >
                   <div className="w-12 h-12 rounded-full bg-[var(--color-surface-hover)] border-2 border-[var(--color-background)] flex items-center justify-center overflow-hidden flex-shrink-0">
-                    {item.avatar_url ? (
+                    {avatarSrc ? (
                       <Image
-                        src={item.avatar_url}
+                        src={avatarSrc}
                         alt={item.name}
                         width={48}
                         height={48}
                         className="w-full h-full object-cover"
+                        quality={90}
                       />
                     ) : (
                       <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-sm font-medium">

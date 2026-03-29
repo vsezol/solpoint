@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button, ProSubscriptionModal } from "@/components/ui";
+import { normalizeTwitterAvatarUrl } from "@/lib/twitter-avatar";
 import { CalendarPlus, MessageCircle, UserPlus, UserCheck } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useChat } from "@/hooks/use-chat";
@@ -43,6 +44,7 @@ export function UserListItem({
   const { user: currentUser, isAuthenticated } = useAuth();
   const { openChat } = useChat();
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const avatarSrc = member.avatar_url ? normalizeTwitterAvatarUrl(member.avatar_url) : null;
 
   const isOwnProfile = currentUser?.id === member.id;
 
@@ -83,13 +85,14 @@ export function UserListItem({
         className="flex items-center gap-3 flex-1 min-w-0"
       >
         <div className="w-12 h-12 rounded-full bg-[var(--color-surface-hover)] border-2 border-[var(--color-background)] flex items-center justify-center overflow-hidden flex-shrink-0">
-          {member.avatar_url ? (
+          {avatarSrc ? (
             <Image
-              src={member.avatar_url}
+              src={avatarSrc}
               alt={member.name}
               width={48}
               height={48}
               className="w-full h-full object-cover"
+              quality={90}
             />
           ) : (
             <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-sm font-medium">
