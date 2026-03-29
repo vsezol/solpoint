@@ -11,6 +11,7 @@ interface AvatarProps {
   className?: string;
   isVerified?: boolean;
   isVip?: boolean;
+  fallbackVariant?: "initials" | "branded";
 }
 
 const sizeClasses = {
@@ -38,6 +39,7 @@ export function Avatar({
   className,
   isVerified = false,
   isVip = false,
+  fallbackVariant = "initials",
 }: AvatarProps) {
   const [hasError, setHasError] = useState(false);
 
@@ -58,6 +60,18 @@ export function Avatar({
             className="object-cover"
             onError={() => setHasError(true)}
           />
+        ) : fallbackVariant === "branded" ? (
+          <svg
+            viewBox="0 0 64 64"
+            aria-hidden="true"
+            className="h-[72%] w-[72%]"
+          >
+            <circle cx="32" cy="32" r="30" fill="#0F1319" />
+            <circle cx="32" cy="32" r="28" fill="none" stroke="#14F195" strokeWidth="1.5" />
+            <circle cx="32" cy="32" r="26.4" fill="none" stroke="#8A5CFF" strokeWidth="1.2" opacity="0.85" />
+            <circle cx="32" cy="24" r="9" fill="#CFD6E4" />
+            <path d="M16 50c1.8-8.3 8.6-13 16-13s14.2 4.7 16 13" fill="#CFD6E4" />
+          </svg>
         ) : (
           <span>{getInitials(alt)}</span>
         )}
@@ -85,4 +99,3 @@ export function Avatar({
     </div>
   );
 }
-

@@ -14,7 +14,6 @@ type EventRow = {
   attendees_count: number | null;
   visibility: "public" | "vip_only";
   is_major: boolean | null;
-  luma_event_id: string | null;
 };
 
 type InternalProfile = {
@@ -29,23 +28,12 @@ type InternalMemberRow = {
   user: InternalProfile | InternalProfile[] | null;
 };
 
-type ExternalLumaUser = {
-  id: string;
-  name: string | null;
-  avatar: string | null;
-};
-
-type ExternalMemberRow = {
-  event_id: string;
-  user: ExternalLumaUser | ExternalLumaUser[] | null;
-};
-
 type AttendeePreview = {
   id: string;
-  avatar_url: string;
+  avatar_url: string | null;
   name: string;
   twitter_handle: string | null;
-  source: "internal" | "external";
+  source: "internal";
 };
 
 type ShowcaseEvent = {
@@ -95,7 +83,7 @@ async function fetchEventsWithFallback(
       let query = supabase
         .from("events")
         .select(
-          "id, name, slug, image_url, city, country, start_date, end_date, attendees_count, visibility, is_major, luma_event_id"
+          "id, name, slug, image_url, city, country, start_date, end_date, attendees_count, visibility, is_major"
         )
         .order("start_date", { ascending: true });
       if (options.upcomingOnly) {
@@ -110,7 +98,7 @@ async function fetchEventsWithFallback(
     let query = supabase
       .from("events")
       .select(
-        "id, name, slug, image_url, city, country, start_date, end_date, attendees_count, visibility, luma_event_id"
+        "id, name, slug, image_url, city, country, start_date, end_date, attendees_count, visibility"
       )
       .order("start_date", { ascending: true });
     if (options.upcomingOnly) {
@@ -230,6 +218,7 @@ export async function GET(request: NextRequest) {
   const displayedEvents = [...majorEvents, ...pagedLocalEvents];
 
   const previewMap = new Map<string, AttendeePreview[]>();
+  const peopleGoingMap = new Map<string, number>();
   const displayedEventIds = displayedEvents.map((event) => event.id);
   const attendingEventIds = new Set<string>();
 
@@ -266,81 +255,25 @@ export async function GET(request: NextRequest) {
       console.error("Error fetching internal attendee previews:", internalError);
     } else {
       for (const row of (internalRowsRaw || []) as InternalMemberRow[]) {
+        peopleGoingMap.set(row.event_id, (peopleGoingMap.get(row.event_id) || 0) + 1);
+
         const profile = toSingle(row.user);
-        if (!profile?.avatar_url) continue;
+        if (!profile) continue;
 
         const current = previewMap.get(row.event_id) || [];
-        if (current.some((item) => item.id === profile.id || item.avatar_url === profile.avatar_url)) {
+        if (current.some((item) => item.id === profile.id)) {
           continue;
         }
 
         if (current.length < 3) {
           current.push({
             id: profile.id,
-            avatar_url: profile.avatar_url,
+            avatar_url: profile.avatar_url || null,
             name: profile.twitter_name || profile.twitter_handle || "User",
             twitter_handle: profile.twitter_handle,
             source: "internal",
           });
           previewMap.set(row.event_id, current);
-        }
-      }
-    }
-
-    const lumaEventIds = displayedEvents
-      .map((event) => event.luma_event_id)
-      .filter((id): id is string => Boolean(id));
-
-    if (lumaEventIds.length > 0) {
-      const { data: externalRowsRaw, error: externalError } = await supabase
-        .from("luma_event_attendees")
-        .select("event_id, user:luma_users!luma_event_attendees_user_id_fkey(id, name, avatar)")
-        .in("event_id", lumaEventIds)
-        .order("scraped_at", { ascending: false });
-
-      if (externalError) {
-        console.error("Error fetching external attendee previews:", externalError);
-      } else {
-        const externalByLumaEventId = new Map<string, AttendeePreview[]>();
-
-        for (const row of (externalRowsRaw || []) as ExternalMemberRow[]) {
-          const externalUser = toSingle(row.user);
-          if (!externalUser?.avatar) continue;
-
-          const key = row.event_id;
-          const current = externalByLumaEventId.get(key) || [];
-          const externalPreviewId = `luma:${externalUser.id}`;
-          if (current.some((item) => item.id === externalPreviewId || item.avatar_url === externalUser.avatar)) {
-            continue;
-          }
-
-          if (current.length < 3) {
-            current.push({
-              id: externalPreviewId,
-              avatar_url: externalUser.avatar,
-              name: externalUser.name || "Guest",
-              twitter_handle: null,
-              source: "external",
-            });
-            externalByLumaEventId.set(key, current);
-          }
-        }
-
-        for (const event of displayedEvents) {
-          if (!event.luma_event_id) continue;
-
-          const internal = previewMap.get(event.id) || [];
-          if (internal.length >= 3) continue;
-
-          const external = externalByLumaEventId.get(event.luma_event_id) || [];
-          for (const attendee of external) {
-            if (internal.length >= 3) break;
-            if (internal.some((item) => item.id === attendee.id || item.avatar_url === attendee.avatar_url)) {
-              continue;
-            }
-            internal.push(attendee);
-          }
-          previewMap.set(event.id, internal);
         }
       }
     }
@@ -355,7 +288,7 @@ export async function GET(request: NextRequest) {
     country: event.country,
     start_date: event.start_date,
     end_date: event.end_date,
-    people_going: event.attendees_count || 0,
+    people_going: peopleGoingMap.get(event.id) || 0,
     attendee_previews: previewMap.get(event.id) || [],
     is_major: event.is_major === true,
     is_attending: attendingEventIds.has(event.id),

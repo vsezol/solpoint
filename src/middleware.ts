@@ -3,16 +3,25 @@ import { updateSession } from "@/lib/supabase/middleware";
 import { hasBlockedQueryPattern } from "@/lib/security/request-guards";
 import { checkRateLimit } from "@/lib/security/rate-limit";
 
-const RATE_LIMITED_API_PATHS = new Set<string>([
-  "/api/users",
-  "/api/users/list",
-  "/api/events",
-  "/api/hubs",
-  "/api/communities",
-  "/api/projects",
-  "/api/workspaces",
+/** Longest prefix first so more specific rules win if paths overlap. */
+const RATE_LIMITED_API_PREFIXES: readonly string[] = [
   "/api/auth/twitter",
-]);
+  "/api/communities",
+  "/api/workspaces",
+  "/api/projects",
+  "/api/events",
+  "/api/users",
+  "/api/hubs",
+].sort((a, b) => b.length - a.length);
+
+function getApiRateLimitGroup(pathname: string): string | null {
+  for (const prefix of RATE_LIMITED_API_PREFIXES) {
+    if (pathname === prefix || pathname.startsWith(`${prefix}/`)) {
+      return prefix;
+    }
+  }
+  return null;
+}
 
 const supabaseOrigin = (() => {
   try {
@@ -126,9 +135,9 @@ function getClientAddress(request: NextRequest): string {
   return "unknown";
 }
 
-function shouldRateLimitApiRequest(request: NextRequest): boolean {
-  if (request.method !== "GET") return false;
-  return RATE_LIMITED_API_PATHS.has(request.nextUrl.pathname);
+function shouldRateLimitApiGet(request: NextRequest): string | null {
+  if (request.method !== "GET") return null;
+  return getApiRateLimitGroup(request.nextUrl.pathname);
 }
 
 function withRateLimitHeaders(
@@ -180,9 +189,10 @@ export async function middleware(request: NextRequest) {
       );
     }
 
-    if (shouldRateLimitApiRequest(request)) {
+    const rateLimitGroup = shouldRateLimitApiGet(request);
+    if (rateLimitGroup) {
       const clientAddress = getClientAddress(request);
-      const rateLimitKey = `${url.pathname}:${clientAddress}`;
+      const rateLimitKey = `${rateLimitGroup}:${clientAddress}`;
       const { limited, remaining, resetAt, limit } = await checkRateLimit(rateLimitKey);
 
       if (limited) {

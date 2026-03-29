@@ -745,6 +745,7 @@ export function EventsAttendeesWidget({
                           src={item.avatar_url || undefined}
                           alt={item.name}
                           size="card"
+                          fallbackVariant="branded"
                           isVip={item.isVip}
                           isVerified={item.isVerified}
                         />

@@ -1,9 +1,9 @@
 export interface ShowcaseAttendeePreview {
   id: string;
-  avatar_url: string;
+  avatar_url: string | null;
   name: string;
   twitter_handle: string | null;
-  source: "internal" | "external";
+  source: "internal";
 }
 
 export interface ShowcaseEvent {

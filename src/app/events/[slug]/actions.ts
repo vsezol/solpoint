@@ -3,6 +3,23 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
+async function getInternalGoingCount(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  eventId: string
+): Promise<{ count: number; error: string | null }> {
+  const { count, error } = await supabase
+    .from("event_members")
+    .select("id", { count: "exact", head: true })
+    .eq("event_id", eventId)
+    .eq("status", "going");
+
+  if (error) {
+    return { count: 0, error: error.message || "Failed to check event capacity" };
+  }
+
+  return { count: count || 0, error: null };
+}
+
 export async function attendEvent(eventId: string) {
   const supabase = await createClient();
 
@@ -20,7 +37,7 @@ export async function attendEvent(eventId: string) {
     // Проверяем существование ивента и доступ
     const { data: event, error: eventError } = await supabase
       .from("events")
-      .select("id, visibility, max_attendees, attendees_count, registration_deadline, slug")
+      .select("id, visibility, max_attendees, registration_deadline, slug")
       .eq("id", eventId)
       .single();
 
@@ -61,6 +78,17 @@ export async function attendEvent(eventId: string) {
       if (existingMember.status === "going") {
         return { error: "Already registered for this event", success: false };
       }
+
+      if (event.max_attendees) {
+        const { count: goingCount, error: countError } = await getInternalGoingCount(supabase, eventId);
+        if (countError) {
+          return { error: countError, success: false };
+        }
+        if (goingCount >= event.max_attendees) {
+          return { error: "Event is full", success: false };
+        }
+      }
+
       // Если статус другой, обновляем на "going"
       const { error: updateError } = await supabase
         .from("event_members")
@@ -79,7 +107,12 @@ export async function attendEvent(eventId: string) {
 
     // Проверяем capacity
     if (event.max_attendees) {
-      if (event.attendees_count >= event.max_attendees) {
+      const { count: goingCount, error: countError } = await getInternalGoingCount(supabase, eventId);
+      if (countError) {
+        return { error: countError, success: false };
+      }
+
+      if (goingCount >= event.max_attendees) {
         return { error: "Event is full", success: false };
       }
     }
@@ -101,11 +134,10 @@ export async function attendEvent(eventId: string) {
     // Обновляем страницу
     revalidatePath(`/events/${event.slug}`);
     return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Internal server error";
     console.error("Unexpected error:", error);
-    return { error: error.message || "Internal server error", success: false };
+    return { error: message, success: false };
   }
 }
-
-
 

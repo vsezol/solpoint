@@ -3,6 +3,23 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getEntityIdByIdentifier } from "@/lib/utils/entity-identifier";
 
+async function getInternalGoingCount(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  eventId: string
+): Promise<{ count: number; error: string | null }> {
+  const { count, error } = await supabase
+    .from("event_members")
+    .select("id", { count: "exact", head: true })
+    .eq("event_id", eventId)
+    .eq("status", "going");
+
+  if (error) {
+    return { count: 0, error: error.message || "Failed to check event capacity" };
+  }
+
+  return { count: count || 0, error: null };
+}
+
 /**
  * GET /api/events/[id]/members
  * Список участников ивента
@@ -181,7 +198,7 @@ export async function POST(
     // Проверяем существование ивента и доступ
     const { data: event, error: eventError } = await supabase
       .from("events")
-      .select("id, visibility, max_attendees, attendees_count, registration_deadline, luma_link, socials")
+      .select("id, visibility, max_attendees, registration_deadline, luma_link, socials")
       .eq("id", id)
       .single();
 
@@ -232,7 +249,12 @@ export async function POST(
 
     // Проверяем capacity (только для статуса "going")
     if (status === "going" && event.max_attendees) {
-      if (event.attendees_count >= event.max_attendees) {
+      const { count: goingCount, error: countError } = await getInternalGoingCount(supabase, id);
+      if (countError) {
+        return NextResponse.json({ error: countError }, { status: 500 });
+      }
+
+      if (goingCount >= event.max_attendees) {
         return NextResponse.json(
           { error: "Event is full" },
           { status: 400 }
@@ -294,10 +316,11 @@ export async function POST(
     }
 
     return NextResponse.json({ member }, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Internal server error";
     console.error("Unexpected error:", error);
     return NextResponse.json(
-      { error: error.message || "Internal server error" },
+      { error: message },
       { status: 500 }
     );
   }
@@ -399,11 +422,16 @@ export async function PATCH(
     if (status === "going") {
       const { data: event } = await supabase
         .from("events")
-        .select("max_attendees, attendees_count")
+        .select("max_attendees")
         .eq("id", id)
         .single();
 
-      if (event?.max_attendees && event.attendees_count >= event.max_attendees) {
+      const { count: goingCount, error: countError } = await getInternalGoingCount(supabase, id);
+      if (countError) {
+        return NextResponse.json({ error: countError }, { status: 500 });
+      }
+
+      if (event?.max_attendees && goingCount >= event.max_attendees) {
         // Если текущий статус был "going", то capacity уже занят этим пользователем
         // Но если был "maybe" или "not_going", то нужно проверить
         if (existingMember.status !== "going") {
@@ -441,14 +469,13 @@ export async function PATCH(
     }
 
     return NextResponse.json({ member }, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Internal server error";
     console.error("Unexpected error:", error);
     return NextResponse.json(
-      { error: error.message || "Internal server error" },
+      { error: message },
       { status: 500 }
     );
   }
 }
-
-
 

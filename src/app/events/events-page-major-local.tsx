@@ -175,6 +175,7 @@ function AttendeesSummary({
               src={attendee.avatar_url}
               alt={attendee.name}
               size="sm"
+              fallbackVariant="branded"
               className={index > 0 ? "-ml-2.5" : ""}
             />
           ))
