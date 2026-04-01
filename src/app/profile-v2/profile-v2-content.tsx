@@ -91,17 +91,8 @@ const interBody12: CSSProperties = {
   letterSpacing: 0,
 };
 
-/** Figma: Connect — Kode Mono 25px Bold */
-const kodeMono25Bold: CSSProperties = {
-  fontFamily: "var(--font-kode-mono), monospace",
-  fontWeight: 700,
-  fontSize: 25,
-  lineHeight: 1,
-  letterSpacing: 0,
-};
-
 const figmaConnectButtonClass =
-  "flex h-[44px] w-full sm:w-[173px] shrink-0 items-center justify-center rounded-[5px] border-0 bg-white p-0 text-black shadow-none hover:bg-white/90 focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-black";
+  "flex h-[40px] w-[132px] shrink-0 items-center justify-center rounded-[5px] border-0 bg-white p-0 text-[18px] leading-none text-black shadow-none hover:bg-white/90 focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-black sm:h-[44px] sm:w-[173px] sm:text-[25px]";
 
 // Compact sizes: match the default `Button` sizing (same as "Edit profile")
 // Keep Connect-like colors + focus behavior, but without fixed h/w.
@@ -771,12 +762,12 @@ export function ProfileV2Content({
 
       <button
         type="button"
-        className="text-left transition-opacity hover:opacity-70"
+        className="group text-left transition-colors duration-150"
         style={kodeMono15}
         onClick={handleOpenAllConnectionsList}
       >
         <span className="text-white">{friendsCount}</span>
-        <span className="text-[#70767d]"> connections</span>
+        <span className="text-[#70767d] transition-colors duration-150 group-hover:text-white"> connections</span>
       </button>
 
       {showProfileForm && (
@@ -1069,8 +1060,8 @@ export function ProfileV2Content({
   );
 
   const mutualContextCard = (
-    <aside className="w-full rounded-[6px] border border-white/10 bg-[#121212] px-5 pb-7 pt-4 sm:px-6">
-      <h3 className="mb-8 text-center uppercase text-[#adaaaa]" style={sectionHeadingStyle}>
+    <aside className="w-full rounded-[6px] border border-white/10 bg-[#121212] px-4 pb-[36px] pt-[15px] sm:px-6">
+      <h3 className="mb-[37px] text-center uppercase text-[#adaaaa]" style={sectionHeadingStyle}>
         mutual context
       </h3>
       {isOwnProfile ? (
@@ -1082,12 +1073,12 @@ export function ProfileV2Content({
           Sign in to see mutual connections and shared events.
         </p>
       ) : (
-        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2">
-          <div className="flex flex-col items-center gap-4 sm:items-start">
+        <div className="grid grid-cols-2 gap-3 sm:gap-8">
+          <div className="flex flex-col items-center justify-center text-center">
             <p className="text-[#828282]" style={kodeMono15}>
               Mutual connections: <span className="font-bold text-white">{mutualConnectionsCount}</span>
             </p>
-            <div className="flex min-h-[45px] items-center">
+            <div className="mt-4 flex min-h-[45px] items-center justify-center">
               {mutualConnections.slice(0, 3).map((item, i) => (
                 <Link
                   href={`/profile/${item.twitter_handle}`}
@@ -1107,18 +1098,18 @@ export function ProfileV2Content({
             </div>
             <button
               onClick={handleOpenConnectionsList}
-              className="h-[45px] w-[127px] rounded-[7px] bg-white text-[17px] font-bold tracking-[-0.85px] text-black transition-opacity hover:opacity-90"
+              className="mt-[33px] h-[45px] w-[127px] rounded-[7px] bg-white text-[17px] font-bold tracking-[-0.85px] text-black transition-opacity hover:opacity-90"
               style={kodeMono15}
             >
               Show list
             </button>
           </div>
 
-          <div className="flex flex-col items-center gap-4 sm:items-start">
+          <div className="flex flex-col items-center justify-center text-center">
             <p className="text-[#828282]" style={kodeMono15}>
               Same event attendee: <span className="font-bold text-white">{mutualEventsCount}</span>
             </p>
-            <div className="flex min-h-[45px] items-center">
+            <div className="mt-4 flex min-h-[45px] items-center justify-center">
               {mutualEvents.slice(0, 3).map((event, i) => (
                 <Link
                   href={`/events/${event.slug || event.id}`}
@@ -1138,7 +1129,7 @@ export function ProfileV2Content({
             </div>
             <button
               onClick={handleOpenEventsList}
-              className="h-[45px] w-[127px] rounded-[7px] bg-white text-[17px] font-bold tracking-[-0.85px] text-black transition-opacity hover:opacity-90"
+              className="mt-[33px] h-[45px] w-[127px] rounded-[7px] bg-white text-[17px] font-bold tracking-[-0.85px] text-black transition-opacity hover:opacity-90"
               style={kodeMono15}
             >
               Show list
@@ -1150,14 +1141,19 @@ export function ProfileV2Content({
   );
 
   const actionButtons = (
-    <div className="flex flex-wrap items-center justify-end gap-3">
+    <div
+      className={cn(
+        "mt-[72px] flex items-center justify-end sm:mt-0",
+        isOwnProfile ? "flex-wrap gap-3" : "flex-nowrap gap-2"
+      )}
+    >
       {!isOwnProfile && (
         <>
           <Button
             type="button"
             variant="primary"
             className={figmaConnectButtonClass}
-            style={kodeMono25Bold}
+            style={{ fontFamily: "var(--font-kode-mono), monospace", fontWeight: 700 }}
             onClick={handleConnectClick}
             disabled={isConnectLoading}
           >
@@ -1166,7 +1162,7 @@ export function ProfileV2Content({
           </Button>
           <button
             type="button"
-            className="flex h-[44px] w-[44px] items-center justify-center rounded-[4px] border border-[rgba(72,72,71,0.3)] bg-[#262626] text-white transition-colors hover:bg-[#2f2f2f]"
+            className="flex h-[40px] w-[40px] items-center justify-center rounded-[4px] border border-[rgba(72,72,71,0.3)] bg-[#262626] text-white transition-colors hover:bg-[#2f2f2f] sm:h-[44px] sm:w-[44px]"
             aria-label="Save profile"
           >
             <Bookmark className="h-[18px] w-[18px]" />
