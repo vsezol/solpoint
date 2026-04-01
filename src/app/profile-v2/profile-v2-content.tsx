@@ -738,6 +738,10 @@ export function ProfileV2Content({
           : "Connect";
 
   const avatarUrl = normalizeTwitterAvatarUrl(user.avatar_url);
+  const mutualConnectionsPreview = mutualConnections.slice(0, 3);
+  const mutualEventsPreview = mutualEvents.slice(0, 3);
+  const missingMutualConnectionsSlots = Math.max(0, 3 - mutualConnectionsPreview.length);
+  const missingMutualEventsSlots = Math.max(0, 3 - mutualEventsPreview.length);
 
   const identityBlock = (
     <div className="min-w-0 max-w-[542px]">
@@ -1075,11 +1079,17 @@ export function ProfileV2Content({
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:gap-8">
           <div className="flex flex-col items-center justify-center text-center">
-            <p className="text-[#828282]" style={kodeMono15}>
-              Mutual connections: <span className="font-bold text-white">{mutualConnectionsCount}</span>
+            <p
+              className="min-h-[26px] text-[11px] leading-[1.1] text-[#828282] sm:min-h-0 sm:text-[15px] sm:leading-[1]"
+              style={{ fontFamily: "var(--font-kode-mono), monospace", fontWeight: 500 }}
+            >
+              <span className="block sm:inline">Mutual</span>
+              <span className="block sm:inline sm:ml-1">
+                connections: <span className="font-bold text-white">{mutualConnectionsCount}</span>
+              </span>
             </p>
             <div className="mt-4 flex min-h-[45px] items-center justify-center">
-              {mutualConnections.slice(0, 3).map((item, i) => (
+              {mutualConnectionsPreview.map((item, i) => (
                 <Link
                   href={`/profile/${item.twitter_handle}`}
                   key={item.id}
@@ -1095,6 +1105,16 @@ export function ProfileV2Content({
                   )}
                 </Link>
               ))}
+              {Array.from({ length: missingMutualConnectionsSlots }).map((_, i) => {
+                const stackIndex = mutualConnectionsPreview.length + i;
+                return (
+                  <div
+                    key={`mutual-connections-placeholder-${i}`}
+                    className="relative h-[45px] w-[45px] shrink-0 rounded-full border border-[rgba(72,72,71,0.4)] bg-[#1a1a1a]"
+                    style={{ marginLeft: stackIndex === 0 ? 0 : "-22px", zIndex: stackIndex + 1 }}
+                  />
+                );
+              })}
             </div>
             <button
               onClick={handleOpenConnectionsList}
@@ -1106,11 +1126,17 @@ export function ProfileV2Content({
           </div>
 
           <div className="flex flex-col items-center justify-center text-center">
-            <p className="text-[#828282]" style={kodeMono15}>
-              Same event attendee: <span className="font-bold text-white">{mutualEventsCount}</span>
+            <p
+              className="min-h-[26px] text-[11px] leading-[1.1] text-[#828282] sm:min-h-0 sm:text-[15px] sm:leading-[1]"
+              style={{ fontFamily: "var(--font-kode-mono), monospace", fontWeight: 500 }}
+            >
+              <span className="block sm:inline">Same event</span>
+              <span className="block sm:inline sm:ml-1">
+                attendee: <span className="font-bold text-white">{mutualEventsCount}</span>
+              </span>
             </p>
             <div className="mt-4 flex min-h-[45px] items-center justify-center">
-              {mutualEvents.slice(0, 3).map((event, i) => (
+              {mutualEventsPreview.map((event, i) => (
                 <Link
                   href={`/events/${event.slug || event.id}`}
                   key={event.id}
@@ -1126,6 +1152,16 @@ export function ProfileV2Content({
                   )}
                 </Link>
               ))}
+              {Array.from({ length: missingMutualEventsSlots }).map((_, i) => {
+                const stackIndex = mutualEventsPreview.length + i;
+                return (
+                  <div
+                    key={`mutual-events-placeholder-${i}`}
+                    className="relative h-[45px] w-[45px] shrink-0 rounded-full border border-[rgba(72,72,71,0.4)] bg-[#1a1a1a]"
+                    style={{ marginLeft: stackIndex === 0 ? 0 : "-22px", zIndex: stackIndex + 1 }}
+                  />
+                );
+              })}
             </div>
             <button
               onClick={handleOpenEventsList}
@@ -1219,13 +1255,13 @@ export function ProfileV2Content({
 
   return (
     <div className="w-full border-x border-white/10 bg-black">
-      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,599px)_minmax(0,601px)]">
-        <section className="border-b border-white/10 xl:min-h-[969px] xl:border-b-0 xl:border-r xl:border-r-white/10">
+      <div className="grid grid-cols-1 min-[830px]:grid-cols-[minmax(0,54fr)_minmax(0,46fr)] min-[1200px]:grid-cols-[minmax(0,599px)_minmax(0,601px)]">
+        <section className="border-b border-white/10 min-[830px]:min-h-[969px] min-[830px]:border-b-0 min-[830px]:border-r min-[830px]:border-r-white/10">
           <div className="relative h-[170px] bg-[#70767d] sm:h-[200px]">
             {user.banner_url && <Image src={user.banner_url} alt="Profile banner" fill className="object-cover" unoptimized />}
           </div>
 
-          <div className="relative px-6 pb-10 pt-3 sm:px-10 xl:px-[45px]">
+          <div className="relative px-6 pb-10 pt-3 sm:px-10 min-[830px]:px-8 min-[1200px]:px-[45px]">
             <div className="absolute -top-[60px] left-5 sm:-top-[75px]">
               <div className="relative h-[120px] w-[120px] overflow-hidden rounded-[56px] border-[3px] border-black bg-[#121212] sm:h-[150px] sm:w-[150px] sm:rounded-[69px]">
                 {avatarUrl ? (
@@ -1248,8 +1284,8 @@ export function ProfileV2Content({
           </div>
         </section>
 
-        <section className="px-6 pb-10 pt-8 sm:px-10 xl:min-h-[969px] xl:px-[50px] xl:pt-[61px]">
-          <div className="mx-auto w-full max-w-[550px] xl:mx-0">{mutualContextCard}</div>
+        <section className="px-6 pb-10 pt-8 sm:px-10 min-[830px]:min-h-[969px] min-[830px]:px-8 min-[830px]:pt-[61px] min-[1200px]:px-[50px]">
+          <div className="mx-auto w-full max-w-[550px] min-[830px]:mx-0">{mutualContextCard}</div>
           <div className="mt-16 max-w-[384px]">{interestsSection}</div>
           <div className="mt-16 max-w-[384px]">{skillsSection}</div>
         </section>
