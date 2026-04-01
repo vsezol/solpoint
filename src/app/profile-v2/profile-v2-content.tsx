@@ -4,10 +4,10 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties }
 import Image from "next/image";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
-import { Avatar, AuthRequiredModal, Button, Modal, ModalContent, ModalHeader, ModalTitle } from "@/components/ui";
+import { AuthRequiredModal, Button, Modal, ModalContent, ModalHeader, ModalTitle } from "@/components/ui";
 import { SkillTagPicker } from "@/components/ui/skill-tag-picker";
 import { formControlFocusClasses } from "@/components/ui/form-control-focus";
-import { Calendar, ChevronDown, Loader2, MapPin, Plus, Search, Trash2, Users } from "lucide-react";
+import { Bookmark, Calendar, ChevronDown, Loader2, MapPin, Plus, Search, Trash2, UserRound } from "lucide-react";
 import type { User } from "@/types";
 import type { FriendshipStatus } from "@/types/profile";
 import {
@@ -34,6 +34,7 @@ import {
 import { addFriend, removeFriend } from "@/lib/api/friends";
 import { cn } from "@/lib/utils";
 import type { Interest, UserRole } from "@/types";
+import { normalizeTwitterAvatarUrl } from "@/lib/twitter-avatar";
 import countries from "../../../supabase/coutries";
 
 /** Figma: Kode Mono 15px / Medium / line-height 100% */
@@ -45,13 +46,40 @@ const kodeMono15: CSSProperties = {
   letterSpacing: 0,
 };
 
-/** Figma: Inter 20px / Extra Bold / line-height 100% */
-const interDisplayName: CSSProperties = {
-  fontFamily: "var(--font-inter), sans-serif",
-  fontWeight: 800,
+/** Figma: Space Grotesk 20px / Bold / line-height 130% */
+const profileNameStyle: CSSProperties = {
+  fontFamily: "var(--font-display), sans-serif",
+  fontWeight: 700,
   fontSize: 20,
-  lineHeight: 1,
+  lineHeight: "26px",
   letterSpacing: 0,
+};
+
+/** Figma: Space Grotesk 20px / Medium / line-height 150% */
+const sectionBodyStyle: CSSProperties = {
+  fontFamily: "var(--font-display), sans-serif",
+  fontWeight: 500,
+  fontSize: 20,
+  lineHeight: "30px",
+  letterSpacing: 0,
+};
+
+/** Figma: Space Grotesk 17px / Medium / line-height 100% */
+const skillLabelStyle: CSSProperties = {
+  fontFamily: "var(--font-display), sans-serif",
+  fontWeight: 500,
+  fontSize: 17,
+  lineHeight: "17px",
+  letterSpacing: "-0.275px",
+};
+
+/** Figma: Space Grotesk 15px / Bold / uppercase headings */
+const sectionHeadingStyle: CSSProperties = {
+  fontFamily: "var(--font-display), sans-serif",
+  fontWeight: 700,
+  fontSize: 15,
+  lineHeight: "12px",
+  letterSpacing: "2px",
 };
 
 /** Figma: Inter 12px / Medium / line-height 100% */
@@ -63,7 +91,7 @@ const interBody12: CSSProperties = {
   letterSpacing: 0,
 };
 
-/** Figma: Connect — Kode Mono 25px Bold, 195×44, radius 5px */
+/** Figma: Connect — Kode Mono 25px Bold */
 const kodeMono25Bold: CSSProperties = {
   fontFamily: "var(--font-kode-mono), monospace",
   fontWeight: 700,
@@ -73,9 +101,7 @@ const kodeMono25Bold: CSSProperties = {
 };
 
 const figmaConnectButtonClass =
-  "flex h-[44px] w-[195px] shrink-0 items-center justify-center rounded-[5px] border-0 bg-white p-0 text-black shadow-none hover:bg-white/90 focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]";
-const figmaCancelButtonClass =
-  "flex h-[44px] w-[195px] shrink-0 items-center justify-center rounded-[5px] border border-white/35 bg-transparent p-0 text-[var(--color-text-primary)] shadow-none hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]";
+  "flex h-[44px] w-full sm:w-[173px] shrink-0 items-center justify-center rounded-[5px] border-0 bg-white p-0 text-black shadow-none hover:bg-white/90 focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-black";
 
 // Compact sizes: match the default `Button` sizing (same as "Edit profile")
 // Keep Connect-like colors + focus behavior, but without fixed h/w.
@@ -173,8 +199,6 @@ const inputClass = cn(
   formControlFocusClasses
 );
 
-/** Figma: fill #121212, radius 6px */
-const profileSectionCardClass = "rounded-[6px] border border-white/10 bg-[#121212]";
 const profileFilterTriggerClass =
   "flex h-10 w-full items-center justify-between border border-[#5e5e5e] bg-black px-2.5 text-left text-[14px] font-semibold text-white";
 
@@ -523,7 +547,18 @@ export function ProfileV2Content({
     return () => {
       cancelled = true;
     };
-  }, [applyDetails, initialFriendshipStatus, isAuthenticated, isOwnProfile, user.bio, user.id]);
+  }, [
+    applyDetails,
+    initialFriendshipStatus,
+    isAuthenticated,
+    isOwnProfile,
+    user.bio,
+    user.city,
+    user.country,
+    user.country_code,
+    user.id,
+    user.role,
+  ]);
 
   const showProfileForm = isOwnProfile && isEditingProfile;
 
@@ -711,133 +746,77 @@ export function ProfileV2Content({
           ? "Accept"
           : "Connect";
 
+  const avatarUrl = normalizeTwitterAvatarUrl(user.avatar_url);
+
   const identityBlock = (
-    <div className="min-w-0 max-w-full">
-      <h1 className="mb-[16px] text-[var(--color-text-primary)]" style={interDisplayName}>
+    <div className="min-w-0 max-w-[542px]">
+      <h1 className="mb-2 text-white" style={profileNameStyle}>
         {user.twitter_name}
       </h1>
-      <p className="mb-[13px] text-[var(--color-text-muted)]" style={kodeMono15}>
+      <p className="mb-4 text-[#70767d]" style={kodeMono15}>
         @{user.twitter_handle}
       </p>
 
       {displayedRole && (
-        <p className="mb-[13px] flex items-center gap-2 text-[var(--color-text-secondary)]" style={kodeMono15}>
-          <Users className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+        <p className="mb-2 flex items-center gap-2 text-[#70767d]" style={kodeMono15}>
+          <UserRound className="h-4 w-4 shrink-0 text-[#00ffa3]" aria-hidden />
           <span>{USER_ROLE_LABELS[displayedRole] || displayedRole}</span>
         </p>
       )}
 
-      <p className="mb-[22px] flex items-center gap-2 text-[var(--color-text-secondary)]" style={kodeMono15}>
-        <MapPin className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+      <p className="mb-4 flex items-center gap-2 text-[#70767d]" style={kodeMono15}>
+        <MapPin className="h-4 w-4 shrink-0 text-[#00ffa3]" aria-hidden />
         <span>{location}</span>
       </p>
 
-      {showProfileForm ? (
-        <div className="mb-5 space-y-3 rounded-[6px] border border-white/10 bg-[#121212] p-3">
-          <div>
-            <SearchableSingleSelect
-              label="Role"
-              placeholder="choose role"
-              value={roleDraft}
-              onChange={(nextValue) => setRoleDraft(nextValue as UserRole | "")}
-              options={roleSelectOptions}
-              searchPlaceholder="find role"
-            />
-          </div>
-
-          <div>
-            <SearchableSingleSelect
-              label="Country"
-              placeholder="choose country"
-              value={countryCodeDraft}
-              onChange={setCountryCodeDraft}
-              options={countrySelectOptions}
-              searchPlaceholder="find your country"
-            />
-          </div>
-
-          <div>
-            <div className="mb-2 flex items-center justify-between">
-              <label className="block text-xs text-[var(--color-text-muted)]">Interests</label>
-              <span className="text-[11px] text-white/60">
-                Selected {interestSlugsDraft.length}/{MAX_INTERESTS}
-              </span>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              {editableInterestOptions.map((interest) => {
-                const isSelected = interestSlugsDraft.includes(interest.slug);
-                const limitReached = !isSelected && interestSlugsDraft.length >= MAX_INTERESTS;
-                return (
-                  <button
-                    key={interest.slug}
-                    type="button"
-                    className={cn(
-                      "rounded-full border px-2.5 py-1 text-[11px] transition-colors",
-                      isSelected
-                        ? "border-[var(--color-primary)] bg-[var(--color-primary)]/15 text-[var(--color-primary)]"
-                        : limitReached
-                          ? "cursor-not-allowed border-white/10 text-white/35"
-                          : "border-white/20 text-white/70 hover:border-white/50 hover:text-white"
-                    )}
-                    onClick={() =>
-                      setInterestSlugsDraft((prev) =>
-                        prev.includes(interest.slug)
-                          ? prev.filter((slug) => slug !== interest.slug)
-                          : prev.length >= MAX_INTERESTS
-                            ? prev
-                            : [...prev, interest.slug]
-                      )
-                    }
-                    disabled={limitReached}
-                  >
-                    {interest.name}
-                  </button>
-                );
-              })}
-            </div>
-            <p className="mt-2 text-[11px] text-white/50">You can choose up to {MAX_INTERESTS} interests.</p>
-          </div>
-        </div>
-      ) : interestsList.length > 0 ? (
-        <div className="mb-5 flex flex-wrap gap-2">
-          {interestsList.map((interest) => (
-            <span
-              key={interest.slug}
-              className="rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-[11px] text-white/80"
-              style={kodeMono15}
-            >
-              {interest.name}
-            </span>
-          ))}
-        </div>
-      ) : null}
-
       <button
         type="button"
-        className="text-[var(--color-text-secondary)] transition-opacity hover:opacity-70 cursor-pointer"
+        className="text-left transition-opacity hover:opacity-70"
         style={kodeMono15}
         onClick={handleOpenAllConnectionsList}
       >
-        {friendsCount} connections
+        <span className="text-white">{friendsCount}</span>
+        <span className="text-[#70767d]"> connections</span>
       </button>
+
+      {showProfileForm && (
+        <div className="mt-6 space-y-3 rounded-[6px] border border-white/10 bg-[#121212] p-3">
+          <SearchableSingleSelect
+            label="Role"
+            placeholder="choose role"
+            value={roleDraft}
+            onChange={(nextValue) => setRoleDraft(nextValue as UserRole | "")}
+            options={roleSelectOptions}
+            searchPlaceholder="find role"
+          />
+
+          <SearchableSingleSelect
+            label="Country"
+            placeholder="choose country"
+            value={countryCodeDraft}
+            onChange={setCountryCodeDraft}
+            options={countrySelectOptions}
+            searchPlaceholder="find your country"
+          />
+        </div>
+      )}
     </div>
   );
 
-  const aboutCard = (
-    <div className={cn(profileSectionCardClass, "flex w-full min-w-0 flex-col p-3")}>
-      <h3 className="mb-2 text-[var(--color-text-primary)]" style={kodeMono15}>
-        About
+  const aboutSection = (
+    <section className="mt-14 max-w-[542px]">
+      <h3 className="mb-5 uppercase text-[#adaaaa]" style={sectionHeadingStyle}>
+        about
       </h3>
       {detailsError && (
-        <p className="mb-2 text-xs text-amber-500" style={interBody12}>
+        <p className="mb-3 text-xs text-amber-500" style={interBody12}>
           {detailsError}
         </p>
       )}
       {showProfileForm ? (
         <textarea
-          className={cn(textareaClass, "min-h-[100px] text-[12px] font-medium leading-none")}
-          style={interBody12}
+          className={cn(textareaClass, "min-h-[120px] text-[16px] leading-[24px]")}
+          style={{ ...sectionBodyStyle, fontSize: 16, lineHeight: "24px", fontWeight: 500 }}
           value={aboutDraft}
           onChange={(e) => setAboutDraft(e.target.value)}
           placeholder="Tell others about yourself..."
@@ -848,22 +827,22 @@ export function ProfileV2Content({
       ) : detailsLoading ? (
         <ProfileSectionContentLoader />
       ) : (
-        <p className="whitespace-pre-wrap text-[var(--color-text-secondary)]" style={interBody12}>
+        <p className="whitespace-pre-wrap text-[#e7e7e7]" style={sectionBodyStyle}>
           {aboutDisplay || "No information yet."}
         </p>
       )}
-    </div>
+    </section>
   );
 
-  const experienceCard = (
-    <div className={cn(profileSectionCardClass, "flex w-full min-w-0 flex-col p-4")}>
-      <h3 className="mb-5 text-[var(--color-text-primary)]" style={kodeMono15}>
-        Experience
+  const experienceSection = (
+    <section className="mt-16 max-w-[554px]">
+      <h3 className="mb-7 uppercase text-[#adaaaa]" style={sectionHeadingStyle}>
+        experience
       </h3>
       {showProfileForm ? (
         <div className="space-y-4">
           {expDrafts.map((row) => (
-            <div key={row.key} className="space-y-2 rounded-[6px] border border-white/10 p-3">
+            <div key={row.key} className="space-y-2 rounded-[6px] border border-white/10 bg-[#121212] p-3">
               <div className="flex justify-end">
                 <button
                   type="button"
@@ -871,7 +850,7 @@ export function ProfileV2Content({
                   className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
                   aria-label="Remove experience"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="h-4 w-4" />
                 </button>
               </div>
               <input
@@ -887,7 +866,9 @@ export function ProfileV2Content({
                 placeholder="Company / project"
                 value={row.company}
                 onChange={(e) =>
-                  setExpDrafts((prev) => prev.map((r) => (r.key === row.key ? { ...r, company: e.target.value } : r)))
+                  setExpDrafts((prev) =>
+                    prev.map((r) => (r.key === row.key ? { ...r, company: e.target.value } : r))
+                  )
                 }
               />
               <div className="grid grid-cols-2 gap-2">
@@ -932,39 +913,132 @@ export function ProfileV2Content({
             </div>
           ))}
           <Button type="button" variant="outline" size="sm" onClick={addExperienceRow}>
-            <Plus className="w-4 h-4 mr-2" />
+            <Plus className="mr-2 h-4 w-4" />
             Add experience
           </Button>
         </div>
       ) : detailsLoading ? (
         <ProfileSectionContentLoader />
       ) : experienceList.length === 0 ? (
-        <p className="text-[var(--color-text-secondary)]" style={interBody12}>
+        <p className="text-[#70767d]" style={kodeMono15}>
           No experience added yet.
         </p>
       ) : (
-        <ul className="flex flex-col gap-3 text-[var(--color-text-secondary)]">
-          {experienceList.map((e) => (
-            <li key={e.id} className="flex items-center justify-between gap-4 border-b border-white/10 pb-3 last:border-0 last:pb-0" style={interBody12}>
-              <p className="min-w-0 break-words leading-snug">
-                {e.title}{e.company ? ` at ${e.company}` : ""}
+        <ul className="flex flex-col gap-6">
+          {experienceList.map((e, index) => (
+            <li
+              key={e.id}
+              className={cn(
+                "relative border-l border-[rgba(72,72,71,0.3)] pl-[25px]",
+                index === experienceList.length - 1 ? "pb-0" : "pb-4"
+              )}
+            >
+              <span
+                className={cn(
+                  "absolute left-[-7px] top-1 h-3 w-3 rounded-full",
+                  index === 0 ? "bg-[#00ffa3]" : "bg-[#484847]"
+                )}
+              />
+              <p
+                className={cn("text-[20px] leading-[30px] text-[#f9f9f9]", index !== 0 && "opacity-70")}
+                style={{ fontFamily: "var(--font-display), sans-serif", fontWeight: 700 }}
+              >
+                {e.company ? `${e.title} at ${e.company}` : e.title}
               </p>
               {(e.startDate || e.endDate) && (
-                <p className="shrink-0 whitespace-nowrap text-[var(--color-text-muted)] leading-snug">
+                <p
+                  className={cn("mt-1 text-[#adaaaa] uppercase", index !== 0 && "opacity-70")}
+                  style={{ ...kodeMono15, letterSpacing: 1 }}
+                >
                   {fmtMonthYear(e.startDate) || "—"} — {fmtMonthYear(e.endDate) || "Present"}
+                </p>
+              )}
+              {e.description && (
+                <p
+                  className={cn("mt-2 text-[20px] leading-[30px] text-[#adaaaa]", index !== 0 && "opacity-70")}
+                  style={{ fontFamily: "var(--font-display), sans-serif", fontWeight: 400 }}
+                >
+                  {e.description}
                 </p>
               )}
             </li>
           ))}
         </ul>
       )}
-    </div>
+    </section>
   );
 
-  const skillsCard = (
-    <div className={cn(profileSectionCardClass, "flex w-full min-w-0 flex-col p-4")}>
-      <h3 className="mb-3 text-[var(--color-text-primary)]" style={kodeMono15}>
-        Skills
+  const interestsSection = (
+    <section>
+      <h3 className="mb-4 uppercase text-[#adaaaa]" style={sectionHeadingStyle}>
+        interested in
+      </h3>
+      {showProfileForm ? (
+        <div className="rounded-[6px] border border-white/10 bg-[#121212] p-3">
+          <div className="mb-2 flex items-center justify-between">
+            <label className="block text-xs text-[var(--color-text-muted)]">Interests</label>
+            <span className="text-[11px] text-white/60">
+              Selected {interestSlugsDraft.length}/{MAX_INTERESTS}
+            </span>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {editableInterestOptions.map((interest) => {
+              const isSelected = interestSlugsDraft.includes(interest.slug);
+              const limitReached = !isSelected && interestSlugsDraft.length >= MAX_INTERESTS;
+              return (
+                <button
+                  key={interest.slug}
+                  type="button"
+                  className={cn(
+                    "rounded-full border px-2.5 py-1 text-[11px] transition-colors",
+                    isSelected
+                      ? "border-[var(--color-primary)] bg-[var(--color-primary)]/15 text-[var(--color-primary)]"
+                      : limitReached
+                        ? "cursor-not-allowed border-white/10 text-white/35"
+                        : "border-white/20 text-white/70 hover:border-white/50 hover:text-white"
+                  )}
+                  onClick={() =>
+                    setInterestSlugsDraft((prev) =>
+                      prev.includes(interest.slug)
+                        ? prev.filter((slug) => slug !== interest.slug)
+                        : prev.length >= MAX_INTERESTS
+                          ? prev
+                          : [...prev, interest.slug]
+                    )
+                  }
+                  disabled={limitReached}
+                >
+                  {interest.name}
+                </button>
+              );
+            })}
+          </div>
+          <p className="mt-2 text-[11px] text-white/50">You can choose up to {MAX_INTERESTS} interests.</p>
+        </div>
+      ) : detailsLoading ? (
+        <ProfileSectionContentLoader />
+      ) : interestsList.length === 0 ? (
+        <p className="text-[#70767d]" style={kodeMono15}>
+          No interests added yet.
+        </p>
+      ) : (
+        <ul className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          {interestsList.map((interest) => (
+            <li key={interest.slug} className="inline-flex items-center gap-2 text-[#adaaaa]" style={skillLabelStyle}>
+              <span className="h-1.5 w-1.5 rounded-full bg-[#00ffa3]" />
+              <span>{interest.name}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+
+  const skillsSection = (
+    <section>
+      <h3 className="mb-5 uppercase text-[#adaaaa]" style={sectionHeadingStyle}>
+        skills
       </h3>
       {showProfileForm ? (
         <SkillTagPicker
@@ -979,196 +1053,211 @@ export function ProfileV2Content({
       ) : detailsLoading ? (
         <ProfileSectionContentLoader />
       ) : skillsList.length === 0 ? (
-        <p className="text-[var(--color-text-secondary)]" style={interBody12}>
+        <p className="text-[#70767d]" style={kodeMono15}>
           No skills added yet.
         </p>
       ) : (
-        <ul className="flex flex-wrap gap-2 text-[var(--color-text-secondary)]" style={interBody12}>
+        <ul className="flex flex-wrap gap-[7px]">
           {skillsList.map((s) => (
-            <li
-              key={s.slug}
-              className="rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-[11px] text-white/80"
-            >
-              {s.label}
+            <li key={s.slug} className="rounded-[3px] border border-[#282827] bg-[#20201f] px-2.5 py-2 text-[#f9f9f9]">
+              <span style={skillLabelStyle}>{s.label}</span>
             </li>
           ))}
         </ul>
+      )}
+    </section>
+  );
+
+  const mutualContextCard = (
+    <aside className="w-full rounded-[6px] border border-white/10 bg-[#121212] px-5 pb-7 pt-4 sm:px-6">
+      <h3 className="mb-8 text-center uppercase text-[#adaaaa]" style={sectionHeadingStyle}>
+        mutual context
+      </h3>
+      {isOwnProfile ? (
+        <p className="text-center text-sm text-[var(--color-text-secondary)]">
+          Mutual context is shown when someone else views your profile.
+        </p>
+      ) : !isAuthenticated ? (
+        <p className="text-center text-sm text-[var(--color-text-secondary)]">
+          Sign in to see mutual connections and shared events.
+        </p>
+      ) : (
+        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2">
+          <div className="flex flex-col items-center gap-4 sm:items-start">
+            <p className="text-[#828282]" style={kodeMono15}>
+              Mutual connections: <span className="font-bold text-white">{mutualConnectionsCount}</span>
+            </p>
+            <div className="flex min-h-[45px] items-center">
+              {mutualConnections.slice(0, 3).map((item, i) => (
+                <Link
+                  href={`/profile/${item.twitter_handle}`}
+                  key={item.id}
+                  className="relative h-[45px] w-[45px] shrink-0 overflow-hidden rounded-full border border-black bg-[#0f0f0f]"
+                  style={{ marginLeft: i === 0 ? 0 : "-22px", zIndex: i + 1 }}
+                >
+                  {item.avatar_url ? (
+                    <Image src={item.avatar_url} alt={item.twitter_name} width={45} height={45} className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-xs text-white">
+                      {item.twitter_name?.[0]?.toUpperCase() || "?"}
+                    </div>
+                  )}
+                </Link>
+              ))}
+            </div>
+            <button
+              onClick={handleOpenConnectionsList}
+              className="h-[45px] w-[127px] rounded-[7px] bg-white text-[17px] font-bold tracking-[-0.85px] text-black transition-opacity hover:opacity-90"
+              style={kodeMono15}
+            >
+              Show list
+            </button>
+          </div>
+
+          <div className="flex flex-col items-center gap-4 sm:items-start">
+            <p className="text-[#828282]" style={kodeMono15}>
+              Same event attendee: <span className="font-bold text-white">{mutualEventsCount}</span>
+            </p>
+            <div className="flex min-h-[45px] items-center">
+              {mutualEvents.slice(0, 3).map((event, i) => (
+                <Link
+                  href={`/events/${event.slug || event.id}`}
+                  key={event.id}
+                  className="relative h-[45px] w-[45px] shrink-0 overflow-hidden rounded-full border border-black bg-[#0f0f0f]"
+                  style={{ marginLeft: i === 0 ? 0 : "-22px", zIndex: i + 1 }}
+                >
+                  {event.image_url ? (
+                    <Image src={event.image_url} alt={event.name} width={45} height={45} className="h-full w-full object-cover" unoptimized />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center px-1 text-center text-[10px] text-white">
+                      Event
+                    </div>
+                  )}
+                </Link>
+              ))}
+            </div>
+            <button
+              onClick={handleOpenEventsList}
+              className="h-[45px] w-[127px] rounded-[7px] bg-white text-[17px] font-bold tracking-[-0.85px] text-black transition-opacity hover:opacity-90"
+              style={kodeMono15}
+            >
+              Show list
+            </button>
+          </div>
+        </div>
+      )}
+    </aside>
+  );
+
+  const actionButtons = (
+    <div className="flex flex-wrap items-center justify-end gap-3">
+      {!isOwnProfile && (
+        <>
+          <Button
+            type="button"
+            variant="primary"
+            className={figmaConnectButtonClass}
+            style={kodeMono25Bold}
+            onClick={handleConnectClick}
+            disabled={isConnectLoading}
+          >
+            {isConnectLoading ? <Loader2 className="mr-2 h-5 w-5 shrink-0 animate-spin" aria-hidden /> : null}
+            {connectButtonLabel}
+          </Button>
+          <button
+            type="button"
+            className="flex h-[44px] w-[44px] items-center justify-center rounded-[4px] border border-[rgba(72,72,71,0.3)] bg-[#262626] text-white transition-colors hover:bg-[#2f2f2f]"
+            aria-label="Save profile"
+          >
+            <Bookmark className="h-[18px] w-[18px]" />
+          </button>
+        </>
+      )}
+      {isOwnProfile && !isEditingProfile && (
+        <Button
+          type="button"
+          variant="outline"
+          className="h-[44px] w-full rounded-[5px] border-white/35 text-white hover:bg-white/10 sm:w-[173px]"
+          onClick={() => {
+            setIsEditingProfile(true);
+            setSaveMessage(null);
+          }}
+          disabled={detailsLoading}
+          style={kodeMono15}
+        >
+          Edit profile
+        </Button>
+      )}
+      {isOwnProfile && isEditingProfile && (
+        <>
+          <Button
+            type="button"
+            variant="primary"
+            className={cn(figmaConnectButtonCompactClass, "h-[44px] w-full rounded-[5px] sm:w-[173px]")}
+            onClick={handleSave}
+            disabled={isSaving || detailsLoading}
+            style={kodeMono15}
+          >
+            {isSaving ? <Loader2 className="mr-2 h-4 w-4 shrink-0 animate-spin" aria-hidden /> : null}
+            Save
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className={cn(figmaCancelButtonCompactClass, "h-[44px] w-full rounded-[5px] sm:w-[173px]")}
+            onClick={handleCancelEdit}
+            disabled={isSaving}
+            style={kodeMono15}
+          >
+            Cancel
+          </Button>
+        </>
+      )}
+      {saveMessage && isEditingProfile && (
+        <span className="w-full text-right text-sm text-green-500" style={interBody12}>
+          {saveMessage}
+        </span>
       )}
     </div>
   );
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,6fr)_minmax(0,4fr)] gap-6 items-start">
-      <section className="overflow-hidden rounded-none border border-white/10 bg-black">
-        <div className="relative h-32 sm:h-40 bg-[var(--color-surface)]">
-          {user.banner_url && <Image src={user.banner_url} alt="Profile banner" fill className="object-cover" unoptimized />}
-        </div>
-
-        <div className="px-4 pb-4 pt-[23px] sm:px-6 sm:pb-6">
-          <div className="-mt-16 mb-4">
-            <Avatar
-              src={user.avatar_url}
-              alt={user.twitter_name}
-              size="xl"
-              isVip={user.subscription_tier === "vip"}
-              isVerified={user.is_verified}
-            />
+    <div className="w-full border-x border-white/10 bg-black">
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,599px)_minmax(0,601px)]">
+        <section className="border-b border-white/10 xl:min-h-[969px] xl:border-b-0 xl:border-r xl:border-r-white/10">
+          <div className="relative h-[170px] bg-[#70767d] sm:h-[200px]">
+            {user.banner_url && <Image src={user.banner_url} alt="Profile banner" fill className="object-cover" unoptimized />}
           </div>
 
-          {/* Mobile: name → About → Experience → Skills */}
-          <div className="flex flex-col gap-4 md:hidden">
-            {identityBlock}
-            {aboutCard}
-            {experienceCard}
-            {skillsCard}
-          </div>
+          <div className="relative px-6 pb-10 pt-3 sm:px-10 xl:px-[45px]">
+            <div className="absolute -top-[60px] left-5 sm:-top-[75px]">
+              <div className="relative h-[120px] w-[120px] overflow-hidden rounded-[56px] border-[3px] border-black bg-[#121212] sm:h-[150px] sm:w-[150px] sm:rounded-[69px]">
+                {avatarUrl ? (
+                  <Image src={avatarUrl} alt={user.twitter_name} fill className="object-cover" unoptimized />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-[#1a1a1a] text-4xl font-bold text-white">
+                    {(user.twitter_name || user.twitter_handle || "?").slice(0, 1).toUpperCase()}
+                  </div>
+                )}
+              </div>
+            </div>
 
-          {/* Desktop: 2 columns — left: identity+experience, right: about+skills */}
-          <div className="hidden md:grid md:grid-cols-2 md:gap-6 md:items-start">
-            <div className="min-w-0 flex flex-col gap-4">
+            {actionButtons}
+
+            <div className="pt-[62px] sm:pt-[70px]">
               {identityBlock}
-              {experienceCard}
-            </div>
-            <div className="min-w-0 flex flex-col gap-4">
-              {aboutCard}
-              {skillsCard}
+              {aboutSection}
+              {experienceSection}
             </div>
           </div>
+        </section>
 
-          <div className="mt-8 flex flex-wrap items-center gap-3 border-t border-white/10 pt-6">
-            {!isOwnProfile && (
-              <Button
-                type="button"
-                variant="primary"
-                className={figmaConnectButtonClass}
-                style={kodeMono25Bold}
-                onClick={handleConnectClick}
-                disabled={isConnectLoading}
-              >
-                {isConnectLoading ? (
-                  <Loader2 className="mr-2 h-5 w-5 shrink-0 animate-spin" aria-hidden />
-                ) : null}
-                {connectButtonLabel}
-              </Button>
-            )}
-            {isOwnProfile && !isEditingProfile && (
-              <Button
-                type="button"
-                variant="outline"
-                className="border-white/35 text-[var(--color-text-primary)] hover:bg-white/10"
-                onClick={() => {
-                  setIsEditingProfile(true);
-                  setSaveMessage(null);
-                }}
-                disabled={detailsLoading}
-              >
-                Edit profile
-              </Button>
-            )}
-            {isOwnProfile && isEditingProfile && (
-              <>
-                <Button
-                  type="button"
-                  variant="primary"
-                  className={figmaConnectButtonCompactClass}
-                  onClick={handleSave}
-                  disabled={isSaving || detailsLoading}
-                >
-                  {isSaving ? <Loader2 className="mr-2 h-4 w-4 shrink-0 animate-spin" aria-hidden /> : null}
-                  Save
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className={figmaCancelButtonCompactClass}
-                  onClick={handleCancelEdit}
-                  disabled={isSaving}
-                >
-                  Cancel
-                </Button>
-              </>
-            )}
-            {saveMessage && isEditingProfile && (
-              <span className="text-sm text-green-500" style={interBody12}>
-                {saveMessage}
-              </span>
-            )}
-          </div>
-        </div>
-      </section>
-
-      <aside className="rounded-xl bg-black px-5 py-6 sm:px-8 sm:py-8" style={{ border: "1px solid rgba(255,255,255,0.10)" }}>
-        <h3 className="mb-6 text-center text-base font-semibold text-white">Mutual context</h3>
-        {isOwnProfile ? (
-          <p className="text-center text-sm text-[var(--color-text-secondary)]">Mutual context is shown when someone else views your profile.</p>
-        ) : !isAuthenticated ? (
-          <p className="text-center text-sm text-[var(--color-text-secondary)]">Sign in to see mutual connections and shared events.</p>
-        ) : (
-          <div className="grid grid-cols-2 gap-4">
-            {/* Mutual connections */}
-            <div className="flex flex-col items-center gap-4">
-              <p className="text-sm text-[var(--color-text-secondary)]">
-                Mutual connections: <span className="font-bold text-white">{mutualConnectionsCount}</span>
-              </p>
-              <div className="flex min-h-[48px] items-center">
-                {mutualConnections.slice(0, 3).map((item, i) => (
-                  <Link
-                    href={`/profile/${item.twitter_handle}`}
-                    key={item.id}
-                    className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full border-2 border-black bg-[var(--color-surface)] transition-transform hover:z-10 hover:scale-105"
-                    style={{ marginLeft: i === 0 ? 0 : "-14px", zIndex: i }}
-                  >
-                    {item.avatar_url ? (
-                      <Image src={item.avatar_url} alt={item.twitter_name} width={48} height={48} className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-xs text-white">
-                        {item.twitter_name?.[0]?.toUpperCase() || "?"}
-                      </div>
-                    )}
-                  </Link>
-                ))}
-              </div>
-              <button
-                onClick={handleOpenConnectionsList}
-                className="w-full rounded-[5px] bg-white py-3 text-sm font-bold text-black transition-opacity hover:opacity-90"
-              >
-                Show list
-              </button>
-            </div>
-
-            {/* Same event attendee */}
-            <div className="flex flex-col items-center gap-4">
-              <p className="text-sm text-[var(--color-text-secondary)]">
-                Same event attendee: <span className="font-bold text-white">{mutualEventsCount}</span>
-              </p>
-              <div className="flex min-h-[48px] items-center">
-                {mutualEvents.slice(0, 3).map((event, i) => (
-                  <Link
-                    href={`/events/${event.slug || event.id}`}
-                    key={event.id}
-                    className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full border-2 border-black bg-[var(--color-surface)] transition-transform hover:z-10 hover:scale-105"
-                    style={{ marginLeft: i === 0 ? 0 : "-14px", zIndex: i }}
-                  >
-                    {event.image_url ? (
-                      <Image src={event.image_url} alt={event.name} width={48} height={48} className="h-full w-full object-cover" unoptimized />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center px-1 text-center text-[10px] text-white">
-                        Event
-                      </div>
-                    )}
-                  </Link>
-                ))}
-              </div>
-              <button
-                onClick={handleOpenEventsList}
-                className="w-full rounded-[5px] bg-white py-3 text-sm font-bold text-black transition-opacity hover:opacity-90"
-              >
-                Show list
-              </button>
-            </div>
-          </div>
-        )}
-      </aside>
+        <section className="px-6 pb-10 pt-8 sm:px-10 xl:min-h-[969px] xl:px-[50px] xl:pt-[61px]">
+          <div className="mx-auto w-full max-w-[550px] xl:mx-0">{mutualContextCard}</div>
+          <div className="mt-16 max-w-[384px]">{interestsSection}</div>
+          <div className="mt-16 max-w-[384px]">{skillsSection}</div>
+        </section>
+      </div>
 
       <Modal isOpen={isConnectionsModalOpen} onClose={() => setIsConnectionsModalOpen(false)} size="md" ariaLabel="Mutual connections" className={v2ModalClass} closeButtonClassName={v2CloseButtonClass}>
         <ModalHeader className={v2ModalHeaderClass}>
