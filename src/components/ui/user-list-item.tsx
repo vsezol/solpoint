@@ -4,7 +4,8 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button, ProSubscriptionModal } from "@/components/ui";
-import { MessageCircle, UserPlus, UserCheck } from "lucide-react";
+import { normalizeTwitterAvatarUrl } from "@/lib/twitter-avatar";
+import { CalendarPlus, MessageCircle, UserPlus, UserCheck } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useChat } from "@/hooks/use-chat";
 
@@ -23,20 +24,27 @@ interface UserListItemProps {
   member: Member;
   friendStatus?: "none" | "pending_sent" | "pending_received" | "accepted" | "blocked";
   onAddFriend?: (userId: string) => void;
+  onRequestMeeting?: (userId: string) => void;
   sendingFriendRequest?: boolean;
+  sendingMeetingRequest?: boolean;
   creatingChat?: boolean;
+  showMeetingRequestButton?: boolean;
 }
 
 export function UserListItem({
   member,
   friendStatus = "none",
   onAddFriend,
+  onRequestMeeting,
   sendingFriendRequest = false,
+  sendingMeetingRequest = false,
   creatingChat = false,
+  showMeetingRequestButton = false,
 }: UserListItemProps) {
   const { user: currentUser, isAuthenticated } = useAuth();
   const { openChat } = useChat();
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const avatarSrc = member.avatar_url ? normalizeTwitterAvatarUrl(member.avatar_url) : null;
 
   const isOwnProfile = currentUser?.id === member.id;
 
@@ -64,6 +72,12 @@ export function UserListItem({
     }
   };
 
+  const handleRequestMeeting = (userId: string) => {
+    if (onRequestMeeting) {
+      onRequestMeeting(userId);
+    }
+  };
+
   return (
     <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-[var(--color-surface-hover)] transition-colors">
       <Link
@@ -71,13 +85,14 @@ export function UserListItem({
         className="flex items-center gap-3 flex-1 min-w-0"
       >
         <div className="w-12 h-12 rounded-full bg-[var(--color-surface-hover)] border-2 border-[var(--color-background)] flex items-center justify-center overflow-hidden flex-shrink-0">
-          {member.avatar_url ? (
+          {avatarSrc ? (
             <Image
-              src={member.avatar_url}
+              src={avatarSrc}
               alt={member.name}
               width={48}
               height={48}
               className="w-full h-full object-cover"
+              quality={90}
             />
           ) : (
             <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-sm font-medium">
@@ -129,6 +144,17 @@ export function UserListItem({
               <UserCheck className="w-4 h-4 text-[var(--color-primary)]" />
             </Button>
           )}
+          {showMeetingRequestButton && onRequestMeeting && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleRequestMeeting(member.id)}
+              disabled={sendingMeetingRequest}
+              title="Request Meeting"
+            >
+              <CalendarPlus className="w-4 h-4" />
+            </Button>
+          )}
         </div>
       )}
       
@@ -142,4 +168,3 @@ export function UserListItem({
     </div>
   );
 }
-

@@ -100,7 +100,7 @@ export default function MapCnPage() {
   return (
     <>
       <Header />
-      <main className="pt-16 min-h-screen bg-[var(--color-background)]">
+      <main className="pt-16 min-h-screen pb-16 bg-[var(--color-background)]">
         {/* Hero section */}
         <section className="py-12 text-center">
           {/* Background decoration */}

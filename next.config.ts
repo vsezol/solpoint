@@ -17,6 +17,16 @@ const nextConfig: NextConfig = {
         hostname: "abs.twimg.com",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "images.lumacdn.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "cdn.lu.ma",
+        pathname: "/**",
+      },
       ...(supabaseHost
         ? [
             {

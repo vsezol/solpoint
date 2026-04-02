@@ -24,28 +24,12 @@ export const isGA4Available = (): boolean => {
   return typeof window.gtag !== 'undefined';
 };
 
-// Инициализация GA4
-export const initGA4 = (measurementId: string): void => {
-  if (typeof window === 'undefined') return;
-
-  // Добавляем скрипт GA4 если его еще нет
-  if (!document.querySelector(`script[src*="gtag"]`)) {
-    const script1 = document.createElement('script');
-    script1.async = true;
-    script1.src = `https://www.googletagmanager.com/gtag/js?id=${measurementId}`;
-    document.head.appendChild(script1);
-
-    const script2 = document.createElement('script');
-    script2.innerHTML = `
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', '${measurementId}', {
-        page_path: window.location.pathname,
-      });
-    `;
-    document.head.appendChild(script2);
-  }
+/**
+ * GA4 is initialized via <Script> in google-analytics.tsx with a CSP nonce.
+ * This function is kept as a no-op to avoid breaking any legacy call sites.
+ */
+export const initGA4 = (_measurementId: string): void => {
+  // Initialization is handled declaratively via next/script in the layout.
 };
 
 // Отправка события в GA4

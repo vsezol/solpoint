@@ -37,6 +37,7 @@ export default function HubsPage() {
   const isVip = user?.subscription_tier === "vip";
   const isAdmin = user?.is_admin || false;
   const { searchQuery, entityTypeFilter, sortBy } = useHubsStore();
+  const kodeMonoStyle = { fontFamily: "var(--font-kode-mono), monospace" } as const;
 
   // Fetch entities from API
   useEffect(() => {
@@ -125,14 +126,6 @@ export default function HubsPage() {
 
   // Фильтрация и сортировка данных
   const filteredAndSortedEntities = useMemo(() => {
-    // Создаем Map для быстрого поиска типа по ID
-    const entityTypeMap = new Map<string, "hub" | "community" | "workspace" | "project">();
-    
-    hubs.forEach(hub => entityTypeMap.set(hub.id, "hub"));
-    communities.forEach(community => entityTypeMap.set(community.id, "community"));
-    projects.forEach(project => entityTypeMap.set(project.id, "project"));
-    workspaces.forEach(workspace => entityTypeMap.set(workspace.id, "workspace"));
-
     let entities: (Hub | Community | Project | Workspace)[] = [];
 
     // Фильтрация по типу
@@ -159,6 +152,17 @@ export default function HubsPage() {
     return entities;
   }, [hubs, communities, projects, workspaces, entityTypeFilter, sortBy]);
 
+  const entityTypeMap = useMemo(() => {
+    const map = new Map<string, "hub" | "community" | "workspace" | "project">();
+
+    hubs.forEach((hub) => map.set(hub.id, "hub"));
+    communities.forEach((community) => map.set(community.id, "community"));
+    projects.forEach((project) => map.set(project.id, "project"));
+    workspaces.forEach((workspace) => map.set(workspace.id, "workspace"));
+
+    return map;
+  }, [hubs, communities, projects, workspaces]);
+
   // Мемоизируем вычисления статистики, чтобы избежать лишних ререндеров
   const { totalMembers, totalCountries } = useMemo(() => {
     const allEntities = [...hubs, ...communities, ...projects, ...workspaces];
@@ -181,7 +185,7 @@ export default function HubsPage() {
     setIsCreateModalOpen(true);
   };
 
-  const handleCreateSuccess = (entity: { id: string; slug: string; type: EntityType }) => {
+  const handleCreateSuccess = () => {
     setIsCreateModalOpen(false);
     // Перезагружаем данные
     window.location.reload();
@@ -190,54 +194,57 @@ export default function HubsPage() {
   return (
     <>
       <Header />
-      <main className="min-h-screen pt-16 pb-16 animated-bg">
+      <main className="min-h-screen bg-black pb-16 pt-20 text-white">
         {/* Hero */}
-        <section className="py-12 text-center">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h1 className="text-4xl sm:text-5xl font-bold mb-4 inline-block bg-gradient-to-r from-[#00F58D] to-[#A73EFF] bg-clip-text text-transparent">
+        <section className="mx-auto w-full max-w-7xl px-4 pb-4 pt-10 text-center sm:px-6 lg:px-8 md:pb-8">
+          <h1 className="text-[30px] font-semibold leading-none md:text-[46px]" style={kodeMonoStyle}>
             Solana Hubs
           </h1>
-            <p className="text-lg text-[var(--color-text-secondary)] max-w-2xl mx-auto mb-8">
-              Connect with local Solana communities and Superteam chapters
-              around the world.
-            </p>
+          <p className="mx-auto mt-4 hidden max-w-3xl text-sm text-white/70 md:block md:text-[18px]" style={kodeMonoStyle}>
+            Connect with local Solana communities and Superteam chapters around the world.
+          </p>
 
-            {/* Stats */}
-            <div className="flex items-center justify-center gap-8">
-              <div className="text-center">
-                <div className="flex items-center justify-center gap-2 text-[var(--color-primary)]">
-                  <Users className="w-5 h-5" />
-                  <span className="text-2xl font-bold">{totalMembers.toLocaleString()}</span>
-                </div>
-                <p className="text-sm text-[var(--color-text-muted)]">
-                  Total Members
-                </p>
+          {/* Stats */}
+          <div className="mt-6 hidden items-center justify-center gap-10 md:flex">
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-2 text-[#14f195]">
+                <Users className="h-5 w-5" />
+                <span className="text-2xl font-semibold" style={kodeMonoStyle}>
+                  {totalMembers.toLocaleString()}
+                </span>
               </div>
-              <div className="text-center">
-                <div className="flex items-center justify-center gap-2 text-[var(--color-secondary)]">
-                  <Globe className="w-5 h-5" />
-                  <span className="text-2xl font-bold">{totalCountries}</span>
-                </div>
-                <p className="text-sm text-[var(--color-text-muted)]">
-                  Countries
-                </p>
+              <p className="mt-1 text-sm text-white/50" style={kodeMonoStyle}>
+                Total Members
+              </p>
+            </div>
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-2 text-white">
+                <Globe className="h-5 w-5 text-[#14f195]" />
+                <span className="text-2xl font-semibold" style={kodeMonoStyle}>
+                  {totalCountries}
+                </span>
               </div>
+              <p className="mt-1 text-sm text-white/50" style={kodeMonoStyle}>
+                Countries
+              </p>
             </div>
           </div>
         </section>
 
         {/* Controls */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <HubsControls />
+        <section className="sticky top-[74px] z-30 border-y border-white/10 bg-black/95 backdrop-blur">
+          <div className="mx-auto w-full max-w-7xl px-4 py-3 sm:px-6 lg:px-8 md:py-6" style={kodeMonoStyle}>
+            <HubsControls />
+          </div>
         </section>
 
         {/* Hubs Grid */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+        <section className="mx-auto w-full max-w-7xl px-4 pb-12 pt-8 sm:px-6 lg:px-8">
           {/* Header with filter label and Add button */}
           <div className="flex items-center justify-between w-full mb-6">
             <div className="flex items-center gap-2">
-              <Home className="w-4 h-4 sm:w-5 sm:h-5 text-[var(--color-primary)]" />
-              <h2 className="text-lg sm:text-xl font-semibold text-[var(--color-text-primary)]">
+              <Home className="h-4 w-4 text-[#14f195] sm:h-5 sm:w-5" />
+              <h2 className="text-lg font-semibold text-white sm:text-xl" style={kodeMonoStyle}>
                 {entityTypeFilter === "all" 
                   ? "All" 
                   : entityTypeFilter === "hubs" 
@@ -252,10 +259,10 @@ export default function HubsPage() {
             <button
               onClick={handleAddClick}
               className={cn(
-                "px-3 py-1.5 sm:px-6 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-colors",
-                "bg-[var(--color-primary)] text-[var(--color-background)]",
-                "hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-offset-2"
+                "h-[40px] rounded-[7px] border border-white bg-white px-3 text-xs font-bold text-black transition-colors hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-white/40",
+                "sm:h-[44px] sm:px-6 sm:text-sm"
               )}
+              style={kodeMonoStyle}
             >
               <span className="hidden sm:inline">Add your hub, community, or project</span>
               <span className="sm:hidden">Add hub/community/project</span>
@@ -263,42 +270,36 @@ export default function HubsPage() {
           </div>
 
           {loading ? (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {Array.from({ length: 6 }).map((_, i) => (
                 <div
                   key={i}
-                  className="bg-[var(--color-surface)] rounded-lg p-6 animate-pulse"
+                  className="rounded-[10px] border border-white/10 bg-[#101319] p-6 animate-pulse"
                 >
-                  <div className="h-4 bg-[var(--color-surface-border)] rounded w-3/4 mb-4"></div>
-                  <div className="h-3 bg-[var(--color-surface-border)] rounded w-full mb-2"></div>
-                  <div className="h-3 bg-[var(--color-surface-border)] rounded w-5/6"></div>
+                  <div className="mb-4 h-4 w-3/4 rounded bg-white/10" />
+                  <div className="mb-2 h-3 w-full rounded bg-white/10" />
+                  <div className="h-3 w-5/6 rounded bg-white/10" />
                 </div>
               ))}
             </div>
           ) : error ? (
             <div className="text-center py-12">
-              <p className="text-[var(--color-error)] mb-4">{error}</p>
+              <p className="mb-4 text-red-300" style={kodeMonoStyle}>{error}</p>
               <button
                 onClick={() => window.location.reload()}
-                className="px-4 py-2 bg-[var(--color-primary)] text-[var(--color-background)] rounded-lg hover:opacity-90 transition-opacity"
+                className="h-[40px] rounded-[7px] border border-white bg-white px-4 text-sm font-bold text-black transition-colors hover:bg-white/90"
+                style={kodeMonoStyle}
               >
                 Try again
               </button>
             </div>
           ) : filteredAndSortedEntities.length > 0 ? (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {filteredAndSortedEntities.map((entity) => {
                 // Проверяем тип сущности и рендерим соответствующую карточку
                 if ("slug" in entity && "members_count" in entity) {
                   // Определяем тип сущности для правильного пути
                   let entityType: "hub" | "community" | "workspace" | "project" | undefined = undefined;
-                  
-                  // Создаем Map для быстрого поиска типа по ID
-                  const entityTypeMap = new Map<string, "hub" | "community" | "workspace" | "project">();
-                  hubs.forEach(hub => entityTypeMap.set(hub.id, "hub"));
-                  communities.forEach(community => entityTypeMap.set(community.id, "community"));
-                  projects.forEach(project => entityTypeMap.set(project.id, "project"));
-                  workspaces.forEach(workspace => entityTypeMap.set(workspace.id, "workspace"));
                   
                   if (entityTypeFilter === "community") {
                     entityType = "community";
@@ -321,8 +322,8 @@ export default function HubsPage() {
             </div>
           ) : (
             <div className="text-center py-12">
-              <Users className="w-16 h-16 text-[var(--color-text-muted)] mx-auto mb-4" />
-              <p className="text-[var(--color-text-secondary)]">
+              <Users className="mx-auto mb-4 h-16 w-16 text-white/35" />
+              <p className="text-white/70" style={kodeMonoStyle}>
                 {searchQuery.trim()
                   ? "No entities found for your query"
                   : "No entities found"}
@@ -420,4 +421,3 @@ export default function HubsPage() {
     </>
   );
 }
-

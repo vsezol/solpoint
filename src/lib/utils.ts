@@ -62,9 +62,10 @@ export function getAppUrl(): string {
  * @param requestOrigin - origin из запроса (опционально, для fallback в production)
  */
 export function getAppOrigin(requestOrigin?: string): string {
-  // В development режиме всегда используем localhost
+  // В development режиме приоритет отдаем реальному origin запроса
+  // (важно для тестов с телефона по LAN, например 192.168.x.x)
   if (process.env.NODE_ENV === "development") {
-    return process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    return requestOrigin || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   }
   
   // В production используем переменную окружения
@@ -108,4 +109,3 @@ export function isUUID(str: string): boolean {
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   return uuidRegex.test(str);
 }
-

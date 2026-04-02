@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { normalizeTwitterAvatarUrl } from "@/lib/twitter-avatar";
 import { NextResponse } from "next/server";
 
 const TWITTER_API_BASE = "https://api.twitterapi.io";
@@ -210,7 +211,7 @@ async function syncMutualFollowers(
         user_id: userId,
         twitter_friend_id: user.id || user.userName, // Используем ID если есть, иначе username
         twitter_friend_username: user.userName || "",
-        twitter_friend_avatar_url: user.profilePicture || null,
+        twitter_friend_avatar_url: normalizeTwitterAvatarUrl(user.profilePicture || null) || null,
       }));
 
       const { error: insertError } = await supabase
@@ -403,4 +404,3 @@ export async function GET() {
     lastSyncedAt: profile.last_twitter_sync_at,
   });
 }
-

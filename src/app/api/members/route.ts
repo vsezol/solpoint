@@ -83,22 +83,21 @@ export async function GET(request: NextRequest) {
   const config = ENTITY_CONFIGS[entityType as EntityType];
   const supabase = await createClient();
 
-  // Получаем информацию о сущности (для owner_id)
-  console.log(`[API Members] Fetching ${entityType} with ID:`, entityId);
-  console.log(`[API Members] Table name:`, config.tableName);
-  console.log(`[API Members] Owner field:`, config.ownerIdField);
-  
-  // Используем maybeSingle() вместо single() для более мягкой обработки ошибок
-  const { data: entity, error: entityError } = await supabase
-    .from(config.tableName)
-    .select(`id, ${config.ownerIdField}`)
-    .eq("id", entityId)
-    .maybeSingle();
+  const entitySelect =
+    entityType === "event"
+      ? `id, ${config.ownerIdField}, luma_event_id`
+      : `id, ${config.ownerIdField}`;
 
-  console.log(`[API Members] Entity query result:`, { entity, entityError });
+  const [{ data: entity, error: entityError }, { data: { user: authUser } }] = await Promise.all([
+    supabase
+      .from(config.tableName)
+      .select(entitySelect)
+      .eq("id", entityId)
+      .maybeSingle(),
+    supabase.auth.getUser(),
+  ]);
 
   if (entityError) {
-    console.error(`[API Members] Error fetching ${entityType}:`, entityError);
     return NextResponse.json(
       { error: `Failed to fetch ${entityType}`, details: entityError.message },
       { status: 500 }
@@ -106,7 +105,6 @@ export async function GET(request: NextRequest) {
   }
 
   if (!entity) {
-    console.error(`[API Members] ${entityType} not found with ID:`, entityId);
     return NextResponse.json(
       { error: `${entityType} not found` },
       { status: 404 }
@@ -115,29 +113,6 @@ export async function GET(request: NextRequest) {
 
   const ownerId = (entity as Record<string, any>)[config.ownerIdField];
 
-  // Получаем текущего пользователя (если авторизован)
-  const {
-    data: { user: authUser },
-  } = await supabase.auth.getUser();
-
-  // Получаем участников
-  // В Supabase PostgREST используем синтаксис table!column_name для join'ов
-  console.log(`[API Members] Fetching members from table:`, config.membersTable);
-  console.log(`[API Members] Using entityIdField:`, config.entityIdField);
-  console.log(`[API Members] Searching for entityId:`, entityId);
-  
-  // Сначала проверим, есть ли вообще записи в таблице с этим event_id
-  const { data: rawData, error: rawError } = await supabase
-    .from(config.membersTable)
-    .select(`${config.entityIdField}, user_id`)
-    .eq(config.entityIdField, entityId);
-  
-  console.log(`[API Members] Raw query (without join) result:`, {
-    count: rawData?.length || 0,
-    error: rawError,
-    sample: rawData?.[0] || null
-  });
-  
   const { data: membersData, error: membersError } = await supabase
     .from(config.membersTable)
     .select(`
@@ -157,7 +132,6 @@ export async function GET(request: NextRequest) {
         is_open_to_meet,
         subscription_tier,
         is_verified,
-        wallet_address,
         socials,
         last_active_at,
         created_at,
@@ -170,41 +144,19 @@ export async function GET(request: NextRequest) {
     .eq(config.entityIdField, entityId)
     .order(config.dateField, { ascending: false });
 
-  console.log(`[API Members] Members query result (with join):`, { 
-    count: membersData?.length || 0, 
-    error: membersError,
-    errorDetails: membersError ? JSON.stringify(membersError, null, 2) : null,
-    sampleData: membersData?.[0] ? JSON.stringify(membersData[0], null, 2) : null
-  });
-
   if (membersError) {
-    console.error(`[API Members] Error fetching ${entityType} members:`, membersError);
     return NextResponse.json(
       { error: membersError.message || "Failed to fetch members", details: membersError },
       { status: 500 }
     );
   }
 
-  // Форматируем участников
-  console.log(`[API Members] Raw membersData length:`, membersData?.length || 0);
-  console.log(`[API Members] Owner ID:`, ownerId);
-  
   const allMembers = (membersData || [])
-    .filter((m: any) => {
-      const hasUser = !!m.user;
-      if (!hasUser) {
-        console.log(`[API Members] Member without user:`, { user_id: m.user_id, dateField: m[config.dateField] });
-      }
-      return hasUser;
-    })
+    .filter((m: any) => !!m.user)
     .map((m: any) => {
       const user = Array.isArray(m.user) ? m.user[0] : (m.user as any);
-      if (!user) {
-        console.log(`[API Members] User is null/undefined for member:`, m.user_id);
-        return null;
-      }
-
-      const member = {
+      if (!user) return null;
+      return {
         id: user.id,
         avatar_url: user.avatar_url,
         name: user.twitter_name,
@@ -214,13 +166,8 @@ export async function GET(request: NextRequest) {
         isOwner: user.id === ownerId,
         joinedAt: m[config.dateField],
       };
-      
-      return member;
     })
     .filter((m): m is NonNullable<typeof m> => m !== null);
-
-  console.log(`[API Members] Formatted allMembers length:`, allMembers.length);
-  console.log(`[API Members] Sample formatted member:`, allMembers[0] || null);
 
   // Если onlyTeam=true, возвращаем только команду
   if (onlyTeam) {
@@ -239,9 +186,6 @@ export async function GET(request: NextRequest) {
 
   // Разделяем на команду (owners) и всех участников
   const team = allMembers.filter((m) => m.isOwner);
-  
-  console.log(`[API Members] Team members:`, team.length);
-  console.log(`[API Members] All members:`, allMembers.length);
 
   // Получаем друзей авторизованного пользователя (если авторизован)
   let friends: typeof allMembers = [];
@@ -280,22 +224,54 @@ export async function GET(request: NextRequest) {
     ? regularMembers
     : allMembers; // Если все участники - владельцы, показываем их
 
+  // For events: load external attendees (Luma) when event has luma_event_id
+  let external: Array<{ id: string; name: string | null; avatar: string | null; profile_url: string; social_links: Record<string, string> }> = [];
+  if (entityType === "event") {
+    const lumaEventId = (entity as { luma_event_id?: string | null })?.luma_event_id;
+    if (lumaEventId) {
+      const { data: lumaAttendees } = await supabase
+        .from("luma_event_attendees")
+        .select(`
+          id,
+          user_id,
+          luma_users(
+            id,
+            luma_profile_url,
+            name,
+            avatar,
+            social_links
+          )
+        `)
+        .eq("event_id", lumaEventId);
+
+      if (lumaAttendees?.length) {
+        external = lumaAttendees.map((row: {
+          id: string;
+          user_id: string;
+          luma_users: { id: string; luma_profile_url: string; name: string | null; avatar: string | null; social_links: unknown } | { id: string; luma_profile_url: string; name: string | null; avatar: string | null; social_links: unknown }[] | null;
+        }) => {
+          const raw = row.luma_users;
+          const u = Array.isArray(raw) ? raw[0] : raw;
+          return {
+            id: u?.id ?? row.user_id,
+            name: u?.name ?? null,
+            avatar: u?.avatar ?? null,
+            profile_url: u?.luma_profile_url ?? "",
+            social_links: (u?.social_links as Record<string, string>) ?? {},
+          };
+        });
+      }
+    }
+  }
+
   const response = {
     totalMembers: allMembers.length,
     totalFriends: friends.length,
     members: allMembersList, // Все участники, не только превью
     friends: friends, // Все друзья, не только превью
     team: team,
+    ...(entityType === "event" ? { external } : {}),
   };
-
-  console.log(`[API Members] Final response:`, {
-    totalMembers: response.totalMembers,
-    totalFriends: response.totalFriends,
-    membersCount: response.members.length,
-    friendsCount: response.friends.length,
-    teamCount: response.team.length,
-    sampleMember: response.members[0] || null,
-  });
 
   return NextResponse.json(response, { status: 200 });
 }

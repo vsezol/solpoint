@@ -1,4 +1,5 @@
 "use client";
+// LEGACY ADAPTER: Удалить после ручного тестирования.
 
 import { useState } from "react";
 import { Avatar, Badge, Button, ProSubscriptionModal } from "@/components/ui";
@@ -103,51 +104,7 @@ export function ProfileHeader({ user, isOwnProfile, friendshipStatus = "none" }:
   }
 
   // Для своего профиля используем контекст
-  try {
-    return <ProfileHeaderWithContext user={user} />;
-  } catch {
-    // Если контекст недоступен, рендерим без кнопок редактирования
-    return (
-      <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4">
-        <Avatar
-          src={user.avatar_url}
-          alt={user.twitter_name}
-          size="xl"
-          isVip={user.subscription_tier === "vip"}
-          isVerified={user.is_verified}
-          className="ring-4 ring-[var(--color-background)]"
-        />
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">
-              {user.twitter_name}
-            </h1>
-            {user.is_verified && (
-              <Badge variant="primary" size="sm">
-                Verified
-              </Badge>
-            )}
-            {user.subscription_tier === "vip" && (
-              <Badge variant="warning" size="sm">
-                <Crown className="w-3 h-3 mr-1" />
-                {getSubscriptionDisplayName(user.subscription_tier)}
-              </Badge>
-            )}
-          {/* Отладка: показываем статус is_admin */}
-          {('is_admin' in user) && (
-            <Badge variant={user.is_admin === true ? "primary" : "secondary"} size="sm">
-              {String(user.is_admin)} - {user.is_admin === true ? "ADMIN" : "NOT ADMIN"}
-            </Badge>
-          )}
-        </div>
-        <p className="text-[var(--color-text-muted)]">
-          @{user.twitter_handle}
-        </p>
-      </div>
-      <ProfileActions />
-      </div>
-    );
-  }
+  return <ProfileHeaderWithContext user={user} />;
 }
 
 function ProfileHeaderWithContext({ user }: { user: User }) {
@@ -193,4 +150,3 @@ function ProfileHeaderWithContext({ user }: { user: User }) {
     </div>
   );
 }
-

@@ -4,7 +4,7 @@ import { EventBadges, Card } from "@/components/ui";
 import { EntityMembersWidget } from "@/components/entities/entity-members-widget";
 import { Calendar, MapPin, Globe, Ticket, Link as LinkIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import type { Event, User, EventMember } from "@/types";
+import type { Event, User, ExternalUser } from "@/types";
 import Image from "next/image";
 import { EventHostCard } from "./event-host-card";
 import type { Metadata } from "next";
@@ -165,9 +165,83 @@ export default async function EventPage({ params }: EventPageProps) {
     notFound();
   }
 
-  // Опционально получаем organizer только если owner_type = 'user'
-  let organizer: User | undefined;
-  if (eventData.owner_type === "user" && eventData.owner_id) {
+  // Organizers from event_organizers (internal = profiles, external = luma_users)
+  let organizersInternal: User[] = [];
+  const organizersExternal: ExternalUser[] = [];
+
+  const { data: organizerRows } = await supabase
+    .from("event_organizers")
+    .select(`
+      profile_id,
+      luma_user_id,
+      position,
+      profile:profiles!event_organizers_profile_id_fkey(
+        id,
+        twitter_id,
+        twitter_handle,
+        twitter_name,
+        avatar_url,
+        bio,
+        country,
+        country_code,
+        city,
+        role,
+        is_open_to_meet,
+        subscription_tier,
+        is_verified,
+        wallet_address,
+        socials,
+        last_active_at,
+        created_at,
+        updated_at,
+        countries!fk_profiles_country_code ( name )
+      ),
+      luma_user:luma_users!event_organizers_luma_user_id_fkey(
+        id,
+        luma_profile_url,
+        name,
+        avatar,
+        social_links
+      )
+    `)
+    .eq("event_id", eventData.id)
+    .order("position", { ascending: true });
+
+  if (organizerRows?.length) {
+    for (const row of organizerRows as Array<{
+      profile_id: string | null;
+      luma_user_id: string | null;
+      profile: unknown;
+      luma_user: { id: string; luma_profile_url: string; name: string | null; avatar: string | null; social_links: unknown } | unknown[] | null;
+    }>) {
+      if (row.profile_id && row.profile) {
+        const p = Array.isArray(row.profile) ? row.profile[0] : row.profile;
+        const pr = p as { countries?: { name: string }[] | { name: string }; country?: string } & User;
+        if (pr) {
+          const countryName = Array.isArray(pr.countries) ? pr.countries[0]?.name : (pr.countries as { name: string })?.name;
+          organizersInternal.push({
+            ...pr,
+            country: countryName || pr.country,
+          } as User);
+        }
+      }
+      if (row.luma_user_id && row.luma_user) {
+        const u = Array.isArray(row.luma_user) ? row.luma_user[0] : row.luma_user;
+        const lu = u as { id: string; luma_profile_url: string; name: string | null; avatar: string | null; social_links: unknown };
+        if (lu)
+          organizersExternal.push({
+            id: lu.id,
+            name: lu.name ?? null,
+            avatar: lu.avatar ?? null,
+            profile_url: lu.luma_profile_url ?? "",
+            social_links: (lu.social_links as Record<string, string>) ?? {},
+          });
+      }
+    }
+  }
+
+  // Fallback: if no organizers but event has user owner, show owner as host
+  if (organizersInternal.length === 0 && organizersExternal.length === 0 && eventData.owner_type === "user" && eventData.owner_id) {
     const { data: ownerProfile } = await supabase
       .from("profiles")
       .select(`
@@ -189,31 +263,23 @@ export default async function EventPage({ params }: EventPageProps) {
         last_active_at,
         created_at,
         updated_at,
-        countries!fk_profiles_country_code (
-          name
-        )
+        countries!fk_profiles_country_code ( name )
       `)
       .eq("id", eventData.owner_id)
       .single();
-
     if (ownerProfile) {
-      const countryName = Array.isArray(ownerProfile.countries) 
-        ? ownerProfile.countries[0]?.name 
-        : (ownerProfile.countries as { name: string } | null | undefined)?.name;
-      
-      organizer = {
-        ...ownerProfile,
-        country: countryName || ownerProfile.country,
-      } as User;
+      const countryName = Array.isArray(ownerProfile.countries) ? ownerProfile.countries[0]?.name : (ownerProfile.countries as { name: string })?.name;
+      organizersInternal = [{ ...ownerProfile, country: countryName || ownerProfile.country } as User];
     }
   }
 
-  const event = eventData as Event;
+  const event: Event = {
+    ...eventData,
+    source: eventData.luma_event_id ? "external" : "solpoint",
+    organizers: { internal: organizersInternal, external: organizersExternal },
+  } as Event;
 
-  // Получаем участников события (только если авторизован)
-  let members: (EventMember & { user?: User })[] = [];
-  let friends: User[] = [];
-  let userFriendsGoing: User[] = [];
+  // Проверяем регистрацию текущего пользователя (только если авторизован)
   let isUserRegistered = false;
 
   if (authUser) {
@@ -227,96 +293,6 @@ export default async function EventPage({ params }: EventPageProps) {
 
     isUserRegistered = userMember?.status === "going";
 
-    // Получаем участников события
-    const { data: membersData } = await supabase
-      .from("event_members")
-      .select(`
-        *,
-        user:profiles!event_members_user_id_fkey(
-          id,
-          twitter_id,
-          twitter_handle,
-          twitter_name,
-          avatar_url,
-          bio,
-          country,
-          country_code,
-          city,
-          role,
-          is_open_to_meet,
-          subscription_tier,
-          is_verified,
-          wallet_address,
-          socials,
-          last_active_at,
-          created_at,
-          updated_at,
-          countries!fk_profiles_country_code (
-            name
-          )
-        )
-      `)
-      .eq("event_id", event.id)
-      .eq("status", "going")
-      .order("registered_at", { ascending: false })
-      .limit(20);
-
-    members = (membersData || []) as (EventMember & { user?: User })[];
-
-    // Получаем взаимных друзей авторизованного пользователя
-    // mutual_friends view содержит записи где user_id < friend_id, поэтому нужно проверять обе стороны
-    const { data: mutualFriendsData } = await supabase
-      .from("mutual_friends")
-      .select("user_id, friend_id")
-      .or(`user_id.eq.${authUser.id},friend_id.eq.${authUser.id}`);
-
-    // Получаем ID всех друзей
-    const friendIds: string[] = [];
-    if (mutualFriendsData) {
-      for (const mf of mutualFriendsData) {
-        if (mf.user_id === authUser.id) {
-          friendIds.push(mf.friend_id);
-        } else if (mf.friend_id === authUser.id) {
-          friendIds.push(mf.user_id);
-        }
-      }
-    }
-
-    // Загружаем профили друзей
-    if (friendIds.length > 0) {
-      const { data: friendsProfiles } = await supabase
-        .from("profiles")
-        .select(`
-          id,
-          twitter_id,
-          twitter_handle,
-          twitter_name,
-          avatar_url,
-          bio,
-          country,
-          country_code,
-          city,
-          role,
-          is_open_to_meet,
-          subscription_tier,
-          is_verified,
-          wallet_address,
-          socials,
-          last_active_at,
-          created_at,
-          updated_at,
-          countries!fk_profiles_country_code (
-            name
-          )
-        `)
-        .in("id", friendIds);
-
-      friends = (friendsProfiles || []) as User[];
-    }
-
-    // Находим друзей, которые идут на событие
-    const memberUserIds = new Set(members.map(m => m.user?.id).filter(Boolean));
-    userFriendsGoing = friends.filter(f => memberUserIds.has(f.id));
   }
 
   const formatDate = (startDate: string, endDate?: string) => {
@@ -355,191 +331,214 @@ export default async function EventPage({ params }: EventPageProps) {
     return `${startStr} ${startTimeStr} - ${endStr} ${endTimeStr}`;
   };
 
+  const kodeMonoStyle = { fontFamily: "var(--font-kode-mono), monospace" } as const;
+  const sectionHeadingStyle = {
+    fontFamily: "var(--font-display), sans-serif",
+    fontWeight: 700,
+    fontSize: 15,
+    lineHeight: "12px",
+    letterSpacing: "2px",
+  } as const;
 
   return (
     <>
       <Header />
       <EventViewTracker event={event} isVip={isVip} />
-      <main className="min-h-screen pt-16 pb-16 bg-[var(--color-background)]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Hero Section */}
-          <div className="relative h-64 md:h-96 rounded-xl overflow-hidden mb-8 bg-gradient-to-br from-[var(--color-primary)]/20 via-[var(--color-primary)]/10 to-[var(--color-secondary)]/20">
-            {event.image_url ? (
-              <Image
-                src={event.image_url}
-                alt={event.name}
-                fill
-                className="object-cover"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <Calendar className="w-24 h-24 text-[var(--color-text-primary)] opacity-60 stroke-[1.5]" />
-              </div>
-            )}
-            <div className="absolute top-4 left-4">
-              <EventBadges event={event} />
-            </div>
-          </div>
-
-          {/* Content Grid */}
-          <div className="grid lg:grid-cols-3 gap-8">
-            {/* Main Content */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* Title */}
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1">
-                  <h1 className="text-4xl font-bold text-[var(--color-text-primary)] mb-4">
-                    {event.name}
-                  </h1>
-                  {event.description && (
-                    <p className="text-lg text-[var(--color-text-secondary)] leading-relaxed">
-                      {event.description}
-                    </p>
-                  )}
-                </div>
-                <EventShareButton event={event} />
-              </div>
-
-                 {/* Details Card */}
-                 <Card variant="bordered">
-                <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">
-                  Event Details
-                </h2>
-                <div className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <Calendar className="w-5 h-5 text-[var(--color-primary)] mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm text-[var(--color-text-muted)] mb-1">Date & Time</p>
-                      <p className="text-[var(--color-text-primary)]">
-                        {formatDate(event.start_date, event.end_date)}
-                      </p>
-                    </div>
-                  </div>
-
-                  {event.is_paid !== undefined && (
-                    <div className="flex items-start gap-3">
-                      <Ticket className="w-5 h-5 text-[var(--color-primary)] mt-0.5 flex-shrink-0" />
-                      <div>
-                        <p className="text-sm text-[var(--color-text-muted)] mb-1">Tickets</p>
-                        <p className="text-[var(--color-text-primary)]">
-                          {event.is_paid ? `${event.price_sol || 0} SOL` : "Free"}
-                        </p>
-                      </div>
+      <main className="min-h-screen bg-black pb-16 pt-20 text-white">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="w-full border-x border-white/10 bg-black">
+            <div className="grid grid-cols-1 min-[980px]:grid-cols-[minmax(0,58fr)_minmax(0,42fr)] min-[1200px]:grid-cols-[minmax(0,599px)_minmax(0,601px)]">
+              <section className="border-b border-white/10 px-6 pb-10 pt-8 sm:px-10 min-[980px]:min-h-[969px] min-[980px]:border-b-0 min-[980px]:border-r min-[980px]:border-r-white/10 min-[980px]:px-8 min-[1200px]:px-[45px]">
+                <div className="relative mb-8 h-[220px] overflow-hidden rounded-[6px] border border-white/10 bg-[#121212] sm:h-[280px]">
+                  {event.image_url ? (
+                    <Image
+                      src={event.image_url}
+                      alt={event.name}
+                      fill
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center">
+                      <Calendar className="h-24 w-24 stroke-[1.5] text-white/45" />
                     </div>
                   )}
-
-                  <div className="flex items-start gap-3">
-                    <Globe className="w-5 h-5 text-[var(--color-primary)] mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm text-[var(--color-text-muted)] mb-1">Visibility</p>
-                      <p className="text-[var(--color-text-primary)] capitalize">
-                        {event.visibility}
-                      </p>
-                    </div>
+                  <div className="absolute left-3 top-3">
+                    <EventBadges event={event} />
                   </div>
-
-                  <div className="flex items-start gap-3">
-                    <MapPin className="w-5 h-5 text-[var(--color-primary)] mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm text-[var(--color-text-muted)] mb-1">Location</p>
-                      <p className="text-[var(--color-text-primary)]">
-                        {event.venue_name && (
-                          <>
-                            <span className="font-semibold">{event.venue_name}</span>
-                            <br />
-                          </>
-                        )}
-                        {event.address && (
-                          <>
-                            {event.address}
-                            <br />
-                          </>
-                        )}
-                        {event.city}, {event.country}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Social Links */}
-                  {(event.socials?.twitter || event.socials?.instagram || event.socials?.facebook || event.socials?.website || event.socials?.luma) && (
-                    <div className="flex items-start gap-3">
-                      <LinkIcon className="w-5 h-5 text-[var(--color-primary)] mt-0.5 flex-shrink-0" />
-                      <div>
-                        <p className="text-sm text-[var(--color-text-muted)] mb-1">Links</p>
-                        <div className="flex items-center gap-3 flex-wrap">
-                          {event.socials?.twitter && (
-                            <EventSocialLink
-                              event={event}
-                              platform="twitter"
-                              href={event.socials.twitter}
-                            />
-                          )}
-                          {event.socials?.instagram && (
-                            <EventSocialLink
-                              event={event}
-                              platform="instagram"
-                              href={event.socials.instagram}
-                            />
-                          )}
-                          {event.socials?.facebook && (
-                            <EventSocialLink
-                              event={event}
-                              platform="facebook"
-                              href={event.socials.facebook}
-                            />
-                          )}
-                          {event.socials?.website && (
-                            <EventSocialLink
-                              event={event}
-                              platform="website"
-                              href={event.socials.website}
-                            />
-                          )}
-                          {event.socials?.luma && (
-                            <EventSocialLink
-                              event={event}
-                              platform="luma"
-                              href={event.socials.luma}
-                            />
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
                 </div>
 
-                {/* Attend/Buy Tickets Button */}
-                <div className="mt-6">
-                  <LumaAttendButtonWrapper
-                    eventSlug={event.slug || slug}
-                    lumaLink={event.luma_link}
-                    isPaid={event.is_paid || false}
-                    isRegistered={isUserRegistered}
-                    priceSol={event.price_sol}
-                  />
-                </div>
-              </Card>
-
-              {/* Host Card */}
-              {organizer && (
-                <div>
-                  <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">
-                    Hosts
-                  </h2>
-                  <div className="w-fit max-w-md">
-                    <EventHostCard
-                      user={organizer}
-                      isVip={isVip}
-                      currentUserId={authUser?.id}
+                <div className="space-y-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <h1 className="min-w-0 text-3xl font-semibold text-white sm:text-4xl" style={kodeMonoStyle}>
+                      {event.name}
+                    </h1>
+                    <EventShareButton
+                      event={event}
+                      variant="outline"
+                      className="h-[44px] w-[44px] shrink-0 rounded-[5px] border-white/30 bg-[#121212] px-0 text-white hover:bg-[#2a2a2a]"
                     />
                   </div>
+
+                  <Card variant="bordered" className="rounded-[6px] border-white/10 bg-[#121212] p-5 sm:p-6">
+                    <h2 className="mb-5 uppercase text-[#adaaaa]" style={sectionHeadingStyle}>
+                      event details
+                    </h2>
+                    <div className="space-y-4">
+                      <div className="flex items-start gap-3">
+                        <Calendar className="mt-0.5 h-5 w-5 shrink-0 text-[#14f195]" />
+                        <div>
+                          <p className="mb-1 text-sm text-white/55" style={kodeMonoStyle}>Date & Time</p>
+                          <p className="text-white/90">
+                            {formatDate(event.start_date, event.end_date)}
+                          </p>
+                        </div>
+                      </div>
+
+                      {event.is_paid !== undefined && (
+                        <div className="flex items-start gap-3">
+                          <Ticket className="mt-0.5 h-5 w-5 shrink-0 text-[#14f195]" />
+                          <div>
+                            <p className="mb-1 text-sm text-white/55" style={kodeMonoStyle}>Tickets</p>
+                            <p className="text-white/90">
+                              {event.is_paid ? `${event.price_sol || 0} SOL` : "Free"}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex items-start gap-3">
+                        <Globe className="mt-0.5 h-5 w-5 shrink-0 text-[#14f195]" />
+                        <div>
+                          <p className="mb-1 text-sm text-white/55" style={kodeMonoStyle}>Visibility</p>
+                          <p className="capitalize text-white/90">
+                            {event.visibility}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3">
+                        <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-[#14f195]" />
+                        <div>
+                          <p className="mb-1 text-sm text-white/55" style={kodeMonoStyle}>Location</p>
+                          <p className="text-white/90 break-words [overflow-wrap:anywhere]">
+                            {event.venue_name && (
+                              <>
+                                <span className="font-semibold">{event.venue_name}</span>
+                                <br />
+                              </>
+                            )}
+                            {event.address && (
+                              <>
+                                {event.address}
+                                <br />
+                              </>
+                            )}
+                            {event.city}, {event.country}
+                          </p>
+                        </div>
+                      </div>
+
+                      {(event.socials?.twitter || event.socials?.instagram || event.socials?.facebook || event.socials?.website || event.socials?.luma) && (
+                        <div className="flex items-start gap-3">
+                          <LinkIcon className="mt-0.5 h-5 w-5 shrink-0 text-[#14f195]" />
+                          <div>
+                            <p className="mb-1 text-sm text-white/55" style={kodeMonoStyle}>Links</p>
+                            <div className="flex flex-wrap items-center gap-3">
+                              {event.socials?.twitter && (
+                                <EventSocialLink
+                                  event={event}
+                                  platform="twitter"
+                                  href={event.socials.twitter}
+                                />
+                              )}
+                              {event.socials?.instagram && (
+                                <EventSocialLink
+                                  event={event}
+                                  platform="instagram"
+                                  href={event.socials.instagram}
+                                />
+                              )}
+                              {event.socials?.facebook && (
+                                <EventSocialLink
+                                  event={event}
+                                  platform="facebook"
+                                  href={event.socials.facebook}
+                                />
+                              )}
+                              {event.socials?.website && (
+                                <EventSocialLink
+                                  event={event}
+                                  platform="website"
+                                  href={event.socials.website}
+                                />
+                              )}
+                              {event.socials?.luma && (
+                                <EventSocialLink
+                                  event={event}
+                                  platform="luma"
+                                  href={event.socials.luma}
+                                />
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mt-6">
+                      <LumaAttendButtonWrapper
+                        eventSlug={event.slug || slug}
+                        lumaLink={event.luma_link}
+                        isPaid={event.is_paid || false}
+                        isRegistered={isUserRegistered}
+                        priceSol={event.price_sol}
+                      />
+                    </div>
+                  </Card>
+
+                  {event.description && (
+                    <div className="rounded-[6px] border border-white/10 bg-[#121212] p-5 sm:p-6">
+                      <h2 className="mb-5 uppercase text-[#adaaaa]" style={sectionHeadingStyle}>
+                        about
+                      </h2>
+                      <p className="whitespace-pre-line text-base leading-relaxed text-white/80 sm:text-lg">
+                        {event.description}
+                      </p>
+                    </div>
+                  )}
+
+                  {((event.organizers?.internal?.length ?? 0) + (event.organizers?.external?.length ?? 0)) > 0 && (
+                    <div>
+                      <h2 className="mb-5 uppercase text-[#adaaaa]" style={sectionHeadingStyle}>
+                        hosts
+                      </h2>
+                      <div className="flex flex-wrap gap-4">
+                        {event.organizers?.internal?.map((user) => (
+                          <div key={user.id} className="w-fit max-w-md">
+                            <EventHostCard
+                              user={user}
+                              isVip={isVip}
+                              currentUserId={authUser?.id}
+                            />
+                          </div>
+                        ))}
+                        {event.organizers?.external?.map((ext) => (
+                          <div key={ext.id} className="w-fit max-w-md">
+                            <EventHostCard
+                              externalUser={ext}
+                              isVip={isVip}
+                              currentUserId={authUser?.id}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
+              </section>
 
-            </div>
-
-            {/* Sidebar */}
-            <div className="space-y-6">
+              <aside className="px-6 pb-10 pt-8 sm:px-10 min-[980px]:px-8 min-[1200px]:px-[50px]">
+                <div className="mx-auto w-full max-w-[560px] min-[980px]:mx-0">
               {/* Register Card */}
               {/* TODO: Temporarily commented out - join/attend functionality */}
               {/* <Card variant="bordered">
@@ -582,7 +581,14 @@ export default async function EventPage({ params }: EventPageProps) {
               <EntityMembersWidget
                 entityType="event"
                 entityId={event.id}
+                eventStartAt={event.start_date ?? null}
+                eventTimezone={event.timezone ?? null}
+                eventLatitude={event.latitude ?? null}
+                eventLongitude={event.longitude ?? null}
+                isUserRegistered={isUserRegistered}
               />
+                </div>
+              </aside>
             </div>
           </div>
         </div>
@@ -591,4 +597,3 @@ export default async function EventPage({ params }: EventPageProps) {
     </>
   );
 }
-

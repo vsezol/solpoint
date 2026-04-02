@@ -1,10 +1,26 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceRoleClient } from "@/lib/supabase/server";
+import { unstable_cache } from "next/cache";
 
-/**
- * GET /api/countries/[code]
- * Получить страну по коду
- */
+const getCountryByCode = unstable_cache(
+  async (code: string) => {
+    const supabase = createServiceRoleClient();
+    const { data, error } = await supabase
+      .from("countries")
+      .select("code, name")
+      .eq("code", code)
+      .single();
+
+    if (error) {
+      if (error.code === "PGRST116") return null;
+      throw error;
+    }
+    return data;
+  },
+  ["country-by-code"],
+  { revalidate: 3600, tags: ["countries"] }
+);
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ code: string }> }
@@ -19,36 +35,17 @@ export async function GET(
       );
     }
 
-    const supabase = await createClient();
+    const country = await getCountryByCode(code.toUpperCase());
 
-    const { data, error } = await supabase
-      .from("countries")
-      .select("code, name")
-      .eq("code", code.toUpperCase())
-      .single();
-
-    if (error) {
-      if (error.code === "PGRST116") {
-        // Not found
-        return NextResponse.json(
-          { error: "Country not found" },
-          { status: 404 }
-        );
-      }
-      console.error("Error fetching country:", error);
-      return NextResponse.json(
-        { error: error.message || "Failed to fetch country" },
-        { status: 500 }
-      );
+    if (!country) {
+      return NextResponse.json({ error: "Country not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ country: data });
+    return NextResponse.json({ country });
   } catch (error: any) {
-    console.error("Get country error:", error);
     return NextResponse.json(
       { error: error.message || "Failed to get country" },
       { status: 500 }
     );
   }
 }
-

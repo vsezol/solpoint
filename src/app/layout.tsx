@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Space_Grotesk, JetBrains_Mono, Inter } from "next/font/google";
+import localFont from "next/font/local";
+import { headers } from "next/headers";
 import "./globals.css";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/components/providers/auth-provider";
@@ -7,6 +9,7 @@ import { QueryProvider } from "@/components/providers/query-provider";
 import { WalletContextProvider } from "@/components/providers/wallet-provider";
 import { GoogleAnalytics } from "@/components/analytics/google-analytics";
 import { IntentChecker } from "@/components/subscription/intent-checker";
+import { MobileNav } from "@/components/layout/mobile-nav";
 
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-display",
@@ -17,6 +20,24 @@ const spaceGrotesk = Space_Grotesk({
 const jetbrainsMono = JetBrains_Mono({
   variable: "--font-mono",
   subsets: ["latin"],
+  display: "swap",
+});
+
+const kodeMono = localFont({
+  src: "../../public/KodeMono-VariableFont_wght.ttf",
+  variable: "--font-kode-mono",
+  display: "swap",
+});
+
+const iceland = localFont({
+  src: "../../public/Iceland-Regular.ttf",
+  variable: "--font-iceland",
+  display: "swap",
+});
+
+const lalezar = localFont({
+  src: "../../public/Lalezar-Regular.ttf",
+  variable: "--font-lalezar",
   display: "swap",
 });
 
@@ -41,6 +62,12 @@ export const metadata: Metadata = {
     "blockchain",
   ],
   authors: [{ name: "SolPoint Team" }],
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "SolPoint",
+  },
   openGraph: {
     title: "SolPoint - The Global Solana Community Map",
     description:
@@ -55,29 +82,35 @@ export const metadata: Metadata = {
       "Connect with Solana enthusiasts, find local hubs, and discover events worldwide.",
   },
   icons: {
-    icon: "/logo_solpoint.svg",
-    shortcut: "/logo_solpoint.svg",
-    apple: "/logo_solpoint.svg",
+    apple: "/apple-touch-icon.png",
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const nonce = (await headers()).get("x-nonce") ?? "";
+
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
+      <head>
+        <meta name="theme-color" content="#0a0f14" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+      </head>
       <body
-        className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} ${inter.variable} antialiased`}
+        className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} ${inter.variable} ${kodeMono.variable} ${iceland.variable} ${lalezar.variable} antialiased`}
       >
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
-          <GoogleAnalytics />
+          <GoogleAnalytics nonce={nonce} />
           <QueryProvider>
             <WalletContextProvider>
               <AuthProvider>
                 <IntentChecker />
                 {children}
+                <MobileNav />
               </AuthProvider>
             </WalletContextProvider>
           </QueryProvider>

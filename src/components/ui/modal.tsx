@@ -12,6 +12,7 @@ export interface ModalProps {
   className?: string;
   overlayClassName?: string;
   showCloseButton?: boolean;
+  closeButtonClassName?: string;
   closeOnOverlayClick?: boolean;
   closeOnEscape?: boolean;
   size?: "sm" | "md" | "lg" | "xl" | "full" | "auto";
@@ -38,6 +39,7 @@ export function Modal({
   className,
   overlayClassName,
   showCloseButton = true,
+  closeButtonClassName,
   closeOnOverlayClick = true,
   closeOnEscape = true,
   size = "md",
@@ -145,7 +147,10 @@ export function Modal({
             {showCloseButton && (
               <button
                 onClick={onClose}
-                className="absolute top-4 right-4 z-10 p-1.5 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface-hover)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface)]"
+                className={cn(
+                  "absolute top-4 right-4 z-10 p-1.5 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface-hover)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface)]",
+                  closeButtonClassName
+                )}
                 aria-label="Close modal"
               >
                 <X className="w-5 h-5" />

@@ -1,5 +1,21 @@
+import type {
+  FriendshipStatus,
+} from "./profile";
+
 // User types
-export type UserRole = "degen" | "developer" | "trader" | "investor" | "designer" | "founder" | "other";
+export type UserRole =
+  | "marketing_or_bd"
+  | "non_tech_founder"
+  | "tech_founder"
+  | "designer_ui_ux"
+  | "graphics_designer"
+  | "vc"
+  | "angel_investor"
+  | "artist"
+  | "influencer"
+  | "developer"
+  | "validator"
+  | "other";
 export type SubscriptionTier = "free" | "vip";
 
 // Country type
@@ -16,10 +32,14 @@ export interface User {
   avatar_url: string;
   banner_url?: string; // URL баннера профиля из Supabase Storage
   bio?: string;
+  /** Long-form profile description (separate from short bio) */
+  about?: string | null;
   country?: string; // @deprecated Use country_code instead
   country_code?: string; // ISO 3166-1 alpha-2 (e.g., "US", "RU")
   city?: string; // Max 150 characters
-  role?: UserRole;
+  role?: UserRole | null;
+  interest_slugs?: string[];
+  skill_slugs?: string[];
   is_open_to_meet: boolean;
   subscription_tier: SubscriptionTier;
   is_verified: boolean;
@@ -40,6 +60,40 @@ export interface User {
   last_active_at: string;
   created_at: string;
   updated_at: string;
+}
+
+/** Skill row from profile_skills */
+export interface ProfileSkillItem {
+  slug: string;
+  label: string;
+  category: string;
+  sortOrder: number;
+}
+
+/** Interest row from interests/profile_interests */
+export interface Interest {
+  id: string;
+  slug: string;
+  name: string;
+}
+
+export interface ProfileInterest {
+  id: string;
+  user_id: string;
+  interest_id: string;
+  created_at?: string;
+  interest?: Interest;
+}
+
+/** Experience row from profile_experience */
+export interface ProfileExperienceItem {
+  id: string;
+  title: string;
+  company: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  description: string | null;
+  sortOrder: number;
 }
 
 export interface UserProfile extends User {
@@ -82,6 +136,7 @@ export interface Event {
   registration_deadline?: string; // Дедлайн регистрации
   is_online: boolean; // Онлайн/офлайн (гибрид пока не делаем)
   is_recommended?: boolean; // Рекомендованное событие (показывается в приоритете)
+  is_major?: boolean; // Ручная пометка для секции "Major events"
   socials?: {
     twitter?: string;
     instagram?: string;
@@ -98,15 +153,29 @@ export interface Event {
   };
   // Унифицированные поля
   owner_type: OwnerType;
-  owner_id: string;
+  owner_id: string | null; // null для external (unclaimed) событий
+  /** 'solpoint' = создано у нас, 'external' = импорт (напр. из Luma); для UI, не раскрывает источник */
+  source?: "solpoint" | "external";
+  luma_event_id?: string | null; // задано, когда событие синкано из Luma
   // Связанные данные (при загрузке с JOIN)
   owner_user?: User;
   owner_hub?: Hub;
   owner_community?: Community;
   owner_project?: Project;
   owner_workspace?: Workspace;
+  /** Organizers (hosts) from event_organizers: internal = our users, external = e.g. Luma */
+  organizers?: { internal: User[]; external: ExternalUser[] };
   created_at: string;
   updated_at?: string;
+}
+
+/** External user (e.g. from Luma); in future may include other sources */
+export interface ExternalUser {
+  id: string;
+  name: string | null;
+  avatar: string | null;
+  profile_url: string;
+  social_links: Record<string, string>;
 }
 
 // Участник ивента
@@ -280,13 +349,32 @@ export interface MapFilters {
   showProjects?: boolean;
   showWorkspaces?: boolean;
   contentType?: ContentTypeFilter; // Переключатель: all | users | events | hubs | communities | projects | workspaces
+  /** Profile interest slugs (same taxonomy as profile editor); OR match when multiple */
+  interestSlugs?: string[];
   userRoles?: UserRole[];
   eventType?: EventType;
+  /** v2 semantic filter: matching by role/interests/skills/shared events */
+  bestMatches?: boolean;
+  /** v2 semantic filter: about + country + skills + interest + role + experience */
+  completeProfiles?: boolean;
+  /** Legacy map filter (kept for backward compatibility). */
   openToMeet?: boolean;
+  /** Legacy map filter (kept for backward compatibility). */
   activeOnly?: boolean;
   country?: string;
   countryCode?: string;
   city?: string;
+}
+
+export interface AttendeeFilterState {
+  selectedEventId?: string;
+  roles: UserRole[];
+  countryCode?: string;
+  interestSlugs: string[];
+  bestMatches: boolean;
+  completeProfiles: boolean;
+  page: number;
+  pageSize: number;
 }
 
 // Message types
@@ -304,6 +392,58 @@ export interface Conversation {
   participant: User;
   last_message?: Message;
   unread_count: number;
+}
+
+export type MeetingRequestStatus = "pending" | "approved" | "rejected";
+export type MeetingRequestEventType = "created" | "approved" | "rejected" | "rescheduled";
+
+export interface MeetingRequestProposal {
+  id: string;
+  meeting_request_id: string;
+  proposed_by_user_id: string;
+  start_at: string;
+  end_at: string;
+  timezone: string;
+  message?: string | null;
+  place?: string | null;
+  created_at: string;
+}
+
+export interface MeetingRequestEvent {
+  id: string;
+  meeting_request_id: string;
+  actor_id: string;
+  target_user_id: string;
+  event_type: MeetingRequestEventType;
+  proposal_id?: string | null;
+  is_read: boolean;
+  created_at: string;
+}
+
+export interface MeetingRequest {
+  id: string;
+  event_id: string;
+  requester_id: string;
+  responder_id: string;
+  status: MeetingRequestStatus;
+  current_proposal_id?: string | null;
+  awaiting_user_id: string;
+  last_action_by: string;
+  approved_at?: string | null;
+  rejected_at?: string | null;
+  created_at: string;
+  updated_at: string;
+  current_proposal?: MeetingRequestProposal | null;
+  counterparty?: Pick<User, "id" | "twitter_handle" | "twitter_name" | "avatar_url" | "is_verified">;
+  event?: Pick<Event, "id" | "name" | "slug" | "start_date" | "end_date" | "timezone" | "longitude">;
+  needs_action?: boolean;
+  unread_events_count?: number;
+}
+
+export interface MeetingRequestCounts {
+  action_needed_count: number;
+  incoming_pending_count: number;
+  incoming_reschedule_count: number;
 }
 
 // Auth types
@@ -331,6 +471,33 @@ export interface GeoLocation {
   city?: string; // Max 150 characters
   latitude: number;
   longitude: number;
+}
+
+export type QrCodeType = "profile" | "event_checkin";
+
+export interface ProfileQrCode {
+  id: string;
+  publicToken: string;
+  imageUrl: string;
+  scanUrl: string;
+  createdAt: string;
+}
+
+export interface ProfileQrScanResponse {
+  scanId: string;
+  requiresAuth: boolean;
+  relationship: FriendshipStatus;
+  isOwnQr: boolean;
+}
+
+export interface ProfileQrConnectResponse {
+  relationship: FriendshipStatus;
+  action:
+    | "request_created"
+    | "request_completed_mutual"
+    | "already_pending"
+    | "already_connected";
+  scanId?: string;
 }
 
 // Invite types
@@ -361,7 +528,7 @@ export interface EntitySubmission {
   entity_type: EntityType;
   submitter_id: string;
   submitter?: User; // При загрузке с JOIN
-  entity_data: Record<string, any>; // JSONB данные сущности
+  entity_data: Record<string, unknown>; // JSONB данные сущности
   contacts: {
     email?: string;
     telegram?: string;
@@ -382,7 +549,7 @@ export interface EntitySubmission {
 // Типы для создания заявки
 export interface CreateSubmissionRequest {
   entity_type: EntityType;
-  entity_data: Record<string, any>;
+  entity_data: Record<string, unknown>;
   contacts: {
     email?: string;
     telegram?: string;
@@ -470,3 +637,10 @@ export interface CreatePaymentResponse {
   expires_at?: string;
 }
 
+export type {
+  FriendshipStatus,
+  UsersFilterType,
+  DirectoryUser,
+  ProfileAffiliation,
+  ProfileAffiliationType,
+} from "./profile";

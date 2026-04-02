@@ -2,12 +2,12 @@
 
 import { Card } from "@/components/ui";
 import { MembersList } from "@/components/ui/members-list";
+import { getEntityLink } from "@/lib/utils/entity-links";
 import type { User } from "@/types";
 
 interface EntityMembersCardProps {
   members: (User & { joined_at?: string })[];
   friends?: User[];
-  isVip: boolean;
   authUser: { id: string } | null;
   entitySlug: string;
   entityType: "hub" | "community" | "project" | "workspace";
@@ -17,26 +17,16 @@ interface EntityMembersCardProps {
 export function EntityMembersCard({ 
   members, 
   friends = [],
-  isVip, 
   authUser, 
   entitySlug,
   entityType,
   entityName 
 }: EntityMembersCardProps) {
-  const getEntityPath = (slug: string) => {
-    switch (entityType) {
-      case "hub":
-        return `/hubs/${slug}`;
-      case "community":
-        return `/communities/${slug}`;
-      case "project":
-        return `/projects/${slug}`;
-      case "workspace":
-        return `/workspaces/${slug}`;
-      default:
-        return `/${entityType}s/${slug}`;
-    }
-  };
+  const entityPath = getEntityLink({
+    type: entityType,
+    slug: entitySlug,
+    id: entitySlug,
+  });
 
   return (
     <Card variant="bordered">
@@ -56,7 +46,7 @@ export function EntityMembersCard({
             isVerified: member.is_verified,
           }))}
           showAllText="Show all members"
-          showAllHref={`${getEntityPath(entitySlug)}?tab=members`}
+          showAllHref={`${entityPath}?tab=members`}
           emptyText="No members yet"
           entitySlug={entitySlug}
           entityType={entityType}
@@ -76,7 +66,7 @@ export function EntityMembersCard({
               isVerified: friend.is_verified,
             }))}
             showAllText="Show all frens"
-            showAllHref={`${getEntityPath(entitySlug)}?tab=members`}
+            showAllHref={`${entityPath}?tab=members`}
             emptyText="No friends yet"
             entitySlug={entitySlug}
             entityType={entityType}
@@ -87,4 +77,3 @@ export function EntityMembersCard({
     </Card>
   );
 }
-

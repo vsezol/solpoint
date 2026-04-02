@@ -95,6 +95,38 @@ export default async function AdminPage() {
                 </p>
               </a>
 
+              {/* Luma Scraper (Apify) */}
+              <a
+                href="/admin/luma-scraper"
+                className="bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg p-6 hover:border-[var(--color-primary)] transition-colors cursor-pointer"
+              >
+                <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">
+                  Luma Scraper
+                </h2>
+                <p className="text-[var(--color-text-secondary)] mb-2">
+                  Run Apify Luma scraper: keywords, calendars, limits. Results saved to local JSON.
+                </p>
+                <p className="text-sm text-[var(--color-primary)]">
+                  Open scraper →
+                </p>
+              </a>
+
+              {/* Major events manager */}
+              <a
+                href="/admin/events-major"
+                className="bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg p-6 hover:border-[var(--color-primary)] transition-colors cursor-pointer"
+              >
+                <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">
+                  Major Events Manager
+                </h2>
+                <p className="text-[var(--color-text-secondary)] mb-2">
+                  Manage major/non-major feeds with search, filters, and bulk updates.
+                </p>
+                <p className="text-sm text-[var(--color-primary)]">
+                  Open manager →
+                </p>
+              </a>
+
               {/* Статистика */}
               <div className="bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg p-6">
                 <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">
@@ -116,14 +148,20 @@ export default async function AdminPage() {
               </div>
 
               {/* События */}
-              <div className="bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg p-6">
+              <a
+                href="/admin/events/create"
+                className="bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg p-6 hover:border-[var(--color-primary)] transition-colors cursor-pointer"
+              >
                 <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">
                   События
                 </h2>
-                <p className="text-[var(--color-text-secondary)]">
-                  Управление событиями
+                <p className="text-[var(--color-text-secondary)] mb-2">
+                  Создание событий вручную (без модерации)
                 </p>
-              </div>
+                <p className="text-sm text-[var(--color-primary)]">
+                  Create event →
+                </p>
+              </a>
 
               {/* Хабы */}
               <div className="bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg p-6">
@@ -142,4 +180,3 @@ export default async function AdminPage() {
     </>
   );
 }
-

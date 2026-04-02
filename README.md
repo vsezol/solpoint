@@ -15,6 +15,9 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
 # For local development use: http://localhost:3000
 # For production use your domain: https://app.example.com
 NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+# Allowed mobile deep-link schemes for OAuth callback redirects (comma-separated)
+MOBILE_DEEP_LINK_SCHEMES=solpointmobile
 ```
 
 ### Running the Development Server
@@ -63,6 +66,7 @@ Before deploying, make sure to add the following environment variables in your V
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
 NEXT_PUBLIC_APP_URL=https://your-domain.vercel.app
+MOBILE_DEEP_LINK_SCHEMES=solpointmobile
 ```
 
 **Optional:**

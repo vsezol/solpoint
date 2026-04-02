@@ -1,4 +1,5 @@
 "use client";
+// LEGACY ADAPTER: Удалить после ручного тестирования.
 
 import { Card, Avatar } from "@/components/ui";
 import Link from "next/link";
@@ -51,4 +52,3 @@ export function FriendsSection({ friends, isOwnProfile }: FriendsSectionProps) {
     </Card>
   );
 }
-

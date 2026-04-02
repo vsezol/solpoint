@@ -269,7 +269,7 @@ export default async function DashboardPage() {
                             </h3>
                           </div>
                           {event.description && (
-                            <p className="text-sm text-[var(--color-text-secondary)] line-clamp-2 mb-3 ml-8">
+                            <p className="text-sm text-[var(--color-text-secondary)] line-clamp-2 mb-3 ml-8 whitespace-pre-line">
                               {event.description}
                             </p>
                           )}

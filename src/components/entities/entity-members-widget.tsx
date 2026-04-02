@@ -1,27 +1,44 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Card, Avatar, ProSubscriptionModal, AuthRequiredModal, Modal, ModalHeader, ModalTitle, ModalContent, UserListItem } from "@/components/ui";
+import { Card, Avatar, ProSubscriptionModal, AuthRequiredModal, Modal, ModalHeader, ModalTitle, ModalDescription, ModalContent, ModalFooter, Button, UserListItem } from "@/components/ui";
+import { UserListModal } from "@/components/users/user-list-modal";
 import { useAuth } from "@/hooks/use-auth";
-import { useChat } from "@/hooks/use-chat";
+import { useRouter } from "next/navigation";
+import { Twitter, Linkedin, Instagram, Facebook, Globe } from "lucide-react";
+import type { ExternalUser } from "@/types";
+import type { DirectoryUser, FriendshipStatus } from "@/types/profile";
+import {
+  addFriend,
+  getFriendStatuses,
+  mapFollowStatusesToFriendshipStatuses,
+} from "@/lib/api/friends";
+import { isMeetingRequestsEnabled } from "@/lib/meeting-requests";
+import { trackEvent } from "@/lib/analytics";
+import { MeetingRequestForm } from "@/components/meeting-request-form";
+
+const EXTERNAL_SOCIAL_ICONS: Record<string, { Icon: React.ComponentType<{ className?: string; size?: number }>; label: string }> = {
+  twitter: { Icon: Twitter, label: "Twitter" },
+  linkedin: { Icon: Linkedin, label: "LinkedIn" },
+  instagram: { Icon: Instagram, label: "Instagram" },
+  facebook: { Icon: Facebook, label: "Facebook" },
+  website: { Icon: Globe, label: "Website" },
+};
 
 type EntityType = "hub" | "community" | "project" | "workspace" | "event";
 
-interface Member {
-  id: string;
-  avatar_url?: string | null;
-  name: string;
-  twitter_handle?: string;
-  isVip?: boolean;
-  isVerified?: boolean;
-  isOwner?: boolean;
-  joinedAt?: string;
-}
+type Member = DirectoryUser;
 
 interface EntityMembersWidgetProps {
   entityType: EntityType;
   entityId: string; // UUID of the entity
   className?: string;
+  eventStartAt?: string | null;
+  eventTimezone?: string | null;
+  eventLatitude?: number | null;
+  eventLongitude?: number | null;
+  /** When entityType is "event": whether the current user is registered (going) for this event */
+  isUserRegistered?: boolean;
 }
 
 // Тексты для разных типов сущностей
@@ -97,10 +114,15 @@ export function EntityMembersWidget({
   entityType,
   entityId,
   className,
+  eventStartAt = null,
+  eventTimezone = null,
+  eventLatitude = null,
+  eventLongitude = null,
+  isUserRegistered = true,
 }: EntityMembersWidgetProps) {
   const { user, isAuthenticated } = useAuth();
+  const router = useRouter();
   const isVip = user?.subscription_tier === "vip";
-  const { openChat } = useChat();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -110,6 +132,7 @@ export function EntityMembersWidget({
     members: Member[];
     friends: Member[];
     team: Member[];
+    external?: ExternalUser[];
   } | null>(null);
 
   const [showProModal, setShowProModal] = useState(false);
@@ -118,11 +141,19 @@ export function EntityMembersWidget({
   const [showFriendsModal, setShowFriendsModal] = useState(false);
   const [allMembers, setAllMembers] = useState<Member[]>([]);
   const [allFriends, setAllFriends] = useState<Member[]>([]);
-  const [friendStatuses, setFriendStatuses] = useState<Record<string, "none" | "pending_sent" | "pending_received" | "accepted" | "blocked">>({});
+  const [allExternal, setAllExternal] = useState<ExternalUser[]>([]);
+  const [friendStatuses, setFriendStatuses] = useState<Record<string, FriendshipStatus>>({});
   const [sendingFriendRequest, setSendingFriendRequest] = useState<Record<string, boolean>>({});
-  const [creatingChat, setCreatingChat] = useState<Record<string, boolean>>({});
+  const [creatingChat] = useState<Record<string, boolean>>({});
+  const [isMeetingModalOpen, setIsMeetingModalOpen] = useState(false);
+  const [meetingTarget, setMeetingTarget] = useState<Member | null>(null);
+  const [showAttendRequiredModal, setShowAttendRequiredModal] = useState(false);
+  const [attendRequiredTarget, setAttendRequiredTarget] = useState<Member | null>(null);
+  const [attendLoading, setAttendLoading] = useState(false);
+  const [attendError, setAttendError] = useState<string | null>(null);
 
   const texts = ENTITY_TEXTS[entityType];
+  const meetingRequestsEnabled = isMeetingRequestsEnabled();
 
   // Функция загрузки данных
   const loadData = useCallback(async () => {
@@ -198,38 +229,35 @@ export function EntityMembersWidget({
       setShowFriendsModal(true);
     } else {
       setAllMembers(data?.members || []);
+      setAllExternal(data?.external || []);
       setShowMembersModal(true);
     }
   };
 
   // Загружаем статусы дружбы для пользователей в модальном окне
   useEffect(() => {
-    if ((showMembersModal || showFriendsModal) && isAuthenticated && user) {
-      const userIds = showMembersModal
-        ? allMembers.map((m) => m.id)
-        : allFriends.map((f) => f.id);
-
-      Promise.all(
-        userIds.map(async (userId) => {
-          try {
-            const response = await fetch(`/api/friends?user_id=${userId}`);
-            if (response.ok) {
-              const result = await response.json();
-              return { userId, status: result.data?.status || "none" };
-            }
-          } catch (error) {
-            console.error(`Error fetching friend status for ${userId}:`, error);
-          }
-          return { userId, status: "none" as const };
-        })
-      ).then((results) => {
-        const statusMap: Record<string, "none" | "pending_sent" | "pending_received" | "accepted" | "blocked"> = {};
-        results.forEach(({ userId, status }) => {
-          statusMap[userId] = status;
-        });
-        setFriendStatuses(statusMap);
-      });
+    if (!(showMembersModal || showFriendsModal) || !isAuthenticated || !user) {
+      return;
     }
+
+    const userIds = showMembersModal ? allMembers.map((m) => m.id) : allFriends.map((f) => f.id);
+    if (userIds.length === 0) {
+      setFriendStatuses({});
+      return;
+    }
+
+    getFriendStatuses(userIds)
+      .then(({ statuses }) => {
+        setFriendStatuses(mapFollowStatusesToFriendshipStatuses(statuses));
+      })
+      .catch((error) => {
+        console.error("Error fetching friend statuses:", error);
+        const fallback = userIds.reduce<Record<string, FriendshipStatus>>((acc, userId) => {
+          acc[userId] = "none";
+          return acc;
+        }, {});
+        setFriendStatuses(fallback);
+      });
   }, [showMembersModal, showFriendsModal, allMembers, allFriends, isAuthenticated, user]);
 
   // Отправка запроса на добавление в друзья
@@ -241,43 +269,12 @@ export function EntityMembersWidget({
 
     setSendingFriendRequest((prev) => ({ ...prev, [userId]: true }));
     try {
-      const response = await fetch("/api/friends", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ friend_id: userId }),
-      });
-
-      if (response.ok) {
-        // Обновляем статус
-        setFriendStatuses((prev) => ({ ...prev, [userId]: "pending_sent" }));
-      }
+      const response = await addFriend(userId);
+      setFriendStatuses((prev) => ({ ...prev, [userId]: response.status }));
     } catch (error) {
       console.error("Error adding friend:", error);
     } finally {
       setSendingFriendRequest((prev) => ({ ...prev, [userId]: false }));
-    }
-  };
-
-  // Создание чата
-  const handleSendMessage = async (userId: string) => {
-    if (!isAuthenticated) {
-      setShowAuthModal(true);
-      return;
-    }
-
-    // Check if user has PRO subscription
-    if (!isVip) {
-      setShowProModal(true);
-      return;
-    }
-
-    setCreatingChat((prev) => ({ ...prev, [userId]: true }));
-    try {
-      await openChat(userId);
-    } catch (error) {
-      console.error("Error creating chat:", error);
-    } finally {
-      setCreatingChat((prev) => ({ ...prev, [userId]: false }));
     }
   };
 
@@ -300,6 +297,63 @@ export function EntityMembersWidget({
     // Если авторизован и VIP - разрешаем переход
     if (twitterHandle) {
       window.location.href = `/profile/${twitterHandle}`;
+    }
+  };
+
+  const handleOpenMeetingRequest = (userId: string) => {
+    if (!isAuthenticated) {
+      setShowAuthModal(true);
+      return;
+    }
+
+    if (!isVip) {
+      setShowProModal(true);
+      return;
+    }
+
+    const target = allMembers.find((member) => member.id === userId) || data?.members?.find((member) => member.id === userId) || null;
+    if (!target) return;
+
+    if (entityType === "event" && !isUserRegistered) {
+      setAttendRequiredTarget(target);
+      setShowMembersModal(false);
+      setShowAttendRequiredModal(true);
+      setAttendError(null);
+      return;
+    }
+
+    setMeetingTarget(target);
+    setIsMeetingModalOpen(true);
+  };
+
+  const handleAttendForMeeting = async () => {
+    setAttendLoading(true);
+    setAttendError(null);
+    try {
+      const response = await fetch(`/api/events/${entityId}/members`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "going" }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to attend event");
+      }
+      setShowAttendRequiredModal(false);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("event-member-updated", { detail: { eventSlug: entityId } }));
+      }
+      router.refresh();
+      const target = attendRequiredTarget;
+      setAttendRequiredTarget(null);
+      if (target) {
+        setMeetingTarget(target);
+        setIsMeetingModalOpen(true);
+      }
+    } catch (err) {
+      setAttendError(err instanceof Error ? err.message : "Failed to attend event");
+    } finally {
+      setAttendLoading(false);
     }
   };
 
@@ -345,6 +399,8 @@ export function EntityMembersWidget({
   // Показываем всех участников и друзей (без ограничений)
   const visibleMembers = data.members || [];
   const visibleFriends = data.friends || [];
+  const externalCount = data.external?.length ?? 0;
+  const isEvent = entityType === "event";
 
   return (
     <>
@@ -354,12 +410,15 @@ export function EntityMembersWidget({
         </h3>
         <div className="space-y-6">
           {/* All Members */}
-          {data.totalMembers > 0 ? (
+          {data.totalMembers > 0 || (isEvent && externalCount > 0) ? (
             <div className="space-y-2">
               <p className="text-sm text-[var(--color-text-secondary)] mb-2">
-                {texts.membersText(data.totalMembers)}
+                {data.totalMembers > 0 && texts.membersText(data.totalMembers)}
+                {isEvent && externalCount > 0 && (
+                  data.totalMembers > 0 ? ` · ${externalCount} external` : `${externalCount} external ${externalCount === 1 ? "attendee" : "attendees"}`
+                )}
               </p>
-              {visibleMembers.length > 0 ? (
+              {(visibleMembers.length > 0 || (isEvent && externalCount > 0)) ? (
                 <>
                   <div className="flex flex-wrap gap-2 mb-2">
                     {visibleMembers.map((member) => (
@@ -376,6 +435,21 @@ export function EntityMembersWidget({
                           isVerified={member.isVerified}
                         />
                       </div>
+                    ))}
+                    {isEvent && (data.external || []).slice(0, 5).map((ext) => (
+                      <a
+                        key={ext.id}
+                        href={ext.profile_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-block"
+                      >
+                        <Avatar
+                          src={ext.avatar ?? undefined}
+                          alt={ext.name ?? "Attendee"}
+                          size="sm"
+                        />
+                      </a>
                     ))}
                   </div>
                   <button
@@ -449,6 +523,45 @@ export function EntityMembersWidget({
         description={`Viewing all ${entityType} members is available only with PRO subscription. Upgrade to PRO to unlock this feature.`}
       />
 
+      {/* Attend required to book meeting (event, user not registered) */}
+      {isEvent && (
+        <Modal
+          isOpen={showAttendRequiredModal}
+          onClose={() => {
+            if (!attendLoading) {
+              setShowAttendRequiredModal(false);
+              setAttendRequiredTarget(null);
+              setAttendError(null);
+              setShowMembersModal(true);
+            }
+          }}
+          size="md"
+          ariaLabel="Attend event to book meeting"
+        >
+          <ModalHeader>
+            <ModalTitle>Attend the event first</ModalTitle>
+            <ModalDescription>
+              To book a meeting you need to attend this event. Click Attend below to register, then you can send a meeting request.
+            </ModalDescription>
+          </ModalHeader>
+          <ModalContent>
+            {attendError && (
+              <p className="text-sm text-red-500 mt-2">{attendError}</p>
+            )}
+          </ModalContent>
+          <ModalFooter>
+            <Button
+              variant="primary"
+              onClick={handleAttendForMeeting}
+              disabled={attendLoading}
+              isLoading={attendLoading}
+            >
+              Attend
+            </Button>
+          </ModalFooter>
+        </Modal>
+      )}
+
       {/* Members Modal */}
       <Modal
         isOpen={showMembersModal}
@@ -460,63 +573,140 @@ export function EntityMembersWidget({
           <ModalTitle>{texts.modalTitleMembers}</ModalTitle>
         </ModalHeader>
         <ModalContent>
-          <div className="space-y-3 max-h-[60vh] overflow-y-auto">
-            {allMembers.length === 0 ? (
-              <p className="text-sm text-[var(--color-text-secondary)] text-center py-4">
-                {texts.emptyMembers}
-              </p>
-            ) : (
-              allMembers.map((member) => {
-                const friendStatus = friendStatuses[member.id] || "none";
-
-                return (
-                  <UserListItem
-                    key={member.id}
-                    member={member}
-                    friendStatus={friendStatus}
-                    onAddFriend={handleAddFriend}
-                    sendingFriendRequest={sendingFriendRequest[member.id]}
-                    creatingChat={creatingChat[member.id]}
-                  />
-                );
-              })
+          <div className="space-y-6 max-h-[60vh] overflow-y-auto">
+            {/* Internal (SolPoint) */}
+            <div>
+              {isEvent && allMembers.length > 0 && (
+                <h4 className="text-sm font-semibold text-[var(--color-text-muted)] mb-2">Internal (SolPoint)</h4>
+              )}
+              {allMembers.length === 0 && allExternal.length === 0 ? (
+                <p className="text-sm text-[var(--color-text-secondary)] text-center py-4">
+                  {texts.emptyMembers}
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {allMembers.map((member) => {
+                    const friendStatus = friendStatuses[member.id] || "none";
+                    return (
+                      <UserListItem
+                        key={member.id}
+                        member={member}
+                        friendStatus={friendStatus}
+                        onAddFriend={handleAddFriend}
+                        sendingFriendRequest={sendingFriendRequest[member.id]}
+                        creatingChat={creatingChat[member.id]}
+                        onRequestMeeting={entityType === "event" && meetingRequestsEnabled ? handleOpenMeetingRequest : undefined}
+                        showMeetingRequestButton={entityType === "event" && meetingRequestsEnabled}
+                      />
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            {/* External (e.g. Luma) - only for events */}
+            {isEvent && allExternal.length > 0 && (
+              <div>
+                <h4 className="text-sm font-semibold text-[var(--color-text-muted)] mb-2">External</h4>
+                <div className="space-y-3">
+                  {allExternal.map((ext) => {
+                    const socialEntries = ext.social_links
+                      ? Object.entries(ext.social_links).filter(([, url]) => url && String(url).trim())
+                      : [];
+                    return (
+                      <div
+                        key={ext.id}
+                        className="flex items-center gap-3 p-2 rounded-lg hover:bg-[var(--color-surface-hover)] transition-colors"
+                      >
+                        <a
+                          href={ext.profile_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-3 min-w-0 flex-1"
+                        >
+                          <Avatar
+                            src={ext.avatar ?? undefined}
+                            alt={ext.name ?? "Attendee"}
+                            size="md"
+                          />
+                          <span className="text-[var(--color-text-primary)] font-medium truncate">
+                            {ext.name ?? "Attendee"}
+                          </span>
+                        </a>
+                        {socialEntries.length > 0 && (
+                          <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                            {socialEntries.map(([key, url]) => {
+                              const config = EXTERNAL_SOCIAL_ICONS[key.toLowerCase()];
+                              const Icon = config?.Icon ?? Globe;
+                              const label = config?.label ?? key;
+                              return (
+                                <a
+                                  key={key}
+                                  href={url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="p-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-surface)] transition-colors"
+                                  title={label}
+                                  aria-label={label}
+                                >
+                                  <Icon className="w-4 h-4" />
+                                </a>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             )}
           </div>
         </ModalContent>
       </Modal>
 
-      {/* Friends Modal */}
-      <Modal
+      {meetingTarget && (
+        <MeetingRequestForm
+          isOpen={isMeetingModalOpen}
+          onClose={() => {
+            setIsMeetingModalOpen(false);
+            setMeetingTarget(null);
+          }}
+          targetUser={{
+            id: meetingTarget.id,
+            name: meetingTarget.name || "user",
+          }}
+          eventId={entityId}
+          eventContext={{
+            eventStartAt,
+            timezone: eventTimezone,
+            latitude: eventLatitude,
+            longitude: eventLongitude,
+          }}
+          onSuccess={({ eventId }) => {
+            trackEvent("meeting_request_create", {
+              event_category: "Meeting Requests",
+              event_label: "create",
+              event_id: eventId,
+            });
+            setIsMeetingModalOpen(false);
+            setMeetingTarget(null);
+          }}
+        />
+      )}
+
+      <UserListModal
         isOpen={showFriendsModal}
         onClose={() => setShowFriendsModal(false)}
-        size="md"
+        title={texts.modalTitleFriends}
         ariaLabel={texts.modalTitleFriends}
-      >
-        <ModalHeader>
-          <ModalTitle>{texts.modalTitleFriends}</ModalTitle>
-        </ModalHeader>
-        <ModalContent>
-          <div className="space-y-3 max-h-[60vh] overflow-y-auto">
-            {allFriends.length === 0 ? (
-              <p className="text-sm text-[var(--color-text-secondary)] text-center py-4">
-                {texts.emptyFriends}
-              </p>
-            ) : (
-              allFriends.map((friend) => (
-                <UserListItem
-                  key={friend.id}
-                  member={friend}
-                  friendStatus="accepted"
-                  onAddFriend={handleAddFriend}
-                  sendingFriendRequest={sendingFriendRequest[friend.id]}
-                  creatingChat={creatingChat[friend.id]}
-                />
-              ))
-            )}
-          </div>
-        </ModalContent>
-      </Modal>
+        users={allFriends}
+        emptyText={texts.emptyFriends}
+        friendStatuses={friendStatuses}
+        defaultFriendStatus="accepted"
+        onAddFriend={handleAddFriend}
+        sendingFriendRequest={sendingFriendRequest}
+        creatingChat={creatingChat}
+      />
     </>
   );
 }
-

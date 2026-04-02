@@ -2,6 +2,29 @@ import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { generateSlug, getUniqueSlug } from "@/lib/utils/event-slug";
+import {
+  parseBoundedInt,
+  sanitizeSearchTerm,
+} from "@/lib/security/request-guards";
+
+const WORKSPACE_PUBLIC_FIELDS = `
+  id,
+  name,
+  description,
+  image_url,
+  slug,
+  country,
+  country_code,
+  city,
+  address,
+  latitude,
+  longitude,
+  members_count,
+  is_recommended,
+  socials,
+  created_at,
+  updated_at
+`;
 
 /**
  * GET /api/workspaces
@@ -13,7 +36,7 @@ export async function GET(request: NextRequest) {
 
   let query = supabase
     .from("workspaces")
-    .select("*")
+    .select(WORKSPACE_PUBLIC_FIELDS)
     .order("is_recommended", { ascending: false })
     .order("members_count", { ascending: false });
 
@@ -28,15 +51,20 @@ export async function GET(request: NextRequest) {
     query = query.ilike("city", `%${city}%`);
   }
 
-  const search = searchParams.get("search");
+  const search = sanitizeSearchTerm(searchParams.get("search"));
   if (search) {
     query = query.or(
       `name.ilike.%${search}%,country.ilike.%${search}%,city.ilike.%${search}%,description.ilike.%${search}%,address.ilike.%${search}%`
     );
+  } else if (searchParams.get("search")) {
+    return NextResponse.json(
+      { error: "Invalid search query" },
+      { status: 400 }
+    );
   }
 
-  const limit = parseInt(searchParams.get("limit") || "500", 10);
-  const offset = parseInt(searchParams.get("offset") || "0", 10);
+  const limit = parseBoundedInt(searchParams.get("limit"), 100, 1, 200);
+  const offset = parseBoundedInt(searchParams.get("offset"), 0, 0, 10_000);
   query = query.range(offset, offset + limit - 1);
 
   const { data: workspaces, error } = await query;
@@ -180,4 +208,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

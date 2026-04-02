@@ -104,7 +104,6 @@ export async function GET(
       is_open_to_meet,
       subscription_tier,
       is_verified,
-      wallet_address,
       socials,
       last_active_at,
       created_at,

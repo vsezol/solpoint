@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { formControlFocusClasses } from "./form-control-focus";
 import { forwardRef, InputHTMLAttributes } from "react";
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
@@ -20,12 +21,13 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
         <input
           type={type}
           className={cn(
-            "w-full h-10 px-3 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] transition-colors",
-            "focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]",
+            "w-full h-10 px-3 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)]",
+            !error && formControlFocusClasses,
             "selection:bg-[var(--color-primary)] selection:text-white",
             "disabled:opacity-50 disabled:cursor-not-allowed",
             icon && "pl-10",
-            error && "border-[var(--color-error)] focus:border-[var(--color-error)] focus:ring-[var(--color-error)]",
+            error &&
+              "transition-[border-color] duration-200 ease-out focus:outline-none border-[var(--color-error)] focus:border-[var(--color-error)]",
             className
           )}
           ref={ref}

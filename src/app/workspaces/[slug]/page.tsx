@@ -1,18 +1,16 @@
 import { notFound } from "next/navigation";
 import { Header, Footer } from "@/components/layout";
-import { Button, Card } from "@/components/ui";
+import { Card } from "@/components/ui";
 import { MapPin, Globe, Users, Building2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import type { Workspace } from "@/types";
 import Image from "next/image";
-import Link from "next/link";
 import { EntityMembersWidget } from "@/components/entities/entity-members-widget";
 import type { Metadata } from "next";
 import { getAppUrl, isUUID } from "@/lib/utils";
 import { WorkspaceViewTracker } from "@/components/analytics/workspace-view-tracker";
 import { WorkspaceShareButton } from "@/components/analytics/workspace-share-button";
 import { WorkspaceSocialLink } from "@/components/analytics/workspace-social-link";
-import { WorkspaceJoinButton } from "@/components/analytics/workspace-join-button";
 
 interface WorkspacePageProps {
   params: Promise<{ slug: string }>;
@@ -108,135 +106,151 @@ export default async function WorkspacePage({ params }: WorkspacePageProps) {
   }
 
   const workspace = workspaceData as Workspace;
+  const kodeMonoStyle = { fontFamily: "var(--font-kode-mono), monospace" } as const;
+  const sectionHeadingStyle = {
+    fontFamily: "var(--font-display), sans-serif",
+    fontWeight: 700,
+    fontSize: 15,
+    lineHeight: "12px",
+    letterSpacing: "2px",
+  } as const;
 
   return (
     <>
       <WorkspaceViewTracker workspace={workspace} />
       <Header />
-      <main className="min-h-screen pt-16 pb-16 bg-[var(--color-background)]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="relative h-64 md:h-96 rounded-xl overflow-hidden mb-8 bg-gradient-to-br from-[var(--color-primary)]/20 via-[var(--color-primary)]/10 to-[var(--color-secondary)]/20">
-            {workspace.image_url ? (
-              <Image
-                src={workspace.image_url}
-                alt={workspace.name}
-                fill
-                className="object-cover"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <Building2 className="w-24 h-24 text-[var(--color-text-primary)] opacity-60 stroke-[1.5]" />
-              </div>
-            )}
-          </div>
-
-          <div className="grid lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-6">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1">
-                  <h1 className="text-4xl font-bold text-[var(--color-text-primary)] mb-4">
-                    {workspace.name}
-                  </h1>
-                  {workspace.description && (
-                    <p className="text-lg text-[var(--color-text-secondary)] leading-relaxed">
-                      {workspace.description}
-                    </p>
+      <main className="min-h-screen bg-black pb-16 pt-20 text-white">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="w-full border-x border-white/10 bg-black">
+            <div className="grid grid-cols-1 min-[830px]:grid-cols-[minmax(0,54fr)_minmax(0,46fr)] min-[1200px]:grid-cols-[minmax(0,599px)_minmax(0,601px)]">
+              <section className="border-b border-white/10 px-6 pb-10 pt-8 sm:px-10 min-[830px]:min-h-[969px] min-[830px]:border-b-0 min-[830px]:border-r min-[830px]:border-r-white/10 min-[830px]:px-8 min-[1200px]:px-[45px]">
+                <div className="relative mb-8 h-[220px] overflow-hidden rounded-[6px] border border-white/10 bg-[#121212] sm:h-[280px]">
+                  {workspace.image_url ? (
+                    <Image
+                      src={workspace.image_url}
+                      alt={workspace.name}
+                      fill
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center">
+                      <Building2 className="h-24 w-24 stroke-[1.5] text-white/45" />
+                    </div>
                   )}
                 </div>
-                <WorkspaceShareButton workspace={workspace} />
-              </div>
 
-              <Card variant="bordered">
-                <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">
-                  Workspace Details
-                </h2>
-                <div className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <Building2 className="w-5 h-5 text-[var(--color-primary)] mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm text-[var(--color-text-muted)] mb-1">Address</p>
-                      <p className="text-[var(--color-text-primary)]">
-                        {workspace.address}
-                      </p>
+                <div className="space-y-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      <h1 className="mb-4 text-3xl font-semibold text-white sm:text-4xl" style={kodeMonoStyle}>
+                        {workspace.name}
+                      </h1>
+                      {workspace.description && (
+                        <p className="text-base leading-relaxed text-white/80 break-words [overflow-wrap:anywhere] sm:text-lg">
+                          {workspace.description}
+                        </p>
+                      )}
                     </div>
+                    <WorkspaceShareButton
+                      workspace={workspace}
+                      variant="outline"
+                      className="h-[44px] w-[44px] shrink-0 rounded-[5px] border-white/30 bg-[#121212] px-0 text-white hover:bg-[#2a2a2a]"
+                    />
                   </div>
 
-                  <div className="flex items-start gap-3">
-                    <MapPin className="w-5 h-5 text-[var(--color-primary)] mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm text-[var(--color-text-muted)] mb-1">Location</p>
-                      <p className="text-[var(--color-text-primary)]">
-                        {workspace.city ? `${workspace.city}, ` : ""}{workspace.country}
-                      </p>
-                    </div>
-                  </div>
+                  <Card variant="bordered" className="rounded-[6px] border-white/10 bg-[#121212] p-5 sm:p-6">
+                    <h2 className="mb-5 uppercase text-[#adaaaa]" style={sectionHeadingStyle}>
+                      workspace details
+                    </h2>
+                    <div className="space-y-4">
+                      <div className="flex items-start gap-3">
+                        <Building2 className="mt-0.5 h-5 w-5 shrink-0 text-[#14f195]" />
+                        <div>
+                          <p className="mb-1 text-sm text-white/55" style={kodeMonoStyle}>Address</p>
+                          <p className="text-white/90 break-words [overflow-wrap:anywhere]">
+                            {workspace.address}
+                          </p>
+                        </div>
+                      </div>
 
-                  <div className="flex items-start gap-3">
-                    <Users className="w-5 h-5 text-[var(--color-primary)] mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm text-[var(--color-text-muted)] mb-1">Members</p>
-                      <p className="text-[var(--color-text-primary)]">
-                        {workspace.members_count} {workspace.members_count === 1 ? "member" : "members"}
-                      </p>
-                    </div>
-                  </div>
+                      <div className="flex items-start gap-3">
+                        <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-[#14f195]" />
+                        <div>
+                          <p className="mb-1 text-sm text-white/55" style={kodeMonoStyle}>Location</p>
+                          <p className="text-white/90 break-words [overflow-wrap:anywhere]">
+                            {workspace.city ? `${workspace.city}, ` : ""}{workspace.country}
+                          </p>
+                        </div>
+                      </div>
 
-                  <div className="flex items-start gap-3">
-                    <Globe className="w-5 h-5 text-[var(--color-primary)] mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm text-[var(--color-text-muted)] mb-1">Created</p>
-                      <p className="text-[var(--color-text-primary)]">
-                        {new Date(workspace.created_at).toLocaleDateString("en-US", {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        })}
-                      </p>
+                      <div className="flex items-start gap-3">
+                        <Users className="mt-0.5 h-5 w-5 shrink-0 text-[#14f195]" />
+                        <div>
+                          <p className="mb-1 text-sm text-white/55" style={kodeMonoStyle}>Members</p>
+                          <p className="text-white/90">
+                            {workspace.members_count} {workspace.members_count === 1 ? "member" : "members"}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3">
+                        <Globe className="mt-0.5 h-5 w-5 shrink-0 text-[#14f195]" />
+                        <div>
+                          <p className="mb-1 text-sm text-white/55" style={kodeMonoStyle}>Created</p>
+                          <p className="text-white/90">
+                            {new Date(workspace.created_at).toLocaleDateString("en-US", {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                            })}
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  </Card>
+
+                  {(workspace.socials?.twitter || workspace.socials?.instagram || workspace.socials?.facebook || workspace.socials?.website) && (
+                    <Card variant="bordered" className="rounded-[6px] border-white/10 bg-[#121212] p-5 sm:p-6">
+                      <h2 className="mb-5 uppercase text-[#adaaaa]" style={sectionHeadingStyle}>
+                        social links
+                      </h2>
+                      <div className="flex flex-wrap items-center gap-3">
+                        {workspace.socials?.twitter && (
+                          <WorkspaceSocialLink
+                            workspace={workspace}
+                            platform="twitter"
+                            href={workspace.socials.twitter}
+                          />
+                        )}
+                        {workspace.socials?.instagram && (
+                          <WorkspaceSocialLink
+                            workspace={workspace}
+                            platform="instagram"
+                            href={workspace.socials.instagram}
+                          />
+                        )}
+                        {workspace.socials?.facebook && (
+                          <WorkspaceSocialLink
+                            workspace={workspace}
+                            platform="facebook"
+                            href={workspace.socials.facebook}
+                          />
+                        )}
+                        {workspace.socials?.website && (
+                          <WorkspaceSocialLink
+                            workspace={workspace}
+                            platform="website"
+                            href={workspace.socials.website}
+                          />
+                        )}
+                      </div>
+                    </Card>
+                  )}
                 </div>
-              </Card>
+              </section>
 
-              {(workspace.socials?.twitter || workspace.socials?.instagram || workspace.socials?.facebook || workspace.socials?.website) && (
-                <Card variant="bordered">
-                  <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">
-                    Social Links
-                  </h2>
-                  <div className="flex items-center gap-3">
-                    {workspace.socials?.twitter && (
-                      <WorkspaceSocialLink
-                        workspace={workspace}
-                        platform="twitter"
-                        href={workspace.socials.twitter}
-                      />
-                    )}
-                    {workspace.socials?.instagram && (
-                      <WorkspaceSocialLink
-                        workspace={workspace}
-                        platform="instagram"
-                        href={workspace.socials.instagram}
-                      />
-                    )}
-                    {workspace.socials?.facebook && (
-                      <WorkspaceSocialLink
-                        workspace={workspace}
-                        platform="facebook"
-                        href={workspace.socials.facebook}
-                      />
-                    )}
-                    {workspace.socials?.website && (
-                      <WorkspaceSocialLink
-                        workspace={workspace}
-                        platform="website"
-                        href={workspace.socials.website}
-                      />
-                    )}
-                  </div>
-                </Card>
-              )}
-            </div>
-
-            <div className="space-y-6">
+              <aside className="px-6 pb-10 pt-8 sm:px-10 min-[830px]:px-8 min-[1200px]:px-[50px]">
+                <div className="mx-auto w-full max-w-[560px] min-[830px]:mx-0">
               {/* TODO: Temporarily commented out - join/attend functionality */}
               {/* <Card variant="bordered">
                 <div className="space-y-4">
@@ -273,6 +287,8 @@ export default async function WorkspacePage({ params }: WorkspacePageProps) {
                 entityType="workspace"
                 entityId={workspace.id}
               />
+                </div>
+              </aside>
             </div>
           </div>
         </div>
@@ -281,4 +297,3 @@ export default async function WorkspacePage({ params }: WorkspacePageProps) {
     </>
   );
 }
-

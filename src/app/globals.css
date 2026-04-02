@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@source "../../node_modules/@ilamy/calendar/dist/index.js";
 
 @theme inline {
   /* SolPoint Dark Theme */
@@ -26,6 +27,22 @@
   --color-text-primary: #ffffff;
   --color-text-secondary: #9ca3af;
   --color-text-muted: #6b7280;
+
+  /* Compatibility tokens for shared UI libraries */
+  --color-border: var(--color-surface-border);
+  --color-input: var(--color-surface-border);
+  --color-ring: var(--color-primary);
+  --color-muted: var(--color-surface-hover);
+  --color-muted-foreground: var(--color-text-secondary);
+  --color-card: var(--color-surface);
+  --color-card-foreground: var(--color-text-primary);
+  --color-popover: var(--color-surface-elevated);
+  --color-popover-foreground: var(--color-text-primary);
+  --color-primary-foreground: var(--color-background);
+  --color-secondary-foreground: #ffffff;
+  --color-accent-foreground: var(--color-background);
+  --color-destructive: var(--color-error);
+  --color-destructive-foreground: #ffffff;
 
   /* Status colors */
   --color-success: #14f195;
@@ -72,6 +89,30 @@ body {
   min-height: 100vh;
 }
 
+/* Interactive affordance */
+button,
+[role="button"],
+a[href],
+summary,
+label[for],
+select,
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+input[type="checkbox"],
+input[type="radio"],
+input[type="file"],
+input[type="range"] {
+  cursor: pointer;
+}
+
+button:disabled,
+[role="button"][aria-disabled="true"],
+select:disabled,
+input:disabled {
+  cursor: not-allowed;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
@@ -106,9 +147,29 @@ input::selection {
 }
 
 /* Focus styles */
-:focus-visible {
+:focus-visible:not(.profile-v2-field):not(.footer-contact-field) {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
+}
+
+/* Footer Contact & Support fields: keep only white border on focus */
+.footer-contact-field:focus,
+.footer-contact-field:focus-visible {
+  border-color: #ffffff !important;
+  outline: none !important;
+  box-shadow: none !important;
+  --tw-ring-shadow: 0 0 #0000;
+  --tw-ring-offset-shadow: 0 0 #0000;
+}
+
+/* Profile v2 edit fields: suppress global green focus outline */
+.profile-v2-field:focus,
+.profile-v2-field:focus-visible {
+  border-color: #ffffff !important;
+  outline: none !important;
+  box-shadow: none !important;
+  --tw-ring-shadow: 0 0 #0000;
+  --tw-ring-offset-shadow: 0 0 #0000;
 }
 
 /* Leaflet overrides */
@@ -257,6 +318,20 @@ input::selection {
   border: 1px solid var(--color-surface-border);
 }
 
+/* Mobile bottom nav safe area */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  body {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* PWA standalone mode: no bounce */
+@media (display-mode: standalone) {
+  html {
+    overscroll-behavior: none;
+  }
+}
+
 /* Animation keyframes */
 @keyframes float {
   0%, 100% {
@@ -356,4 +431,60 @@ input::selection {
 
 .wallet-adapter-modal-list-more {
   z-index: 999999999 !important;
+}
+
+/* Meeting calendar style bridge for @ilamy/calendar */
+.solpoint-meeting-calendar [data-testid="ilamy-calendar"] {
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+}
+
+.solpoint-meeting-calendar [data-testid="calendar-body"] {
+  border-color: var(--color-surface-border) !important;
+}
+
+.solpoint-meeting-calendar [data-testid="ilamy-calendar"] .border,
+.solpoint-meeting-calendar [data-testid="ilamy-calendar"] .border-b,
+.solpoint-meeting-calendar [data-testid="ilamy-calendar"] .border-r,
+.solpoint-meeting-calendar [data-testid="ilamy-calendar"] .border-t {
+  border-color: var(--color-surface-border);
+}
+
+.solpoint-meeting-calendar [data-testid="ilamy-calendar"] button {
+  border-radius: var(--radius-md);
+}
+
+.solpoint-meeting-calendar [data-testid="ilamy-calendar"] .text-muted-foreground {
+  color: var(--color-text-secondary);
+}
+
+.solpoint-meeting-calendar [data-testid="ilamy-calendar"] .text-foreground {
+  color: var(--color-text-primary);
+}
+
+.solpoint-meeting-calendar [data-testid="ilamy-calendar"] .bg-blue-50 {
+  background-color: color-mix(in srgb, var(--color-primary) 14%, transparent);
+}
+
+.solpoint-meeting-calendar [data-testid="ilamy-calendar"] .text-blue-600 {
+  color: var(--color-primary);
+}
+
+/* Cell hover: purple instead of blue (library uses hover:bg-accent / bg-blue-50) */
+.solpoint-meeting-calendar [data-testid="ilamy-calendar"] [data-testid="calendar-body"] [role="gridcell"]:hover {
+  background-color: rgb(147 51 234 / 0.25) !important;
+}
+.solpoint-meeting-calendar [data-testid="ilamy-calendar"] [data-testid="calendar-body"] .hover\:bg-blue-50:hover {
+  background-color: rgb(147 51 234 / 0.25) !important;
+}
+.solpoint-meeting-calendar [data-testid="ilamy-calendar"] [data-testid="calendar-body"] .hover\:bg-accent:hover {
+  background-color: rgb(147 51 234 / 0.25) !important;
+}
+.solpoint-meeting-calendar [data-testid="ilamy-calendar"] [data-testid="calendar-body"] div[class*="hover:bg"]:hover {
+  background-color: rgb(147 51 234 / 0.25) !important;
+}
+/* Any blue-tinted hover in calendar body -> purple */
+.solpoint-meeting-calendar [data-testid="ilamy-calendar"] [data-testid="calendar-body"] [class*="blue-50"]:hover,
+.solpoint-meeting-calendar [data-testid="ilamy-calendar"] [data-testid="calendar-body"] [class*="blue-100"]:hover {
+  background-color: rgb(147 51 234 / 0.25) !important;
 }

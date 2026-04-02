@@ -11,6 +11,12 @@ import { EventCard } from "@/components/cards/event-card";
 import { HubCard } from "@/components/cards/hub-card";
 import { ProSubscriptionModal } from "@/components/ui";
 import { trackEvent } from "@/lib/analytics";
+import {
+  addFriend,
+  getFriendStatuses,
+  removeFriend,
+  type FollowStatus,
+} from "@/lib/api/friends";
 import { COUNTRIES_STATIC, COUNTRY_CENTERS, MAJOR_CITIES } from "@/lib/countries";
 
 // Fix for default markers (только в браузере)
@@ -199,7 +205,7 @@ export function SolPointMap({
   const [, setSelectedMarker] = useState<MapMarker | null>(null);
   const [worldGeoJson, setWorldGeoJson] = useState<GeoJsonObject | null>(null);
   const [citiesGeoJson, setCitiesGeoJson] = useState<GeoJsonObject | null>(null);
-  const [friendshipStatuses, setFriendshipStatuses] = useState<Record<string, "none" | "following" | "mutual">>({});
+  const [friendshipStatuses, setFriendshipStatuses] = useState<Record<string, FollowStatus>>({});
   const [currentZoom, setCurrentZoom] = useState(zoom);
   const [showProModal, setShowProModal] = useState(false);
 
@@ -342,9 +348,9 @@ export function SolPointMap({
       })
       .then((data) => {
         // Фильтруем записи с null geometry
-        if (data.features) {
+        if (Array.isArray(data.features)) {
           data.features = data.features.filter(
-            (feature: any) => feature.geometry !== null
+            (feature: { geometry?: unknown | null }) => feature.geometry !== null
           );
         }
         setCitiesGeoJson(data as GeoJsonObject);
@@ -390,19 +396,7 @@ export function SolPointMap({
       const userIds = userMarkers.map((m) => (m.data as User).id);
 
       try {
-        const response = await fetch("/api/friends/status", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ user_ids: userIds }),
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const { statuses } = await response.json();
+        const { statuses } = await getFriendStatuses(userIds);
         setFriendshipStatuses(statuses || {});
       } catch (error) {
         console.error("Error checking friendship statuses:", error);
@@ -439,32 +433,11 @@ export function SolPointMap({
     }
 
     try {
-      const response = await fetch("/api/friends", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ friend_id: userId }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to add friend");
-      }
-
-      // Обновляем статус подписки
-      if (data.data?.isMutual || data.data?.status === "mutual") {
-        setFriendshipStatuses((prev) => ({
-          ...prev,
-          [userId]: "mutual",
-        }));
-      } else {
-        setFriendshipStatuses((prev) => ({
-          ...prev,
-          [userId]: "following",
-        }));
-      }
+      const response = await addFriend(userId);
+      setFriendshipStatuses((prev) => ({
+        ...prev,
+        [userId]: response.followStatus,
+      }));
     } catch (error) {
       console.error("Error adding friend:", error);
       alert(error instanceof Error ? error.message : "Failed to add friend");
@@ -477,14 +450,7 @@ export function SolPointMap({
     }
 
     try {
-      const response = await fetch(`/api/friends?friend_id=${userId}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to remove friend");
-      }
+      await removeFriend(userId);
 
       // После отписки статус становится "none"
       setFriendshipStatuses((prev) => ({
@@ -536,6 +502,8 @@ export function SolPointMap({
           cardFriendshipStatus = "accepted";
         } else if (friendshipStatus === "following") {
           cardFriendshipStatus = "pending_sent";
+        } else if (friendshipStatus === "follower") {
+          cardFriendshipStatus = "pending_received";
         }
         
         return (
@@ -545,7 +513,11 @@ export function SolPointMap({
             compact
             isFriend={isFriend}
             friendshipStatus={cardFriendshipStatus}
-            onAddFriend={friendshipStatus === "none" ? () => handleAddFriend(user.id) : undefined}
+            onAddFriend={
+              friendshipStatus === "none" || friendshipStatus === "follower"
+                ? () => handleAddFriend(user.id)
+                : undefined
+            }
             onRemoveFriend={friendshipStatus === "following" || friendshipStatus === "mutual" ? () => handleRemoveFriend(user.id) : undefined}
             currentUserId={currentUserId}
             onProfileClick={(e) => {
@@ -588,7 +560,7 @@ export function SolPointMap({
         {worldGeoJson && (
           <GeoJSON
             data={worldGeoJson}
-            style={(feature) => {
+            style={() => {
               // Более детальная визуализация в зависимости от зума
               const baseWeight = currentZoom < 5 ? 1.5 : currentZoom < 7 ? 1.2 : 1;
               return {
@@ -785,4 +757,3 @@ export function SolPointMap({
     </div>
   );
 }
-

@@ -1,18 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { Event } from "@/types";
+import { isUUID } from "@/lib/utils";
 
-/**
- * GET /api/profile/data
- * Получить данные профиля: события, количество друзей, статус дружбы, upcoming events
- * Query params: user_id (ID профиля, для которого загружаем данные)
- */
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
-    const {
-      data: { user: authUser },
-    } = await supabase.auth.getUser();
+    const { data: { user: authUser } } = await supabase.auth.getUser();
 
     const { searchParams } = new URL(request.url);
     const targetUserId = searchParams.get("user_id");
@@ -24,141 +18,93 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    if (!isUUID(targetUserId)) {
+      return NextResponse.json(
+        { error: "user_id must be a valid UUID" },
+        { status: 400 }
+      );
+    }
+
     const now = new Date();
     const isOwnProfile = authUser?.id === targetUserId;
+    const eventFields = `id, name, image_url, country, country_code, city, start_date, end_date, slug, luma_link, attendees_count, event_type, visibility, is_online, owner_type, owner_id`;
 
-    // Параллельно получаем основные данные
-    const [
-      { data: eventAttendees },
-      { count: mutualFriendsCount },
-    ] = await Promise.all([
-      // События пользователя (past events)
-      supabase
-        .from("event_members")
-        .select(
-          `
-          event_id,
-          status,
-          events (
-            id,
-            name,
-            description,
-            image_url,
-            country,
-            country_code,
-            city,
-            address,
-            venue_name,
-            latitude,
-            longitude,
-            start_date,
-            end_date,
-            timezone,
-            event_type,
-            visibility,
-            is_paid,
-            price_sol,
-            price_usd,
-            max_attendees,
-            attendees_count,
-            capacity_remaining,
-            registration_deadline,
-            is_online,
-            socials,
-            contacts,
-            owner_type,
-            owner_id,
-            slug,
-            luma_link,
-            created_at,
-            updated_at
-          )
-        `
-        )
-        .eq("user_id", targetUserId)
-        .eq("status", "going"),
-      // Количество друзей
-      supabase
-        .from("mutual_friends")
-        .select("*", { count: "exact", head: true })
-        .or(`user_id.eq.${targetUserId},friend_id.eq.${targetUserId}`),
-    ]);
+    const eventsPromise = supabase
+      .from("event_members")
+      .select(`event_id, status, events (${eventFields})`)
+      .eq("user_id", targetUserId)
+      .eq("status", "going");
 
-    // Получаем статус дружбы (только для чужого профиля)
-    let friendshipStatus: "none" | "pending_sent" | "pending_received" | "accepted" = "none";
-    if (!isOwnProfile && authUser) {
-      const [
-        { data: userFollowsOther },
-        { data: otherFollowsUser },
-      ] = await Promise.all([
-        supabase
-          .from("follows")
-          .select("*")
-          .eq("follower_id", authUser.id)
-          .eq("following_id", targetUserId)
-          .maybeSingle(),
-        supabase
-          .from("follows")
-          .select("*")
-          .eq("follower_id", targetUserId)
-          .eq("following_id", authUser.id)
-          .maybeSingle(),
+    const friendsCountPromise = supabase
+      .from("mutual_friends")
+      .select("*", { count: "exact", head: true })
+      .or(`user_id.eq.${targetUserId},friend_id.eq.${targetUserId}`);
+
+    const followStatusPromise =
+      !isOwnProfile && authUser
+        ? supabase.rpc("get_follow_status", {
+            p_user_id: authUser.id,
+            p_other_user_id: targetUserId,
+          })
+        : null;
+
+    const profilePromise = authUser
+      ? supabase
+          .from("profiles")
+          .select("country_code")
+          .eq("id", authUser.id)
+          .maybeSingle()
+      : null;
+
+    const [eventsResult, friendsResult, followResult, profileResult] =
+      await Promise.all([
+        eventsPromise,
+        friendsCountPromise,
+        followStatusPromise ?? Promise.resolve(null),
+        profilePromise ?? Promise.resolve(null),
       ]);
 
-      if (userFollowsOther && otherFollowsUser) {
-        friendshipStatus = "accepted";
-      } else if (userFollowsOther) {
-        friendshipStatus = "pending_sent";
-      } else if (otherFollowsUser) {
-        friendshipStatus = "pending_received";
-      }
+    let friendshipStatus: "none" | "pending_sent" | "pending_received" | "accepted" = "none";
+    if (followResult) {
+      const status = followResult.data as string | null;
+      if (status === "mutual") friendshipStatus = "accepted";
+      else if (status === "following") friendshipStatus = "pending_sent";
+      else if (status === "follower") friendshipStatus = "pending_received";
     }
 
-    // Получаем upcoming events по стране авторизованного пользователя
     let upcomingEvents: Event[] = [];
-    if (authUser) {
-      const { data: authUserProfile } = await supabase
-        .from("profiles")
-        .select("country_code")
-        .eq("id", authUser.id)
-        .maybeSingle();
+    if (profileResult?.data?.country_code) {
+      const { data: countryEvents } = await supabase
+        .from("events")
+        .select(eventFields)
+        .eq("country_code", profileResult.data.country_code)
+        .gte("start_date", now.toISOString())
+        .order("start_date", { ascending: true })
+        .limit(10);
 
-      if (authUserProfile?.country_code) {
-        const { data: countryEvents } = await supabase
-          .from("events")
-          .select("*")
-          .eq("country_code", authUserProfile.country_code)
-          .gte("start_date", now.toISOString())
-          .order("start_date", { ascending: true })
-          .limit(10);
-
-        upcomingEvents = (countryEvents || []) as Event[];
-      }
+      upcomingEvents = (countryEvents || []) as Event[];
     }
 
-    // Обрабатываем события пользователя
     const allEvents: Event[] =
-      eventAttendees?.map((ea: { event_id: string; events: Event | Event[] }) => {
-        const event = Array.isArray(ea.events) ? ea.events[0] : ea.events;
-        return event;
-      }).filter((e): e is Event => Boolean(e)) || [];
+      (eventsResult.data || [])
+        .map((ea: Record<string, unknown>) => {
+          const evts = ea.events;
+          return (Array.isArray(evts) ? evts[0] : evts) as Event | null;
+        })
+        .filter((e): e is Event => Boolean(e));
 
     const pastEvents = allEvents.filter((e) => new Date(e.start_date) <= now);
 
-    const friendsCount = mutualFriendsCount || 0;
-
     return NextResponse.json({
       pastEvents,
-      friendsCount,
+      friendsCount: friendsResult.count || 0,
       friendshipStatus,
       upcomingEvents,
     });
   } catch (error: any) {
-    console.error("Get profile data error:", error);
     return NextResponse.json(
       { error: error.message || "Failed to get profile data" },
       { status: 500 }
     );
   }
 }
-

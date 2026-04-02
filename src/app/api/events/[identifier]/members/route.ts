@@ -3,6 +3,23 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getEntityIdByIdentifier } from "@/lib/utils/entity-identifier";
 
+async function getInternalGoingCount(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  eventId: string
+): Promise<{ count: number; error: string | null }> {
+  const { count, error } = await supabase
+    .from("event_members")
+    .select("id", { count: "exact", head: true })
+    .eq("event_id", eventId)
+    .eq("status", "going");
+
+  if (error) {
+    return { count: 0, error: error.message || "Failed to check event capacity" };
+  }
+
+  return { count: count || 0, error: null };
+}
+
 /**
  * GET /api/events/[id]/members
  * Список участников ивента
@@ -32,10 +49,10 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Проверяем существование ивента
+  // Проверяем существование ивента и luma_event_id (для external attendees)
   const { data: event, error: eventError } = await supabase
     .from("events")
-    .select("id, visibility")
+    .select("id, visibility, luma_event_id")
     .eq("id", id)
     .single();
 
@@ -82,7 +99,7 @@ export async function GET(
     query = query.eq("status", status);
   }
 
-  const { data: members, error } = await query;
+  const { data: internalMembers, error } = await query;
 
   if (error) {
     console.error("Error fetching event members:", error);
@@ -92,7 +109,50 @@ export async function GET(
     );
   }
 
-  return NextResponse.json({ members: members || [] }, { status: 200 });
+  // Для external событий (luma_event_id задан) подтягиваем участников из luma_event_attendees
+  type ExternalAttendee = { id: string; name: string | null; avatar: string | null; luma_profile_url: string; social_links: Record<string, string> };
+  let external: ExternalAttendee[] = [];
+  if (event.luma_event_id) {
+    const { data: lumaAttendees } = await supabase
+      .from("luma_event_attendees")
+      .select(`
+        id,
+        user_id,
+        luma_users(
+          luma_profile_url,
+          name,
+          avatar,
+          social_links
+        )
+      `)
+      .eq("event_id", event.luma_event_id);
+
+    if (lumaAttendees) {
+      external = lumaAttendees.map((row: {
+        id: string;
+        user_id: string;
+        luma_users: { luma_profile_url: string; name: string | null; avatar: string | null; social_links: unknown } | { luma_profile_url: string; name: string | null; avatar: string | null; social_links: unknown }[] | null;
+      }) => {
+        const raw = row.luma_users;
+        const u = Array.isArray(raw) ? raw[0] : raw;
+        return {
+          id: row.id,
+          name: u?.name ?? null,
+          avatar: u?.avatar ?? null,
+          luma_profile_url: u?.luma_profile_url ?? "",
+          social_links: (u?.social_links as Record<string, string>) ?? {},
+        };
+      });
+    }
+  }
+
+  return NextResponse.json(
+    {
+      internal: internalMembers || [],
+      external,
+    },
+    { status: 200 }
+  );
 }
 
 /**
@@ -138,7 +198,7 @@ export async function POST(
     // Проверяем существование ивента и доступ
     const { data: event, error: eventError } = await supabase
       .from("events")
-      .select("id, visibility, max_attendees, attendees_count, registration_deadline, luma_link, socials")
+      .select("id, visibility, max_attendees, registration_deadline, luma_link, socials")
       .eq("id", id)
       .single();
 
@@ -189,7 +249,12 @@ export async function POST(
 
     // Проверяем capacity (только для статуса "going")
     if (status === "going" && event.max_attendees) {
-      if (event.attendees_count >= event.max_attendees) {
+      const { count: goingCount, error: countError } = await getInternalGoingCount(supabase, id);
+      if (countError) {
+        return NextResponse.json({ error: countError }, { status: 500 });
+      }
+
+      if (goingCount >= event.max_attendees) {
         return NextResponse.json(
           { error: "Event is full" },
           { status: 400 }
@@ -251,10 +316,11 @@ export async function POST(
     }
 
     return NextResponse.json({ member }, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Internal server error";
     console.error("Unexpected error:", error);
     return NextResponse.json(
-      { error: error.message || "Internal server error" },
+      { error: message },
       { status: 500 }
     );
   }
@@ -356,11 +422,16 @@ export async function PATCH(
     if (status === "going") {
       const { data: event } = await supabase
         .from("events")
-        .select("max_attendees, attendees_count")
+        .select("max_attendees")
         .eq("id", id)
         .single();
 
-      if (event?.max_attendees && event.attendees_count >= event.max_attendees) {
+      const { count: goingCount, error: countError } = await getInternalGoingCount(supabase, id);
+      if (countError) {
+        return NextResponse.json({ error: countError }, { status: 500 });
+      }
+
+      if (event?.max_attendees && goingCount >= event.max_attendees) {
         // Если текущий статус был "going", то capacity уже занят этим пользователем
         // Но если был "maybe" или "not_going", то нужно проверить
         if (existingMember.status !== "going") {
@@ -398,14 +469,13 @@ export async function PATCH(
     }
 
     return NextResponse.json({ member }, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Internal server error";
     console.error("Unexpected error:", error);
     return NextResponse.json(
-      { error: error.message || "Internal server error" },
+      { error: message },
       { status: 500 }
     );
   }
 }
-
-
 

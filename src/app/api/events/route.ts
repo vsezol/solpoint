@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { parseBoundedInt } from "@/lib/security/request-guards";
 
 /**
  * GET /api/events
@@ -21,14 +22,18 @@ export async function GET(request: NextRequest) {
   const supabase = await createClient();
   const { searchParams } = new URL(request.url);
 
-  // Проверяем аутентификацию для VIP ивентов
-  const {
-    data: { user: authUser },
-  } = await supabase.auth.getUser();
+  const { data: { user: authUser } } = await supabase.auth.getUser();
 
-  // Получаем профиль для проверки VIP статуса
+  const visibility = searchParams.get("visibility");
+  if (visibility && !["public", "vip_only"].includes(visibility)) {
+    return NextResponse.json(
+      { error: "Invalid visibility filter" },
+      { status: 400 }
+    );
+  }
+
   let isVip = false;
-  if (authUser) {
+  if (authUser && (visibility === "vip_only" || !visibility)) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("subscription_tier")
@@ -37,10 +42,13 @@ export async function GET(request: NextRequest) {
     isVip = profile?.subscription_tier === "vip";
   }
 
-    // Строим запрос
-    // Примечание: owner_id - полиморфное поле, поэтому нельзя использовать внешний ключ
-    // Данные владельца получаем отдельно или на клиенте
-    // Показываем ВСЕ события (worldwide) - фильтрация по владельцу только в dashboard
+  if (visibility === "vip_only" && !isVip) {
+    return NextResponse.json(
+      { error: "VIP access required for vip_only events" },
+      { status: 403 }
+    );
+  }
+
   let query = supabase
     .from("events")
     .select("*")
@@ -66,10 +74,15 @@ export async function GET(request: NextRequest) {
 
   const eventType = searchParams.get("event_type");
   if (eventType) {
+    if (!["official", "community", "private", "meetup"].includes(eventType)) {
+      return NextResponse.json(
+        { error: "Invalid event_type filter" },
+        { status: 400 }
+      );
+    }
     query = query.eq("event_type", eventType);
   }
 
-  const visibility = searchParams.get("visibility");
   if (visibility) {
     query = query.eq("visibility", visibility);
   } else if (!isVip) {
@@ -99,8 +112,8 @@ export async function GET(request: NextRequest) {
   }
 
   // Пагинация
-  const limit = parseInt(searchParams.get("limit") || "50", 10);
-  const offset = parseInt(searchParams.get("offset") || "0", 10);
+  const limit = parseBoundedInt(searchParams.get("limit"), 50, 1, 200);
+  const offset = parseBoundedInt(searchParams.get("offset"), 0, 0, 10_000);
   query = query.range(offset, offset + limit - 1);
 
   const { data: events, error } = await query;
@@ -113,7 +126,12 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  return NextResponse.json({ events: events || [] }, { status: 200 });
+  const eventsWithSource = (events || []).map((event) => ({
+    ...event,
+    source: event.luma_event_id ? ("external" as const) : ("solpoint" as const),
+  }));
+
+  return NextResponse.json({ events: eventsWithSource }, { status: 200 });
 }
 
 /**
@@ -334,6 +352,15 @@ export async function POST(request: Request) {
       );
     }
 
+    // При создании через наш API добавляем владельца в event_organizers
+    if (ownerType === "user" && event?.id) {
+      await supabase.from("event_organizers").insert({
+        event_id: event.id,
+        profile_id: ownerId,
+        position: 0,
+      });
+    }
+
     return NextResponse.json({ event }, { status: 201 });
   } catch (error: any) {
     console.error("Unexpected error:", error);
@@ -343,4 +370,3 @@ export async function POST(request: Request) {
     );
   }
 }
-

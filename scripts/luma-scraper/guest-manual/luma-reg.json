@@ -1,0 +1,1769 @@
+{
+  "https://api2.luma.com/event/register": {
+    "type": "POST",
+    "body": {
+      "approval_status": "pending_approval",
+      "event_tickets": [
+        {
+          "api_id": "eventticket-RHvHSxFPid72HgR",
+          "event_ticket_type_api_id": "evtticktyp-zhTU3dheMQjOllD",
+          "event_ticket_type_info": {
+            "name": "Standard",
+            "type": "free",
+            "cents": null,
+            "api_id": "evtticktyp-zhTU3dheMQjOllD",
+            "currency": null,
+            "position": "8",
+            "is_hidden": false,
+            "min_cents": null,
+            "description": null,
+            "is_flexible": false,
+            "event_api_id": "evt-8IjKuMuMuR2c3pJ",
+            "max_capacity": null,
+            "valid_end_at": null,
+            "currency_info": null,
+            "valid_start_at": null,
+            "require_approval": true,
+            "membership_restriction": null,
+            "ethereum_token_requirements": []
+          }
+        }
+      ],
+      "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_39.png",
+      "email": "41st043l1kblya@gmail.com",
+      "cents": 0,
+      "currency": null,
+      "email_verified": true,
+      "rsvp_api_id": "gst-ZffENhekHLgm1VT",
+      "status": "success",
+      "ticket_key": "qi8AOq",
+      "user_api_id": "usr-aighk55dLciWnHQ"
+    }
+  },
+  "https://api2.luma.com/search/get-results?query=": {
+    "type": "GET",
+    "body": {
+      "query": "",
+            "calendars": [],
+            "events": [
+                {
+                    "api_id": "evt-nLWuu8HSjLupkGz",
+                    "event": {
+                        "api_id": "evt-nLWuu8HSjLupkGz",
+                        "calendar_api_id": "cal-rMdmYCRWtrzLUwa",
+                        "cover_url": "https://images.lumacdn.com/event-covers/pd/21b9a851-eaba-4565-b6ba-8ef79f140c42.png",
+                        "end_at": "2026-02-20T16:00:00.000Z",
+                        "event_type": "independent",
+                        "hide_rsvp": false,
+                        "location_type": "offline",
+                        "name": "Co-Working Friday: Munich",
+                        "one_to_one": true,
+                        "recurrence_id": null,
+                        "show_guest_list": false,
+                        "start_at": "2026-02-20T09:00:00.000Z",
+                        "timezone": "Europe/Berlin",
+                        "url": "5kxb4tcl",
+                        "user_api_id": "usr-ji5Es93n5NcuiQa",
+                        "visibility": "public",
+                        "virtual_info": {
+                            "has_access": false
+                        },
+                        "geo_address_info": {
+                            "city": "München",
+                            "type": "google",
+                            "region": "Bayern",
+                            "address": "St.-Martin-Straße 72",
+                            "country": "Germany",
+                            "place_id": "ChIJWbjTczPfnUcROB-L3Zf0qFM",
+                            "localized": {
+                                "de": {
+                                    "city": "München",
+                                    "region": "Bayern",
+                                    "address": "St.-Martin-Straße 72",
+                                    "country": "Deutschland",
+                                    "city_state": "München, Bayern",
+                                    "sublocality": "Ramersdorf-Perlach",
+                                    "full_address": "St.-Martin-Straße 72, 81541 München, Deutschland",
+                                    "short_address": "St.-Martin-Straße 72, München-Ramersdorf-Perlach"
+                                }
+                            },
+                            "city_state": "München, Bayern",
+                            "description": "1000 Satellites Wiesses Quartier. There will be signs outside of the building and in the lobby leading you to us.",
+                            "sublocality": "Ramersdorf-Perlach",
+                            "country_code": "DE",
+                            "full_address": "St.-Martin-Straße 72, 81541 München, Germany",
+                            "short_address": "St.-Martin-Straße 72, München-Ramersdorf-Perlach",
+                            "apple_maps_place_id": null,
+                            "mode": "shown"
+                        },
+                        "geo_address_visibility": "public",
+                        "coordinate": {
+                            "longitude": 11.5971572,
+                            "latitude": 48.118525299999995
+                        },
+                        "waitlist_enabled": true,
+                        "waitlist_status": "enabled"
+                    },
+                    "cover_image": {
+                        "colors": [
+                            "#d49041",
+                            "#9e61d5",
+                            "#7d4157",
+                            "#f5ebf7"
+                        ],
+                        "palette": {
+                            "neutral": [
+                                {
+                                    "color": "#f8f0f7",
+                                    "percentage": 7.47
+                                }
+                            ],
+                            "vibrant": [
+                                {
+                                    "color": "#e49f35",
+                                    "percentage": 19.82
+                                },
+                                {
+                                    "color": "#682f4f",
+                                    "percentage": 5.5
+                                },
+                                {
+                                    "color": "#7735d4",
+                                    "percentage": 4.91
+                                }
+                            ]
+                        }
+                    },
+                    "calendar": {
+                        "access_level": "public",
+                        "api_id": "cal-rMdmYCRWtrzLUwa",
+                        "avatar_url": "https://images.lumacdn.com/calendars/yb/8fc1660d-8b1d-4d9c-a0d6-2a392f78dced.png",
+                        "coordinate": {
+                            "longitude": 13.404954,
+                            "latitude": 52.520007
+                        },
+                        "cover_image_url": "https://images.lumacdn.com/calendar-cover-images/me/e4b39d5b-4413-411f-96e8-69fb24dfcbe1.png",
+                        "description_short": "Superteam Germany is here to support your journey in the Solana ecosystem. Our events are the perfect place to learn, network, and find opportunities.",
+                        "event_submission_restriction": "open",
+                        "geo_city": "Berlin",
+                        "geo_country": "Germany",
+                        "geo_region": "Berlin",
+                        "google_measurement_id": "350717236",
+                        "instagram_handle": null,
+                        "is_blocked": false,
+                        "launch_status": "launched",
+                        "linkedin_handle": "/company/superteam-germany",
+                        "luma_plus_active": true,
+                        "meta_pixel_id": null,
+                        "name": "Superteam Germany",
+                        "personal_user_api_id": null,
+                        "refund_policy": null,
+                        "slug": "SuperteamGermany",
+                        "social_image_url": "https://images.lumacdn.com/calendar-cover-images/ca/7c690a33-c320-4dda-826a-97f485c4e41b.png",
+                        "stripe_account_id": null,
+                        "tax_config": null,
+                        "tiktok_handle": null,
+                        "timezone": "Europe/Berlin",
+                        "tint_color": "#682FFF",
+                        "track_meta_ads_from_luma": false,
+                        "twitter_handle": "SuperteamDE",
+                        "verified_at": "2024-05-12T18:15:46.687Z",
+                        "website": "https://de.superteam.fun/",
+                        "youtube_handle": "SuperteamDE",
+                        "is_personal": false,
+                        "personal_user": null
+                    },
+                    "start_at": "2026-02-20T09:00:00.000Z",
+                    "hosts": [
+                        {
+                            "name": "Superteam Germany",
+                            "api_id": "usr-ji5Es93n5NcuiQa",
+                            "website": "https://de.superteam.fun/",
+                            "timezone": "Europe/Berlin",
+                            "username": "superteamde",
+                            "bio_short": "Join our group: https://t.me/superteamgermany",
+                            "avatar_url": "https://images.lumacdn.com/avatars/0y/4ee81445-3c40-490a-911e-a19af30cb685",
+                            "is_verified": false,
+                            "tiktok_handle": null,
+                            "last_online_at": "2026-02-12T08:16:53.242Z",
+                            "twitter_handle": "superteamde",
+                            "youtube_handle": "superteamDE",
+                            "linkedin_handle": "/company/87388296",
+                            "instagram_handle": "superteamde"
+                        }
+                    ],
+                    "guest_count": 0,
+                    "ticket_count": 0,
+                    "ticket_info": {
+                        "price": null,
+                        "is_free": false,
+                        "max_price": null,
+                        "is_sold_out": false,
+                        "spots_remaining": 15,
+                        "is_near_capacity": false,
+                        "require_approval": true,
+                        "currency_info": null
+                    },
+                    "featured_guests": [],
+                    "role": {
+                        "type": "guest",
+                        "proxy_key": "g-qEvowgSCwDt2jgn",
+                        "ticket_key": "LBQdcZ",
+                        "approval_status": "pending_approval"
+                    },
+                    "waitlist_active": false,
+                    "featured_city": null
+                },
+                {
+                    "api_id": "evt-8IjKuMuMuR2c3pJ",
+                    "event": {
+                        "api_id": "evt-8IjKuMuMuR2c3pJ",
+                        "calendar_api_id": "cal-cl57AMcV2gdbbau",
+                        "cover_url": "https://images.lumacdn.com/event-covers/r5/6208317f-7971-48e7-8fcd-36d4d16b171b.png",
+                        "end_at": "2026-02-16T13:30:00.000Z",
+                        "event_type": "independent",
+                        "hide_rsvp": false,
+                        "location_type": "zoom",
+                        "name": "kabhi cursor kabhi claude (showcase)",
+                        "one_to_one": true,
+                        "recurrence_id": null,
+                        "show_guest_list": true,
+                        "start_at": "2026-02-16T12:30:00.000Z",
+                        "timezone": "Asia/Calcutta",
+                        "url": "cursor-claude",
+                        "user_api_id": "usr-rCaS4JLmR62yKIU",
+                        "visibility": "public",
+                        "virtual_info": {
+                            "has_access": false
+                        },
+                        "geo_address_info": {
+                            "mode": "obfuscated"
+                        },
+                        "geo_address_visibility": "guests-only",
+                        "coordinate": null,
+                        "waitlist_enabled": false,
+                        "waitlist_status": "disabled"
+                    },
+                    "cover_image": {
+                        "colors": [
+                            "#151515",
+                            "#d2744f",
+                            "#fcfcfc",
+                            "#1f8a14"
+                        ],
+                        "palette": {
+                            "neutral": [
+                                {
+                                    "color": "#151515",
+                                    "percentage": 86.74
+                                },
+                                {
+                                    "color": "#fcfcfc",
+                                    "percentage": 0.36
+                                }
+                            ],
+                            "vibrant": [
+                                {
+                                    "color": "#d2744f",
+                                    "percentage": 4.83
+                                },
+                                {
+                                    "color": "#1f8a14",
+                                    "percentage": 0.03
+                                }
+                            ]
+                        }
+                    },
+                    "calendar": {
+                        "access_level": "public",
+                        "api_id": "cal-cl57AMcV2gdbbau",
+                        "avatar_url": "https://images.lumacdn.com/calendars/u2/a513f5d1-a5d1-41be-a955-4d8b4de42934",
+                        "coordinate": null,
+                        "cover_image_url": "https://images.lumacdn.com/calendar-cover-images/v6/1b98a683-cfb4-4824-a862-48262db47769",
+                        "description_short": "Events that help talented folks learn, earn, and build on Solana around the world.",
+                        "event_submission_restriction": "open",
+                        "geo_city": null,
+                        "geo_country": null,
+                        "geo_region": null,
+                        "google_measurement_id": null,
+                        "instagram_handle": "superteamfun",
+                        "is_blocked": false,
+                        "launch_status": "launched",
+                        "linkedin_handle": null,
+                        "luma_plus_active": true,
+                        "meta_pixel_id": "764374168765886",
+                        "name": "Superteam",
+                        "personal_user_api_id": null,
+                        "refund_policy": null,
+                        "slug": "superteam",
+                        "social_image_url": "https://images.lumacdn.com/calendar-cover-images/l6/b7fdc615-7d37-4665-b535-3be88aa8b6b2",
+                        "stripe_account_id": null,
+                        "tax_config": null,
+                        "tiktok_handle": "",
+                        "timezone": null,
+                        "tint_color": "#5d09e7",
+                        "track_meta_ads_from_luma": false,
+                        "twitter_handle": "superteam",
+                        "verified_at": "2023-08-04T21:18:08.933Z",
+                        "website": "https://superteam.fun",
+                        "youtube_handle": "SuperteamPodcast",
+                        "is_personal": false,
+                        "personal_user": null
+                    },
+                    "start_at": "2026-02-16T12:30:00.000Z",
+                    "hosts": [
+                        {
+                            "name": "Paarug",
+                            "api_id": "usr-fewosULA6RqdoEF",
+                            "website": "http://paarug.com",
+                            "timezone": "Asia/Kolkata",
+                            "username": "paarug",
+                            "bio_short": "enthusiast. @superteamIN",
+                            "avatar_url": "https://images.lumacdn.com/avatars/q7/a027e3c4-9eb3-4b02-b3b7-5dc2e7d2bbe2.jpg",
+                            "is_verified": false,
+                            "tiktok_handle": null,
+                            "last_online_at": "2026-02-12T08:12:30.166Z",
+                            "twitter_handle": "paarugsethi",
+                            "youtube_handle": "",
+                            "linkedin_handle": "/in/paarugsethi",
+                            "instagram_handle": "paarugsethi"
+                        },
+                        {
+                            "name": null,
+                            "api_id": "usr-QfFNrvrejstIzAC",
+                            "website": null,
+                            "timezone": "Asia/Kolkata",
+                            "username": null,
+                            "bio_short": null,
+                            "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_25.png",
+                            "is_verified": false,
+                            "tiktok_handle": null,
+                            "last_online_at": null,
+                            "twitter_handle": null,
+                            "youtube_handle": null,
+                            "linkedin_handle": null,
+                            "instagram_handle": null
+                        }
+                    ],
+                    "guest_count": 11,
+                    "ticket_count": 11,
+                    "ticket_info": {
+                        "price": null,
+                        "is_free": false,
+                        "max_price": null,
+                        "is_sold_out": false,
+                        "spots_remaining": null,
+                        "is_near_capacity": false,
+                        "require_approval": true,
+                        "currency_info": null
+                    },
+                    "featured_guests": [
+                        {
+                            "api_id": "usr-vdgjBZYxKQFiCRF",
+                            "avatar_url": "https://images.lumacdn.com/avatars/mx/5fa2b65d-0bfe-4088-9185-1314e6595120",
+                            "bio_short": "memes @Superteam Earn",
+                            "instagram_handle": null,
+                            "is_verified": false,
+                            "last_online_at": "2026-02-10T12:40:01.976Z",
+                            "linkedin_handle": "/in/devanshk404",
+                            "name": "Devansh Kaushik",
+                            "tiktok_handle": null,
+                            "timezone": "Asia/Kolkata",
+                            "twitter_handle": "devanshk404",
+                            "username": "devanshk404",
+                            "website": null,
+                            "youtube_handle": ""
+                        },
+                        {
+                            "api_id": "usr-1SJY9HnRnX1IvFI",
+                            "avatar_url": "https://images.lumacdn.com/avatars/mz/5fbe5bff-b666-4c52-9bc6-7e9a5452c950.jpg",
+                            "bio_short": null,
+                            "instagram_handle": null,
+                            "is_verified": false,
+                            "last_online_at": "2026-02-11T15:31:46.923Z",
+                            "linkedin_handle": null,
+                            "name": "Smit Patel",
+                            "tiktok_handle": null,
+                            "timezone": "Asia/Kolkata",
+                            "twitter_handle": "iamsmitpatel_",
+                            "username": null,
+                            "website": null,
+                            "youtube_handle": null
+                        },
+                        {
+                            "api_id": "usr-fBpyxH0VurJksGF",
+                            "avatar_url": "https://cdn.lu.ma/avatars/7v/00fd103a-e5be-4ce2-9039-c2875d055972",
+                            "bio_short": "",
+                            "instagram_handle": null,
+                            "is_verified": false,
+                            "last_online_at": "2026-01-29T11:29:12.794Z",
+                            "linkedin_handle": null,
+                            "name": "Ayush",
+                            "tiktok_handle": null,
+                            "timezone": "Asia/Kolkata",
+                            "twitter_handle": "heyayushh",
+                            "username": null,
+                            "website": "https://ayush.contact",
+                            "youtube_handle": null
+                        },
+                        {
+                            "api_id": "usr-E3tHCPiEC7dHtF2",
+                            "avatar_url": "https://images.lumacdn.com/avatars/j5/7b8bbda5-1c6e-4d99-8d69-513b10908f71.jpg",
+                            "bio_short": "| Building @theMenageri3 | ELITE @solanaturbine | Member @superteam | Web3.0 Engineer @solana |",
+                            "instagram_handle": null,
+                            "is_verified": false,
+                            "last_online_at": "2026-01-29T17:31:31.971Z",
+                            "linkedin_handle": null,
+                            "name": "AHINDRA D",
+                            "tiktok_handle": null,
+                            "timezone": "Asia/Kolkata",
+                            "twitter_handle": "Ahindra_D",
+                            "username": "etherium",
+                            "website": null,
+                            "youtube_handle": ""
+                        },
+                        {
+                            "api_id": "usr-jAaKdeK16TmaMBh",
+                            "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_47.png",
+                            "bio_short": null,
+                            "instagram_handle": null,
+                            "is_verified": false,
+                            "last_online_at": "2026-01-26T12:43:41.755Z",
+                            "linkedin_handle": null,
+                            "name": "Nikhil Acharya Prakash",
+                            "tiktok_handle": null,
+                            "timezone": "Asia/Kolkata",
+                            "twitter_handle": null,
+                            "username": null,
+                            "website": null,
+                            "youtube_handle": null
+                        },
+                        {
+                            "api_id": "usr-rEPrY7ixY7PYscL",
+                            "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_6.png",
+                            "bio_short": null,
+                            "instagram_handle": null,
+                            "is_verified": false,
+                            "last_online_at": "2026-01-29T12:51:04.821Z",
+                            "linkedin_handle": "/in/yuvraj-biswal",
+                            "name": "Yuvraj Biswal",
+                            "tiktok_handle": null,
+                            "timezone": "Asia/Kolkata",
+                            "twitter_handle": null,
+                            "username": null,
+                            "website": null,
+                            "youtube_handle": null
+                        },
+                        {
+                            "api_id": "usr-BvCN8i9FKeNSb8V",
+                            "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_13.png",
+                            "bio_short": null,
+                            "instagram_handle": null,
+                            "is_verified": false,
+                            "last_online_at": "2025-12-12T13:33:17.763Z",
+                            "linkedin_handle": null,
+                            "name": "Arpit Singh Bhatia",
+                            "tiktok_handle": null,
+                            "timezone": "Asia/Kolkata",
+                            "twitter_handle": "Arpitx35",
+                            "username": null,
+                            "website": null,
+                            "youtube_handle": null
+                        },
+                        {
+                            "api_id": "usr-ac5CskwcBXKUco1",
+                            "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_15.png",
+                            "bio_short": null,
+                            "instagram_handle": null,
+                            "is_verified": false,
+                            "last_online_at": "2025-12-14T12:39:15.772Z",
+                            "linkedin_handle": "/in/prapti-sharma-796080257",
+                            "name": "Prapti Sharma",
+                            "tiktok_handle": null,
+                            "timezone": "America/Los_Angeles",
+                            "twitter_handle": "praptichilling",
+                            "username": null,
+                            "website": null,
+                            "youtube_handle": null
+                        },
+                        {
+                            "api_id": "usr-BWrrexvbRwLQ2HS",
+                            "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_8.png",
+                            "bio_short": "",
+                            "instagram_handle": null,
+                            "is_verified": false,
+                            "last_online_at": "2026-02-05T12:34:22.172Z",
+                            "linkedin_handle": "/in/nitishxyz",
+                            "name": "Nitish Sharma",
+                            "tiktok_handle": null,
+                            "timezone": "Asia/Kolkata",
+                            "twitter_handle": "nitishxyz",
+                            "username": null,
+                            "website": null,
+                            "youtube_handle": null
+                        },
+                        {
+                            "api_id": "usr-rynH3YSEueAuoch",
+                            "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_12.png",
+                            "bio_short": null,
+                            "instagram_handle": null,
+                            "is_verified": false,
+                            "last_online_at": "2026-02-09T20:47:37.305Z",
+                            "linkedin_handle": "/in/ayaankhan121",
+                            "name": "Ayaan Khan",
+                            "tiktok_handle": null,
+                            "timezone": "Asia/Kolkata",
+                            "twitter_handle": "ayaankhan_x",
+                            "username": null,
+                            "website": null,
+                            "youtube_handle": null
+                        }
+                    ],
+                    "role": {
+                        "type": "guest",
+                        "proxy_key": "g-tJHV9aLexrsfx4x",
+                        "ticket_key": "qi8AOq",
+                        "approval_status": "pending_approval"
+                    },
+                    "waitlist_active": false,
+                    "featured_city": null
+                },
+                {
+                    "api_id": "evt-SE3tNjwbNcltG95",
+                    "event": {
+                        "api_id": "evt-SE3tNjwbNcltG95",
+                        "calendar_api_id": "cal-cbQBgIH4GgnznUM",
+                        "cover_url": "https://images.lumacdn.com/event-covers/zu/141e3320-b623-46c1-ba26-de8f925734db.jpg",
+                        "end_at": "2026-02-12T13:00:00.000Z",
+                        "event_type": "independent",
+                        "hide_rsvp": false,
+                        "location_type": "offline",
+                        "name": "Solana Mobile x AI Workshop {LAGOS}",
+                        "one_to_one": true,
+                        "recurrence_id": null,
+                        "show_guest_list": true,
+                        "start_at": "2026-02-12T10:00:00.000Z",
+                        "timezone": "Africa/Lagos",
+                        "url": "760turso",
+                        "user_api_id": "usr-SLmkXU68QV7imae",
+                        "visibility": "public",
+                        "virtual_info": {
+                            "has_access": true,
+                            "raw_join_url": null,
+                            "zoom_id": null,
+                            "password": null
+                        },
+                        "geo_address_info": {
+                            "city": "Lagos",
+                            "type": "google",
+                            "region": "Lagos",
+                            "address": "Cafe One Lekki, Admiralty Way",
+                            "country": "Nigeria",
+                            "place_id": "ChIJD42xbun1OxARKLUgzEnycOo",
+                            "localized": {
+                                "en-GB": {
+                                    "city": "Lagos",
+                                    "region": "Lagos",
+                                    "address": "Cafe One Lekki, Admiralty Way",
+                                    "country": "Nigeria",
+                                    "city_state": "Lagos, Lagos",
+                                    "sublocality": "Lekki Phase I",
+                                    "full_address": "Cafe One Lekki, Admiralty Way, 21 Admiralty Wy, Lekki Phase 1, Lagos 106104, Lagos, Nigeria",
+                                    "short_address": "21 Admiralty Wy, Lagos"
+                                }
+                            },
+                            "city_state": "Lagos, Lagos",
+                            "description": "",
+                            "sublocality": "Lekki Phase I",
+                            "country_code": "NG",
+                            "full_address": "Cafe One Lekki, Admiralty Way, 21 Admiralty Wy, Lekki Phase 1, Lagos 106104, Lagos, Nigeria",
+                            "short_address": "21 Admiralty Wy, Lagos",
+                            "apple_maps_place_id": null,
+                            "mode": "shown"
+                        },
+                        "geo_address_visibility": "public",
+                        "coordinate": {
+                            "longitude": 3.4607512,
+                            "latitude": 6.4467923
+                        },
+                        "waitlist_enabled": false,
+                        "waitlist_status": "disabled"
+                    },
+                    "cover_image": {
+                        "colors": [
+                            "#010201",
+                            "#fafafa",
+                            "#05ab67"
+                        ],
+                        "palette": {
+                            "neutral": [
+                                {
+                                    "color": "#010201",
+                                    "percentage": 81.85
+                                },
+                                {
+                                    "color": "#fafafa",
+                                    "percentage": 2.02
+                                }
+                            ],
+                            "vibrant": [
+                                {
+                                    "color": "#05ab67",
+                                    "percentage": 1.66
+                                }
+                            ]
+                        }
+                    },
+                    "calendar": {
+                        "access_level": "public",
+                        "api_id": "cal-cbQBgIH4GgnznUM",
+                        "avatar_url": "https://cdn.lu.ma/avatars-default/community_avatar_16.png",
+                        "coordinate": null,
+                        "cover_image_url": "https://images.lumacdn.com/calendar-defaults/patterns/rain-100.png",
+                        "description_short": null,
+                        "event_submission_restriction": "open",
+                        "geo_city": null,
+                        "geo_country": null,
+                        "geo_region": null,
+                        "google_measurement_id": null,
+                        "instagram_handle": null,
+                        "is_blocked": false,
+                        "launch_status": "launched",
+                        "linkedin_handle": null,
+                        "luma_plus_active": false,
+                        "meta_pixel_id": null,
+                        "name": "Personal",
+                        "personal_user_api_id": "usr-SLmkXU68QV7imae",
+                        "refund_policy": null,
+                        "slug": null,
+                        "social_image_url": null,
+                        "stripe_account_id": null,
+                        "tax_config": null,
+                        "tiktok_handle": null,
+                        "timezone": null,
+                        "tint_color": "#F31A7C",
+                        "track_meta_ads_from_luma": false,
+                        "twitter_handle": null,
+                        "verified_at": null,
+                        "website": null,
+                        "youtube_handle": null,
+                        "is_personal": true,
+                        "personal_user": {
+                            "api_id": "usr-SLmkXU68QV7imae",
+                            "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_11.png",
+                            "bio_short": "",
+                            "instagram_handle": null,
+                            "is_verified": false,
+                            "last_online_at": "2026-02-09T15:26:51.477Z",
+                            "linkedin_handle": null,
+                            "name": "Monarch",
+                            "tiktok_handle": null,
+                            "timezone": "Africa/Lagos",
+                            "twitter_handle": "thisis_monarch",
+                            "username": null,
+                            "website": null,
+                            "youtube_handle": "thisismonarch"
+                        }
+                    },
+                    "start_at": "2026-02-12T10:00:00.000Z",
+                    "hosts": [
+                        {
+                            "name": "Monarch",
+                            "api_id": "usr-SLmkXU68QV7imae",
+                            "website": null,
+                            "timezone": "Africa/Lagos",
+                            "username": null,
+                            "bio_short": "",
+                            "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_11.png",
+                            "is_verified": false,
+                            "tiktok_handle": null,
+                            "last_online_at": "2026-02-09T15:26:51.477Z",
+                            "twitter_handle": "thisis_monarch",
+                            "youtube_handle": "thisismonarch",
+                            "linkedin_handle": null,
+                            "instagram_handle": null
+                        }
+                    ],
+                    "guest_count": 26,
+                    "ticket_count": 26,
+                    "ticket_info": {
+                        "price": null,
+                        "is_free": true,
+                        "max_price": null,
+                        "is_sold_out": false,
+                        "spots_remaining": null,
+                        "is_near_capacity": false,
+                        "require_approval": false,
+                        "currency_info": null
+                    },
+                    "featured_guests": [
+                        {
+                            "api_id": "usr-ZlfMXKJf1nfIc8h",
+                            "avatar_url": "https://images.lumacdn.com/avatars/oz/fc1d3a10-cdc0-4f04-bca1-7ec5f7e17814.jpg",
+                            "bio_short": "Creating awesome interfaces ✨\nDesign lead SuperteamNG Ekiti",
+                            "instagram_handle": null,
+                            "is_verified": false,
+                            "last_online_at": "2025-09-30T15:29:58.560Z",
+                            "linkedin_handle": "/in/Joy-Yusuf",
+                            "name": "Joy Yusuf",
+                            "tiktok_handle": null,
+                            "timezone": "Africa/Lagos",
+                            "twitter_handle": "JoyYusuf__",
+                            "username": "JoyYusuf__",
+                            "website": null,
+                            "youtube_handle": ""
+                        },
+                        {
+                            "api_id": "usr-vFxYvFKpV2DGMHA",
+                            "avatar_url": "https://images.lumacdn.com/avatars/we/a686a88b-dbc2-4751-9e57-f4242a7e68e3.jpg",
+                            "bio_short": "communicate emotion",
+                            "instagram_handle": "_goodylili",
+                            "is_verified": false,
+                            "last_online_at": "2026-02-10T14:21:02.275Z",
+                            "linkedin_handle": "/in/goodylili",
+                            "name": "Ukeje Goodness",
+                            "tiktok_handle": "goodylili",
+                            "timezone": "Africa/Lagos",
+                            "twitter_handle": "goodylili",
+                            "username": "goodylili",
+                            "website": "https://linktr.ee/goodylili",
+                            "youtube_handle": "goodylili"
+                        },
+                        {
+                            "api_id": "usr-MOElUEGCp5XgUDq",
+                            "avatar_url": "https://images.lumacdn.com/avatars/kg/305ca452-14df-4fa6-9ca2-ccd6afabe41b.jpg",
+                            "bio_short": "",
+                            "instagram_handle": "kingjaspertechinc",
+                            "is_verified": false,
+                            "last_online_at": "2026-02-12T07:44:35.352Z",
+                            "linkedin_handle": "/in/oladele-afeez-0aa80719b",
+                            "name": "Oladele Afeez Adekola",
+                            "tiktok_handle": null,
+                            "timezone": "Africa/Lagos",
+                            "twitter_handle": "KINGJASPER14981",
+                            "username": "Kingjasper",
+                            "website": null,
+                            "youtube_handle": null
+                        },
+                        {
+                            "api_id": "usr-DBFNfGFGXpbVSMm",
+                            "avatar_url": "https://images.lumacdn.com/avatars/w8/af957f20-d488-4f94-8dc3-e558239b43df.jpg",
+                            "bio_short": null,
+                            "instagram_handle": null,
+                            "is_verified": false,
+                            "last_online_at": "2026-01-26T07:45:30.811Z",
+                            "linkedin_handle": null,
+                            "name": "Kelechi Endurance",
+                            "tiktok_handle": null,
+                            "timezone": "Africa/Lagos",
+                            "twitter_handle": "endurance_kel",
+                            "username": null,
+                            "website": null,
+                            "youtube_handle": ""
+                        },
+                        {
+                            "api_id": "usr-3USLzfrIjeU95Y3",
+                            "avatar_url": "https://images.lumacdn.com/avatars/7f/660819fb-1b57-43ae-86b6-b692ec4dd819.png",
+                            "bio_short": "Building web3 software products \nDevrel Superteamng Ekiti",
+                            "instagram_handle": null,
+                            "is_verified": false,
+                            "last_online_at": "2026-02-11T14:22:40.065Z",
+                            "linkedin_handle": "/in/elijah-kolawole",
+                            "name": "inspiration_gx",
+                            "tiktok_handle": null,
+                            "timezone": "America/Los_Angeles",
+                            "twitter_handle": "inspiration_gx",
+                            "username": "inspirationgx",
+                            "website": null,
+                            "youtube_handle": ""
+                        },
+                        {
+                            "api_id": "usr-d9NUKaaeGxLZdF3",
+                            "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_19.png",
+                            "bio_short": null,
+                            "instagram_handle": null,
+                            "is_verified": false,
+                            "last_online_at": "2025-08-06T17:19:19.627Z",
+                            "linkedin_handle": null,
+                            "name": "Arowolo Kehinde ",
+                            "tiktok_handle": null,
+                            "timezone": "Africa/Lagos",
+                            "twitter_handle": "Arowolokenny01",
+                            "username": null,
+                            "website": null,
+                            "youtube_handle": null
+                        },
+                        {
+                            "api_id": "usr-aighk55dLciWnHQ",
+                            "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_39.png",
+                            "bio_short": null,
+                            "instagram_handle": null,
+                            "is_verified": false,
+                            "last_online_at": "2026-02-12T08:21:59.190Z",
+                            "linkedin_handle": null,
+                            "name": "Mindsurfer",
+                            "tiktok_handle": null,
+                            "timezone": "Asia/Almaty",
+                            "twitter_handle": null,
+                            "username": null,
+                            "website": null,
+                            "youtube_handle": null
+                        },
+                        {
+                            "api_id": "usr-3LDJhWEgUnSsQ2F",
+                            "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_10.png",
+                            "bio_short": null,
+                            "instagram_handle": null,
+                            "is_verified": false,
+                            "last_online_at": "2026-02-11T19:33:51.272Z",
+                            "linkedin_handle": null,
+                            "name": "Purity Ogheneochuko",
+                            "tiktok_handle": null,
+                            "timezone": "Africa/Lagos",
+                            "twitter_handle": null,
+                            "username": null,
+                            "website": null,
+                            "youtube_handle": null
+                        },
+                        {
+                            "api_id": "usr-emDVFImtJnoPBs4",
+                            "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_29.png",
+                            "bio_short": null,
+                            "instagram_handle": null,
+                            "is_verified": false,
+                            "last_online_at": "2026-02-12T01:57:11.673Z",
+                            "linkedin_handle": null,
+                            "name": "Nuel",
+                            "tiktok_handle": null,
+                            "timezone": "Africa/Lagos",
+                            "twitter_handle": null,
+                            "username": null,
+                            "website": null,
+                            "youtube_handle": null
+                        },
+                        {
+                            "api_id": "usr-D87WjphQtiXoFUr",
+                            "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_4.png",
+                            "bio_short": null,
+                            "instagram_handle": null,
+                            "is_verified": false,
+                            "last_online_at": "2026-01-17T08:57:47.705Z",
+                            "linkedin_handle": null,
+                            "name": "Favour",
+                            "tiktok_handle": null,
+                            "timezone": "Africa/Lagos",
+                            "twitter_handle": null,
+                            "username": null,
+                            "website": null,
+                            "youtube_handle": null
+                        }
+                    ],
+                    "role": {
+                        "type": "guest",
+                        "proxy_key": "g-wFYfKFCB6nAx0DE",
+                        "ticket_key": "sVHXwn",
+                        "approval_status": "approved"
+                    },
+                    "waitlist_active": false,
+                    "featured_city": null
+                },
+                {
+                    "api_id": "evt-2MH2sYNkaGtfOi3",
+                    "event": {
+                        "api_id": "evt-2MH2sYNkaGtfOi3",
+                        "calendar_api_id": "cal-lAEsBBAMHKYklra",
+                        "cover_url": "https://images.lumacdn.com/event-covers/ed/7637a956-f343-4455-9122-65856c86b8c2.jpg",
+                        "end_at": "2026-02-12T14:00:00.000Z",
+                        "event_type": "independent",
+                        "hide_rsvp": false,
+                        "location_type": "offline",
+                        "name": "Solana x AI Workshop, FUTO",
+                        "one_to_one": true,
+                        "recurrence_id": null,
+                        "show_guest_list": true,
+                        "start_at": "2026-02-12T09:00:00.000Z",
+                        "timezone": "Africa/Lagos",
+                        "url": "g55kadpl",
+                        "user_api_id": "usr-IuK2EfrxxVG6irG",
+                        "visibility": "public",
+                        "virtual_info": {
+                            "has_access": true,
+                            "raw_join_url": null,
+                            "zoom_id": null,
+                            "password": null
+                        },
+                        "geo_address_info": {
+                            "city": "Ihiagwa",
+                            "type": "google",
+                            "region": "Imo",
+                            "address": "Federal University of Technology - Owerri",
+                            "country": "Nigeria",
+                            "place_id": "ChIJmYZlbAZfQhAR9cgnaqlTdLw",
+                            "localized": {
+                                "en-GB": {
+                                    "city": "Ihiagwa",
+                                    "region": "Imo",
+                                    "address": "Federal University of Technology - Owerri",
+                                    "country": "Nigeria",
+                                    "city_state": "Ihiagwa, Imo",
+                                    "sublocality": "Diamond Bank",
+                                    "full_address": "Federal University of Technology - Owerri, PMB,Owerri, 1526, Ihiagwa 460113, Imo, Nigeria",
+                                    "short_address": "1526, PMB,Owerri, Ihiagwa"
+                                }
+                            },
+                            "city_state": "Ihiagwa, Imo",
+                            "description": "",
+                            "sublocality": "Diamond Bank",
+                            "country_code": "NG",
+                            "full_address": "Federal University of Technology - Owerri, PMB,Owerri, 1526, Ihiagwa 460113, Imo, Nigeria",
+                            "short_address": "1526, PMB,Owerri, Ihiagwa",
+                            "apple_maps_place_id": "I3CCD066E5A1B303E",
+                            "mode": "shown"
+                        },
+                        "geo_address_visibility": "public",
+                        "coordinate": {
+                            "longitude": 6.986148099999999,
+                            "latitude": 5.392690099999999
+                        },
+                        "waitlist_enabled": false,
+                        "waitlist_status": "disabled"
+                    },
+                    "cover_image": {
+                        "colors": [
+                            "#010201",
+                            "#05ab67",
+                            "#fcfcfc"
+                        ],
+                        "palette": {
+                            "neutral": [
+                                {
+                                    "color": "#010201",
+                                    "percentage": 84.08
+                                },
+                                {
+                                    "color": "#fcfcfc",
+                                    "percentage": 1.58
+                                }
+                            ],
+                            "vibrant": [
+                                {
+                                    "color": "#05ab67",
+                                    "percentage": 1.81
+                                }
+                            ]
+                        }
+                    },
+                    "calendar": {
+                        "access_level": "public",
+                        "api_id": "cal-lAEsBBAMHKYklra",
+                        "avatar_url": "https://cdn.lu.ma/avatars-default/community_avatar_2.png",
+                        "coordinate": null,
+                        "cover_image_url": "https://images.lumacdn.com/calendar-defaults/patterns/squares-100.png",
+                        "description_short": null,
+                        "event_submission_restriction": "open",
+                        "geo_city": null,
+                        "geo_country": null,
+                        "geo_region": null,
+                        "google_measurement_id": null,
+                        "instagram_handle": null,
+                        "is_blocked": false,
+                        "launch_status": "launched",
+                        "linkedin_handle": null,
+                        "luma_plus_active": false,
+                        "meta_pixel_id": null,
+                        "name": "Personal",
+                        "personal_user_api_id": "usr-IuK2EfrxxVG6irG",
+                        "refund_policy": null,
+                        "slug": null,
+                        "social_image_url": null,
+                        "stripe_account_id": null,
+                        "tax_config": null,
+                        "tiktok_handle": null,
+                        "timezone": null,
+                        "tint_color": "#F31A7C",
+                        "track_meta_ads_from_luma": false,
+                        "twitter_handle": null,
+                        "verified_at": null,
+                        "website": null,
+                        "youtube_handle": null,
+                        "is_personal": true,
+                        "personal_user": {
+                            "api_id": "usr-IuK2EfrxxVG6irG",
+                            "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_39.png",
+                            "bio_short": null,
+                            "instagram_handle": null,
+                            "is_verified": false,
+                            "last_online_at": "2026-02-11T09:24:31.112Z",
+                            "linkedin_handle": "/in/prince-ubadineke-820bba345",
+                            "name": "Ubadineke Prince",
+                            "tiktok_handle": null,
+                            "timezone": "Africa/Lagos",
+                            "twitter_handle": null,
+                            "username": null,
+                            "website": null,
+                            "youtube_handle": null
+                        }
+                    },
+                    "start_at": "2026-02-12T09:00:00.000Z",
+                    "hosts": [
+                        {
+                            "name": "Ubadineke Prince",
+                            "api_id": "usr-IuK2EfrxxVG6irG",
+                            "website": null,
+                            "timezone": "Africa/Lagos",
+                            "username": null,
+                            "bio_short": null,
+                            "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_39.png",
+                            "is_verified": false,
+                            "tiktok_handle": null,
+                            "last_online_at": "2026-02-11T09:24:31.112Z",
+                            "twitter_handle": null,
+                            "youtube_handle": null,
+                            "linkedin_handle": "/in/prince-ubadineke-820bba345",
+                            "instagram_handle": null
+                        }
+                    ],
+                    "guest_count": 54,
+                    "ticket_count": 54,
+                    "ticket_info": {
+                        "price": null,
+                        "is_free": true,
+                        "max_price": null,
+                        "is_sold_out": false,
+                        "spots_remaining": null,
+                        "is_near_capacity": false,
+                        "require_approval": false,
+                        "currency_info": null
+                    },
+                    "featured_guests": [
+                        {
+                            "api_id": "usr-c9DLPSKc9WDEDm1",
+                            "avatar_url": "https://images.lumacdn.com/avatars/fa/ecc7a3f4-17ea-4b56-a486-83079610103c.jpg",
+                            "bio_short": null,
+                            "instagram_handle": null,
+                            "is_verified": false,
+                            "last_online_at": "2025-11-01T08:53:07.533Z",
+                            "linkedin_handle": null,
+                            "name": "ogbuagu nwabunwanne Michael ",
+                            "tiktok_handle": null,
+                            "timezone": "Africa/Lagos",
+                            "twitter_handle": null,
+                            "username": null,
+                            "website": null,
+                            "youtube_handle": null
+                        },
+                        {
+                            "api_id": "usr-lxJhdoV3oVrV84n",
+                            "avatar_url": "https://images.lumacdn.com/avatars/vx/a3656740-5420-4f5f-8bc0-dea9928c5e9d.jpg",
+                            "bio_short": null,
+                            "instagram_handle": "nestorcyber",
+                            "is_verified": false,
+                            "last_online_at": "2026-02-12T05:57:03.533Z",
+                            "linkedin_handle": "/in/nestoranyanwu",
+                            "name": "Nestor Anyanwu",
+                            "tiktok_handle": "nestorcyber",
+                            "timezone": "Africa/Lagos",
+                            "twitter_handle": "nestorcyber",
+                            "username": null,
+                            "website": null,
+                            "youtube_handle": "nestorcyber"
+                        },
+                        {
+                            "api_id": "usr-TL9En0GAuwQHbBO",
+                            "avatar_url": "https://images.lumacdn.com/avatars/06/9a9b82ef-9b14-47e5-8b5a-12bb2a2b6a3c.jpg",
+                            "bio_short": null,
+                            "instagram_handle": null,
+                            "is_verified": false,
+                            "last_online_at": "2026-02-09T06:29:55.441Z",
+                            "linkedin_handle": null,
+                            "name": "Excel Onoh",
+                            "tiktok_handle": null,
+                            "timezone": "Africa/Lagos",
+                            "twitter_handle": "Solana_Sprinter",
+                            "username": "Solana_Sprinter",
+                            "website": null,
+                            "youtube_handle": ""
+                        },
+                        {
+                            "api_id": "usr-f9L9y3fEKFi5G5l",
+                            "avatar_url": "https://images.lumacdn.com/avatars/n7/238c4f4c-e069-4792-9754-60a30cc121ff.jpg",
+                            "bio_short": null,
+                            "instagram_handle": null,
+                            "is_verified": false,
+                            "last_online_at": "2026-02-12T08:22:01.906Z",
+                            "linkedin_handle": null,
+                            "name": "Ezeigwe Natania",
+                            "tiktok_handle": null,
+                            "timezone": "Africa/Lagos",
+                            "twitter_handle": null,
+                            "username": "DarkRequim",
+                            "website": null,
+                            "youtube_handle": ""
+                        },
+                        {
+                            "api_id": "usr-6NV1QUbgx3Fjx0l",
+                            "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_10.png",
+                            "bio_short": null,
+                            "instagram_handle": null,
+                            "is_verified": false,
+                            "last_online_at": "2025-04-15T17:06:30.061Z",
+                            "linkedin_handle": null,
+                            "name": "Okolie Onyedikachukwu ",
+                            "tiktok_handle": null,
+                            "timezone": "Africa/Lagos",
+                            "twitter_handle": null,
+                            "username": null,
+                            "website": null,
+                            "youtube_handle": null
+                        },
+                        {
+                            "api_id": "usr-gngElsOouGesnDC",
+                            "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_43.png",
+                            "bio_short": null,
+                            "instagram_handle": null,
+                            "is_verified": false,
+                            "last_online_at": null,
+                            "linkedin_handle": null,
+                            "name": "Chinwuba ",
+                            "tiktok_handle": null,
+                            "timezone": "Africa/Lagos",
+                            "twitter_handle": null,
+                            "username": null,
+                            "website": null,
+                            "youtube_handle": null
+                        },
+                        {
+                            "api_id": "usr-K2keKA5UMuz8jPo",
+                            "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_44.png",
+                            "bio_short": null,
+                            "instagram_handle": null,
+                            "is_verified": false,
+                            "last_online_at": "2026-02-12T05:18:14.644Z",
+                            "linkedin_handle": null,
+                            "name": "Leweke Precious Chigozie",
+                            "tiktok_handle": null,
+                            "timezone": "Africa/Lagos",
+                            "twitter_handle": null,
+                            "username": null,
+                            "website": null,
+                            "youtube_handle": null
+                        },
+                        {
+                            "api_id": "usr-aighk55dLciWnHQ",
+                            "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_39.png",
+                            "bio_short": null,
+                            "instagram_handle": null,
+                            "is_verified": false,
+                            "last_online_at": "2026-02-12T08:21:59.190Z",
+                            "linkedin_handle": null,
+                            "name": "Mindsurfer",
+                            "tiktok_handle": null,
+                            "timezone": "Asia/Almaty",
+                            "twitter_handle": null,
+                            "username": null,
+                            "website": null,
+                            "youtube_handle": null
+                        },
+                        {
+                            "api_id": "usr-qxem0EsJMV7vUrT",
+                            "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_39.png",
+                            "bio_short": null,
+                            "instagram_handle": null,
+                            "is_verified": false,
+                            "last_online_at": "2026-02-10T00:00:19.275Z",
+                            "linkedin_handle": null,
+                            "name": "lucky",
+                            "tiktok_handle": null,
+                            "timezone": "America/Los_Angeles",
+                            "twitter_handle": null,
+                            "username": null,
+                            "website": null,
+                            "youtube_handle": null
+                        },
+                        {
+                            "api_id": "usr-pa4ZYLdsGodO4GD",
+                            "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_2.png",
+                            "bio_short": null,
+                            "instagram_handle": null,
+                            "is_verified": false,
+                            "last_online_at": "2026-02-11T18:57:28.583Z",
+                            "linkedin_handle": null,
+                            "name": "Emmanuel Okorie",
+                            "tiktok_handle": null,
+                            "timezone": "Africa/Lagos",
+                            "twitter_handle": null,
+                            "username": null,
+                            "website": null,
+                            "youtube_handle": null
+                        }
+                    ],
+                    "role": {
+                        "type": "guest",
+                        "proxy_key": "g-8RGQXOaO3iCeXpZ",
+                        "ticket_key": "hBog9a",
+                        "approval_status": "approved"
+                    },
+                    "waitlist_active": false,
+                    "featured_city": null
+                }
+            ],
+      "discover_entities": [],
+      "help_pages": []
+    }
+  },
+  "https://api2.luma.com/event/get-guest-list?event_api_id=evt-SE3tNjwbNcltG95&pagination_limit=100&ticket_key=sVHXwn": {
+    "type": "GET",
+    "body": {
+      "has_more": false,
+      "next_cursor": "eyJzdiI6IjJfX3dhem9iaWEiLCJmYiI6InVzci1oNmxKTGM0V3BGcHVsS0cifQ",
+      "entries": [
+        {
+          "api_id": "usr-aighk55dLciWnHQ",
+          "user": {
+            "name": "Mindsurfer",
+            "api_id": "usr-aighk55dLciWnHQ",
+            "website": null,
+            "timezone": "Asia/Almaty",
+            "username": null,
+            "bio_short": null,
+            "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_39.png",
+            "is_verified": false,
+            "tiktok_handle": null,
+            "last_online_at": "2026-02-12T08:21:59.190Z",
+            "twitter_handle": null,
+            "youtube_handle": null,
+            "linkedin_handle": null,
+            "instagram_handle": null
+          },
+          "num_tickets_registered": 1,
+          "section_label": null
+        },
+        {
+          "api_id": "usr-IsWBpAnUFGlJUqS",
+          "user": {
+            "name": "Adeola Lasisi ",
+            "api_id": "usr-IsWBpAnUFGlJUqS",
+            "website": null,
+            "timezone": "Africa/Lagos",
+            "username": null,
+            "bio_short": null,
+            "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_1.png",
+            "is_verified": false,
+            "tiktok_handle": null,
+            "last_online_at": "2026-02-11T11:14:54.505Z",
+            "twitter_handle": "adeolalasisi6",
+            "youtube_handle": null,
+            "linkedin_handle": null,
+            "instagram_handle": null
+          },
+          "num_tickets_registered": 1,
+          "section_label": null
+        },
+        {
+          "api_id": "usr-R5erptdBuKjjlrq",
+          "user": {
+            "name": "Alfredo Glover",
+            "api_id": "usr-R5erptdBuKjjlrq",
+            "website": null,
+            "timezone": "Europe/Paris",
+            "username": "alfred_glover",
+            "bio_short": "Hey, I'm Alfredo Glover, a self-employed blockchain developer with five years of hands-on experience building smart contracts and Web3 apps",
+            "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_40.png",
+            "is_verified": false,
+            "tiktok_handle": "alfredo_glover",
+            "last_online_at": "2026-02-12T06:15:33.748Z",
+            "twitter_handle": "alfred_glover25",
+            "youtube_handle": "AlfredoGlover",
+            "linkedin_handle": "/in/alfredo-glover-453193328",
+            "instagram_handle": null
+          },
+          "num_tickets_registered": 1,
+          "section_label": null
+        },
+        {
+          "api_id": "usr-d9NUKaaeGxLZdF3",
+          "user": {
+            "name": "Arowolo Kehinde ",
+            "api_id": "usr-d9NUKaaeGxLZdF3",
+            "website": null,
+            "timezone": "Africa/Lagos",
+            "username": null,
+            "bio_short": null,
+            "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_19.png",
+            "is_verified": false,
+            "tiktok_handle": null,
+            "last_online_at": "2025-08-06T17:19:19.627Z",
+            "twitter_handle": "Arowolokenny01",
+            "youtube_handle": null,
+            "linkedin_handle": null,
+            "instagram_handle": null
+          },
+          "num_tickets_registered": 1,
+          "section_label": null
+        },
+        {
+          "api_id": "usr-pHC2D6Avu6OAEyo",
+          "user": {
+            "name": "Confidence Ekeanya",
+            "api_id": "usr-pHC2D6Avu6OAEyo",
+            "website": null,
+            "timezone": "America/New_York",
+            "username": null,
+            "bio_short": "Full stack blockchain developer ✨",
+            "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_3.png",
+            "is_verified": false,
+            "tiktok_handle": null,
+            "last_online_at": "2025-05-16T12:37:06.381Z",
+            "twitter_handle": null,
+            "youtube_handle": null,
+            "linkedin_handle": null,
+            "instagram_handle": null
+          },
+          "num_tickets_registered": 1,
+          "section_label": null
+        },
+        {
+          "api_id": "usr-mmxYKeoBB6vq3RR",
+          "user": {
+            "name": "Edimoya",
+            "api_id": "usr-mmxYKeoBB6vq3RR",
+            "website": null,
+            "timezone": "Africa/Lagos",
+            "username": null,
+            "bio_short": null,
+            "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_40.png",
+            "is_verified": false,
+            "tiktok_handle": null,
+            "last_online_at": "2025-11-07T09:27:11.912Z",
+            "twitter_handle": "Lifeofedi_",
+            "youtube_handle": null,
+            "linkedin_handle": null,
+            "instagram_handle": null
+          },
+          "num_tickets_registered": 1,
+          "section_label": null
+        },
+        {
+          "api_id": "usr-xtsCIKqaTL4Q117",
+          "user": {
+            "name": "Energy ",
+            "api_id": "usr-xtsCIKqaTL4Q117",
+            "website": null,
+            "timezone": "Africa/Lagos",
+            "username": null,
+            "bio_short": null,
+            "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_32.png",
+            "is_verified": false,
+            "tiktok_handle": null,
+            "last_online_at": "2025-05-29T01:09:43.378Z",
+            "twitter_handle": null,
+            "youtube_handle": null,
+            "linkedin_handle": null,
+            "instagram_handle": null
+          },
+          "num_tickets_registered": 1,
+          "section_label": null
+        },
+        {
+          "api_id": "usr-ZgUBispq8GuH5EW",
+          "user": {
+            "name": "Farouk Bello",
+            "api_id": "usr-ZgUBispq8GuH5EW",
+            "website": null,
+            "timezone": "Africa/Lagos",
+            "username": null,
+            "bio_short": null,
+            "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_41.png",
+            "is_verified": false,
+            "tiktok_handle": null,
+            "last_online_at": "2026-02-11T20:29:55.175Z",
+            "twitter_handle": null,
+            "youtube_handle": null,
+            "linkedin_handle": null,
+            "instagram_handle": null
+          },
+          "num_tickets_registered": 1,
+          "section_label": null
+        },
+        {
+          "api_id": "usr-D87WjphQtiXoFUr",
+          "user": {
+            "name": "Favour",
+            "api_id": "usr-D87WjphQtiXoFUr",
+            "website": null,
+            "timezone": "Africa/Lagos",
+            "username": null,
+            "bio_short": null,
+            "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_4.png",
+            "is_verified": false,
+            "tiktok_handle": null,
+            "last_online_at": "2026-01-17T08:57:47.705Z",
+            "twitter_handle": null,
+            "youtube_handle": null,
+            "linkedin_handle": null,
+            "instagram_handle": null
+          },
+          "num_tickets_registered": 1,
+          "section_label": null
+        },
+        {
+          "api_id": "usr-BCpwvRBGwjD1eKl",
+          "user": {
+            "name": "Godwin Bakpo",
+            "api_id": "usr-BCpwvRBGwjD1eKl",
+            "website": null,
+            "timezone": "Africa/Lagos",
+            "username": null,
+            "bio_short": null,
+            "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_39.png",
+            "is_verified": false,
+            "tiktok_handle": null,
+            "last_online_at": "2026-01-14T16:01:13.651Z",
+            "twitter_handle": null,
+            "youtube_handle": null,
+            "linkedin_handle": null,
+            "instagram_handle": null
+          },
+          "num_tickets_registered": 1,
+          "section_label": null
+        },
+        {
+          "api_id": "usr-1pl0GFdhlHXBd7v",
+          "user": {
+            "name": "Gyimah Tosin Isaac",
+            "api_id": "usr-1pl0GFdhlHXBd7v",
+            "website": null,
+            "timezone": "Africa/Lagos",
+            "username": null,
+            "bio_short": null,
+            "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_27.png",
+            "is_verified": false,
+            "tiktok_handle": null,
+            "last_online_at": null,
+            "twitter_handle": null,
+            "youtube_handle": null,
+            "linkedin_handle": null,
+            "instagram_handle": null
+          },
+          "num_tickets_registered": 1,
+          "section_label": null
+        },
+        {
+          "api_id": "usr-3USLzfrIjeU95Y3",
+          "user": {
+            "name": "inspiration_gx",
+            "api_id": "usr-3USLzfrIjeU95Y3",
+            "website": null,
+            "timezone": "America/Los_Angeles",
+            "username": "inspirationgx",
+            "bio_short": "Building web3 software products \nDevrel Superteamng Ekiti",
+            "avatar_url": "https://images.lumacdn.com/avatars/7f/660819fb-1b57-43ae-86b6-b692ec4dd819.png",
+            "is_verified": false,
+            "tiktok_handle": null,
+            "last_online_at": "2026-02-11T14:22:40.065Z",
+            "twitter_handle": "inspiration_gx",
+            "youtube_handle": "",
+            "linkedin_handle": "/in/elijah-kolawole",
+            "instagram_handle": null
+          },
+          "num_tickets_registered": 1,
+          "section_label": null
+        },
+        {
+          "api_id": "usr-ZlfMXKJf1nfIc8h",
+          "user": {
+            "name": "Joy Yusuf",
+            "api_id": "usr-ZlfMXKJf1nfIc8h",
+            "website": null,
+            "timezone": "Africa/Lagos",
+            "username": "JoyYusuf__",
+            "bio_short": "Creating awesome interfaces ✨\nDesign lead SuperteamNG Ekiti",
+            "avatar_url": "https://images.lumacdn.com/avatars/oz/fc1d3a10-cdc0-4f04-bca1-7ec5f7e17814.jpg",
+            "is_verified": false,
+            "tiktok_handle": null,
+            "last_online_at": "2025-09-30T15:29:58.560Z",
+            "twitter_handle": "JoyYusuf__",
+            "youtube_handle": "",
+            "linkedin_handle": "/in/Joy-Yusuf",
+            "instagram_handle": null
+          },
+          "num_tickets_registered": 1,
+          "section_label": null
+        },
+        {
+          "api_id": "usr-DBFNfGFGXpbVSMm",
+          "user": {
+            "name": "Kelechi Endurance",
+            "api_id": "usr-DBFNfGFGXpbVSMm",
+            "website": null,
+            "timezone": "Africa/Lagos",
+            "username": null,
+            "bio_short": null,
+            "avatar_url": "https://images.lumacdn.com/avatars/w8/af957f20-d488-4f94-8dc3-e558239b43df.jpg",
+            "is_verified": false,
+            "tiktok_handle": null,
+            "last_online_at": "2026-01-26T07:45:30.811Z",
+            "twitter_handle": "endurance_kel",
+            "youtube_handle": "",
+            "linkedin_handle": null,
+            "instagram_handle": null
+          },
+          "num_tickets_registered": 1,
+          "section_label": null
+        },
+        {
+          "api_id": "usr-emDVFImtJnoPBs4",
+          "user": {
+            "name": "Nuel",
+            "api_id": "usr-emDVFImtJnoPBs4",
+            "website": null,
+            "timezone": "Africa/Lagos",
+            "username": null,
+            "bio_short": null,
+            "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_29.png",
+            "is_verified": false,
+            "tiktok_handle": null,
+            "last_online_at": "2026-02-12T01:57:11.673Z",
+            "twitter_handle": null,
+            "youtube_handle": null,
+            "linkedin_handle": null,
+            "instagram_handle": null
+          },
+          "num_tickets_registered": 1,
+          "section_label": null
+        },
+        {
+          "api_id": "usr-5JtaixM8KXsCbyN",
+          "user": {
+            "name": "obiwale ayomide",
+            "api_id": "usr-5JtaixM8KXsCbyN",
+            "website": null,
+            "timezone": "Africa/Lagos",
+            "username": null,
+            "bio_short": null,
+            "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_0.png",
+            "is_verified": false,
+            "tiktok_handle": null,
+            "last_online_at": null,
+            "twitter_handle": null,
+            "youtube_handle": null,
+            "linkedin_handle": null,
+            "instagram_handle": null
+          },
+          "num_tickets_registered": 1,
+          "section_label": null
+        },
+        {
+          "api_id": "usr-ah3PwOiMS7X7rLE",
+          "user": {
+            "name": "Okwandu Sample",
+            "api_id": "usr-ah3PwOiMS7X7rLE",
+            "website": null,
+            "timezone": "Africa/Lagos",
+            "username": null,
+            "bio_short": null,
+            "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_31.png",
+            "is_verified": false,
+            "tiktok_handle": null,
+            "last_online_at": null,
+            "twitter_handle": null,
+            "youtube_handle": null,
+            "linkedin_handle": null,
+            "instagram_handle": null
+          },
+          "num_tickets_registered": 1,
+          "section_label": null
+        },
+        {
+          "api_id": "usr-qaGJdRzTwGpdNjM",
+          "user": {
+            "name": "OLADAPO ABDULRAZAQ ",
+            "api_id": "usr-qaGJdRzTwGpdNjM",
+            "website": null,
+            "timezone": "Africa/Lagos",
+            "username": null,
+            "bio_short": null,
+            "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_6.png",
+            "is_verified": false,
+            "tiktok_handle": null,
+            "last_online_at": "2026-02-11T08:32:02.125Z",
+            "twitter_handle": null,
+            "youtube_handle": null,
+            "linkedin_handle": null,
+            "instagram_handle": null
+          },
+          "num_tickets_registered": 1,
+          "section_label": null
+        },
+        {
+          "api_id": "usr-MOElUEGCp5XgUDq",
+          "user": {
+            "name": "Oladele Afeez Adekola",
+            "api_id": "usr-MOElUEGCp5XgUDq",
+            "website": null,
+            "timezone": "Africa/Lagos",
+            "username": "Kingjasper",
+            "bio_short": "",
+            "avatar_url": "https://images.lumacdn.com/avatars/kg/305ca452-14df-4fa6-9ca2-ccd6afabe41b.jpg",
+            "is_verified": false,
+            "tiktok_handle": null,
+            "last_online_at": "2026-02-12T07:44:35.352Z",
+            "twitter_handle": "KINGJASPER14981",
+            "youtube_handle": null,
+            "linkedin_handle": "/in/oladele-afeez-0aa80719b",
+            "instagram_handle": "kingjaspertechinc"
+          },
+          "num_tickets_registered": 1,
+          "section_label": null
+        },
+        {
+          "api_id": "usr-3XlYkHrECOb12lf",
+          "user": {
+            "name": "Olawale.dev",
+            "api_id": "usr-3XlYkHrECOb12lf",
+            "website": null,
+            "timezone": "Africa/Lagos",
+            "username": null,
+            "bio_short": null,
+            "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_29.png",
+            "is_verified": false,
+            "tiktok_handle": null,
+            "last_online_at": "2025-10-11T11:54:35.727Z",
+            "twitter_handle": null,
+            "youtube_handle": null,
+            "linkedin_handle": null,
+            "instagram_handle": null
+          },
+          "num_tickets_registered": 1,
+          "section_label": null
+        },
+        {
+          "api_id": "usr-3LDJhWEgUnSsQ2F",
+          "user": {
+            "name": "Purity Ogheneochuko",
+            "api_id": "usr-3LDJhWEgUnSsQ2F",
+            "website": null,
+            "timezone": "Africa/Lagos",
+            "username": null,
+            "bio_short": null,
+            "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_10.png",
+            "is_verified": false,
+            "tiktok_handle": null,
+            "last_online_at": "2026-02-11T19:33:51.272Z",
+            "twitter_handle": null,
+            "youtube_handle": null,
+            "linkedin_handle": null,
+            "instagram_handle": null
+          },
+          "num_tickets_registered": 1,
+          "section_label": null
+        },
+        {
+          "api_id": "usr-VKJGexKozYrAmtV",
+          "user": {
+            "name": "Satoshi",
+            "api_id": "usr-VKJGexKozYrAmtV",
+            "website": null,
+            "timezone": "Africa/Lagos",
+            "username": null,
+            "bio_short": null,
+            "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_5.png",
+            "is_verified": false,
+            "tiktok_handle": null,
+            "last_online_at": "2026-02-10T17:00:57.071Z",
+            "twitter_handle": null,
+            "youtube_handle": null,
+            "linkedin_handle": null,
+            "instagram_handle": null
+          },
+          "num_tickets_registered": 1,
+          "section_label": null
+        },
+        {
+          "api_id": "usr-vXAsj2m9pVZnvMG",
+          "user": {
+            "name": "STee",
+            "api_id": "usr-vXAsj2m9pVZnvMG",
+            "website": null,
+            "timezone": "Africa/Lagos",
+            "username": null,
+            "bio_short": null,
+            "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_4.png",
+            "is_verified": false,
+            "tiktok_handle": null,
+            "last_online_at": "2025-11-04T15:49:46.320Z",
+            "twitter_handle": "S_tiiie",
+            "youtube_handle": null,
+            "linkedin_handle": null,
+            "instagram_handle": null
+          },
+          "num_tickets_registered": 1,
+          "section_label": null
+        },
+        {
+          "api_id": "usr-d1ueH4mebwncCBG",
+          "user": {
+            "name": "Theophilus ",
+            "api_id": "usr-d1ueH4mebwncCBG",
+            "website": null,
+            "timezone": "Africa/Lagos",
+            "username": null,
+            "bio_short": null,
+            "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_39.png",
+            "is_verified": false,
+            "tiktok_handle": null,
+            "last_online_at": "2026-02-12T01:28:45.645Z",
+            "twitter_handle": "web3_theo",
+            "youtube_handle": null,
+            "linkedin_handle": null,
+            "instagram_handle": null
+          },
+          "num_tickets_registered": 1,
+          "section_label": null
+        },
+        {
+          "api_id": "usr-vFxYvFKpV2DGMHA",
+          "user": {
+            "name": "Ukeje Goodness",
+            "api_id": "usr-vFxYvFKpV2DGMHA",
+            "website": "https://linktr.ee/goodylili",
+            "timezone": "Africa/Lagos",
+            "username": "goodylili",
+            "bio_short": "communicate emotion",
+            "avatar_url": "https://images.lumacdn.com/avatars/we/a686a88b-dbc2-4751-9e57-f4242a7e68e3.jpg",
+            "is_verified": false,
+            "tiktok_handle": "goodylili",
+            "last_online_at": "2026-02-10T14:21:02.275Z",
+            "twitter_handle": "goodylili",
+            "youtube_handle": "goodylili",
+            "linkedin_handle": "/in/goodylili",
+            "instagram_handle": "_goodylili"
+          },
+          "num_tickets_registered": 1,
+          "section_label": null
+        },
+        {
+          "api_id": "usr-h6lJLc4WpFpulKG",
+          "user": {
+            "name": "Wazobia",
+            "api_id": "usr-h6lJLc4WpFpulKG",
+            "website": null,
+            "timezone": "Africa/Lagos",
+            "username": null,
+            "bio_short": null,
+            "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_22.png",
+            "is_verified": false,
+            "tiktok_handle": null,
+            "last_online_at": "2025-06-25T17:57:10.281Z",
+            "twitter_handle": null,
+            "youtube_handle": null,
+            "linkedin_handle": null,
+            "instagram_handle": null
+          },
+          "num_tickets_registered": 1,
+          "section_label": null
+        }
+      ]
+    }
+  }
+}

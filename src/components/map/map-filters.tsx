@@ -9,16 +9,9 @@ import CountrySelect from "@/app/map/country-select";
 import { useMapStore } from "@/store/map-store";
 import { trackEvent } from "@/lib/analytics";
 import { useAuth } from "@/hooks/use-auth";
+import { USER_ROLE_OPTIONS } from "@/lib/profile-taxonomy";
 
-const userRoles: { value: UserRole; label: string; description?: string }[] = [
-  { value: "developer", label: "Developer" },
-  { value: "trader", label: "Trader" },
-  { value: "investor", label: "Investor" },
-  { value: "designer", label: "Designer" },
-  { value: "founder", label: "Founder" },
-  { value: "degen", label: "Degen" },
-  { value: "other", label: "Other" },
-];
+const userRoles: { value: UserRole; label: string; description?: string }[] = USER_ROLE_OPTIONS;
 
 const eventTypes: { value: EventType; label: string }[] = [
   { value: "official", label: "Official" },
@@ -292,132 +285,103 @@ export function MapFiltersPanel({
         </div>
 
         {/* Event Type */}
-        <div>
-          <label className="block text-sm text-[var(--color-text-muted)] mb-3">
-            Events by category
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {eventTypes.map((type) => {
-              const isSelected = filters.eventType === type.value;
-              return (
-                <button
-                  key={type.value}
-                  onClick={() => toggleEventType(type.value)}
-                  className={cn(
-                    "px-3 py-1.5 text-sm rounded-full border transition-colors",
-                    isSelected
-                      ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
-                      : "border-[var(--color-surface-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-text-muted)]"
-                  )}
-                >
-                  {type.label}
-                </button>
-              );
-            })}
+        {filters.contentType !== "users" && filters.contentType !== "hubs" && (
+          <div>
+            <label className="block text-sm text-[var(--color-text-muted)] mb-3">
+              Events by category
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {eventTypes.map((type) => {
+                const isSelected = filters.eventType === type.value;
+                return (
+                  <button
+                    key={type.value}
+                    onClick={() => toggleEventType(type.value)}
+                    className={cn(
+                      "px-3 py-1.5 text-sm rounded-full border transition-colors",
+                      isSelected
+                        ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
+                        : "border-[var(--color-surface-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-text-muted)]"
+                    )}
+                  >
+                    {type.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* User roles */}
-        <div>
-          <label className="block text-sm text-[var(--color-text-muted)] mb-3">
-            User Types
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {userRoles.map((role) => {
-              const isSelected = filters.userRoles?.includes(role.value);
-              return (
-                <button
-                  key={role.value}
-                  onClick={() => toggleRole(role.value)}
-                  className={cn(
-                    "px-3 py-1.5 text-sm rounded-full border transition-colors",
-                    isSelected
-                      ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
-                      : "border-[var(--color-surface-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-text-muted)]"
-                  )}
-                >
-                  {role.label}
-                </button>
-              );
-            })}
+        {filters.contentType !== "hubs" && filters.contentType !== "events" && (
+          <div>
+            <label className="block text-sm text-[var(--color-text-muted)] mb-3">
+              User Types
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {userRoles.map((role) => {
+                const isSelected = filters.userRoles?.includes(role.value);
+                return (
+                  <button
+                    key={role.value}
+                    onClick={() => toggleRole(role.value)}
+                    className={cn(
+                      "px-3 py-1.5 text-sm rounded-full border transition-colors",
+                      isSelected
+                        ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
+                        : "border-[var(--color-surface-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-text-muted)]"
+                    )}
+                  >
+                    {role.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Toggle switches */}
-        <div className="space-y-3">
-          <label className="flex items-center justify-between cursor-pointer">
-            <span className="text-sm text-[var(--color-text-secondary)]">
-              Find frens
-            </span>
-            <button
-              onClick={() => {
-                handleFilterAction(() => {
-                  const newOpenToMeet = !filters.openToMeet;
-                  if (newOpenToMeet) {
-                    // При включении "Find frens" сбрасываем все остальные фильтры
-                    setCountry(null);
-                    setCityInput("");
-                    onFiltersChange({
-                      showUsers: true,
-                      showEvents: false,
-                      showHubs: false,
-                      showCommunities: false,
-                      showWorkspaces: false,
-                      contentType: "users",
-                      userRoles: undefined,
-                      eventType: undefined,
-                      openToMeet: true,
-                      activeOnly: undefined,
-                      country: undefined,
-                      countryCode: undefined,
-                      city: undefined,
-                    });
-                  } else {
-                    // При выключении просто убираем фильтр openToMeet
-                    onFiltersChange({
-                      ...filters,
-                      openToMeet: false,
-                    });
-                  }
-                });
-              }}
-              className={cn(
-                "w-11 h-6 rounded-full transition-colors relative",
-                filters.openToMeet
-                  ? "bg-[var(--color-primary)]"
-                  : "bg-[var(--color-surface-border)]"
-              )}
-            >
-              <span
-                className={cn(
-                  "absolute top-1 w-4 h-4 rounded-full bg-white transition-transform",
-                  filters.openToMeet ? "left-6" : "left-1"
-                )}
-              />
-            </button>
-          </label>
-
-          {isVip && (
+        {filters.contentType !== "hubs" && filters.contentType !== "events" && (
+          <div className="space-y-3">
             <label className="flex items-center justify-between cursor-pointer">
               <span className="text-sm text-[var(--color-text-secondary)]">
-                Pro users only
+                Find frens
               </span>
               <button
                 onClick={() => {
-                  const newActiveOnly = !filters.activeOnly;
-                  trackEvent("map_filter_change", {
-                    event_category: "Map",
-                    filter_type: "active_only",
-                    filter_value: newActiveOnly ? "true" : "false",
-                  });
-                  onFiltersChange({
-                    ...filters,
-                    activeOnly: newActiveOnly,
+                  handleFilterAction(() => {
+                    const newOpenToMeet = !filters.openToMeet;
+                    if (newOpenToMeet) {
+                      // При включении "Find frens" сбрасываем все остальные фильтры
+                      setCountry(null);
+                      setCityInput("");
+                      onFiltersChange({
+                        showUsers: true,
+                        showEvents: false,
+                        showHubs: false,
+                        showCommunities: false,
+                        showWorkspaces: false,
+                        contentType: "users",
+                        userRoles: undefined,
+                        eventType: undefined,
+                        openToMeet: true,
+                        activeOnly: undefined,
+                        country: undefined,
+                        countryCode: undefined,
+                        city: undefined,
+                      });
+                    } else {
+                      // При выключении просто убираем фильтр openToMeet
+                      onFiltersChange({
+                        ...filters,
+                        openToMeet: false,
+                      });
+                    }
                   });
                 }}
                 className={cn(
                   "w-11 h-6 rounded-full transition-colors relative",
-                  filters.activeOnly
+                  filters.openToMeet
                     ? "bg-[var(--color-primary)]"
                     : "bg-[var(--color-surface-border)]"
                 )}
@@ -425,13 +389,48 @@ export function MapFiltersPanel({
                 <span
                   className={cn(
                     "absolute top-1 w-4 h-4 rounded-full bg-white transition-transform",
-                    filters.activeOnly ? "left-6" : "left-1"
+                    filters.openToMeet ? "left-6" : "left-1"
                   )}
                 />
               </button>
             </label>
-          )}
-        </div>
+
+            {isVip && (
+              <label className="flex items-center justify-between cursor-pointer">
+                <span className="text-sm text-[var(--color-text-secondary)]">
+                  Pro users only
+                </span>
+                <button
+                  onClick={() => {
+                    const newActiveOnly = !filters.activeOnly;
+                    trackEvent("map_filter_change", {
+                      event_category: "Map",
+                      filter_type: "active_only",
+                      filter_value: newActiveOnly ? "true" : "false",
+                    });
+                    onFiltersChange({
+                      ...filters,
+                      activeOnly: newActiveOnly,
+                    });
+                  }}
+                  className={cn(
+                    "w-11 h-6 rounded-full transition-colors relative",
+                    filters.activeOnly
+                      ? "bg-[var(--color-primary)]"
+                      : "bg-[var(--color-surface-border)]"
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "absolute top-1 w-4 h-4 rounded-full bg-white transition-transform",
+                      filters.activeOnly ? "left-6" : "left-1"
+                    )}
+                  />
+                </button>
+              </label>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Active Filter Indicator Labels */}
@@ -531,4 +530,3 @@ export function MapFiltersPanel({
     </div>
   );
 }
-

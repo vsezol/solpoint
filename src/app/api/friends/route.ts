@@ -29,15 +29,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Проверяем, существует ли уже подписка
-    const { data: existingFollow } = await supabase
+    const { count: existingCount } = await supabase
       .from("follows")
-      .select("*")
+      .select("*", { count: "exact", head: true })
       .eq("follower_id", authUser.id)
-      .eq("following_id", friend_id)
-      .maybeSingle();
+      .eq("following_id", friend_id);
 
-    if (existingFollow) {
+    if (existingCount && existingCount > 0) {
       return NextResponse.json(
         { error: "Already following this user" },
         { status: 400 }
@@ -56,15 +54,13 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error;
 
-    // Проверяем, является ли это взаимной подпиской (дружбой)
-    const { data: mutualFollow } = await supabase
+    const { count: mutualCount } = await supabase
       .from("follows")
-      .select("*")
+      .select("*", { count: "exact", head: true })
       .eq("follower_id", friend_id)
-      .eq("following_id", authUser.id)
-      .maybeSingle();
+      .eq("following_id", authUser.id);
 
-    const isMutual = !!mutualFollow;
+    const isMutual = (mutualCount ?? 0) > 0;
 
     return NextResponse.json({
       data: {
@@ -149,32 +145,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Проверяем, подписан ли текущий пользователь на другого
-    const { data: userFollowsOther } = await supabase
-      .from("follows")
-      .select("*")
-      .eq("follower_id", authUser.id)
-      .eq("following_id", user_id)
-      .maybeSingle();
-
-    // Проверяем, подписан ли другой пользователь на текущего
-    const { data: otherFollowsUser } = await supabase
-      .from("follows")
-      .select("*")
-      .eq("follower_id", user_id)
-      .eq("following_id", authUser.id)
-      .maybeSingle();
-
-    // Определяем статус
-    let status: "none" | "following" | "follower" | "mutual" = "none";
-    
-    if (userFollowsOther && otherFollowsUser) {
-      status = "mutual";
-    } else if (userFollowsOther) {
-      status = "following";
-    } else if (otherFollowsUser) {
-      status = "follower";
-    }
+    const { data: status } = await supabase.rpc("get_follow_status", {
+      p_user_id: authUser.id,
+      p_other_user_id: user_id,
+    }) as { data: "none" | "following" | "follower" | "mutual" | null };
 
     // Для обратной совместимости с фронтендом, маппим статусы
     let frontendStatus: "none" | "pending_sent" | "pending_received" | "accepted" | "blocked" = "none";
@@ -187,13 +161,14 @@ export async function GET(request: NextRequest) {
       frontendStatus = "pending_received"; // follower = pending_received (входящий запрос)
     }
 
+    const followStatus = status || "none";
     return NextResponse.json({
       data: {
-        status: frontendStatus, // Для обратной совместимости
-        followStatus: status, // Новый статус (following/follower/mutual/none)
-        isMutual: status === "mutual",
-        userFollowsOther: !!userFollowsOther,
-        otherFollowsUser: !!otherFollowsUser,
+        status: frontendStatus,
+        followStatus,
+        isMutual: followStatus === "mutual",
+        userFollowsOther: followStatus === "following" || followStatus === "mutual",
+        otherFollowsUser: followStatus === "follower" || followStatus === "mutual",
       },
     });
   } catch (error: any) {

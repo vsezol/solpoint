@@ -1,4 +1,4 @@
-import type { MapMarker, MapFilters, User, Event, Hub, Community, Workspace } from "@/types";
+import type { MapMarker, MapFilters, User, Event } from "@/types";
 import { MAJOR_CITIES, COUNTRY_CENTERS } from "@/lib/countries";
 
 export interface GetMapMarkersResponse {
@@ -16,8 +16,9 @@ export async function getMapMarkers(
   filters: MapFilters = {
     showUsers: true,
     showEvents: true,
-    showHubs: true,
-    showWorkspaces: true,
+    showHubs: false,
+    showCommunities: false,
+    showWorkspaces: false,
   },
   currentUserId?: string,
   viewerIsPro: boolean = false
@@ -46,7 +47,18 @@ export async function getMapMarkers(
       if (filters.userRoles && filters.userRoles.length > 0) {
         userParams.append("roles", filters.userRoles.join(","));
       }
-      
+
+      // v2 semantic filters
+      if (filters.bestMatches && currentUserId) {
+        userParams.append("best_matches", "true");
+        userParams.append("current_user_id", currentUserId);
+      }
+
+      if (filters.completeProfiles) {
+        userParams.append("complete_profiles", "true");
+      }
+
+      // Legacy map filters (kept for backward compatibility with v1 map flows)
       if (filters.openToMeet) {
         userParams.append("open_to_meet", "true");
         // Если включен openToMeet, показываем только mutual friends
@@ -58,6 +70,10 @@ export async function getMapMarkers(
       
       if (filters.activeOnly) {
         userParams.append("active_only", "true");
+      }
+
+      if (filters.interestSlugs && filters.interestSlugs.length > 0) {
+        userParams.append("interest_slugs", filters.interestSlugs.join(","));
       }
 
       fetchPromises.push(
@@ -161,155 +177,8 @@ export async function getMapMarkers(
       );
     }
 
-    // Подготовка запроса хабов
-    if (filters.showHubs) {
-      const hubParams = new URLSearchParams();
-      
-      if (filters.countryCode) {
-        hubParams.append("country_code", filters.countryCode);
-      }
-      
-      if (filters.city) {
-        hubParams.append("city", filters.city);
-      }
-
-      fetchPromises.push(
-        fetch(`/api/hubs?${hubParams.toString()}`)
-          .then(async (hubsResponse) => {
-            if (hubsResponse.ok) {
-              const data = await hubsResponse.json().catch(() => ({}));
-              const { hubs } = data;
-              if (hubs && Array.isArray(hubs)) {
-                hubs.forEach((hub: Hub) => {
-                  // Пропускаем хабы без координат
-                  if (hub.latitude == null || hub.longitude == null) {
-                    return;
-                  }
-                  
-                  // Проверяем валидность координат
-                  const lat = typeof hub.latitude === "number" ? hub.latitude : parseFloat(String(hub.latitude));
-                  const lng = typeof hub.longitude === "number" ? hub.longitude : parseFloat(String(hub.longitude));
-                  
-                  if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-                    return;
-                  }
-                  
-                  markers.push({
-                    id: `hub-${hub.id}`,
-                    type: "hub",
-                    latitude: lat,
-                    longitude: lng,
-                    data: hub,
-                  });
-                });
-              }
-            }
-          })
-          .catch((error) => {
-            console.error("Error fetching hubs for map:", error);
-          })
-      );
-    }
-
-    // Подготовка запроса communities
-    if (filters.showCommunities) {
-      const communityParams = new URLSearchParams();
-      
-      if (filters.countryCode) {
-        communityParams.append("country_code", filters.countryCode);
-      }
-      
-      if (filters.city) {
-        communityParams.append("city", filters.city);
-      }
-
-      fetchPromises.push(
-        fetch(`/api/communities?${communityParams.toString()}`)
-          .then(async (communitiesResponse) => {
-            if (communitiesResponse.ok) {
-              const data = await communitiesResponse.json().catch(() => ({}));
-              const { communities } = data;
-              if (communities && Array.isArray(communities)) {
-                communities.forEach((community: Community) => {
-                  // Пропускаем communities без координат
-                  if (community.latitude == null || community.longitude == null) {
-                    return;
-                  }
-                  
-                  // Проверяем валидность координат
-                  const lat = typeof community.latitude === "number" ? community.latitude : parseFloat(String(community.latitude));
-                  const lng = typeof community.longitude === "number" ? community.longitude : parseFloat(String(community.longitude));
-                  
-                  if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-                    return;
-                  }
-                  
-                  markers.push({
-                    id: `community-${community.id}`,
-                    type: "community",
-                    latitude: lat,
-                    longitude: lng,
-                    data: community,
-                  });
-                });
-              }
-            }
-          })
-          .catch((error) => {
-            console.error("Error fetching communities for map:", error);
-          })
-      );
-    }
-
-    // Подготовка запроса workspaces
-    if (filters.showWorkspaces) {
-      const workspaceParams = new URLSearchParams();
-      
-      if (filters.countryCode) {
-        workspaceParams.append("country_code", filters.countryCode);
-      }
-      
-      if (filters.city) {
-        workspaceParams.append("city", filters.city);
-      }
-
-      fetchPromises.push(
-        fetch(`/api/workspaces?${workspaceParams.toString()}`)
-          .then(async (workspacesResponse) => {
-            if (workspacesResponse.ok) {
-              const data = await workspacesResponse.json().catch(() => ({}));
-              const { workspaces } = data;
-              if (workspaces && Array.isArray(workspaces)) {
-                workspaces.forEach((workspace: Workspace) => {
-                  // Пропускаем workspaces без координат
-                  if (workspace.latitude == null || workspace.longitude == null) {
-                    return;
-                  }
-                  
-                  // Проверяем валидность координат
-                  const lat = typeof workspace.latitude === "number" ? workspace.latitude : parseFloat(String(workspace.latitude));
-                  const lng = typeof workspace.longitude === "number" ? workspace.longitude : parseFloat(String(workspace.longitude));
-                  
-                  if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-                    return;
-                  }
-                  
-                  markers.push({
-                    id: `workspace-${workspace.id}`,
-                    type: "workspace",
-                    latitude: lat,
-                    longitude: lng,
-                    data: workspace,
-                  });
-                });
-              }
-            }
-          })
-          .catch((error) => {
-            console.error("Error fetching workspaces for map:", error);
-          })
-      );
-    }
+    // Хабы/комьюнити/проекты/воркспейсы отключены на карте:
+    // оставляем только пользователей и события.
 
     // Выполняем все запросы параллельно
     await Promise.all(fetchPromises);
@@ -407,4 +276,3 @@ function getUserCoordinates(user: User, viewerIsPro: boolean = false): { lat: nu
   // Если страна не найдена, возвращаем координаты по умолчанию (центр мира)
   return { lat: 0, lng: 0 };
 }
-

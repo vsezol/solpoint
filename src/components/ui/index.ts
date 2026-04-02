@@ -11,6 +11,7 @@ export { Badge } from "./badge";
 export { EventBadges } from "./event-badges";
 export { Input } from "./input";
 export type { InputProps } from "./input";
+export { TimezoneSelect } from "./timezone-select";
 
 export {
   Modal,
@@ -43,4 +44,3 @@ export type { CheckBoxProps } from "./checkbox";
 export { AuthRequiredModal } from "./auth-required-modal";
 export { ProSubscriptionModal } from "./pro-subscription-modal";
 export { UserListItem } from "./user-list-item";
-

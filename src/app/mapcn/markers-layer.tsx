@@ -8,6 +8,12 @@ import { EventCard } from "@/components/cards/event-card";
 import { HubCard } from "@/components/cards/hub-card";
 import { ProSubscriptionModal } from "@/components/ui";
 import { trackEvent } from "@/lib/analytics";
+import {
+  addFriend,
+  getFriendStatuses,
+  removeFriend,
+  type FollowStatus,
+} from "@/lib/api/friends";
 
 interface MapMarkersLayerProps {
   markers: MapMarker[];
@@ -466,7 +472,7 @@ export function MapMarkersLayer({
 }: MapMarkersLayerProps) {
   const { map, isLoaded } = useMap();
   const [friendshipStatuses, setFriendshipStatuses] = useState<
-    Record<string, "none" | "following" | "mutual">
+    Record<string, FollowStatus>
   >({});
   const [showProModal, setShowProModal] = useState(false);
   const [currentZoom, setCurrentZoom] = useState(4);
@@ -512,19 +518,7 @@ export function MapMarkersLayer({
       const userIds = userMarkers.map((m) => (m.data as User).id);
 
       try {
-        const response = await fetch("/api/friends/status", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ user_ids: userIds }),
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const { statuses } = await response.json();
+        const { statuses } = await getFriendStatuses(userIds);
         setFriendshipStatuses(statuses || {});
       } catch (error) {
         console.error("Error checking friendship statuses:", error);
@@ -542,32 +536,11 @@ export function MapMarkersLayer({
       }
 
       try {
-        const response = await fetch("/api/friends", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ friend_id: userId }),
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.error || "Failed to add friend");
-        }
-
-        // Обновляем статус подписки
-        if (data.data?.isMutual || data.data?.status === "mutual") {
-          setFriendshipStatuses((prev) => ({
-            ...prev,
-            [userId]: "mutual",
-          }));
-        } else {
-          setFriendshipStatuses((prev) => ({
-            ...prev,
-            [userId]: "following",
-          }));
-        }
+        const response = await addFriend(userId);
+        setFriendshipStatuses((prev) => ({
+          ...prev,
+          [userId]: response.followStatus,
+        }));
       } catch (error) {
         console.error("Error adding friend:", error);
         alert(error instanceof Error ? error.message : "Failed to add friend");
@@ -583,14 +556,7 @@ export function MapMarkersLayer({
       }
 
       try {
-        const response = await fetch(`/api/friends?friend_id=${userId}`, {
-          method: "DELETE",
-        });
-
-        if (!response.ok) {
-          const data = await response.json();
-          throw new Error(data.error || "Failed to remove friend");
-        }
+        await removeFriend(userId);
 
         // После отписки статус становится "none"
         setFriendshipStatuses((prev) => ({
@@ -665,10 +631,6 @@ export function MapMarkersLayer({
   );
 
   const renderPopupContent = (marker: MapMarker) => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'markers-layer.tsx:renderPopupContent',message:'Rendering popup content',data:{markerType:marker.type,markerId:marker.id},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
-    
     switch (marker.type) {
       case "user":
       case "pro_user": {
@@ -712,11 +674,9 @@ export function MapMarkersLayer({
           cardFriendshipStatus = "accepted";
         } else if (friendshipStatus === "following") {
           cardFriendshipStatus = "pending_sent";
+        } else if (friendshipStatus === "follower") {
+          cardFriendshipStatus = "pending_received";
         }
-
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'markers-layer.tsx:renderPopupContent:user',message:'Rendering UserCard',data:{markerType:'user',hasBorder:false,hasBackground:false},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
 
         return (
           <UserCard
@@ -726,7 +686,9 @@ export function MapMarkersLayer({
             isFriend={isFriend}
             friendshipStatus={cardFriendshipStatus}
             onAddFriend={
-              friendshipStatus === "none" ? () => handleAddFriend(user.id) : undefined
+              friendshipStatus === "none" || friendshipStatus === "follower"
+                ? () => handleAddFriend(user.id)
+                : undefined
             }
             onRemoveFriend={
               friendshipStatus === "following" || friendshipStatus === "mutual"
@@ -744,9 +706,6 @@ export function MapMarkersLayer({
         );
       }
       case "event":
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'markers-layer.tsx:renderPopupContent:event',message:'Rendering EventCard',data:{markerType:'event',hasBorder:true,hasBackground:false},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'C'})}).catch(()=>{});
-        // #endregion
         return (
           <EventCard
             event={marker.data as Event}
@@ -757,9 +716,6 @@ export function MapMarkersLayer({
           />
         );
       case "hub":
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'markers-layer.tsx:renderPopupContent:hub',message:'Rendering HubCard',data:{markerType:'hub',hasBorder:false,hasBackground:false},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
         return (
           <HubCard
             hub={marker.data as Hub}
@@ -769,9 +725,6 @@ export function MapMarkersLayer({
           />
         );
       case "workspace":
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'markers-layer.tsx:renderPopupContent:workspace',message:'Rendering Workspace HubCard',data:{markerType:'workspace',hasBorder:false,hasBackground:false},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
         return (
           <HubCard
             hub={marker.data as Workspace}
@@ -781,9 +734,6 @@ export function MapMarkersLayer({
           />
         );
       case "community":
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/611c1467-114d-452c-bfd5-d57fb145b7c0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'markers-layer.tsx:renderPopupContent:community',message:'Rendering Community HubCard',data:{markerType:'community',hasBorder:false,hasBackground:false},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
         return (
           <HubCard
             hub={marker.data as Community}
@@ -935,4 +885,3 @@ export function MapMarkersLayer({
     </>
   );
 }
-

@@ -1,48 +1,55 @@
 "use client";
 
+import Script from "next/script";
 import { useEffect, Suspense } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { initGA4, trackPageView } from "@/lib/analytics";
+import { trackPageView } from "@/lib/analytics";
 
-function GoogleAnalyticsInner() {
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-
-  useEffect(() => {
-    // Инициализируем GA4 при монтировании компонента
-    // Используем переменную окружения NEXT_PUBLIC_GA4_MEASUREMENT_ID
-    // Для разработки: создайте .env.local с вашим dev GA4 ID
-    // Для продакшена: установите переменную в настройках деплоя (Vercel/другое)
-    const measurementId = process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID;
-    
-    if (!measurementId) {
-      // В режиме разработки просто логируем предупреждение
-      if (process.env.NODE_ENV === 'development') {
-        console.warn('[GA4] NEXT_PUBLIC_GA4_MEASUREMENT_ID не установлен. События будут логироваться в консоль.');
-      }
-      return;
-    }
-
-    initGA4(measurementId);
-  }, []);
-
-  useEffect(() => {
-    // Отслеживаем изменения страницы
-    const measurementId = process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID;
-    if (measurementId && pathname) {
-      const url = pathname + (searchParams?.toString() ? `?${searchParams.toString()}` : "");
-      trackPageView(url);
-    }
-  }, [pathname, searchParams]);
-
-  return null;
+interface GoogleAnalyticsProps {
+  nonce?: string;
 }
 
-export function GoogleAnalytics() {
+function GoogleAnalyticsInner({ nonce }: GoogleAnalyticsProps) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const measurementId = process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID;
+
+  useEffect(() => {
+    if (!measurementId || !pathname) return;
+    const url = pathname + (searchParams?.toString() ? `?${searchParams.toString()}` : "");
+    trackPageView(url);
+  }, [pathname, searchParams, measurementId]);
+
+  if (!measurementId) return null;
+
   return (
-    <Suspense fallback={null}>
-      <GoogleAnalyticsInner />
-    </Suspense>
+    <>
+      <Script
+        src={`https://www.googletagmanager.com/gtag/js?id=${measurementId}`}
+        strategy="afterInteractive"
+        nonce={nonce}
+      />
+      <Script
+        id="ga4-init"
+        strategy="afterInteractive"
+        nonce={nonce}
+        dangerouslySetInnerHTML={{
+          __html: `
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', '${measurementId}', { page_path: window.location.pathname });
+          `,
+        }}
+      />
+    </>
   );
 }
 
+export function GoogleAnalytics({ nonce }: GoogleAnalyticsProps) {
+  return (
+    <Suspense fallback={null}>
+      <GoogleAnalyticsInner nonce={nonce} />
+    </Suspense>
+  );
+}
