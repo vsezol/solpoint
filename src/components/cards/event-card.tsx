@@ -6,8 +6,9 @@ import { Twitter, Instagram, Facebook, ExternalLink, MapPin, Calendar, Share2 } 
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { trackEvent } from "@/lib/analytics";
+import { useState } from "react";
+import { attendEvent } from "@/app/events/[slug]/actions";
 
 interface EventCardProps {
   event: Event;
@@ -15,6 +16,7 @@ interface EventCardProps {
   isAuthenticated?: boolean;
   compact?: boolean;
   isBlurred?: boolean;
+  isRegistered?: boolean;
 }
 
 export function EventCardSkeleton() {
@@ -71,8 +73,12 @@ export function EventCard({
   isAuthenticated = false,
   compact = false,
   isBlurred = false,
+  isRegistered = false,
 }: EventCardProps) {
-  const router = useRouter();
+  const [showAttendModal, setShowAttendModal] = useState(false);
+  const [attendLoading, setAttendLoading] = useState(false);
+  const [attendError, setAttendError] = useState<string | null>(null);
+  const [attended, setAttended] = useState(isRegistered);
 
   // Определяем, может ли пользователь видеть детали события
   const canViewDetails = isAuthenticated && (
@@ -166,32 +172,119 @@ export function EventCard({
 
         {/* Actions */}
         {canViewDetails ? (
-          <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+          <div className="flex justify-center gap-3" onClick={(e) => e.stopPropagation()}>
             <button
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-[7px] border border-[#14f195] py-2 text-sm font-bold text-[#14f195] transition-opacity hover:opacity-80"
-              style={kmFont}
+              className={cn(
+                "h-[49px] w-[125px] shrink-0 rounded-[7px] border text-[13px] font-bold transition-opacity",
+                attended
+                  ? "cursor-default border-white/30 bg-[#1A1A1A] text-white/75"
+                  : "border-white bg-white text-black hover:bg-white/90"
+              )}
+              style={{ fontFamily: "var(--font-kode-mono), monospace", fontWeight: 700, letterSpacing: "-0.05em" }}
+              disabled={attended}
               onClick={(e) => {
                 e.stopPropagation();
                 e.preventDefault();
-                setTimeout(() => { trackEvent("event_share_click", { event_category: "Events", event_label: event.slug || event.id, event_id: event.id, event_slug: event.slug, event_name: event.name, source: "event_card_compact" }); }, 0);
+                if (!attended) setShowAttendModal(true);
               }}
             >
-              <Share2 className="w-4 h-4" />
-              Share
+              {attended ? "Attending" : "Attend"}
             </button>
-            <button
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-[7px] border border-white/20 py-2 text-sm font-bold text-white/80 transition-opacity hover:opacity-80"
-              style={kmFont}
-              onClick={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                setTimeout(() => { trackEvent("event_card_click", { event_category: "Events", event_label: event.slug || event.id, event_id: event.id, event_slug: event.slug, event_name: event.name, event_type: event.event_type, source: "event_card_compact" }); }, 0);
-                router.push(`/events/${event.slug}`);
-              }}
+
+            {/* Show List button — placeholder, coming soon */}
+            {/* <div
+              className="w-[125px] shrink-0 rounded-[7px] p-px"
+              style={{ background: "linear-gradient(to right, #9849FC, #01F48B)" }}
             >
-              <ExternalLink className="w-4 h-4" />
-              Details
-            </button>
+              <button
+                className="h-[47px] w-full rounded-[6px] bg-black text-white text-[13px] font-bold hover:bg-white/5 transition-colors"
+                style={{ fontFamily: "var(--font-kode-mono), monospace", fontWeight: 700, letterSpacing: "-0.05em" }}
+                onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}
+              >
+                Show list
+              </button>
+            </div> */}
+
+            {/* Attend confirmation modal */}
+            {showAttendModal && (
+              <div
+                className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+                onClick={(e) => { e.stopPropagation(); setShowAttendModal(false); setAttendError(null); }}
+              >
+                <div
+                  className="bg-[#101319] border border-white/[0.08] rounded-[10px] w-full max-w-sm mx-4 overflow-hidden"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="px-6 py-4 border-b border-white/[0.08]">
+                    <h3
+                      className="text-[18px] font-semibold text-white"
+                      style={{ fontFamily: "var(--font-kode-mono), monospace" }}
+                    >
+                      Confirm attendance
+                    </h3>
+                    <p
+                      className="mt-1 text-sm text-white/60"
+                      style={{ fontFamily: "var(--font-kode-mono), monospace" }}
+                    >
+                      Are you sure you are going to {event.name}?
+                    </p>
+                  </div>
+                  <div className="px-6 py-4">
+                    {attendError ? (
+                      <p className="rounded border border-red-500/35 bg-red-500/10 px-3 py-2 text-[13px] text-red-200">
+                        {attendError}
+                      </p>
+                    ) : (
+                      <p className="text-[13px] text-white/70" style={{ fontFamily: "var(--font-kode-mono), monospace" }}>
+                        We will add you to the internal attendees list for this event.
+                      </p>
+                    )}
+                  </div>
+                  <div className="px-6 py-4 border-t border-white/[0.08] flex justify-end gap-3">
+                    <button
+                      className="h-[40px] px-4 rounded-[7px] border border-white/35 bg-transparent text-white text-sm font-medium hover:bg-white/10 transition-colors disabled:opacity-50"
+                      style={{ fontFamily: "var(--font-kode-mono), monospace" }}
+                      onClick={() => { setShowAttendModal(false); setAttendError(null); }}
+                      disabled={attendLoading}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      className="h-[40px] px-4 rounded-[7px] border border-white bg-white text-black text-sm font-medium hover:bg-white/90 transition-colors disabled:opacity-50 flex items-center gap-2"
+                      style={{ fontFamily: "var(--font-kode-mono), monospace" }}
+                      disabled={attendLoading}
+                      onClick={async () => {
+                        setAttendLoading(true);
+                        setAttendError(null);
+                        trackEvent("event_attend_click", { event_category: "Events", event_label: event.slug || event.id, event_id: event.id, event_slug: event.slug, event_name: event.name, source: "map_popup" });
+                        try {
+                          const result = await attendEvent(event.id);
+                          if (result.success) {
+                            setAttended(true);
+                            setShowAttendModal(false);
+                            trackEvent("event_attend_success", { event_category: "Events", event_label: event.slug || event.id, event_id: event.id, event_name: event.name, source: "map_popup" });
+                          } else {
+                            setAttendError(result.error || "Failed to register");
+                          }
+                        } catch {
+                          setAttendError("An unexpected error occurred");
+                        } finally {
+                          setAttendLoading(false);
+                        }
+                      }}
+                    >
+                      {attendLoading && (
+                        <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                      )}
+                      Accept
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div className="relative" onClick={(e) => e.stopPropagation()}>
@@ -200,11 +293,8 @@ export function EventCard({
                 <Link href="/signup" onClick={(e) => e.stopPropagation()}>Sign up / Log in</Link>
               </Button>
             </div>
-            <div className="blur-sm pointer-events-none opacity-50">
-              <div className="flex gap-2">
-                <button className="flex-1 rounded-[7px] border border-[#14f195] py-2 text-sm font-bold text-[#14f195]" style={kmFont}>Share</button>
-                <button className="flex-1 rounded-[7px] border border-white/20 py-2 text-sm font-bold text-white/80" style={kmFont}>Details</button>
-              </div>
+            <div className="blur-sm pointer-events-none opacity-50 flex justify-center">
+              <button className="h-[49px] w-[125px] rounded-[7px] border border-white bg-white text-black text-[13px] font-bold" style={{ fontFamily: "var(--font-kode-mono), monospace" }}>Attend</button>
             </div>
           </div>
         )}
@@ -214,25 +304,8 @@ export function EventCard({
 
   // Full card view
   return (
-    <Link 
-      href={`/events/${event.slug}`} 
-      className="block h-full"
-      onClick={() => {
-        // Вызываем trackEvent асинхронно, чтобы не блокировать навигацию
-        setTimeout(() => {
-          trackEvent("event_card_click", {
-            event_category: "Events",
-            event_label: event.slug || event.id,
-            event_id: event.id,
-            event_slug: event.slug,
-            event_name: event.name,
-            event_type: event.event_type,
-            source: "event_card_full",
-          });
-        }, 0);
-      }}
-    >
-      <div className="bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-xl overflow-hidden flex flex-col h-full transition-all duration-200 hover:scale-[1.02] hover:border-[var(--color-primary)] cursor-pointer">
+    <div className="block h-full">
+      <div className="bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-xl overflow-hidden flex flex-col h-full transition-all duration-200">
       {/* Image/Icon Section */}
       <div className="relative h-48 bg-gradient-to-br from-[var(--color-primary)]/20 via-[var(--color-primary)]/10 to-[var(--color-secondary)]/20 flex-shrink-0">
         {event.image_url ? (
@@ -401,7 +474,7 @@ export function EventCard({
         </div>
       </div>
     </div>
-    </Link>
+    </div>
   );
 }
 

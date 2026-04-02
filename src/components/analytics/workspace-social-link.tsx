@@ -41,10 +41,9 @@ export function WorkspaceSocialLink({ workspace, platform, href }: WorkspaceSoci
       target="_blank"
       rel="noopener noreferrer"
       onClick={handleClick}
-      className="p-3 rounded-full bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+      className="flex h-10 w-10 items-center justify-center rounded-[5px] border border-white/20 bg-[#20201f] text-white/80 transition-colors hover:bg-[#2a2a2a] hover:text-white"
     >
       <Icon className="w-5 h-5" />
     </a>
   );
 }
-

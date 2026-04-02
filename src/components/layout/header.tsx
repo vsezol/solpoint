@@ -422,6 +422,14 @@ export function Header() {
     pathname.startsWith("/map-v1/") ||
     pathname === "/profile" ||
     pathname.startsWith("/profile/") ||
+    pathname === "/hubs" ||
+    pathname.startsWith("/hubs/") ||
+    pathname === "/communities" ||
+    pathname.startsWith("/communities/") ||
+    pathname === "/projects" ||
+    pathname.startsWith("/projects/") ||
+    pathname === "/workspaces" ||
+    pathname.startsWith("/workspaces/") ||
     pathname === "/profile-v1" ||
     pathname.startsWith("/profile-v1/") ||
     pathname === "/profile-v2" ||

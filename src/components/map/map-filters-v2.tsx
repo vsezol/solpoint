@@ -32,7 +32,6 @@ const mapContentSelectOptions: { value: ContentTypeFilter; label: string }[] = [
   { value: "all", label: "everything on map" },
   { value: "users", label: "users only" },
   { value: "events", label: "events only" },
-  { value: "hubs", label: "hubs & communities" },
 ];
 
 function countryCodeToFlagEmoji(code: string): string {
@@ -47,9 +46,9 @@ function countryCodeToFlagEmoji(code: string): string {
 export const MAP_V2_DEFAULT_FILTERS: MapFilters = {
   showUsers: true,
   showEvents: true,
-  showHubs: true,
-  showCommunities: true,
-  showWorkspaces: true,
+  showHubs: false,
+  showCommunities: false,
+  showWorkspaces: false,
   contentType: "all",
   interestSlugs: undefined,
   userRoles: undefined,
@@ -85,24 +84,13 @@ function buildContentTypePayload(contentType: ContentTypeFilter): Partial<MapFil
     };
   }
 
-  if (contentType === "hubs") {
-    return {
-      contentType,
-      showUsers: false,
-      showEvents: false,
-      showHubs: true,
-      showCommunities: true,
-      showWorkspaces: true,
-    };
-  }
-
   return {
     contentType: "all",
     showUsers: true,
     showEvents: true,
-    showHubs: true,
-    showCommunities: true,
-    showWorkspaces: true,
+    showHubs: false,
+    showCommunities: false,
+    showWorkspaces: false,
   };
 }
 

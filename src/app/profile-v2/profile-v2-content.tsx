@@ -924,7 +924,7 @@ export function ProfileV2Content({
             <li
               key={e.id}
               className={cn(
-                "relative border-l border-[rgba(72,72,71,0.3)] pl-[25px]",
+                "relative min-w-0 border-l border-[rgba(72,72,71,0.3)] pl-[25px]",
                 index === experienceList.length - 1 ? "pb-0" : "pb-4"
               )}
             >
@@ -935,7 +935,10 @@ export function ProfileV2Content({
                 )}
               />
               <p
-                className={cn("text-[20px] leading-[30px] text-[#f9f9f9]", index !== 0 && "opacity-70")}
+                className={cn(
+                  "text-[20px] leading-[30px] text-[#f9f9f9] break-words [overflow-wrap:anywhere]",
+                  index !== 0 && "opacity-70"
+                )}
                 style={{ fontFamily: "var(--font-display), sans-serif", fontWeight: 700 }}
               >
                 {e.company ? `${e.title} at ${e.company}` : e.title}
@@ -950,7 +953,10 @@ export function ProfileV2Content({
               )}
               {e.description && (
                 <p
-                  className={cn("mt-2 text-[20px] leading-[30px] text-[#adaaaa]", index !== 0 && "opacity-70")}
+                  className={cn(
+                    "mt-2 whitespace-pre-wrap text-[20px] leading-[30px] text-[#adaaaa] break-words [overflow-wrap:anywhere]",
+                    index !== 0 && "opacity-70"
+                  )}
                   style={{ fontFamily: "var(--font-display), sans-serif", fontWeight: 400 }}
                 >
                   {e.description}

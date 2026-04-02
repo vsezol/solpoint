@@ -148,14 +148,20 @@ export default async function AdminPage() {
               </div>
 
               {/* События */}
-              <div className="bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg p-6">
+              <a
+                href="/admin/events/create"
+                className="bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg p-6 hover:border-[var(--color-primary)] transition-colors cursor-pointer"
+              >
                 <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">
                   События
                 </h2>
-                <p className="text-[var(--color-text-secondary)]">
-                  Управление событиями
+                <p className="text-[var(--color-text-secondary)] mb-2">
+                  Создание событий вручную (без модерации)
                 </p>
-              </div>
+                <p className="text-sm text-[var(--color-primary)]">
+                  Create event →
+                </p>
+              </a>
 
               {/* Хабы */}
               <div className="bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg p-6">

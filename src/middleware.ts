@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createServerClient } from "@supabase/ssr";
 import { updateSession } from "@/lib/supabase/middleware";
 import { hasBlockedQueryPattern } from "@/lib/security/request-guards";
 import { checkRateLimit } from "@/lib/security/rate-limit";
@@ -91,6 +92,73 @@ function buildCsp(nonce: string): string {
 }
 
 const HEADERS_TO_REMOVE = ["x-vercel-id", "x-vercel-deployment-url", "server"];
+const CORE_ROUTE_PREFIXES = ["/map", "/profile"] as const;
+const AUTH_ROUTE_PREFIXES = ["/login", "/signup", "/activate"] as const;
+
+function matchesPathPrefix(pathname: string, prefix: string): boolean {
+  return pathname === prefix || pathname.startsWith(`${prefix}/`);
+}
+
+function isPublicAssetPath(pathname: string): boolean {
+  return /\/[^/]+\.[^/]+$/.test(pathname);
+}
+
+function isAllowedPagePath(pathname: string): boolean {
+  if (pathname === "/") return true;
+  if (pathname === "/events") return true;
+
+  for (const prefix of CORE_ROUTE_PREFIXES) {
+    if (matchesPathPrefix(pathname, prefix)) {
+      return true;
+    }
+  }
+
+  for (const prefix of AUTH_ROUTE_PREFIXES) {
+    if (matchesPathPrefix(pathname, prefix)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+async function isCurrentUserAdmin(request: NextRequest): Promise<boolean> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !supabaseAnonKey) return false;
+
+  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
+      },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+      },
+    },
+  });
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return false;
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("is_admin")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (profileError) {
+    return false;
+  }
+
+  return Boolean(profile?.is_admin);
+}
 
 function applySecurityHeaders(response: NextResponse, nonce: string): NextResponse {
   response.headers.set("X-Frame-Options", "DENY");
@@ -154,6 +222,7 @@ function withRateLimitHeaders(
 
 export async function middleware(request: NextRequest) {
   const url = request.nextUrl;
+  const pathname = url.pathname;
 
   // Generate a per-request nonce for CSP
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
@@ -163,7 +232,7 @@ export async function middleware(request: NextRequest) {
   requestHeaders.set("x-nonce", nonce);
 
   // ── OAuth callback shortcut ──────────────────────────────────────────────
-  if (url.pathname === "/" && url.searchParams.has("code") && !url.searchParams.has("redirect_to")) {
+  if (pathname === "/" && url.searchParams.has("code") && !url.searchParams.has("redirect_to")) {
     const callbackUrl = new URL("/api/auth/callback", url.origin);
     callbackUrl.searchParams.set("code", url.searchParams.get("code") || "");
     url.searchParams.forEach((value, key) => {
@@ -173,7 +242,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // ── Block _next/data admin routes ────────────────────────────────────────
-  if (url.pathname.startsWith("/_next/data/") && url.pathname.includes("/admin")) {
+  if (pathname.startsWith("/_next/data/") && pathname.includes("/admin")) {
     return applySecurityHeaders(
       NextResponse.json({ error: "Not found" }, { status: 404 }),
       nonce
@@ -181,7 +250,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // ── API routes ───────────────────────────────────────────────────────────
-  if (url.pathname.startsWith("/api/")) {
+  if (pathname.startsWith("/api/")) {
     if (hasBlockedQueryPattern(url.search)) {
       return applySecurityHeaders(
         NextResponse.json({ error: "Blocked query pattern" }, { status: 400 }),
@@ -220,9 +289,30 @@ export async function middleware(request: NextRequest) {
   }
 
   // ── All other routes — refresh Supabase session ──────────────────────────
+  const sessionRequest = new NextRequest(request.url, { headers: requestHeaders });
   const supabaseResponse = await updateSession(
-    new NextRequest(request.url, { headers: requestHeaders })
+    sessionRequest
   );
+
+  // Admin is explicitly allowed only for admins.
+  if (matchesPathPrefix(pathname, "/admin")) {
+    const hasAdminAccess = await isCurrentUserAdmin(sessionRequest);
+    if (!hasAdminAccess) {
+      return applySecurityHeaders(NextResponse.redirect(new URL("/", request.url)), nonce);
+    }
+    return applySecurityHeaders(supabaseResponse, nonce);
+  }
+
+  // Keep JSON/txt/etc public assets and Next data requests reachable.
+  if (isPublicAssetPath(pathname) || pathname.startsWith("/_next/data/")) {
+    return applySecurityHeaders(supabaseResponse, nonce);
+  }
+
+  // Everything else outside core routes is redirected to landing.
+  if (!isAllowedPagePath(pathname)) {
+    return applySecurityHeaders(NextResponse.redirect(new URL("/", request.url)), nonce);
+  }
+
   return applySecurityHeaders(supabaseResponse, nonce);
 }
 
