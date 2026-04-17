@@ -198,9 +198,87 @@ function clusterMarkers(
 }
 
 // Компонент для отображения иконки маркера
-const MarkerIcon = ({ type, user }: { type: MapMarker["type"]; user?: User }) => {
+const MarkerIcon = ({ type, user, event }: { type: MapMarker["type"]; user?: User; event?: Event }) => {
   let imgSrc = "";
   let filterStyle = "drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4))";
+
+  // Circular event marker with image and rings
+  if (type === "event") {
+    const imageUrl = event?.image_url || "";
+    const filterGlow = "drop-shadow(0 4px 12px rgba(20, 241, 149, 0.55))";
+    const outerSize = 68;
+    const mainSize = 52;
+
+    return (
+      <div
+        style={{
+          width: `${outerSize}px`,
+          height: `${outerSize}px`,
+          position: "relative",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          filter: filterGlow,
+          transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+          animation: "cluster-appear 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+        }}
+        onMouseEnter={(e) => { e.currentTarget.style.transform = "scale(1.15) translateY(-2px)"; }}
+        onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1) translateY(0)"; }}
+      >
+        {/* Outer pulsing ring */}
+        <div style={{
+          position: "absolute",
+          width: `${outerSize}px`,
+          height: `${outerSize}px`,
+          borderRadius: "50%",
+          border: "1.5px solid rgba(20,241,149,0.3)",
+          animation: "cluster-pulse 2s ease-in-out infinite",
+          pointerEvents: "none",
+        }} />
+        {/* Middle ring */}
+        <div style={{
+          position: "absolute",
+          width: `${mainSize + 10}px`,
+          height: `${mainSize + 10}px`,
+          borderRadius: "50%",
+          border: "1.5px solid rgba(20,241,149,0.55)",
+          pointerEvents: "none",
+        }} />
+        {/* Main circle with image */}
+        <div style={{
+          width: `${mainSize}px`,
+          height: `${mainSize}px`,
+          borderRadius: "50%",
+          border: "2px solid #14f195",
+          overflow: "hidden",
+          background: "#111820",
+          flexShrink: 0,
+          position: "relative",
+        }}>
+          {imageUrl ? (
+            <img
+              src={imageUrl}
+              alt={event?.name || "event"}
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            />
+          ) : (
+            <div style={{
+              width: "100%",
+              height: "100%",
+              background: "rgba(20,241,149,0.2)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "22px",
+            }}>
+              📅
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   // For user markers, create SVG with avatar
   if (type === "user" || type === "pro_user") {
@@ -255,10 +333,6 @@ const MarkerIcon = ({ type, user }: { type: MapMarker["type"]; user?: User }) =>
 
   // For other marker types, use existing images
   switch (type) {
-    case "event":
-      imgSrc = "/event-pin.svg";
-      filterStyle = "drop-shadow(0 4px 8px rgba(20, 241, 149, 0.4))";
-      break;
     case "hub":
       imgSrc = "/hub-pin.svg";
       filterStyle = "drop-shadow(0 4px 8px rgba(20, 241, 149, 0.4))";
@@ -793,6 +867,7 @@ export function MapMarkersLayer({
                 <MarkerIcon 
                   type={marker.type} 
                   user={(marker.type === "user" || marker.type === "pro_user") ? (marker.data as User) : undefined}
+                  event={marker.type === "event" ? (marker.data as Event) : undefined}
                 />
               </MarkerContent>
               <MarkerPopup

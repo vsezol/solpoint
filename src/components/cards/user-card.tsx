@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Avatar, Badge, Button, ProSubscriptionModal } from "@/components/ui";
 import type { User } from "@/types";
-import { Twitter, Instagram, Facebook, Check, X } from "lucide-react";
+import { Twitter, Instagram, Facebook, Check, X, User as UserIcon, MapPin } from "lucide-react";
 import { cn, getSubscriptionDisplayName } from "@/lib/utils";
 import Link from "next/link";
 import { useChat } from "@/hooks/use-chat";
@@ -61,135 +61,93 @@ export function UserCard({
   const kmFont = { fontFamily: "var(--font-kode-mono), monospace" } as const;
 
   if (compact) {
+    const location =
+      [user.city, (user as User & { countries?: { name: string } }).countries?.name || user.country]
+        .filter(Boolean)
+        .join(", ") || "Location unknown";
+    const roleLabel = user.role ? USER_ROLE_LABELS[user.role] || user.role : "Role not specified";
+    const interStyle = { fontFamily: "var(--font-inter), system-ui, sans-serif" } as const;
+    const sgStyle = { fontFamily: "var(--font-display), system-ui, sans-serif" } as const;
+    const cardSurface = {
+      border: "1px solid transparent",
+      background: `
+        linear-gradient(180deg, #0B0B0B 0%, #030303 100%) padding-box,
+        linear-gradient(180deg, #00F68B 0%, rgba(0,246,139,0.38) 46%, rgba(0,246,139,0) 76%) border-box
+      `,
+      backgroundClip: "padding-box, border-box",
+    } as const;
+
     return (
-      <div className="p-4 min-w-[280px] max-w-[350px] bg-[#101319] border border-white/8 rounded-[10px]">
-        {/* Content with blur if unauthorized */}
-        <div className={cn(isUnauthorized && "blur-sm")}>
-          {/* Header */}
-          <div className="flex items-start justify-between gap-3 mb-3">
-            <Link
-              href={`/profile/${user.twitter_handle}`}
-              className="flex items-start gap-3 hover:opacity-80 transition-opacity"
-              onClick={onProfileClick}
-            >
+      <div
+        className="relative isolate flex w-[256px] flex-col overflow-hidden rounded-[3px] p-4 shadow-[0_0_18px_rgba(0,246,139,0.12)]"
+        style={cardSurface}
+      >
+        {/* Bottom fade */}
+        <div
+          className="pointer-events-none absolute inset-0 rounded-[inherit] bg-[linear-gradient(180deg,transparent_0%,transparent_46%,rgba(0,0,0,0.45)_72%,#000000_100%)]"
+          aria-hidden
+        />
+
+        <div className="relative z-10 flex flex-col">
+          {/* Avatar */}
+          <div className="flex flex-col items-center">
+            <div className="rounded-full bg-[#E8F5ED] p-[3px]">
               <Avatar
                 src={user.avatar_url}
                 alt={user.twitter_name}
-                size="lg"
+                size="card"
                 isVip={user.subscription_tier === "vip"}
                 isVerified={user.is_verified}
+                fallbackVariant="branded"
               />
-              <div className="flex flex-col min-w-0">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-white truncate" style={kmFont}>
-                    {user.twitter_name}
-                  </h3>
-                  {user.is_verified && <Check className="w-4 h-4 text-[#14f195]" />}
-                </div>
-                <div className="flex items-center gap-2 mt-1">
-                  {user.role && (
-                    <Badge variant="primary" className="w-fit">
-                      {USER_ROLE_LABELS[user.role] || user.role}
-                    </Badge>
-                  )}
-                  {user.subscription_tier === "vip" && <Badge variant="warning">Pro</Badge>}
-                </div>
-              </div>
-            </Link>
-            {isHost && (
-              <Badge variant="outline" className="bg-white/10 text-white border-white/20">Host</Badge>
-            )}
+            </div>
+            <h4
+              className="mt-[15px] max-w-full truncate text-center text-[20px] font-extrabold leading-none text-white"
+              style={interStyle}
+              title={user.twitter_name}
+            >
+              {user.twitter_name}
+            </h4>
           </div>
 
-          {/* Location */}
-          <div className={cn("space-y-1 text-sm mb-3", isBlurred && !isVip && "blur-sm select-none")} style={kmFont}>
-            <p className="text-white/70">
-              <span className="text-[#14f195]">Country:</span>{" "}
-              {(user as User & { countries?: { name: string } }).countries?.name || user.country || user.country_code || "Not specified"}
+          {/* Role + Location */}
+          <div className="mt-[33px] w-full space-y-5 text-[15px] font-medium leading-none">
+            <p className="flex items-start gap-2 text-[#14f195]" style={kmFont}>
+              <UserIcon className="mt-px h-[15px] w-[15px] shrink-0" strokeWidth={1.5} aria-hidden />
+              <span className="min-w-0 break-words">{roleLabel}</span>
             </p>
-            {isVip && user.city && (
-              <p className="text-white/70">
-                <span className="text-[#14f195]">City:</span>{" "}{user.city}
-              </p>
-            )}
+            <p className="flex items-start gap-2 text-[#14f195]" style={kmFont}>
+              <MapPin className="mt-px h-[15px] w-[15px] shrink-0" strokeWidth={1.5} aria-hidden />
+              <span className="min-w-0 break-words">{location}</span>
+            </p>
           </div>
 
-          {/* Bio */}
-          {isVip && user.bio && (
-            <div className="mb-3">
-              <p className="text-xs text-[#14f195] mb-1" style={kmFont}>BIO:</p>
-              <p className="text-sm text-white/70 line-clamp-2" style={kmFont}>{user.bio}</p>
-            </div>
-          )}
-
-          {/* Socials */}
-          {isVip && (
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-xs text-white/40" style={kmFont}>Socials:</span>
-              {(user.socials?.twitter || user.twitter_handle) && (
-                <a href={user.socials?.twitter || `https://twitter.com/${user.twitter_handle}`} target="_blank" rel="noopener noreferrer"
-                  className="p-1.5 rounded-[5px] bg-white/10 text-white/60 hover:text-white transition-colors">
-                  <Twitter className="w-4 h-4" />
-                </a>
-              )}
-              {user.socials?.instagram && (
-                <a href={user.socials.instagram} target="_blank" rel="noopener noreferrer"
-                  className="p-1.5 rounded-[5px] bg-white/10 text-white/60 hover:text-white transition-colors">
-                  <Instagram className="w-4 h-4" />
-                </a>
-              )}
-              {user.socials?.facebook && (
-                <a href={user.socials.facebook} target="_blank" rel="noopener noreferrer"
-                  className="p-1.5 rounded-[5px] bg-white/10 text-white/60 hover:text-white transition-colors">
-                  <Facebook className="w-4 h-4" />
-                </a>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Actions */}
-        {user.id === currentUserId ? null : isUnauthorized ? (
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center justify-center z-10">
-              <Button variant="secondary" size="sm" asChild>
-                <Link href="/signup">Sign up / Log in</Link>
-              </Button>
-            </div>
-            <div className={cn("pointer-events-none opacity-50", isUnauthorized && "blur-sm")}>
-              <div className="flex gap-2">
-                <button className="flex-1 rounded-[7px] border border-[#14f195] py-2 text-sm font-bold text-[#14f195]" style={kmFont}>Connect</button>
-                <button className="flex-1 rounded-[7px] border border-white/20 py-2 text-sm font-bold text-white/80" style={kmFont}>Send Message</button>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="flex gap-2">
-            {(isFriend || friendshipStatus === "accepted") ? (
-              <button disabled className="flex flex-1 items-center justify-center gap-1.5 rounded-[7px] border border-white/20 py-2 text-sm font-bold text-white/50 cursor-default" style={kmFont}>
-                <Check className="w-4 h-4" />
-                Friends
-              </button>
-            ) : friendshipStatus === "pending_sent" && onRemoveFriend ? (
-              <button onClick={onRemoveFriend} className="flex flex-1 items-center justify-center gap-1.5 rounded-[7px] border border-white/20 py-2 text-sm font-bold text-white/70 transition-opacity hover:opacity-80 cursor-pointer" style={kmFont}>
-                <X className="w-4 h-4" />
-                Cancel Request
-              </button>
-            ) : onAddFriend ? (
-              <button onClick={onAddFriend} className="flex flex-1 items-center justify-center gap-1.5 rounded-[7px] border border-[#14f195] py-2 text-sm font-bold text-[#14f195] transition-opacity hover:opacity-80 cursor-pointer" style={kmFont}>
-                Connect
-              </button>
-            ) : null}
-            <button
-              onClick={handleMessage}
-              disabled={isChatLoading}
-              className="flex flex-1 items-center justify-center rounded-[7px] border border-white/20 py-2 text-sm font-bold text-white/80 transition-opacity hover:opacity-80 cursor-pointer disabled:opacity-50"
+          {/* About */}
+          <div className="mt-[11px] flex flex-col">
+            <p
+              className="text-center text-[15px] font-medium leading-none text-[#70767d]"
               style={kmFont}
             >
-              {isChatLoading ? "..." : "Send Message"}
-            </button>
+              About
+            </p>
+            <p
+              className="mt-[9px] line-clamp-4 text-left text-[12px] font-medium leading-normal text-white"
+              style={sgStyle}
+            >
+              {user.bio || "Profile has no about yet."}
+            </p>
           </div>
-        )}
+
+          {/* View button */}
+          <Link
+            href={`/profile/${user.twitter_handle}`}
+            onClick={onProfileClick}
+            className="mt-6 mx-auto flex h-[49px] w-[164px] shrink-0 items-center justify-center rounded-[7px] bg-white text-[20px] font-bold leading-none tracking-[-0.05em] text-black transition-colors hover:bg-white/90"
+            style={kmFont}
+          >
+            View
+          </Link>
+        </div>
       </div>
     );
   }

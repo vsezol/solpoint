@@ -78,6 +78,23 @@ const interStyle = {
   fontFamily: "var(--font-inter), system-ui, sans-serif",
 } as const;
 
+const spaceGroteskStyle = {
+  fontFamily: "var(--font-display), system-ui, sans-serif",
+} as const;
+
+/** Mint border fades out toward the bottom; fill darkens slightly downward (matches attendee card design). */
+const attendeeCardSurfaceStyle = {
+  border: "1px solid transparent",
+  background: `
+    linear-gradient(180deg, #0B0B0B 0%, #030303 100%) padding-box,
+    linear-gradient(180deg, #00F68B 0%, rgba(0, 246, 139, 0.38) 46%, rgba(0, 246, 139, 0) 76%) border-box
+  `,
+  backgroundClip: "padding-box, border-box",
+} as const;
+
+const attendeeCardBottomFadeClass =
+  "pointer-events-none absolute inset-0 rounded-[inherit] bg-[linear-gradient(180deg,transparent_0%,transparent_46%,rgba(0,0,0,0.45)_72%,#000000_100%)]";
+
 function MultiSelectPopup({
   label,
   placeholder,
@@ -693,8 +710,11 @@ export function EventsAttendeesWidget({
               {Array.from({ length: 4 }).map((_, index) => (
                 <div
                   key={index}
-                  className="h-[420px] w-full max-w-[256px] animate-pulse rounded-[3px] border border-[#919191] bg-[#0B0B0B] sm:h-[374px]"
-                />
+                  className="relative isolate h-[420px] w-full max-w-[256px] animate-pulse overflow-hidden rounded-[3px] shadow-[0_0_18px_rgba(0,246,139,0.12)] sm:h-[374px]"
+                  style={attendeeCardSurfaceStyle}
+                >
+                  <div className={cn(attendeeCardBottomFadeClass)} aria-hidden />
+                </div>
               ))}
             </div>
           ) : error ? (
@@ -744,71 +764,77 @@ export function EventsAttendeesWidget({
                   return (
                     <article
                       key={item.id}
-                      className="flex h-full w-full max-w-[256px] min-h-[420px] flex-col rounded-[3px] border border-[#919191] bg-[#0B0B0B] p-4 sm:mx-auto sm:min-h-[374px] sm:p-[14px]"
+                      className="relative isolate flex h-full w-full max-w-[256px] min-h-[420px] flex-col overflow-hidden rounded-[3px] p-4 shadow-[0_0_18px_rgba(0,246,139,0.12)] sm:mx-auto sm:min-h-[374px] sm:p-[14px]"
+                      style={attendeeCardSurfaceStyle}
                     >
-                      <div className="flex flex-col items-center">
-                        <Avatar
-                          src={item.avatar_url || undefined}
-                          alt={item.name}
-                          size="card"
-                          fallbackVariant="branded"
-                          isVip={item.isVip}
-                          isVerified={item.isVerified}
-                        />
-                        <h4
-                          className="mt-6 max-w-full truncate text-center text-[20px] font-extrabold leading-none tracking-normal text-white sm:mt-[15px]"
-                          style={interStyle}
-                          title={item.name}
-                        >
-                          {item.name}
-                        </h4>
-                      </div>
+                      <div className={cn(attendeeCardBottomFadeClass)} aria-hidden />
+                      <div className="relative z-10 flex min-h-0 flex-1 flex-col">
+                        <div className="flex flex-col items-center">
+                          <div className="rounded-full bg-[#E8F5ED] p-[3px]">
+                            <Avatar
+                              src={item.avatar_url || undefined}
+                              alt={item.name}
+                              size="card"
+                              fallbackVariant="branded"
+                              isVip={item.isVip}
+                              isVerified={item.isVerified}
+                            />
+                          </div>
+                          <h4
+                            className="mt-6 max-w-full truncate text-center text-[20px] font-extrabold leading-none tracking-normal text-white sm:mt-[15px]"
+                            style={interStyle}
+                            title={item.name}
+                          >
+                            {item.name}
+                          </h4>
+                        </div>
 
-                      <div className="mt-3 w-full min-w-0 space-y-5 text-[15px] font-medium leading-none tracking-normal text-white sm:mt-[8px] sm:space-y-[15px]">
-                        <p className="flex items-start gap-2" style={kodeMonoStyle}>
-                          <User
-                            className="mt-px h-[15px] w-[15px] shrink-0 text-white"
-                            strokeWidth={1.5}
-                            aria-hidden
-                          />
-                          <span className="min-w-0 wrap-break-word">{roleLabel}</span>
-                        </p>
-                        <p className="flex items-start gap-2" style={kodeMonoStyle}>
-                          <MapPin
-                            className="mt-px h-[15px] w-[15px] shrink-0 text-white"
-                            strokeWidth={1.5}
-                            aria-hidden
-                          />
-                          <span className="min-w-0 wrap-break-word">{location}</span>
-                        </p>
-                      </div>
+                        <div className="mt-[33px] w-full min-w-0 space-y-5 text-[15px] font-medium leading-none tracking-normal sm:space-y-[15px]">
+                          <p className="flex items-start gap-2 text-[#14f195]" style={kodeMonoStyle}>
+                            <User
+                              className="mt-px h-[15px] w-[15px] shrink-0"
+                              strokeWidth={1.5}
+                              aria-hidden
+                            />
+                            <span className="min-w-0 wrap-break-word">{roleLabel}</span>
+                          </p>
+                          <p className="flex items-start gap-2 text-[#14f195]" style={kodeMonoStyle}>
+                            <MapPin
+                              className="mt-px h-[15px] w-[15px] shrink-0"
+                              strokeWidth={1.5}
+                              aria-hidden
+                            />
+                            <span className="min-w-0 wrap-break-word">{location}</span>
+                          </p>
+                        </div>
 
-                      <div className="mt-4 flex min-h-0 flex-col sm:mt-[11px]">
-                        <p
-                          className="text-center text-[15px] font-medium leading-none tracking-normal text-white"
+                        <div className="mt-4 flex min-h-0 flex-col sm:mt-[11px]">
+                          <p
+                            className="text-center text-[15px] font-medium leading-none tracking-normal text-[#70767d]"
+                            style={kodeMonoStyle}
+                          >
+                            About
+                          </p>
+                          <p
+                            className="mt-3 line-clamp-5 text-left text-[12px] font-medium leading-[normal] tracking-normal text-white sm:mt-[9px]"
+                            style={spaceGroteskStyle}
+                          >
+                            {about}
+                          </p>
+                        </div>
+
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="mt-auto mx-auto h-[49px] w-[164px] shrink-0 rounded-[7px] border-0 bg-white px-6 py-3 text-[20px] font-bold leading-none tracking-[-0.05em] text-black hover:bg-white/90"
                           style={kodeMonoStyle}
+                          onClick={() => onView(item.twitter_handle)}
+                          disabled={!item.twitter_handle}
                         >
-                          About
-                        </p>
-                        <p
-                          className="mt-3 line-clamp-5 text-left text-[12px] font-medium leading-none tracking-normal text-white sm:mt-[9px]"
-                          style={interStyle}
-                        >
-                          {about}
-                        </p>
+                          View
+                        </Button>
                       </div>
-
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="mt-auto h-auto w-full shrink-0 rounded-[10px] border-0 bg-white px-6 py-3 text-[20px] font-bold leading-none tracking-[-0.05em] text-black hover:bg-white/90"
-                        style={kodeMonoStyle}
-                        onClick={() => onView(item.twitter_handle)}
-                        disabled={!item.twitter_handle}
-                      >
-                        View
-                      </Button>
                     </article>
                   );
                 })}
