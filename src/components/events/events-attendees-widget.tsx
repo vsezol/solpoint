@@ -84,31 +84,43 @@ const spaceGroteskStyle = {
 
 const attendeeCardFill = "#0B0B0B";
 
-/** Row-1 cards: mint border fades out toward the bottom, glow at the top. */
+/**
+ * Radial border-image gradient: bright at the anchored edge center, fades
+ * outward in all directions so the opposite edge AND the sides disappear
+ * before the corners can form a visible rectangle.
+ */
+const mintArcBorder = (anchor: "top" | "bottom") =>
+  `radial-gradient(130% 85% at 50% ${anchor === "top" ? "0%" : "100%"},` +
+  " #00F68B 0%," +
+  " rgba(0, 246, 139, 0.55) 18%," +
+  " rgba(0, 246, 139, 0.12) 42%," +
+  " rgba(0, 246, 139, 0) 62%)";
+
+/** Row-1 cards: mint arc glows from the top center, sides + bottom invisible. */
 const attendeeCardSurfaceStyle = {
   border: "1px solid transparent",
   background: `
     linear-gradient(${attendeeCardFill}, ${attendeeCardFill}) padding-box,
-    linear-gradient(180deg, #00F68B 0%, rgba(0, 246, 139, 0.38) 46%, rgba(0, 246, 139, 0) 76%) border-box
+    ${mintArcBorder("top")} border-box
   `,
   backgroundClip: "padding-box, border-box",
 } as const;
 
-/** Row-2 cards: mint border fades out toward the top, glow at the bottom. */
+/** Row-2 cards: mint arc glows from the bottom center instead. */
 const attendeeCardSurfaceStyleFlipped = {
   border: "1px solid transparent",
   background: `
     linear-gradient(${attendeeCardFill}, ${attendeeCardFill}) padding-box,
-    linear-gradient(0deg, #00F68B 0%, rgba(0, 246, 139, 0.38) 46%, rgba(0, 246, 139, 0) 76%) border-box
+    ${mintArcBorder("bottom")} border-box
   `,
   backgroundClip: "padding-box, border-box",
 } as const;
 
 const attendeeCardBottomFadeClass =
-  "pointer-events-none absolute inset-0 rounded-[inherit] bg-[linear-gradient(180deg,transparent_0%,transparent_46%,rgba(0,0,0,0.45)_72%,#0B0B0B_100%)]";
+  "pointer-events-none absolute inset-0 rounded-[inherit] bg-[linear-gradient(180deg,transparent_0%,transparent_55%,rgba(11,11,11,0.7)_80%,#0B0B0B_100%)]";
 
 const attendeeCardTopFadeClass =
-  "pointer-events-none absolute inset-0 rounded-[inherit] bg-[linear-gradient(0deg,transparent_0%,transparent_46%,rgba(0,0,0,0.45)_72%,#0B0B0B_100%)]";
+  "pointer-events-none absolute inset-0 rounded-[inherit] bg-[linear-gradient(0deg,transparent_0%,transparent_55%,rgba(11,11,11,0.7)_80%,#0B0B0B_100%)]";
 
 /** Soft mint glow above the card only — replaces the all-around shadow so bottom corners melt into the page. */
 const attendeeCardTopGlowStyle = {

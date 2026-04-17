@@ -116,7 +116,7 @@ export function EventCard({
       border: "1px solid transparent",
       background: `
         linear-gradient(${cardFill}, ${cardFill}) padding-box,
-        linear-gradient(180deg, #00F68B 0%, rgba(0,246,139,0.38) 46%, rgba(0,246,139,0) 76%) border-box
+        radial-gradient(130% 85% at 50% 0%, #00F68B 0%, rgba(0,246,139,0.55) 18%, rgba(0,246,139,0.12) 42%, rgba(0,246,139,0) 62%) border-box
       `,
       backgroundClip: "padding-box, border-box",
     } as const;
@@ -184,7 +184,7 @@ export function EventCard({
       >
         {/* Bottom fade */}
         <div
-          className="pointer-events-none absolute inset-0 rounded-[inherit] bg-[linear-gradient(180deg,transparent_0%,transparent_46%,rgba(0,0,0,0.45)_72%,#0B0B0B_100%)]"
+          className="pointer-events-none absolute inset-0 rounded-[inherit] bg-[linear-gradient(180deg,transparent_0%,transparent_55%,rgba(11,11,11,0.7)_80%,#0B0B0B_100%)]"
           aria-hidden
         />
 
