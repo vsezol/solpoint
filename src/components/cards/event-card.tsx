@@ -111,10 +111,11 @@ export function EventCard({
   const kmFont = { fontFamily: "var(--font-kode-mono), monospace" } as const;
 
   if (compact) {
+    const cardFill = "#0B0B0B";
     const cardSurface = {
       border: "1px solid transparent",
       background: `
-        linear-gradient(180deg, #0B0B0B 0%, #030303 100%) padding-box,
+        linear-gradient(${cardFill}, ${cardFill}) padding-box,
         linear-gradient(180deg, #00F68B 0%, rgba(0,246,139,0.38) 46%, rgba(0,246,139,0) 76%) border-box
       `,
       backgroundClip: "padding-box, border-box",
@@ -183,7 +184,7 @@ export function EventCard({
       >
         {/* Bottom fade */}
         <div
-          className="pointer-events-none absolute inset-0 rounded-[inherit] bg-[linear-gradient(180deg,transparent_0%,transparent_46%,rgba(0,0,0,0.45)_72%,#000000_100%)]"
+          className="pointer-events-none absolute inset-0 rounded-[inherit] bg-[linear-gradient(180deg,transparent_0%,transparent_46%,rgba(0,0,0,0.45)_72%,#0B0B0B_100%)]"
           aria-hidden
         />
 

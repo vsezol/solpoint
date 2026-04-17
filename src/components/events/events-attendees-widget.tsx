@@ -82,18 +82,33 @@ const spaceGroteskStyle = {
   fontFamily: "var(--font-display), system-ui, sans-serif",
 } as const;
 
-/** Mint border fades out toward the bottom; fill darkens slightly downward (matches attendee card design). */
+const attendeeCardFill = "#0B0B0B";
+
+/** Row-1 cards: mint border fades out toward the bottom, glow at the top. */
 const attendeeCardSurfaceStyle = {
   border: "1px solid transparent",
   background: `
-    linear-gradient(180deg, #0B0B0B 0%, #030303 100%) padding-box,
+    linear-gradient(${attendeeCardFill}, ${attendeeCardFill}) padding-box,
     linear-gradient(180deg, #00F68B 0%, rgba(0, 246, 139, 0.38) 46%, rgba(0, 246, 139, 0) 76%) border-box
   `,
   backgroundClip: "padding-box, border-box",
 } as const;
 
+/** Row-2 cards: mint border fades out toward the top, glow at the bottom. */
+const attendeeCardSurfaceStyleFlipped = {
+  border: "1px solid transparent",
+  background: `
+    linear-gradient(${attendeeCardFill}, ${attendeeCardFill}) padding-box,
+    linear-gradient(0deg, #00F68B 0%, rgba(0, 246, 139, 0.38) 46%, rgba(0, 246, 139, 0) 76%) border-box
+  `,
+  backgroundClip: "padding-box, border-box",
+} as const;
+
 const attendeeCardBottomFadeClass =
-  "pointer-events-none absolute inset-0 rounded-[inherit] bg-[linear-gradient(180deg,transparent_0%,transparent_46%,rgba(0,0,0,0.6)_72%,#000000_100%)]";
+  "pointer-events-none absolute inset-0 rounded-[inherit] bg-[linear-gradient(180deg,transparent_0%,transparent_46%,rgba(0,0,0,0.45)_72%,#0B0B0B_100%)]";
+
+const attendeeCardTopFadeClass =
+  "pointer-events-none absolute inset-0 rounded-[inherit] bg-[linear-gradient(0deg,transparent_0%,transparent_46%,rgba(0,0,0,0.45)_72%,#0B0B0B_100%)]";
 
 /** Soft mint glow above the card only — replaces the all-around shadow so bottom corners melt into the page. */
 const attendeeCardTopGlowStyle = {
@@ -104,6 +119,16 @@ const attendeeCardTopGlowStyle = {
 
 const attendeeCardTopGlowClass =
   "pointer-events-none absolute -top-4 left-1/2 h-24 w-[calc(100%+32px)] -translate-x-1/2";
+
+/** Soft mint glow below the card — for flipped (row-2) cards. */
+const attendeeCardBottomGlowStyle = {
+  background:
+    "radial-gradient(60% 100% at 50% 100%, rgba(0,246,139,0.22) 0%, rgba(0,246,139,0.08) 45%, transparent 75%)",
+  filter: "blur(6px)",
+} as const;
+
+const attendeeCardBottomGlowClass =
+  "pointer-events-none absolute -bottom-4 left-1/2 h-24 w-[calc(100%+32px)] -translate-x-1/2";
 
 function MultiSelectPopup({
   label,
@@ -717,24 +742,27 @@ export function EventsAttendeesWidget({
         <div className="space-y-4">
           {loading ? (
             <div className="grid grid-cols-1 justify-items-center gap-6 sm:grid-cols-2">
-              {Array.from({ length: 4 }).map((_, index) => (
-                <div
-                  key={index}
-                  className="relative isolate h-[420px] w-full max-w-[256px] sm:h-[374px]"
-                >
+              {Array.from({ length: 4 }).map((_, index) => {
+                const flipped = index >= 2;
+                return (
                   <div
-                    aria-hidden
-                    className={attendeeCardTopGlowClass}
-                    style={attendeeCardTopGlowStyle}
-                  />
-                  <div
-                    className="relative z-1 h-full w-full animate-pulse overflow-hidden rounded-[3px]"
-                    style={attendeeCardSurfaceStyle}
+                    key={index}
+                    className="relative isolate h-[420px] w-full max-w-[256px] sm:h-[374px]"
                   >
-                    <div className={cn(attendeeCardBottomFadeClass)} aria-hidden />
+                    <div
+                      aria-hidden
+                      className={flipped ? attendeeCardBottomGlowClass : attendeeCardTopGlowClass}
+                      style={flipped ? attendeeCardBottomGlowStyle : attendeeCardTopGlowStyle}
+                    />
+                    <div
+                      className="relative z-1 h-full w-full animate-pulse overflow-hidden rounded-[3px]"
+                      style={flipped ? attendeeCardSurfaceStyleFlipped : attendeeCardSurfaceStyle}
+                    >
+                      <div className={cn(flipped ? attendeeCardTopFadeClass : attendeeCardBottomFadeClass)} aria-hidden />
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : error ? (
             <div className="rounded border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200" style={kodeMonoStyle}>
@@ -773,7 +801,8 @@ export function EventsAttendeesWidget({
           ) : (
             <>
               <div className="grid grid-cols-1 justify-items-center gap-6 sm:grid-cols-2 sm:items-stretch">
-                {items.map((item) => {
+                {items.map((item, index) => {
+                  const flipped = index >= 2;
                   const location =
                     [item.city, item.country].filter(Boolean).join(", ") || "Location unknown";
                   const about = item.about || "Profile has no about yet.";
@@ -787,14 +816,14 @@ export function EventsAttendeesWidget({
                     >
                       <div
                         aria-hidden
-                        className={attendeeCardTopGlowClass}
-                        style={attendeeCardTopGlowStyle}
+                        className={flipped ? attendeeCardBottomGlowClass : attendeeCardTopGlowClass}
+                        style={flipped ? attendeeCardBottomGlowStyle : attendeeCardTopGlowStyle}
                       />
                       <div
                         className="relative z-1 flex h-full w-full flex-1 flex-col overflow-hidden rounded-[3px] p-4 sm:p-[14px]"
-                        style={attendeeCardSurfaceStyle}
+                        style={flipped ? attendeeCardSurfaceStyleFlipped : attendeeCardSurfaceStyle}
                       >
-                      <div className={cn(attendeeCardBottomFadeClass)} aria-hidden />
+                      <div className={cn(flipped ? attendeeCardTopFadeClass : attendeeCardBottomFadeClass)} aria-hidden />
                       <div className="relative z-10 flex min-h-0 flex-1 flex-col">
                         <div className="flex flex-col items-center">
                           <div className="rounded-full bg-[#E8F5ED] p-[3px]">

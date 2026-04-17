@@ -68,10 +68,11 @@ export function UserCard({
     const roleLabel = user.role ? USER_ROLE_LABELS[user.role] || user.role : "Role not specified";
     const interStyle = { fontFamily: "var(--font-inter), system-ui, sans-serif" } as const;
     const sgStyle = { fontFamily: "var(--font-display), system-ui, sans-serif" } as const;
+    const cardFill = "#0B0B0B";
     const cardSurface = {
       border: "1px solid transparent",
       background: `
-        linear-gradient(180deg, #0B0B0B 0%, #030303 100%) padding-box,
+        linear-gradient(${cardFill}, ${cardFill}) padding-box,
         linear-gradient(180deg, #00F68B 0%, rgba(0,246,139,0.38) 46%, rgba(0,246,139,0) 76%) border-box
       `,
       backgroundClip: "padding-box, border-box",
@@ -96,7 +97,7 @@ export function UserCard({
         >
           {/* Bottom fade — darkens the lower portion so the corners melt into the page background */}
           <div
-            className="pointer-events-none absolute inset-0 rounded-[inherit] bg-[linear-gradient(180deg,transparent_0%,transparent_46%,rgba(0,0,0,0.6)_72%,#000000_100%)]"
+            className="pointer-events-none absolute inset-0 rounded-[inherit] bg-[linear-gradient(180deg,transparent_0%,transparent_46%,rgba(0,0,0,0.45)_72%,#0B0B0B_100%)]"
             aria-hidden
           />
 
