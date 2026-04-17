@@ -85,42 +85,49 @@ const spaceGroteskStyle = {
 const attendeeCardFill = "#0B0B0B";
 
 /**
- * Radial border-image gradient: bright at the anchored edge center, fades
- * outward in all directions so the opposite edge AND the sides disappear
- * before the corners can form a visible rectangle.
+ * Linear border gradient: bright mint at the anchored edge, fades smoothly
+ * along the opposite direction. Corners no longer form a visible silhouette
+ * because the card fill, the fade overlay end color, and the surrounding
+ * section all share the same #0B0B0B hex.
  */
-const mintArcBorder = (anchor: "top" | "bottom") =>
-  `radial-gradient(130% 85% at 50% ${anchor === "top" ? "0%" : "100%"},` +
+const mintLinearBorder = (angleDeg: number) =>
+  `linear-gradient(${angleDeg}deg,` +
   " #00F68B 0%," +
-  " rgba(0, 246, 139, 0.55) 18%," +
-  " rgba(0, 246, 139, 0.12) 42%," +
-  " rgba(0, 246, 139, 0) 62%)";
+  " rgba(0, 246, 139, 0.85) 25%," +
+  " rgba(0, 246, 139, 0.45) 55%," +
+  " rgba(0, 246, 139, 0.12) 75%," +
+  " rgba(0, 246, 139, 0) 92%)";
 
-/** Row-1 cards: mint arc glows from the top center, sides + bottom invisible. */
+/** Row-1 cards: mint border starts at the top, fades out toward the bottom. */
 const attendeeCardSurfaceStyle = {
   border: "1px solid transparent",
   background: `
     linear-gradient(${attendeeCardFill}, ${attendeeCardFill}) padding-box,
-    ${mintArcBorder("top")} border-box
+    ${mintLinearBorder(180)} border-box
   `,
   backgroundClip: "padding-box, border-box",
 } as const;
 
-/** Row-2 cards: mint arc glows from the bottom center instead. */
+/** Row-2 cards: mint border starts at the bottom, fades out toward the top. */
 const attendeeCardSurfaceStyleFlipped = {
   border: "1px solid transparent",
   background: `
     linear-gradient(${attendeeCardFill}, ${attendeeCardFill}) padding-box,
-    ${mintArcBorder("bottom")} border-box
+    ${mintLinearBorder(0)} border-box
   `,
   backgroundClip: "padding-box, border-box",
 } as const;
 
+/**
+ * Tiny fade only on the very last ~10% of the card, matching the page
+ * background. Prevents the corners where the mint border ends from looking
+ * like a hard rectangle, without darkening actual content.
+ */
 const attendeeCardBottomFadeClass =
-  "pointer-events-none absolute inset-0 rounded-[inherit] bg-[linear-gradient(180deg,transparent_0%,transparent_55%,rgba(11,11,11,0.7)_80%,#0B0B0B_100%)]";
+  "pointer-events-none absolute inset-0 rounded-[inherit] bg-[linear-gradient(180deg,transparent_0%,transparent_85%,#0B0B0B_100%)]";
 
 const attendeeCardTopFadeClass =
-  "pointer-events-none absolute inset-0 rounded-[inherit] bg-[linear-gradient(0deg,transparent_0%,transparent_55%,rgba(11,11,11,0.7)_80%,#0B0B0B_100%)]";
+  "pointer-events-none absolute inset-0 rounded-[inherit] bg-[linear-gradient(0deg,transparent_0%,transparent_85%,#0B0B0B_100%)]";
 
 /** Soft mint glow above the card only — replaces the all-around shadow so bottom corners melt into the page. */
 const attendeeCardTopGlowStyle = {
