@@ -229,6 +229,8 @@ const MarkerIcon = ({ type, user, event }: { type: MapMarker["type"]; user?: Use
         {/* Outer pulsing ring */}
         <div style={{
           position: "absolute",
+          top: "50%",
+          left: "50%",
           width: `${outerSize}px`,
           height: `${outerSize}px`,
           borderRadius: "50%",
@@ -290,18 +292,17 @@ const MarkerIcon = ({ type, user, event }: { type: MapMarker["type"]; user?: Use
     
     const svg = `
       <svg width="46" height="54" viewBox="0 0 27 42" fill="none" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
-        <path d="M13.5 1C20.4036 1 26 6.59644 26 13.5C26 16.3142 25.0694 18.9108 23.5 21C21 24.5 14.5 29 14.5 38C14.5 38.5523 14.0523 39 13.5 39C12.9477 39 12.5 38.5523 12.5 38C12.5 29 6 24.5 3.5 21C1.93058 18.9108 1 16.3142 1 13.5C1 6.59644 6.59644 1 13.5 1Z" fill="#111820" stroke="#14f195" stroke-width="1.5"/>
-        <circle cx="13.5" cy="13.5" r="11" fill="none" stroke="#14f195" stroke-width="1.5"/>
         ${avatarUrl ? `
           <defs>
             <clipPath id="${clipId}">
-              <circle cx="13.5" cy="13.5" r="10.6"/>
+              <circle cx="13.5" cy="13.5" r="11.5"/>
             </clipPath>
           </defs>
-          <image xlink:href="${escapedAvatarUrl}" x="2.9" y="2.9" width="21.2" height="21.2" clip-path="url(#${clipId})" preserveAspectRatio="xMidYMid slice"/>
+          <image xlink:href="${escapedAvatarUrl}" x="2" y="2" width="23" height="23" clip-path="url(#${clipId})" preserveAspectRatio="xMidYMid slice"/>
         ` : `
-          <circle cx="13.5" cy="13.5" r="10.6" fill="#14f195" fill-opacity="0.3"/>
+          <circle cx="13.5" cy="13.5" r="11.5" fill="#14f195" fill-opacity="0.3"/>
         `}
+        <path d="M13.5 1C20.4036 1 26 6.59644 26 13.5C26 16.3142 25.0694 18.9108 23.5 21C21 24.5 14.5 29 14.5 38C14.5 38.5523 14.0523 39 13.5 39C12.9477 39 12.5 38.5523 12.5 38C12.5 29 6 24.5 3.5 21C1.93058 18.9108 1 16.3142 1 13.5C1 6.59644 6.59644 1 13.5 1Z" fill="none" stroke="#14f195" stroke-width="1.5"/>
       </svg>
     `;
 

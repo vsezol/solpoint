@@ -78,17 +78,29 @@ export function UserCard({
     } as const;
 
     return (
-      <div
-        className="relative isolate flex w-[256px] flex-col overflow-hidden rounded-[3px] p-4 shadow-[0_0_18px_rgba(0,246,139,0.12)]"
-        style={cardSurface}
-      >
-        {/* Bottom fade */}
+      <div className="relative isolate w-[256px]">
+        {/* Top-only glow — mimics the original shadow but keeps the bottom corners from lighting up */}
         <div
-          className="pointer-events-none absolute inset-0 rounded-[inherit] bg-[linear-gradient(180deg,transparent_0%,transparent_46%,rgba(0,0,0,0.45)_72%,#000000_100%)]"
           aria-hidden
+          className="pointer-events-none absolute -top-4 left-1/2 h-24 w-[calc(100%+32px)] -translate-x-1/2"
+          style={{
+            background:
+              "radial-gradient(60% 100% at 50% 0%, rgba(0,246,139,0.22) 0%, rgba(0,246,139,0.08) 45%, transparent 75%)",
+            filter: "blur(6px)",
+          }}
         />
 
-        <div className="relative z-10 flex flex-col">
+        <div
+          className="relative z-1 flex w-full flex-col overflow-hidden rounded-[3px] p-4"
+          style={cardSurface}
+        >
+          {/* Bottom fade — darkens the lower portion so the corners melt into the page background */}
+          <div
+            className="pointer-events-none absolute inset-0 rounded-[inherit] bg-[linear-gradient(180deg,transparent_0%,transparent_46%,rgba(0,0,0,0.6)_72%,#000000_100%)]"
+            aria-hidden
+          />
+
+          <div className="relative z-10 flex flex-col">
           {/* Avatar */}
           <div className="flex flex-col items-center">
             <div className="rounded-full bg-[#E8F5ED] p-[3px]">
@@ -147,6 +159,7 @@ export function UserCard({
           >
             View
           </Link>
+        </div>
         </div>
       </div>
     );

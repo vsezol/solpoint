@@ -93,7 +93,17 @@ const attendeeCardSurfaceStyle = {
 } as const;
 
 const attendeeCardBottomFadeClass =
-  "pointer-events-none absolute inset-0 rounded-[inherit] bg-[linear-gradient(180deg,transparent_0%,transparent_46%,rgba(0,0,0,0.45)_72%,#000000_100%)]";
+  "pointer-events-none absolute inset-0 rounded-[inherit] bg-[linear-gradient(180deg,transparent_0%,transparent_46%,rgba(0,0,0,0.6)_72%,#000000_100%)]";
+
+/** Soft mint glow above the card only — replaces the all-around shadow so bottom corners melt into the page. */
+const attendeeCardTopGlowStyle = {
+  background:
+    "radial-gradient(60% 100% at 50% 0%, rgba(0,246,139,0.22) 0%, rgba(0,246,139,0.08) 45%, transparent 75%)",
+  filter: "blur(6px)",
+} as const;
+
+const attendeeCardTopGlowClass =
+  "pointer-events-none absolute -top-4 left-1/2 h-24 w-[calc(100%+32px)] -translate-x-1/2";
 
 function MultiSelectPopup({
   label,
@@ -710,10 +720,19 @@ export function EventsAttendeesWidget({
               {Array.from({ length: 4 }).map((_, index) => (
                 <div
                   key={index}
-                  className="relative isolate h-[420px] w-full max-w-[256px] animate-pulse overflow-hidden rounded-[3px] shadow-[0_0_18px_rgba(0,246,139,0.12)] sm:h-[374px]"
-                  style={attendeeCardSurfaceStyle}
+                  className="relative isolate h-[420px] w-full max-w-[256px] sm:h-[374px]"
                 >
-                  <div className={cn(attendeeCardBottomFadeClass)} aria-hidden />
+                  <div
+                    aria-hidden
+                    className={attendeeCardTopGlowClass}
+                    style={attendeeCardTopGlowStyle}
+                  />
+                  <div
+                    className="relative z-1 h-full w-full animate-pulse overflow-hidden rounded-[3px]"
+                    style={attendeeCardSurfaceStyle}
+                  >
+                    <div className={cn(attendeeCardBottomFadeClass)} aria-hidden />
+                  </div>
                 </div>
               ))}
             </div>
@@ -764,9 +783,17 @@ export function EventsAttendeesWidget({
                   return (
                     <article
                       key={item.id}
-                      className="relative isolate flex h-full w-full max-w-[256px] min-h-[420px] flex-col overflow-hidden rounded-[3px] p-4 shadow-[0_0_18px_rgba(0,246,139,0.12)] sm:mx-auto sm:min-h-[374px] sm:p-[14px]"
-                      style={attendeeCardSurfaceStyle}
+                      className="relative isolate flex h-full w-full max-w-[256px] min-h-[420px] flex-col sm:mx-auto sm:min-h-[374px]"
                     >
+                      <div
+                        aria-hidden
+                        className={attendeeCardTopGlowClass}
+                        style={attendeeCardTopGlowStyle}
+                      />
+                      <div
+                        className="relative z-1 flex h-full w-full flex-1 flex-col overflow-hidden rounded-[3px] p-4 sm:p-[14px]"
+                        style={attendeeCardSurfaceStyle}
+                      >
                       <div className={cn(attendeeCardBottomFadeClass)} aria-hidden />
                       <div className="relative z-10 flex min-h-0 flex-1 flex-col">
                         <div className="flex flex-col items-center">
@@ -834,6 +861,7 @@ export function EventsAttendeesWidget({
                         >
                           View
                         </Button>
+                      </div>
                       </div>
                     </article>
                   );
