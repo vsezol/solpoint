@@ -89,16 +89,20 @@ export async function checkRateLimit(
   const limiter = getUpstashLimiter();
 
   if (limiter) {
-    const { success, remaining, reset } = await limiter.limit(identifier);
-    return {
-      limited: !success,
-      remaining,
-      resetAt: reset,
-      limit: MAX_REQUESTS,
-    };
+    try {
+      const { success, remaining, reset } = await limiter.limit(identifier);
+      return {
+        limited: !success,
+        remaining,
+        resetAt: reset,
+        limit: MAX_REQUESTS,
+      };
+    } catch (err) {
+      console.warn("[rate-limit] Upstash unavailable, falling back to in-memory", err);
+    }
   }
 
-  // In-memory fallback
+  // In-memory fallback (also used when Upstash is unreachable)
   const result = checkInMemory(identifier);
   return { ...result, limit: MAX_REQUESTS };
 }

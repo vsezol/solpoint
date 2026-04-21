@@ -78,6 +78,77 @@ const interStyle = {
   fontFamily: "var(--font-inter), system-ui, sans-serif",
 } as const;
 
+const spaceGroteskStyle = {
+  fontFamily: "var(--font-display), system-ui, sans-serif",
+} as const;
+
+const attendeeCardFill = "#0B0B0B";
+
+/**
+ * Linear border gradient: bright mint at the anchored edge, fades smoothly
+ * along the opposite direction. Corners no longer form a visible silhouette
+ * because the card fill, the fade overlay end color, and the surrounding
+ * section all share the same #0B0B0B hex.
+ */
+const mintLinearBorder = (angleDeg: number) =>
+  `linear-gradient(${angleDeg}deg,` +
+  " #00F68B 0%," +
+  " rgba(0, 246, 139, 0.85) 25%," +
+  " rgba(0, 246, 139, 0.45) 55%," +
+  " rgba(0, 246, 139, 0.12) 75%," +
+  " rgba(0, 246, 139, 0) 92%)";
+
+/** Row-1 cards: mint border starts at the top, fades out toward the bottom. */
+const attendeeCardSurfaceStyle = {
+  border: "1px solid transparent",
+  background: `
+    linear-gradient(${attendeeCardFill}, ${attendeeCardFill}) padding-box,
+    ${mintLinearBorder(180)} border-box
+  `,
+  backgroundClip: "padding-box, border-box",
+} as const;
+
+/** Row-2 cards: mint border starts at the bottom, fades out toward the top. */
+const attendeeCardSurfaceStyleFlipped = {
+  border: "1px solid transparent",
+  background: `
+    linear-gradient(${attendeeCardFill}, ${attendeeCardFill}) padding-box,
+    ${mintLinearBorder(0)} border-box
+  `,
+  backgroundClip: "padding-box, border-box",
+} as const;
+
+/**
+ * Tiny fade only on the very last ~10% of the card, matching the page
+ * background. Prevents the corners where the mint border ends from looking
+ * like a hard rectangle, without darkening actual content.
+ */
+const attendeeCardBottomFadeClass =
+  "pointer-events-none absolute inset-0 rounded-[inherit] bg-[linear-gradient(180deg,transparent_0%,transparent_85%,#0B0B0B_100%)]";
+
+const attendeeCardTopFadeClass =
+  "pointer-events-none absolute inset-0 rounded-[inherit] bg-[linear-gradient(0deg,transparent_0%,transparent_85%,#0B0B0B_100%)]";
+
+/** Soft mint glow above the card only — replaces the all-around shadow so bottom corners melt into the page. */
+const attendeeCardTopGlowStyle = {
+  background:
+    "radial-gradient(60% 100% at 50% 0%, rgba(0,246,139,0.22) 0%, rgba(0,246,139,0.08) 45%, transparent 75%)",
+  filter: "blur(6px)",
+} as const;
+
+const attendeeCardTopGlowClass =
+  "pointer-events-none absolute -top-4 left-1/2 h-24 w-[calc(100%+32px)] -translate-x-1/2";
+
+/** Soft mint glow below the card — for flipped (row-2) cards. */
+const attendeeCardBottomGlowStyle = {
+  background:
+    "radial-gradient(60% 100% at 50% 100%, rgba(0,246,139,0.22) 0%, rgba(0,246,139,0.08) 45%, transparent 75%)",
+  filter: "blur(6px)",
+} as const;
+
+const attendeeCardBottomGlowClass =
+  "pointer-events-none absolute -bottom-4 left-1/2 h-24 w-[calc(100%+32px)] -translate-x-1/2";
+
 function MultiSelectPopup({
   label,
   placeholder,
@@ -690,12 +761,27 @@ export function EventsAttendeesWidget({
         <div className="space-y-4">
           {loading ? (
             <div className="grid grid-cols-1 justify-items-center gap-6 sm:grid-cols-2">
-              {Array.from({ length: 4 }).map((_, index) => (
-                <div
-                  key={index}
-                  className="h-[420px] w-full max-w-[256px] animate-pulse rounded-[3px] border border-[#919191] bg-[#0B0B0B] sm:h-[374px]"
-                />
-              ))}
+              {Array.from({ length: 4 }).map((_, index) => {
+                const flipped = index >= 2;
+                return (
+                  <div
+                    key={index}
+                    className="relative isolate h-[420px] w-full max-w-[256px] sm:h-[374px]"
+                  >
+                    <div
+                      aria-hidden
+                      className={flipped ? attendeeCardBottomGlowClass : attendeeCardTopGlowClass}
+                      style={flipped ? attendeeCardBottomGlowStyle : attendeeCardTopGlowStyle}
+                    />
+                    <div
+                      className="relative z-1 h-full w-full animate-pulse overflow-hidden rounded-[3px]"
+                      style={flipped ? attendeeCardSurfaceStyleFlipped : attendeeCardSurfaceStyle}
+                    >
+                      <div className={cn(flipped ? attendeeCardTopFadeClass : attendeeCardBottomFadeClass)} aria-hidden />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           ) : error ? (
             <div className="rounded border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200" style={kodeMonoStyle}>
@@ -734,7 +820,8 @@ export function EventsAttendeesWidget({
           ) : (
             <>
               <div className="grid grid-cols-1 justify-items-center gap-6 sm:grid-cols-2 sm:items-stretch">
-                {items.map((item) => {
+                {items.map((item, index) => {
+                  const flipped = index >= 2;
                   const location =
                     [item.city, item.country].filter(Boolean).join(", ") || "Location unknown";
                   const about = item.about || "Profile has no about yet.";
@@ -744,71 +831,86 @@ export function EventsAttendeesWidget({
                   return (
                     <article
                       key={item.id}
-                      className="flex h-full w-full max-w-[256px] min-h-[420px] flex-col rounded-[3px] border border-[#919191] bg-[#0B0B0B] p-4 sm:mx-auto sm:min-h-[374px] sm:p-[14px]"
+                      className="relative isolate flex h-full w-full max-w-[256px] min-h-[420px] flex-col sm:mx-auto sm:min-h-[374px]"
                     >
-                      <div className="flex flex-col items-center">
-                        <Avatar
-                          src={item.avatar_url || undefined}
-                          alt={item.name}
-                          size="card"
-                          fallbackVariant="branded"
-                          isVip={item.isVip}
-                          isVerified={item.isVerified}
-                        />
-                        <h4
-                          className="mt-6 max-w-full truncate text-center text-[20px] font-extrabold leading-none tracking-normal text-white sm:mt-[15px]"
-                          style={interStyle}
-                          title={item.name}
-                        >
-                          {item.name}
-                        </h4>
-                      </div>
-
-                      <div className="mt-3 w-full min-w-0 space-y-5 text-[15px] font-medium leading-none tracking-normal text-white sm:mt-[8px] sm:space-y-[15px]">
-                        <p className="flex items-start gap-2" style={kodeMonoStyle}>
-                          <User
-                            className="mt-px h-[15px] w-[15px] shrink-0 text-white"
-                            strokeWidth={1.5}
-                            aria-hidden
-                          />
-                          <span className="min-w-0 wrap-break-word">{roleLabel}</span>
-                        </p>
-                        <p className="flex items-start gap-2" style={kodeMonoStyle}>
-                          <MapPin
-                            className="mt-px h-[15px] w-[15px] shrink-0 text-white"
-                            strokeWidth={1.5}
-                            aria-hidden
-                          />
-                          <span className="min-w-0 wrap-break-word">{location}</span>
-                        </p>
-                      </div>
-
-                      <div className="mt-4 flex min-h-0 flex-col sm:mt-[11px]">
-                        <p
-                          className="text-center text-[15px] font-medium leading-none tracking-normal text-white"
-                          style={kodeMonoStyle}
-                        >
-                          About
-                        </p>
-                        <p
-                          className="mt-3 line-clamp-5 text-left text-[12px] font-medium leading-none tracking-normal text-white sm:mt-[9px]"
-                          style={interStyle}
-                        >
-                          {about}
-                        </p>
-                      </div>
-
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="mt-auto h-auto w-full shrink-0 rounded-[10px] border-0 bg-white px-6 py-3 text-[20px] font-bold leading-none tracking-[-0.05em] text-black hover:bg-white/90"
-                        style={kodeMonoStyle}
-                        onClick={() => onView(item.twitter_handle)}
-                        disabled={!item.twitter_handle}
+                      <div
+                        aria-hidden
+                        className={flipped ? attendeeCardBottomGlowClass : attendeeCardTopGlowClass}
+                        style={flipped ? attendeeCardBottomGlowStyle : attendeeCardTopGlowStyle}
+                      />
+                      <div
+                        className="relative z-1 flex h-full w-full flex-1 flex-col overflow-hidden rounded-[3px] p-4 sm:p-[14px]"
+                        style={flipped ? attendeeCardSurfaceStyleFlipped : attendeeCardSurfaceStyle}
                       >
-                        View
-                      </Button>
+                      <div className={cn(flipped ? attendeeCardTopFadeClass : attendeeCardBottomFadeClass)} aria-hidden />
+                      <div className="relative z-10 flex min-h-0 flex-1 flex-col">
+                        <div className="flex flex-col items-center">
+                          <div className="rounded-full bg-[#E8F5ED] p-[3px]">
+                            <Avatar
+                              src={item.avatar_url || undefined}
+                              alt={item.name}
+                              size="card"
+                              fallbackVariant="branded"
+                              isVip={item.isVip}
+                              isVerified={item.isVerified}
+                            />
+                          </div>
+                          <h4
+                            className="mt-6 max-w-full truncate text-center text-[20px] font-extrabold leading-none tracking-normal text-white sm:mt-[15px]"
+                            style={interStyle}
+                            title={item.name}
+                          >
+                            {item.name}
+                          </h4>
+                        </div>
+
+                        <div className="mt-[33px] w-full min-w-0 space-y-5 text-[15px] font-medium leading-none tracking-normal sm:space-y-[15px]">
+                          <p className="flex items-start gap-2 text-[#14f195]" style={kodeMonoStyle}>
+                            <User
+                              className="mt-px h-[15px] w-[15px] shrink-0"
+                              strokeWidth={1.5}
+                              aria-hidden
+                            />
+                            <span className="min-w-0 wrap-break-word">{roleLabel}</span>
+                          </p>
+                          <p className="flex items-start gap-2 text-[#14f195]" style={kodeMonoStyle}>
+                            <MapPin
+                              className="mt-px h-[15px] w-[15px] shrink-0"
+                              strokeWidth={1.5}
+                              aria-hidden
+                            />
+                            <span className="min-w-0 wrap-break-word">{location}</span>
+                          </p>
+                        </div>
+
+                        <div className="mt-4 flex min-h-0 flex-col sm:mt-[11px]">
+                          <p
+                            className="text-center text-[15px] font-medium leading-none tracking-normal text-[#70767d]"
+                            style={kodeMonoStyle}
+                          >
+                            About
+                          </p>
+                          <p
+                            className="mt-3 line-clamp-5 text-left text-[12px] font-medium leading-[normal] tracking-normal text-white sm:mt-[9px]"
+                            style={spaceGroteskStyle}
+                          >
+                            {about}
+                          </p>
+                        </div>
+
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="mt-auto mx-auto h-[49px] w-[164px] shrink-0 rounded-[7px] border-0 bg-white px-6 py-3 text-[20px] font-bold leading-none tracking-[-0.05em] text-black hover:bg-white/90"
+                          style={kodeMonoStyle}
+                          onClick={() => onView(item.twitter_handle)}
+                          disabled={!item.twitter_handle}
+                        >
+                          View
+                        </Button>
+                      </div>
+                      </div>
                     </article>
                   );
                 })}
