@@ -30,7 +30,7 @@ export default async function ProfileQrPage({ params }: ProfileQrPageProps) {
 
   // Self-scan: do not create scan record; redirect to own profile (where My QR lives)
   if (isOwnProfile) {
-    redirect(`/profile/${target.profile.twitter_handle}`);
+    redirect(`/profile/${target.profile.id}`);
   }
 
   return (

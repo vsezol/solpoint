@@ -113,41 +113,47 @@ input:disabled {
   cursor: not-allowed;
 }
 
-/* Custom scrollbar */
+/* Global scrollbar: thin + neutral gray */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: #3a3a3a transparent;
+}
+
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 2px;
+  height: 2px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--color-surface);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-surface-border);
-  border-radius: var(--radius-full);
+  background: #3a3a3a;
+  border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-text-muted);
+  background: #555555;
 }
 
 /* Selection */
 ::selection {
-  background: rgba(20, 241, 149, 0.3);
+  background: rgba(255, 255, 255, 0.25);
   color: var(--color-text-primary);
 }
 
-/* Input selection - same as focus color (bright green) */
+/* Input selection */
 input[type="text"]::selection,
 input[type="search"]::selection,
-input::selection {
-  background: #14f195 !important;
+input::selection,
+textarea::selection {
+  background: rgba(255, 255, 255, 0.25) !important;
   color: #ffffff !important;
 }
 
 /* Focus styles */
-:focus-visible:not(.profile-v2-field):not(.footer-contact-field) {
+:focus-visible:not(.profile-v2-field):not(.footer-contact-field):not(.signup-field) {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
@@ -170,6 +176,54 @@ input::selection {
   box-shadow: none !important;
   --tw-ring-shadow: 0 0 #0000;
   --tw-ring-offset-shadow: 0 0 #0000;
+}
+
+/* Profile v2 dropdown scrollbar: thin, neutral gray */
+.profile-v2-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #3a3a3a transparent;
+}
+
+.profile-v2-scrollbar::-webkit-scrollbar {
+  width: 2px;
+  height: 2px;
+}
+
+.profile-v2-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.profile-v2-scrollbar::-webkit-scrollbar-thumb {
+  background: #3a3a3a;
+  border-radius: 9999px;
+}
+
+.profile-v2-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #555555;
+}
+
+/* Neutral scrollbar (reuse across popups/modals): thin, gray */
+.neutral-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #3a3a3a transparent;
+}
+
+.neutral-scrollbar::-webkit-scrollbar {
+  width: 2px;
+  height: 2px;
+}
+
+.neutral-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.neutral-scrollbar::-webkit-scrollbar-thumb {
+  background: #3a3a3a;
+  border-radius: 9999px;
+}
+
+.neutral-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #555555;
 }
 
 /* Leaflet overrides */

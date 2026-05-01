@@ -36,7 +36,6 @@ function LegacyHeader() {
   const { user, isAuthenticated, isLoading, logout } = useAuth();
   const meetingRequestsEnabled = isMeetingRequestsEnabled();
   const userId = user?.id;
-  const isVipUser = user?.subscription_tier === "vip";
 
   // Проверяем наличие сущностей для показа Dashboard на фронтенде
   useEffect(() => {
@@ -68,7 +67,7 @@ function LegacyHeader() {
   }, [isAuthenticated, userId]);
 
   useEffect(() => {
-    if (!meetingRequestsEnabled || !isAuthenticated || !userId || !isVipUser) {
+    if (!meetingRequestsEnabled || !isAuthenticated || !userId) {
       const timer = setTimeout(() => setMeetingActionNeededCount(0), 0);
       return () => clearTimeout(timer);
     }
@@ -101,7 +100,7 @@ function LegacyHeader() {
       clearInterval(intervalId);
       window.removeEventListener("meeting-requests-updated", onMeetingRequestsUpdated);
     };
-  }, [isAuthenticated, userId, isVipUser, meetingRequestsEnabled]);
+  }, [isAuthenticated, userId, meetingRequestsEnabled]);
 
   // Формируем динамический список ссылок навигации
   const dynamicNavLinks = [...navLinks];
@@ -249,7 +248,7 @@ function LegacyHeader() {
                         <button
                           onClick={() => {
                             setIsProfileMenuOpen(false);
-                            router.push(`/profile/${user.twitter_handle}`);
+                            router.push(`/profile/${user.id}`);
                           }}
                           className="w-full px-4 py-2 text-left text-sm text-[var(--color-text-primary)] hover:bg-[var(--color-surface-hover)] flex items-center gap-2 transition-colors"
                         >
@@ -274,7 +273,7 @@ function LegacyHeader() {
                                 setShowMeetingRequestsProModal(true);
                                 return;
                               }
-                              router.push(`/profile/${user.twitter_handle}?meetingRequests=1`);
+                              router.push(`/profile/${user.id}?meetingRequests=1`);
                             }}
                             className="w-full px-4 py-2 text-left text-sm text-[var(--color-text-primary)] hover:bg-[var(--color-surface-hover)] flex items-center justify-between gap-2 transition-colors"
                           >
@@ -372,7 +371,7 @@ function LegacyHeader() {
                   </div>
                 ) : isAuthenticated && user ? (
                   <Link
-                    href={`/profile/${user.twitter_handle}`}
+                    href={`/profile/${user.id}`}
                     onClick={() => setIsMobileMenuOpen(false)}
                     className="block px-4 py-2 rounded-lg text-sm font-medium text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]"
                   >

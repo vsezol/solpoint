@@ -63,28 +63,23 @@ export default function MapCnPage() {
     contentType: "all",
   });
   const { user } = useAuth();
-  const isVip = user?.subscription_tier === "vip";
   const isAuthenticated = !!user;
 
-  // Отслеживаем просмотр карты
   useEffect(() => {
-    // Вызываем trackEvent асинхронно, чтобы не блокировать загрузку страницы
     setTimeout(() => {
       trackEvent("map_view", {
         event_category: "Map",
-        is_vip: isVip,
         is_authenticated: isAuthenticated,
       });
     }, 0);
-  }, [isVip, isAuthenticated]);
+  }, [isAuthenticated]);
 
-  // Загружаем маркеры при изменении фильтров
   useEffect(() => {
     async function loadMarkers() {
       try {
         setLoading(true);
         setError(null);
-        const allMarkers = await getMapMarkers(filters, user?.id, isVip);
+        const allMarkers = await getMapMarkers(filters, user?.id, isAuthenticated);
         setMarkers(allMarkers);
       } catch (err) {
         console.error("Error loading map markers:", err);
@@ -95,7 +90,7 @@ export default function MapCnPage() {
     }
 
     loadMarkers();
-  }, [filters, user?.id, isVip]);
+  }, [filters, user?.id, isAuthenticated]);
 
   return (
     <>
@@ -148,7 +143,6 @@ export default function MapCnPage() {
               <MapFiltersPanel
                 filters={filters}
                 onFiltersChange={setFilters}
-                isVip={isVip}
               />
             </aside>
 
@@ -184,7 +178,6 @@ export default function MapCnPage() {
                       <CountriesLayer landColor="#452D9F" />
                       <MapMarkersLayer
                         markers={markers}
-                        isVip={isVip}
                         isAuthenticated={isAuthenticated}
                         currentUserId={user?.id}
                       />

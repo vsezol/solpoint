@@ -61,6 +61,10 @@ export interface ProfileDetailsResponse {
 }
 
 export interface SaveProfileDetailsPayload {
+  /** Overrides Twitter display name stored as profiles.twitter_name */
+  displayName?: string | null;
+  /** City stored in profiles.city */
+  city?: string | null;
   about: string | null;
   skillSlugs: string[];
   /** Legacy format (temporary backward compatibility) */
@@ -197,6 +201,23 @@ export async function uploadProfileBanner(file: File): Promise<{ banner_url: str
   }
 
   return { banner_url: data.banner_url };
+}
+
+export async function uploadProfileAvatar(file: File): Promise<{ avatar_url: string }> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch("/api/profile/avatar", {
+    method: "POST",
+    body: formData,
+  });
+
+  const data = (await parseJsonOrThrow(response)) as { avatar_url?: string };
+  if (!data.avatar_url) {
+    throw new Error("Invalid response from server");
+  }
+
+  return { avatar_url: data.avatar_url };
 }
 
 export async function deleteProfileBanner(): Promise<void> {

@@ -29,7 +29,7 @@ export function MobileNav() {
   const [isMoreOpen, setIsMoreOpen] = useState(false);
 
   const profileHref = isAuthenticated && user
-    ? `/profile/${user.twitter_handle}`
+    ? `/profile/${user.id}`
     : "/login";
 
   const isActive = (href: string) => {

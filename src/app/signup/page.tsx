@@ -32,8 +32,10 @@ const kodeMonoStyle = {
   fontFamily: "var(--font-kode-mono), monospace",
 } as const;
 
+const MAX_INTERESTS = 4;
+
 const selectTriggerClass =
-  "flex h-11 w-full items-center justify-between border border-[#2A2A2A] bg-[#0E0F11] px-3 pr-2 text-left text-[14px] font-bold leading-none tracking-[-0.05em] text-white transition-colors hover:border-[#3A3A3A] focus-visible:border-[#14f195] focus-visible:ring-1 focus-visible:ring-[#14f195] focus-visible:outline-none";
+  "signup-field flex h-11 w-full items-center justify-between border border-[#2A2A2A] bg-[#0E0F11] px-3 pr-2 text-left text-[14px] font-bold leading-none tracking-[-0.05em] text-white transition-colors hover:border-[#3A3A3A] active:border-white focus-visible:border-white focus-visible:outline-none focus-visible:ring-0";
 
 const selectPopupClass =
   "absolute left-0 right-0 top-full z-50 mt-1 border border-[#2A2A2A] bg-[#0E0F11] p-2 shadow-[0_12px_40px_rgba(0,0,0,0.55)]";
@@ -491,11 +493,6 @@ function SignupPageContent() {
                     Sign up with Twitter
                   </Button>
 
-                  <p className="mt-4 text-center text-[12px] font-medium leading-snug text-white/60">
-                    We&apos;ll import your name, handle, and profile picture.
-                    We never post without permission.
-                  </p>
-
                   <p className="mt-6 text-center text-[13px] font-medium text-white/70">
                     Already have an account?{" "}
                     <Link
@@ -549,7 +546,7 @@ function SignupPageContent() {
 
                       {isCountryDropdownOpen ? (
                         <div className={selectPopupClass}>
-                          <div className="mb-2 flex h-9 items-center gap-2 border border-[#2A2A2A] bg-black px-2">
+                          <div className="mb-2 flex h-9 items-center gap-2 border border-[#2A2A2A] bg-black px-2 transition-colors focus-within:border-white">
                             <Search className="h-3.5 w-3.5 shrink-0 text-white/55" />
                             <input
                               autoFocus
@@ -557,7 +554,7 @@ function SignupPageContent() {
                               onChange={(event) => setCountrySearchQuery(event.target.value)}
                               onKeyDown={handleCountryKeyDown}
                               placeholder="find your country"
-                              className="w-full bg-transparent text-[12px] font-bold text-white placeholder:text-white/45 focus:outline-none"
+                              className="signup-field w-full bg-transparent text-[12px] font-bold text-white placeholder:text-white/45 focus:outline-none"
                             />
                           </div>
                           <div className="max-h-56 space-y-1 overflow-y-auto pr-1">
@@ -599,7 +596,7 @@ function SignupPageContent() {
                         className={cn(
                           "flex h-11 items-center gap-2 border border-[#2A2A2A] bg-[#0E0F11] px-3 transition-colors",
                           formData.country_code
-                            ? "focus-within:border-[#3A3A3A]"
+                            ? "focus-within:border-white"
                             : "cursor-not-allowed opacity-55"
                         )}
                       >
@@ -622,7 +619,7 @@ function SignupPageContent() {
                           onKeyDown={handleCityKeyDown}
                           placeholder={formData.country_code ? "type your city" : "choose country first"}
                           disabled={!formData.country_code}
-                          className="w-full bg-transparent text-[12px] font-bold text-white placeholder:text-white/45 focus:outline-none"
+                          className="signup-field w-full bg-transparent text-[12px] font-bold text-white placeholder:text-white/45 focus:outline-none"
                         />
                       </div>
 
@@ -661,15 +658,6 @@ function SignupPageContent() {
                           </div>
                         </div>
                       ) : null}
-                    </div>
-
-                    <div className="border border-[#2A2A2A] bg-[#171A1E] px-3 py-3">
-                      <div className="flex items-start gap-2">
-                        <Globe className="mt-0.5 h-4 w-4 shrink-0 text-[#14f195]" />
-                        <p className="text-[12px] font-medium leading-snug text-white/65">
-                          Country is visible to everyone. City is visible only to PRO users.
-                        </p>
-                      </div>
                     </div>
 
                     <Button
@@ -711,91 +699,95 @@ function SignupPageContent() {
                           }))
                         }
                         placeholder="Tell us about yourself..."
-                        className="h-24 w-full resize-none rounded-[4px] border border-[#5e5e5e] bg-black px-2.5 py-2 text-[13px] font-medium leading-snug text-white placeholder:text-[#a4a7ac] focus:border-white focus:outline-none"
+                        className="signup-field h-24 w-full resize-none rounded-[4px] border border-[#5e5e5e] bg-black px-2.5 py-2 text-[13px] font-medium leading-snug text-white placeholder:text-[#a4a7ac] focus:border-white focus:outline-none focus-visible:outline-none"
                       />
                     </div>
 
                     <div>
                       <label className="mb-2 block text-[13px] font-medium text-white/75">I am a... (optional)</label>
-                      <div className="flex flex-wrap gap-2">
-                        {roles.map((role) => (
-                          <button
-                            key={role.value}
-                            type="button"
-                            onClick={() =>
-                              setFormData((prev) => ({
-                                ...prev,
-                                role: prev.role === role.value ? "" : role.value,
-                              }))
-                            }
-                            className={cn(
-                              "rounded-full border px-2.5 py-1 text-[11px] font-bold transition-colors",
-                              formData.role === role.value
-                                ? "border-[#14f195] bg-[#0A201A] text-[#14f195]"
-                                : "border-[#555] text-white/85 hover:border-white/70"
-                            )}
-                          >
-                            {role.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="mb-2 block text-[13px] font-medium text-white/75">Interests (optional)</label>
-                      <div className="flex flex-wrap gap-2">
-                        {interests.map((interest) => {
-                          const selected = formData.interests.includes(interest.slug);
+                      <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+                        {roles.map((role) => {
+                          const isSelected = formData.role === role.value;
                           return (
                             <button
-                              key={interest.slug}
+                              key={role.value}
                               type="button"
+                              className="group flex w-full items-center justify-between gap-3 text-left"
+                              aria-pressed={isSelected}
                               onClick={() =>
                                 setFormData((prev) => ({
                                   ...prev,
-                                  interests: selected
-                                    ? prev.interests.filter((slug) => slug !== interest.slug)
-                                    : [...prev.interests, interest.slug],
+                                  role: prev.role === role.value ? "" : role.value,
                                 }))
                               }
-                              className={cn(
-                                "rounded-full border px-2.5 py-1 text-[11px] font-bold transition-colors",
-                                selected
-                                  ? "border-[#14f195] bg-[#0A201A] text-[#14f195]"
-                                  : "border-[#555] text-white/85 hover:border-white/70"
-                              )}
                             >
-                              {interest.name}
+                              <span className="text-[12px] font-bold text-white">{role.label}</span>
+                              <span
+                                aria-hidden="true"
+                                className={cn(
+                                  "grid h-[13px] w-[13px] place-items-center rounded-[2px] border",
+                                  "border-[#313131] bg-[#0F0F0F]",
+                                  "group-hover:border-white/40"
+                                )}
+                                style={{ borderWidth: 1 }}
+                              >
+                                {isSelected ? <span className="h-[7px] w-[7px] rounded-[1px] bg-white" /> : null}
+                              </span>
                             </button>
                           );
                         })}
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between border border-[#2A2A2A] bg-[#171A1E] px-3 py-2.5">
-                      <span className="text-[13px] font-medium text-white/80">Open to meet IRL</span>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            isOpenToMeet: !prev.isOpenToMeet,
-                          }))
-                        }
-                        className={cn(
-                          "relative h-6 w-11 rounded-full border transition-colors",
-                          formData.isOpenToMeet
-                            ? "border-[#14f195] bg-[#14f195]"
-                            : "border-white/30 bg-transparent"
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            "absolute top-1 h-4 w-4 rounded-full bg-white transition-transform",
-                            formData.isOpenToMeet ? "left-6" : "left-1"
-                          )}
-                        />
-                      </button>
+                    <div>
+                      <div className="mb-2 flex items-center justify-between">
+                        <label className="block text-[13px] font-medium text-white/75">Interests (optional)</label>
+                        <span className="text-[11px] text-white/60">
+                          {formData.interests.length}/{MAX_INTERESTS}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+                        {interests.map((interest) => {
+                          const isSelected = formData.interests.includes(interest.slug);
+                          const limitReached = !isSelected && formData.interests.length >= MAX_INTERESTS;
+                          return (
+                            <button
+                              key={interest.slug}
+                              type="button"
+                              className={cn(
+                                "group flex w-full items-center justify-between gap-3 text-left transition-opacity",
+                                limitReached && "cursor-not-allowed opacity-45"
+                              )}
+                              aria-pressed={isSelected}
+                              onClick={() =>
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  interests: prev.interests.includes(interest.slug)
+                                    ? prev.interests.filter((slug) => slug !== interest.slug)
+                                    : prev.interests.length >= MAX_INTERESTS
+                                      ? prev.interests
+                                      : [...prev.interests, interest.slug],
+                                }))
+                              }
+                              disabled={limitReached}
+                            >
+                              <span className="text-[12px] font-bold text-white">{interest.name}</span>
+                              <span
+                                aria-hidden="true"
+                                className={cn(
+                                  "grid h-[13px] w-[13px] place-items-center rounded-[2px] border",
+                                  "border-[#313131] bg-[#0F0F0F]",
+                                  !limitReached && "group-hover:border-white/40"
+                                )}
+                                style={{ borderWidth: 1 }}
+                              >
+                                {isSelected ? <span className="h-[7px] w-[7px] rounded-[1px] bg-white" /> : null}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <p className="mt-2 text-[11px] text-white/50">You can choose up to {MAX_INTERESTS} interests.</p>
                     </div>
 
                     <Button
@@ -836,7 +828,8 @@ function SignupPageContent() {
                           }))
                         }
                         maxSelected={MAX_PROFILE_SKILLS}
-                        searchPlaceholder="Search skills"
+                          searchPlaceholder="Find skills"
+                          variant="toggles"
                         disabled={isLoading}
                       />
                     </div>

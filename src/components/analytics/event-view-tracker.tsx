@@ -6,10 +6,9 @@ import type { Event } from "@/types";
 
 interface EventViewTrackerProps {
   event: Event;
-  isVip?: boolean;
 }
 
-export function EventViewTracker({ event, isVip = false }: EventViewTrackerProps) {
+export function EventViewTracker({ event }: EventViewTrackerProps) {
   useEffect(() => {
     trackEvent("event_view", {
       event_category: "Events",
@@ -21,10 +20,8 @@ export function EventViewTracker({ event, isVip = false }: EventViewTrackerProps
       is_paid: event.is_paid || false,
       price_sol: event.price_sol || 0,
       visibility: event.visibility,
-      is_vip: isVip,
     });
-  }, [event, isVip]);
+  }, [event]);
 
   return null;
 }
-

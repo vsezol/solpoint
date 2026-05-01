@@ -64,25 +64,23 @@ export default function MapV1Page() {
   });
 
   const { user } = useAuth();
-  const isVip = user?.subscription_tier === "vip";
   const isAuthenticated = !!user;
 
   useEffect(() => {
     setTimeout(() => {
       trackEvent("map_v1_view", {
         event_category: "Map",
-        is_vip: isVip,
         is_authenticated: isAuthenticated,
       });
     }, 0);
-  }, [isVip, isAuthenticated]);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     async function loadMarkers() {
       try {
         setLoading(true);
         setError(null);
-        const allMarkers = await getMapMarkers(filters, user?.id, isVip);
+        const allMarkers = await getMapMarkers(filters, user?.id, isAuthenticated);
         setMarkers(allMarkers);
       } catch (err) {
         console.error("Error loading map markers:", err);
@@ -93,7 +91,7 @@ export default function MapV1Page() {
     }
 
     loadMarkers();
-  }, [filters, user?.id, isVip]);
+  }, [filters, user?.id, isAuthenticated]);
 
   return (
     <>
@@ -142,7 +140,6 @@ export default function MapV1Page() {
               <MapFiltersPanel
                 filters={filters}
                 onFiltersChange={setFilters}
-                isVip={isVip}
               />
             </aside>
 
@@ -177,7 +174,6 @@ export default function MapV1Page() {
                       <CountriesLayer landColor="#452D9F" />
                       <MapMarkersLayer
                         markers={markers}
-                        isVip={isVip}
                         isAuthenticated={isAuthenticated}
                         currentUserId={user?.id}
                       />

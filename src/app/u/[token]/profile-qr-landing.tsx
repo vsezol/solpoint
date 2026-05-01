@@ -227,7 +227,6 @@ export function ProfileQrLanding({
           src={profile.avatar_url}
           alt={profile.twitter_name}
           size="xl"
-          isVip={profile.subscription_tier === "vip"}
           isVerified={profile.is_verified}
         />
 
@@ -245,9 +244,11 @@ export function ProfileQrLanding({
             )}
           </div>
 
-          <p className="text-[var(--color-text-muted)] mb-3">
-            @{profile.twitter_handle}
-          </p>
+          {profile.twitter_handle ? (
+            <p className="text-[var(--color-text-muted)] mb-3">
+              @{profile.twitter_handle}
+            </p>
+          ) : null}
 
           {profile.bio ? (
             <p className="text-sm leading-6 text-[var(--color-text-secondary)]">
@@ -305,7 +306,7 @@ export function ProfileQrLanding({
         </Button>
 
         <Button asChild variant="outline" size="lg">
-          <Link href={`/profile/${profile.twitter_handle}`}>
+          <Link href={`/profile/${profile.id}`}>
             View profile
             <ArrowRight className="w-4 h-4 ml-2" />
           </Link>
@@ -320,8 +321,7 @@ export function ProfileQrLanding({
 
       {user && !isOwnQr && relationship === "pending_received" && (
         <p className="mt-4 text-sm text-[var(--color-text-secondary)]">
-          @{profile.twitter_handle} already follows you. Connect back to make it
-          mutual.
+          This user already follows you. Connect back to make it mutual.
         </p>
       )}
     </Card>

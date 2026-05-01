@@ -21,6 +21,7 @@ interface AuthRequiredModalProps {
   description?: string;
   requirePro?: boolean;
   redirectTo?: string;
+  variant?: "default" | "compact";
 }
 
 export function AuthRequiredModal({
@@ -30,6 +31,7 @@ export function AuthRequiredModal({
   description,
   requirePro = false,
   redirectTo,
+  variant = "default",
 }: AuthRequiredModalProps) {
   const defaultTitle = requirePro
     ? "This feature is available only for Pro users"
@@ -44,6 +46,46 @@ export function AuthRequiredModal({
     const query = new URLSearchParams({ redirect_to: redirectTo });
     return `${basePath}?${query.toString()}`;
   };
+
+  if (variant === "compact" && !requirePro) {
+    return (
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        size="sm"
+        className="!bg-[#0B0B0B] !border-white/[0.14] !rounded-[12px] !p-0"
+        closeButtonClassName="!hidden"
+      >
+        <ModalContent>
+          <div className="px-5 pb-5 pt-4" style={{ fontFamily: "var(--font-kode-mono), monospace" }}>
+            <div className="text-center text-[20px] font-extrabold leading-snug text-white">
+              {title || "Log in or Sign up to continue"}
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <Button
+                className="h-[46px] w-full rounded-[8px] border border-white bg-white text-[20px] font-extrabold text-black hover:bg-white/90"
+                asChild
+              >
+                <Link href={withRedirect("/login")} onClick={onClose}>
+                  Log in
+                </Link>
+              </Button>
+              <Link
+                href={withRedirect("/signup")}
+                onClick={onClose}
+                className="group inline-flex h-[46px] w-full items-stretch rounded-[8px] p-px"
+                style={{ background: "linear-gradient(90deg, #9b45fe 0%, #00f58d 100%)" }}
+              >
+                <span className="flex flex-1 items-center justify-center rounded-[7px] bg-black text-[20px] font-extrabold text-white transition-colors group-hover:bg-transparent group-hover:text-black">
+                  Sign up
+                </span>
+              </Link>
+            </div>
+          </div>
+        </ModalContent>
+      </Modal>
+    );
+  }
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="md" className={modalClass} closeButtonClassName={closeButtonClass}>

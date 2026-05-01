@@ -7,12 +7,11 @@ import type { User } from "@/types";
 interface HubMembersCardProps {
   members: (User & { joined_at?: string })[];
   friends?: User[];
-  isVip: boolean;
   authUser: { id: string } | null;
   hubSlug: string;
 }
 
-export function HubMembersCard({ members, friends = [], isVip, authUser, hubSlug }: HubMembersCardProps) {
+export function HubMembersCard({ members, friends = [], authUser, hubSlug }: HubMembersCardProps) {
   return (
     <Card variant="bordered">
       <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
@@ -27,7 +26,6 @@ export function HubMembersCard({ members, friends = [], isVip, authUser, hubSlug
             avatar_url: member.avatar_url,
             name: member.twitter_name,
             twitter_handle: member.twitter_handle,
-            isVip: member.subscription_tier === "vip",
             isVerified: member.is_verified,
           }))}
           showAllText="Show all members"
@@ -47,8 +45,7 @@ export function HubMembersCard({ members, friends = [], isVip, authUser, hubSlug
               avatar_url: friend.avatar_url,
               name: friend.twitter_name,
               twitter_handle: friend.twitter_handle,
-              isVip: friend.subscription_tier === "vip",
-              isVerified: friend.is_verified,
+            isVerified: friend.is_verified,
             }))}
             showAllText="Show all frens"
             showAllHref={`/hubs/${hubSlug}?tab=members`}

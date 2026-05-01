@@ -133,16 +133,6 @@ export default async function EventPage({ params }: EventPageProps) {
     data: { user: authUser },
   } = await supabase.auth.getUser();
 
-  let isVip = false;
-  if (authUser) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("subscription_tier")
-      .eq("id", authUser.id)
-      .single();
-    isVip = profile?.subscription_tier === "vip";
-  }
-
   // Получаем событие - сначала по слагу, потом по ID (если параметр является UUID)
   let query = supabase
     .from("events")
@@ -157,11 +147,6 @@ export default async function EventPage({ params }: EventPageProps) {
   const { data: eventData, error: eventError } = await query.single();
 
   if (eventError || !eventData) {
-    notFound();
-  }
-
-  // Проверяем доступ к VIP событию
-  if (eventData.visibility === "vip_only" && !isVip) {
     notFound();
   }
 
@@ -343,7 +328,7 @@ export default async function EventPage({ params }: EventPageProps) {
   return (
     <>
       <Header />
-      <EventViewTracker event={event} isVip={isVip} />
+      <EventViewTracker event={event} />
       <main className="min-h-screen bg-black pb-16 pt-20 text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="w-full border-x border-white/10 bg-black">
@@ -517,7 +502,6 @@ export default async function EventPage({ params }: EventPageProps) {
                           <div key={user.id} className="w-fit max-w-md">
                             <EventHostCard
                               user={user}
-                              isVip={isVip}
                               currentUserId={authUser?.id}
                             />
                           </div>
@@ -526,7 +510,6 @@ export default async function EventPage({ params }: EventPageProps) {
                           <div key={ext.id} className="w-fit max-w-md">
                             <EventHostCard
                               externalUser={ext}
-                              isVip={isVip}
                               currentUserId={authUser?.id}
                             />
                           </div>

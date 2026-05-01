@@ -187,7 +187,6 @@ function SubscriptionPageContent() {
   const [loadingPlans, setLoadingPlans] = useState(true);
   const [mapMarkers, setMapMarkers] = useState<MapMarker[]>([]);
   const [loadingMap, setLoadingMap] = useState(true);
-  const isVip = user?.subscription_tier === "vip";
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [paymentData, setPaymentData] = useState<{
@@ -271,7 +270,7 @@ function SubscriptionPageContent() {
           showWorkspaces: true,
           contentType: "all",
         };
-        const markers = await getMapMarkers(filters, user?.id, isVip);
+        const markers = await getMapMarkers(filters, user?.id, isAuthenticated);
         setMapMarkers(markers);
       } catch (error) {
         console.error("Error loading map markers:", error);
@@ -283,7 +282,7 @@ function SubscriptionPageContent() {
     if (!authLoading) {
       loadMapMarkers();
     }
-  }, [user?.id, isVip, authLoading]);
+  }, [user?.id, isAuthenticated, authLoading]);
 
   const fetchPlans = async () => {
     try {
@@ -885,7 +884,6 @@ function SubscriptionPageContent() {
                       <CountriesLayer landColor="#452D9F" />
                       <MapMarkersLayer
                         markers={mapMarkers}
-                        isVip={isVip}
                         isAuthenticated={isAuthenticated}
                         currentUserId={user?.id}
                       />

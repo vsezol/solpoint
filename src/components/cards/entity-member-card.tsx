@@ -101,7 +101,6 @@ export function EntityMemberCard({
             src={user.avatar_url}
             alt={user.twitter_name}
             size="lg"
-            isVip={user.subscription_tier === "vip"}
             isVerified={user.is_verified}
           />
           <div className="flex-1 min-w-0">

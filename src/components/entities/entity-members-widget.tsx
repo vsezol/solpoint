@@ -122,7 +122,6 @@ export function EntityMembersWidget({
 }: EntityMembersWidgetProps) {
   const { user, isAuthenticated } = useAuth();
   const router = useRouter();
-  const isVip = user?.subscription_tier === "vip";
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -217,12 +216,6 @@ export function EntityMembersWidget({
       return;
     }
 
-    // Проверяем VIP статус
-    if (!isVip) {
-      setShowProModal(true);
-      return;
-    }
-
     // Используем уже загруженные данные, без дополнительного запроса
     if (isFriends) {
       setAllFriends(data?.friends || []);
@@ -288,13 +281,6 @@ export function EntityMembersWidget({
       return;
     }
 
-    // Проверяем VIP статус
-    if (!isVip) {
-      setShowProModal(true);
-      return;
-    }
-
-    // Если авторизован и VIP - разрешаем переход
     if (twitterHandle) {
       window.location.href = `/profile/${twitterHandle}`;
     }
@@ -303,11 +289,6 @@ export function EntityMembersWidget({
   const handleOpenMeetingRequest = (userId: string) => {
     if (!isAuthenticated) {
       setShowAuthModal(true);
-      return;
-    }
-
-    if (!isVip) {
-      setShowProModal(true);
       return;
     }
 
@@ -431,7 +412,6 @@ export function EntityMembersWidget({
                           src={member.avatar_url}
                           alt={member.name}
                           size="sm"
-                          isVip={member.isVip}
                           isVerified={member.isVerified}
                         />
                       </div>
@@ -486,7 +466,6 @@ export function EntityMembersWidget({
                           src={friend.avatar_url}
                           alt={friend.name}
                           size="sm"
-                          isVip={friend.isVip}
                           isVerified={friend.isVerified}
                         />
                       </div>

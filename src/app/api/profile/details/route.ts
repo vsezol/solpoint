@@ -10,7 +10,7 @@ import {
 } from "@/lib/profile-skills";
 import { isUUID } from "@/lib/utils";
 
-const MAX_ABOUT = 4000;
+const MAX_ABOUT = 200;
 const MAX_EXPERIENCE_ITEMS = 25;
 const MAX_TITLE = 300;
 const MAX_COMPANY = 200;
@@ -169,7 +169,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
-    const { about, skillSlugs, skills, experience, role, countryCode, interestSlugs } = body as {
+    const { about, skillSlugs, skills, experience, role, countryCode, interestSlugs, displayName, city } = body as {
       about?: string | null;
       skillSlugs?: string[] | null;
       skills?: IncomingSkill[];
@@ -177,6 +177,8 @@ export async function PUT(request: NextRequest) {
       role?: string | null;
       countryCode?: string | null;
       interestSlugs?: string[] | null;
+      displayName?: string | null;
+      city?: string | null;
     };
 
     if (about === undefined || (skillSlugs === undefined && skills === undefined) || experience === undefined) {
@@ -191,6 +193,36 @@ export async function PUT(request: NextRequest) {
     }
     if (typeof about === "string" && about.length > MAX_ABOUT) {
       return NextResponse.json({ error: `about must be ${MAX_ABOUT} characters or less` }, { status: 400 });
+    }
+
+    let normalizedDisplayName: string | null | undefined;
+    if (displayName !== undefined) {
+      if (displayName === null || displayName === "") {
+        normalizedDisplayName = null;
+      } else if (typeof displayName !== "string") {
+        return NextResponse.json({ error: "displayName must be a string or null" }, { status: 400 });
+      } else {
+        const trimmed = displayName.trim();
+        if (trimmed.length > 15) {
+          return NextResponse.json({ error: "displayName must be 15 characters or less" }, { status: 400 });
+        }
+        normalizedDisplayName = trimmed || null;
+      }
+    }
+
+    let normalizedCity: string | null | undefined;
+    if (city !== undefined) {
+      if (city === null || city === "") {
+        normalizedCity = null;
+      } else if (typeof city !== "string") {
+        return NextResponse.json({ error: "city must be a string or null" }, { status: 400 });
+      } else {
+        const trimmed = city.trim();
+        if (trimmed.length > 150) {
+          return NextResponse.json({ error: "city must be 150 characters or less" }, { status: 400 });
+        }
+        normalizedCity = trimmed || null;
+      }
     }
 
     let normalizedRole: string | null | undefined;
@@ -356,6 +388,8 @@ export async function PUT(request: NextRequest) {
       role?: string | null;
       country_code?: string | null;
       country?: string | null;
+      twitter_name?: string | null;
+      city?: string | null;
     } = {
       about: about === null || about === "" ? null : about,
     };
@@ -381,6 +415,14 @@ export async function PUT(request: NextRequest) {
 
         profileUpdatePayload.country = (countryRow?.name as string | undefined) || null;
       }
+    }
+
+    if (normalizedDisplayName !== undefined) {
+      profileUpdatePayload.twitter_name = normalizedDisplayName;
+    }
+
+    if (normalizedCity !== undefined) {
+      profileUpdatePayload.city = normalizedCity;
     }
 
     const { error: upErr } = await supabase
