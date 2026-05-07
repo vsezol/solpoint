@@ -1,23 +1,18 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef, type CSSProperties } from "react";
+import { createPortal } from "react-dom";
 import { useMap, MapMarker as MapMarkerComponent, MarkerContent, MarkerPopup } from "@/components/ui/map";
 import type { MapMarker, User, Event, Hub, Community, Workspace } from "@/types";
-import { UserCard } from "@/components/cards/user-card";
+import { AttendeeStyleProfileCard } from "@/components/events/attendee-style-profile-card";
 import { EventCard } from "@/components/cards/event-card";
 import { HubCard } from "@/components/cards/hub-card";
-import { ProSubscriptionModal } from "@/components/ui";
 import { trackEvent } from "@/lib/analytics";
-import {
-  addFriend,
-  getFriendStatuses,
-  removeFriend,
-  type FollowStatus,
-} from "@/lib/api/friends";
+import { USER_ROLE_LABELS } from "@/lib/profile-taxonomy";
+import { AuthRequiredModal } from "@/components/ui";
 
 interface MapMarkersLayerProps {
   markers: MapMarker[];
-  isVip?: boolean;
   isAuthenticated?: boolean;
   currentUserId?: string;
 }
@@ -198,7 +193,15 @@ function clusterMarkers(
 }
 
 // Компонент для отображения иконки маркера
-const MarkerIcon = ({ type, user, event }: { type: MapMarker["type"]; user?: User; event?: Event }) => {
+const MarkerIcon = ({
+  type,
+  user,
+  event,
+}: {
+  type: MapMarker["type"];
+  user?: User;
+  event?: Event;
+}) => {
   let imgSrc = "";
   let filterStyle = "drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4))";
 
@@ -288,29 +291,31 @@ const MarkerIcon = ({ type, user, event }: { type: MapMarker["type"]; user?: Use
     const clipId = user?.id ? `avatar-clip-${user.id.replace(/[^a-zA-Z0-9]/g, '-')}` : 'avatar-clip-default';
     const escapedAvatarUrl = avatarUrl ? avatarUrl.replace(/"/g, '&quot;') : '';
     
-    filterStyle = "drop-shadow(0 4px 8px rgba(20, 241, 149, 0.4))";
+    // No glow for user pins (per design)
+    filterStyle = "none";
     
     const svg = `
-      <svg width="46" height="54" viewBox="0 0 27 42" fill="none" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+      <svg width="43" height="55" viewBox="0 0 43 55" fill="none" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+        <path d="M21.5 0.5C33.1091 0.5 42.5 9.68919 42.5 21C42.5 22.3816 42.3604 23.7309 42.0938 25.0352L42.0898 25.0518L42.0879 25.0684C41.1607 31.8933 36.0099 39.2624 31.0098 44.9766C28.5206 47.8212 26.0895 50.233 24.2803 51.9336C23.3761 52.7835 22.628 53.4553 22.1064 53.9141C21.9082 54.0885 21.7411 54.2309 21.6123 54.3418C21.5099 54.2537 21.384 54.1451 21.2373 54.0166C20.789 53.6241 20.1426 53.0479 19.3545 52.3154C17.7779 50.8502 15.6346 48.761 13.3672 46.2666C8.81894 41.263 3.82333 34.6832 1.85449 28.2627L1.84961 28.2461L1.84277 28.2295C0.974829 25.9817 0.5 23.5455 0.5 21C0.5 9.68919 9.89086 0.5 21.5 0.5Z" fill="black" stroke="#16F196"/>
         ${avatarUrl ? `
           <defs>
             <clipPath id="${clipId}">
-              <circle cx="13.5" cy="13.5" r="11.5"/>
+              <rect x="4" y="4" width="35" height="35" rx="17.5" />
             </clipPath>
           </defs>
-          <image xlink:href="${escapedAvatarUrl}" x="2" y="2" width="23" height="23" clip-path="url(#${clipId})" preserveAspectRatio="xMidYMid slice"/>
+          <image xlink:href="${escapedAvatarUrl}" x="4" y="4" width="35" height="35" clip-path="url(#${clipId})" preserveAspectRatio="xMidYMid slice"/>
         ` : `
-          <circle cx="13.5" cy="13.5" r="11.5" fill="#14f195" fill-opacity="0.3"/>
+          <circle cx="21.5" cy="21.5" r="17.5" fill="#16F196"/>
+          <path d="M32 30.25V27.75C32 26.4239 31.4732 25.1522 30.5355 24.2145C29.5979 23.2768 28.3261 22.75 27 22.75H17C15.6739 22.75 14.4021 23.2768 13.4645 24.2145C12.5268 25.1522 12 26.4239 12 27.75V30.25M27 12.75C27 15.5114 24.7614 17.75 22 17.75C19.2386 17.75 17 15.5114 17 12.75C17 9.98858 19.2386 7.75 22 7.75C24.7614 7.75 27 9.98858 27 12.75Z" stroke="#1E1E1E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
         `}
-        <path d="M13.5 1C20.4036 1 26 6.59644 26 13.5C26 16.3142 25.0694 18.9108 23.5 21C21 24.5 14.5 29 14.5 38C14.5 38.5523 14.0523 39 13.5 39C12.9477 39 12.5 38.5523 12.5 38C12.5 29 6 24.5 3.5 21C1.93058 18.9108 1 16.3142 1 13.5C1 6.59644 6.59644 1 13.5 1Z" fill="none" stroke="#14f195" stroke-width="1.5"/>
       </svg>
     `;
 
     return (
       <div
         style={{
-          width: "46px",
-          height: "54px",
+          width: "43px",
+          height: "55px",
           cursor: "pointer",
           filter: filterStyle,
           transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
@@ -318,10 +323,8 @@ const MarkerIcon = ({ type, user, event }: { type: MapMarker["type"]; user?: Use
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.transform = "scale(1.15) translateY(-2px)";
-          e.currentTarget.style.filter = filterStyle.replace(/rgba\(([^)]+)\)/g, (match, rgba) => {
-            const [r, g, b] = rgba.split(',').slice(0, 3);
-            return `rgba(${r}, ${g}, ${b}, 0.7)`;
-          });
+          // keep filter unchanged (no glow)
+          e.currentTarget.style.filter = filterStyle;
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.transform = "scale(1) translateY(0)";
@@ -329,6 +332,107 @@ const MarkerIcon = ({ type, user, event }: { type: MapMarker["type"]; user?: Use
         }}
         dangerouslySetInnerHTML={{ __html: svg }}
       />
+    );
+  }
+
+  // Event markers: render the same "cluster" circular look with pulse,
+  // but with the event logo in the center (no clustering).
+  if ((type as unknown as string) === "event") {
+    const borderColor = "#14f195";
+    const size = 52;
+    const logoSize = 40;
+    const eventLogoUrl = event?.image_url || "";
+
+    return (
+      <div
+        style={{
+          position: "relative",
+          width: `${size}px`,
+          height: `${size}px`,
+          animation: "cluster-appear 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+          cursor: "pointer",
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: `${size + 8}px`,
+            height: `${size + 8}px`,
+            borderRadius: "50%",
+            border: `2px solid ${borderColor}`,
+            animation: "cluster-pulse 2s ease-in-out infinite",
+            pointerEvents: "none",
+          }}
+        />
+        <div
+          style={{
+            width: "100%",
+            height: "100%",
+            borderRadius: "50%",
+            background: "linear-gradient(135deg, #111820 0%, #182028 100%)",
+            border: `2px solid ${borderColor}`,
+            boxShadow: `
+              0 4px 12px rgba(0, 0, 0, 0.5),
+              0 0 0 3px ${borderColor}20,
+              inset 0 1px 0 ${borderColor}40
+            `,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            position: "relative",
+          }}
+        >
+          <div
+            style={{
+              position: "absolute",
+              top: "10%",
+              left: "10%",
+              right: "10%",
+              bottom: "10%",
+              borderRadius: "50%",
+              background: `radial-gradient(circle at 30% 30%, ${borderColor}15 0%, transparent 70%)`,
+              pointerEvents: "none",
+            }}
+          />
+          {eventLogoUrl ? (
+            <img
+              src={eventLogoUrl}
+              alt={event?.name || "Event"}
+              style={{
+                width: `${logoSize}px`,
+                height: `${logoSize}px`,
+                borderRadius: "9999px",
+                objectFit: "cover",
+                position: "relative",
+                zIndex: 1,
+                background: "#0B0B0B",
+              }}
+            />
+          ) : (
+            // Fallback: small calendar glyph
+            <svg
+              width={logoSize}
+              height={logoSize}
+              viewBox="0 0 22 22"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              style={{ position: "relative", zIndex: 1 }}
+            >
+              <rect x="3" y="5" width="16" height="14" rx="2" stroke={borderColor} strokeWidth="2" />
+              <line x1="3" y1="8" x2="19" y2="8" stroke={borderColor} strokeWidth="2" />
+              <line x1="7" y1="3" x2="7" y2="6" stroke={borderColor} strokeWidth="2" strokeLinecap="round" />
+              <line x1="15" y1="3" x2="15" y2="6" stroke={borderColor} strokeWidth="2" strokeLinecap="round" />
+              <circle cx="7" cy="12" r="1.3" fill={borderColor} />
+              <circle cx="11" cy="12" r="1.3" fill={borderColor} />
+              <circle cx="15" cy="12" r="1.3" fill={borderColor} />
+              <circle cx="7" cy="16" r="1.3" fill={borderColor} />
+            </svg>
+          )}
+        </div>
+      </div>
     );
   }
 
@@ -539,112 +643,237 @@ const ClusterIcon = ({ count, type }: { count: number; type: MapMarker["type"] }
   );
 };
 
+// Dimensions of the user profile card used for smart popup positioning
+const USER_CARD_WIDTH = 290;
+const USER_CARD_HEIGHT = 460;
+const USER_PIN_HEIGHT = 55;
+const USER_PIN_HALF_WIDTH = 22;
+const CARD_OFFSET = 14;
+
+// Dimensions of the event compact card used for smart popup positioning
+const EVENT_CARD_WIDTH = 256;
+const EVENT_CARD_HEIGHT = 374;
+const EVENT_PIN_HEIGHT = 52;
+const EVENT_PIN_HALF_WIDTH = 26;
+
+type UserCardState = {
+  user: User;
+  style: CSSProperties;
+};
+
+type EventCardState = {
+  event: Event;
+  style: CSSProperties;
+};
+
 export function MapMarkersLayer({
   markers,
-  isVip = false,
   isAuthenticated = false,
   currentUserId,
 }: MapMarkersLayerProps) {
   const { map, isLoaded } = useMap();
-  const [friendshipStatuses, setFriendshipStatuses] = useState<
-    Record<string, FollowStatus>
-  >({});
-  const [showProModal, setShowProModal] = useState(false);
-  const [currentZoom, setCurrentZoom] = useState(4);
 
-  // Отслеживаем зум карты для кластеризации
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authModalTitle, setAuthModalTitle] = useState("Log in or Sign up to continue");
+  const [authRedirectTo, setAuthRedirectTo] = useState<string | undefined>(undefined);
+
+  // Custom overlay state for authenticated user cards (replaces MapLibre popup)
+  const [userCard, setUserCard] = useState<UserCardState | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  // Custom overlay state for event cards (replaces MapLibre popup)
+  const [eventCard, setEventCard] = useState<EventCardState | null>(null);
+  const eventCardRef = useRef<HTMLDivElement>(null);
+
+  const visibleMarkers = useMemo(() => {
+    return markers.filter((marker) => {
+      // Only users and events are shown on this map
+      if (marker.type === "hub" || marker.type === "community" || marker.type === "workspace") {
+        return false;
+      }
+      return (
+        marker.latitude != null &&
+        marker.longitude != null &&
+        !isNaN(marker.latitude) &&
+        !isNaN(marker.longitude) &&
+        marker.latitude >= -90 &&
+        marker.latitude <= 90 &&
+        marker.longitude >= -180 &&
+        marker.longitude <= 180
+      );
+    });
+  }, [markers]);
+
+  // Calculate the best position for the user card so it stays fully inside the map container
+  const openUserCard = useCallback(
+    (marker: MapMarker) => {
+      if (!map) return;
+
+      const pixel = map.project([marker.longitude, marker.latitude]);
+      const container = map.getContainer();
+      const mapWidth = container.clientWidth;
+      const mapHeight = container.clientHeight;
+
+      const x = pixel.x; // pin tip x (pin is centered horizontally)
+      const y = pixel.y; // pin tip y (anchor="bottom", so tip is at the coordinate)
+
+      // Available space in each direction
+      const spaceAbove = y - USER_PIN_HEIGHT; // from pin icon top to map top
+      const spaceBelow = mapHeight - y; // from pin tip to map bottom
+      const spaceRight = mapWidth - x; // from pin center to map right
+      const spaceLeft = x; // from map left to pin center
+
+      const clampH = (left: number) =>
+        Math.max(8, Math.min(left, mapWidth - USER_CARD_WIDTH - 8));
+      const clampV = (top: number) =>
+        Math.max(8, Math.min(top, mapHeight - USER_CARD_HEIGHT - 8));
+
+      const pinCenterY = y - USER_PIN_HEIGHT / 2;
+
+      let style: CSSProperties = {
+        position: "absolute",
+        width: USER_CARD_WIDTH,
+        zIndex: 400,
+      };
+
+      if (spaceAbove >= USER_CARD_HEIGHT + CARD_OFFSET) {
+        // Enough space above: show card above the pin
+        style.left = clampH(x - USER_CARD_WIDTH / 2);
+        style.top = y - USER_PIN_HEIGHT - CARD_OFFSET - USER_CARD_HEIGHT;
+      } else if (spaceRight >= USER_CARD_WIDTH + USER_PIN_HALF_WIDTH + CARD_OFFSET) {
+        // Enough space to the right
+        style.left = x + USER_PIN_HALF_WIDTH + CARD_OFFSET;
+        style.top = clampV(pinCenterY - USER_CARD_HEIGHT / 2);
+      } else if (spaceLeft >= USER_CARD_WIDTH + USER_PIN_HALF_WIDTH + CARD_OFFSET) {
+        // Enough space to the left
+        style.left = x - USER_PIN_HALF_WIDTH - CARD_OFFSET - USER_CARD_WIDTH;
+        style.top = clampV(pinCenterY - USER_CARD_HEIGHT / 2);
+      } else if (spaceBelow >= USER_CARD_HEIGHT + CARD_OFFSET) {
+        // Enough space below: show card below the pin tip
+        style.left = clampH(x - USER_CARD_WIDTH / 2);
+        style.top = y + CARD_OFFSET;
+      } else {
+        // Best effort: above with clamping to map bounds
+        style.left = clampH(x - USER_CARD_WIDTH / 2);
+        style.top = Math.max(8, y - USER_PIN_HEIGHT - CARD_OFFSET - USER_CARD_HEIGHT);
+      }
+
+      const user = marker.data as User;
+      setUserCard({ user, style });
+    },
+    [map]
+  );
+
+  // Calculate the best position for the event card so it stays fully inside the map container
+  const openEventCard = useCallback(
+    (marker: MapMarker) => {
+      if (!map) return;
+
+      const pixel = map.project([marker.longitude, marker.latitude]);
+      const container = map.getContainer();
+      const mapWidth = container.clientWidth;
+      const mapHeight = container.clientHeight;
+
+      const x = pixel.x;
+      const y = pixel.y;
+
+      const spaceAbove = y - EVENT_PIN_HEIGHT;
+      const spaceBelow = mapHeight - y;
+      const spaceRight = mapWidth - x;
+      const spaceLeft = x;
+
+      const clampH = (left: number) =>
+        Math.max(8, Math.min(left, mapWidth - EVENT_CARD_WIDTH - 8));
+      const clampV = (top: number) =>
+        Math.max(8, Math.min(top, mapHeight - EVENT_CARD_HEIGHT - 8));
+
+      const pinCenterY = y - EVENT_PIN_HEIGHT / 2;
+
+      let style: CSSProperties = {
+        position: "absolute",
+        width: EVENT_CARD_WIDTH,
+        zIndex: 400,
+      };
+
+      if (spaceAbove >= EVENT_CARD_HEIGHT + CARD_OFFSET) {
+        style.left = clampH(x - EVENT_CARD_WIDTH / 2);
+        style.top = y - EVENT_PIN_HEIGHT - CARD_OFFSET - EVENT_CARD_HEIGHT;
+      } else if (spaceRight >= EVENT_CARD_WIDTH + EVENT_PIN_HALF_WIDTH + CARD_OFFSET) {
+        style.left = x + EVENT_PIN_HALF_WIDTH + CARD_OFFSET;
+        style.top = clampV(pinCenterY - EVENT_CARD_HEIGHT / 2);
+      } else if (spaceLeft >= EVENT_CARD_WIDTH + EVENT_PIN_HALF_WIDTH + CARD_OFFSET) {
+        style.left = x - EVENT_PIN_HALF_WIDTH - CARD_OFFSET - EVENT_CARD_WIDTH;
+        style.top = clampV(pinCenterY - EVENT_CARD_HEIGHT / 2);
+      } else if (spaceBelow >= EVENT_CARD_HEIGHT + CARD_OFFSET) {
+        style.left = clampH(x - EVENT_CARD_WIDTH / 2);
+        style.top = y + CARD_OFFSET;
+      } else {
+        style.left = clampH(x - EVENT_CARD_WIDTH / 2);
+        style.top = Math.max(8, y - EVENT_PIN_HEIGHT - CARD_OFFSET - EVENT_CARD_HEIGHT);
+      }
+
+      const event = marker.data as Event;
+      setEventCard({ event, style });
+    },
+    [map]
+  );
+
+  // Close user card when clicking outside it
   useEffect(() => {
-    if (!map || !isLoaded) return;
+    if (!userCard) return;
 
-    const updateZoom = () => {
-      setCurrentZoom(map.getZoom());
+    const handleDocClick = (e: MouseEvent) => {
+      if (cardRef.current && !cardRef.current.contains(e.target as Node)) {
+        setUserCard(null);
+      }
     };
 
-    updateZoom();
-    map.on("zoom", updateZoom);
-    map.on("moveend", updateZoom);
+    // Defer so the opening click doesn't immediately close the card
+    const timerId = setTimeout(() => {
+      document.addEventListener("mousedown", handleDocClick);
+    }, 0);
 
     return () => {
-      map.off("zoom", updateZoom);
-      map.off("moveend", updateZoom);
+      clearTimeout(timerId);
+      document.removeEventListener("mousedown", handleDocClick);
     };
-  }, [map, isLoaded]);
+  }, [userCard]);
 
-  // Кластеризуем маркеры на основе текущего зума
-  const clusteredItems = useMemo(() => {
-    return clusterMarkers(markers, currentZoom);
-  }, [markers, currentZoom]);
-
-  // Проверяем статус дружбы для пользователей
+  // Close event card when clicking outside it
   useEffect(() => {
-    if (!currentUserId || !isAuthenticated) {
-      return;
-    }
+    if (!eventCard) return;
 
-    const checkFriendshipStatuses = async () => {
-      const userMarkers = markers.filter(
-        (m) => m.type === "user" || m.type === "pro_user"
-      );
-
-      if (userMarkers.length === 0) {
-        return;
-      }
-
-      const userIds = userMarkers.map((m) => (m.data as User).id);
-
-      try {
-        const { statuses } = await getFriendStatuses(userIds);
-        setFriendshipStatuses(statuses || {});
-      } catch (error) {
-        console.error("Error checking friendship statuses:", error);
-        setFriendshipStatuses({});
+    const handleDocClick = (e: MouseEvent) => {
+      if (eventCardRef.current && !eventCardRef.current.contains(e.target as Node)) {
+        setEventCard(null);
       }
     };
 
-    checkFriendshipStatuses();
-  }, [markers, currentUserId, isAuthenticated]);
+    const timerId = setTimeout(() => {
+      document.addEventListener("mousedown", handleDocClick);
+    }, 0);
 
-  const handleAddFriend = useCallback(
-    async (userId: string) => {
-      if (!isAuthenticated || !currentUserId) {
-        return;
-      }
+    return () => {
+      clearTimeout(timerId);
+      document.removeEventListener("mousedown", handleDocClick);
+    };
+  }, [eventCard]);
 
-      try {
-        const response = await addFriend(userId);
-        setFriendshipStatuses((prev) => ({
-          ...prev,
-          [userId]: response.followStatus,
-        }));
-      } catch (error) {
-        console.error("Error adding friend:", error);
-        alert(error instanceof Error ? error.message : "Failed to add friend");
-      }
-    },
-    [isAuthenticated, currentUserId]
-  );
-
-  const handleRemoveFriend = useCallback(
-    async (userId: string) => {
-      if (!isAuthenticated || !currentUserId) {
-        return;
-      }
-
-      try {
-        await removeFriend(userId);
-
-        // После отписки статус становится "none"
-        setFriendshipStatuses((prev) => ({
-          ...prev,
-          [userId]: "none",
-        }));
-      } catch (error) {
-        console.error("Error removing friend:", error);
-        alert(error instanceof Error ? error.message : "Failed to remove friend");
-      }
-    },
-    [isAuthenticated, currentUserId]
-  );
+  // Close cards when the map is dragged (position becomes stale).
+  // We intentionally do NOT close on zoomstart/zoom because scroll-wheel and
+  // trackpad zooming fire zoomstart on every step, which would close a card
+  // that was just opened between two consecutive scroll ticks.
+  useEffect(() => {
+    if (!map) return;
+    const close = () => {
+      setUserCard(null);
+      setEventCard(null);
+    };
+    map.on("dragstart", close);
+    return () => {
+      map.off("dragstart", close);
+    };
+  }, [map]);
 
   const handleMarkerClick = useCallback(
     (marker: MapMarker) => {
@@ -660,136 +889,18 @@ export function MapMarkersLayer({
     []
   );
 
-  const handleClusterClick = useCallback(
-    (cluster: Cluster) => {
-      if (!map) return;
-
-      trackEvent("map_cluster_click", {
-        event_category: "Map",
-        cluster_id: cluster.id,
-        marker_count: cluster.count,
-      });
-
-      // Вычисляем bounding box для всех маркеров в кластере
-      const lats = cluster.markers.map((m) => m.latitude);
-      const lngs = cluster.markers.map((m) => m.longitude);
-      const minLat = Math.min(...lats);
-      const maxLat = Math.max(...lats);
-      const minLng = Math.min(...lngs);
-      const maxLng = Math.max(...lngs);
-
-      // Вычисляем центр и зум для кластера
-      const centerLat = (minLat + maxLat) / 2;
-      const centerLng = (minLng + maxLng) / 2;
-
-      // Вычисляем оптимальный зум на основе размера кластера
-      const latRange = maxLat - minLat;
-      const lngRange = maxLng - minLng;
-      const maxRange = Math.max(latRange, lngRange);
-
-      let targetZoom = currentZoom + 2;
-      if (maxRange > 0.5) targetZoom = currentZoom + 1;
-      if (maxRange > 1) targetZoom = currentZoom + 0.5;
-      if (maxRange > 2) targetZoom = currentZoom;
-
-      // Ограничиваем зум
-      targetZoom = Math.min(Math.max(targetZoom, currentZoom + 1), 16);
-
-      // Плавно зумим к кластеру
-      map.flyTo({
-        center: [centerLng, centerLat],
-        zoom: targetZoom,
-        duration: 500,
-      });
-    },
-    [map, currentZoom]
-  );
+  // Clusters are intentionally disabled for this map.
 
   const renderPopupContent = (marker: MapMarker) => {
     switch (marker.type) {
       case "user":
       case "pro_user": {
-        // Если пользователь не авторизован, не показываем попап с UserCard
-        if (!isAuthenticated) {
-          return (
-            <div className="p-4 text-center">
-              <p className="text-sm text-[var(--color-text-secondary)] mb-3">
-                Sign up or log in to view user profiles
-              </p>
-              <div className="flex gap-2 justify-center">
-                <a
-                  href="/signup"
-                  className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:opacity-90 transition-opacity text-sm"
-                >
-                  Sign up
-                </a>
-                <a
-                  href="/login"
-                  className="px-4 py-2 border border-[var(--color-surface-border)] rounded-lg hover:bg-[var(--color-surface-hover)] transition-colors text-sm"
-                >
-                  Log in
-                </a>
-              </div>
-            </div>
-          );
-        }
-
-        const user = marker.data as User;
-        const friendshipStatus = friendshipStatuses[user.id] || "none";
-        const isFriend = friendshipStatus === "mutual";
-
-        // Преобразуем статус из формата карты в формат для UserCard
-        let cardFriendshipStatus:
-          | "none"
-          | "pending_sent"
-          | "pending_received"
-          | "accepted"
-          | "blocked" = "none";
-        if (friendshipStatus === "mutual") {
-          cardFriendshipStatus = "accepted";
-        } else if (friendshipStatus === "following") {
-          cardFriendshipStatus = "pending_sent";
-        } else if (friendshipStatus === "follower") {
-          cardFriendshipStatus = "pending_received";
-        }
-
-        return (
-          <UserCard
-            user={user}
-            isVip={user.subscription_tier === "vip"}
-            compact
-            isFriend={isFriend}
-            friendshipStatus={cardFriendshipStatus}
-            onAddFriend={
-              friendshipStatus === "none" || friendshipStatus === "follower"
-                ? () => handleAddFriend(user.id)
-                : undefined
-            }
-            onRemoveFriend={
-              friendshipStatus === "following" || friendshipStatus === "mutual"
-                ? () => handleRemoveFriend(user.id)
-                : undefined
-            }
-            currentUserId={currentUserId}
-            onProfileClick={(e) => {
-              if (isAuthenticated && !isVip) {
-                e.preventDefault();
-                setShowProModal(true);
-              }
-            }}
-          />
-        );
+        // User markers are handled by custom overlay (auth) or auth modal (guest)
+        return null;
       }
       case "event":
-        return (
-          <EventCard
-            event={marker.data as Event}
-            isVip={isVip}
-            isAuthenticated={isAuthenticated}
-            compact
-            isBlurred={!isAuthenticated}
-          />
-        );
+        // Event markers are handled by custom overlay (auth) or auth modal (guest)
+        return null;
       case "hub":
         return (
           <HubCard
@@ -826,67 +937,138 @@ export function MapMarkersLayer({
     return null;
   }
 
+  const isUserMarker = (m: MapMarker) => m.type === "user" || m.type === "pro_user";
+
+  // Build the user card portal overlay (rendered directly inside the map container
+  // so absolute positioning is relative to the map bounds).
+  const mapContainer = map.getContainer();
+
+  const eventCardPortal =
+    eventCard && mapContainer
+      ? createPortal(
+          <div
+            ref={eventCardRef}
+            style={eventCard.style}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <EventCard
+              event={eventCard.event}
+              isAuthenticated={isAuthenticated}
+              compact
+              isBlurred={!isAuthenticated}
+            />
+          </div>,
+          mapContainer
+        )
+      : null;
+
+  const userCardPortal =
+    userCard && mapContainer
+      ? createPortal(
+          <div
+            ref={cardRef}
+            style={userCard.style}
+            // Prevent map clicks inside the card from bubbling to the backdrop listener
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <AttendeeStyleProfileCard
+              displayName={userCard.user.twitter_name}
+              avatarUrl={userCard.user.avatar_url}
+              isVerified={userCard.user.is_verified}
+              roleLabel={
+                userCard.user.role
+                  ? USER_ROLE_LABELS[userCard.user.role] || userCard.user.role
+                  : "Role not specified"
+              }
+              locationLine={
+                [userCard.user.city, userCard.user.country].filter(Boolean).join(", ") ||
+                "Location unknown"
+              }
+              aboutText={
+                userCard.user.about || userCard.user.bio || "Profile has no about yet."
+              }
+              strokeVariant="top"
+              onView={
+                () => {
+                  window.location.href = `/profile/${userCard.user.id}`;
+                }
+              }
+              viewDisabled={false}
+            />
+          </div>,
+          mapContainer
+        )
+      : null;
+
   return (
     <>
-      {clusteredItems.map((item) => {
-        // Проверяем, является ли элемент кластером
-        // Используем type guard для более точной проверки
-        const isCluster = 
-          typeof item === "object" &&
-          item !== null &&
-          "count" in item &&
-          "markers" in item &&
-          Array.isArray((item as Cluster).markers);
-        
-        if (isCluster) {
-          const cluster = item as Cluster;
-          return (
-            <MapMarkerComponent
-              key={cluster.id}
-              longitude={cluster.longitude}
-              latitude={cluster.latitude}
-              onClick={() => handleClusterClick(cluster)}
-              anchor="center"
-            >
-              <MarkerContent>
-                <ClusterIcon count={cluster.count} type={cluster.type} />
-              </MarkerContent>
-            </MapMarkerComponent>
-          );
-        } else {
-          // Обычный маркер
-          const marker = item as MapMarker;
-          return (
-            <MapMarkerComponent
-              key={marker.id}
-              longitude={marker.longitude}
-              latitude={marker.latitude}
-              onClick={() => handleMarkerClick(marker)}
-              anchor="bottom"
-            >
-              <MarkerContent>
-                <MarkerIcon 
-                  type={marker.type} 
-                  user={(marker.type === "user" || marker.type === "pro_user") ? (marker.data as User) : undefined}
-                  event={marker.type === "event" ? (marker.data as Event) : undefined}
-                />
-              </MarkerContent>
-              <MarkerPopup
-                closeButton={false}
-                maxWidth="350px"
-                className="solpoint-popup-maplibre"
-              >
+      {visibleMarkers.map((marker) => {
+        const isUser = isUserMarker(marker);
+        const isEvent = marker.type === "event";
+        // Authenticated user markers: use custom overlay, no MapLibre popup.
+        // Unauthenticated user markers: keep small sign-in MapLibre popup.
+        // Event markers: always use custom overlay for smart positioning.
+        // All other markers: keep MapLibre popup.
+        // For this map we suppress MapLibre popups for users/events and use:
+        // - custom overlays when authenticated
+        // - a single compact auth modal when unauthenticated
+        const useCustomOverlay = true;
+
+        return (
+          <MapMarkerComponent
+            key={marker.id}
+            longitude={marker.longitude}
+            latitude={marker.latitude}
+            onClick={() => {
+              handleMarkerClick(marker);
+              if (!isAuthenticated) {
+                const redirectTo =
+                  typeof window !== "undefined"
+                    ? `${window.location.pathname}${window.location.search}`
+                    : undefined;
+                setAuthRedirectTo(redirectTo);
+                if (isUser) {
+                  setAuthModalTitle("Log in or Sign up to view profiles");
+                } else if (isEvent) {
+                  setAuthModalTitle("Log in or Sign up to view event details");
+                } else {
+                  setAuthModalTitle("Log in or Sign up to continue");
+                }
+                setShowAuthModal(true);
+                return;
+              }
+
+              if (isUser) {
+                openUserCard(marker);
+              } else if (isEvent) {
+                openEventCard(marker);
+              }
+            }}
+            anchor="bottom"
+          >
+            <MarkerContent>
+              <MarkerIcon
+                type={marker.type}
+                user={isUser ? (marker.data as User) : undefined}
+                event={isEvent ? (marker.data as Event) : undefined}
+              />
+            </MarkerContent>
+            {!useCustomOverlay ? (
+              <MarkerPopup closeButton={false} maxWidth="350px" className="solpoint-popup-maplibre">
                 {renderPopupContent(marker)}
               </MarkerPopup>
-            </MapMarkerComponent>
-          );
-        }
+            ) : null}
+          </MapMarkerComponent>
+        );
       })}
-      <ProSubscriptionModal
-        isOpen={showProModal}
-        onClose={() => setShowProModal(false)}
-        title="This feature is available only with PRO subscription"
-        description="Viewing user profiles is available only with PRO subscription. Upgrade to PRO to unlock this feature."
+      {eventCardPortal}
+      {userCardPortal}
+      <AuthRequiredModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        variant="compact"
+        title={authModalTitle}
+        redirectTo={authRedirectTo}
       />
       {/* Custom styles for popups and animations */}
       <style jsx global>{`
@@ -909,6 +1091,10 @@ export function MapMarkersLayer({
           margin: 0 !important;
           min-width: 280px !important;
           max-width: 350px !important;
+          /* Prevent popup from overflowing the map container vertically */
+          max-height: calc(100vh - 120px) !important;
+          overflow-y: auto !important;
+          overflow-x: hidden !important;
         }
         
         /* Hide close button */

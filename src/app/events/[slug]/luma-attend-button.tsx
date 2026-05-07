@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Button, Modal, ModalHeader, ModalTitle, ModalDescription, ModalContent, ModalFooter } from "@/components/ui";
-import { useRouter } from "next/navigation";
+import { AuthRequiredModal, Button, Modal, ModalHeader, ModalTitle, ModalDescription, ModalContent, ModalFooter } from "@/components/ui";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useAuth } from "@/hooks/use-auth";
 
 interface LumaAttendButtonProps {
   eventSlug: string;
@@ -21,14 +22,19 @@ export function LumaAttendButton({
 }: LumaAttendButtonProps) {
   const [showAttendModal, setShowAttendModal] = useState(false);
   const [showReturnModal, setShowReturnModal] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isGoing, setIsGoing] = useState(isRegistered);
   const router = useRouter();
+  const pathname = usePathname();
+  const { isAuthenticated } = useAuth();
 
   const storageKey = `event_clicked_${eventSlug}`;
   const sessionKey = `event_luma_redirect_${eventSlug}`;
   const wasBlurredRef = useRef(false);
+  const searchParams = useSearchParams();
+  const autoAttendTriggeredRef = useRef(false);
 
   // Проверяем, нажимал ли пользователь кнопку ранее
   const [hasClickedBefore, setHasClickedBefore] = useState(false);
@@ -88,6 +94,25 @@ export function LumaAttendButton({
     };
   }, [storageKey, sessionKey, isRegistered, isGoing]);
 
+  // Автоматически открываем попап подтверждения если пришли с ?attend=true (с карточки на карте)
+  useEffect(() => {
+    if (autoAttendTriggeredRef.current) return;
+    if (isRegistered || isGoing) return;
+    if (searchParams.get("attend") !== "true") return;
+
+    autoAttendTriggeredRef.current = true;
+
+    const timer = setTimeout(() => {
+      setShowAttendModal(true);
+      // Убираем параметр из URL без перезагрузки страницы
+      const url = new URL(window.location.href);
+      url.searchParams.delete("attend");
+      window.history.replaceState({}, "", url.toString());
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchParams, isRegistered, isGoing]);
+
   // Проверяем, вернулся ли пользователь с Loom (старая логика для совместимости)
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -125,6 +150,10 @@ export function LumaAttendButton({
   }
 
   const handleAttendClick = () => {
+    if (!isAuthenticated) {
+      setShowAuthModal(true);
+      return;
+    }
     // Если пользователь уже нажимал кнопку, показываем поп-ап
     if (hasClickedBefore) {
       setShowAttendModal(true);
@@ -210,6 +239,14 @@ export function LumaAttendButton({
           {isPaid ? `Buy Tickets - ${priceSol || 0} SOL` : "Attend"}
         </Button>
       </div>
+
+      <AuthRequiredModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        variant="compact"
+        title="Log in or Sign up to attend the event"
+        redirectTo={`${pathname}?attend=true`}
+      />
 
       {/* Модальное окно при повторном нажатии на кнопку */}
       <Modal isOpen={showAttendModal} onClose={() => setShowAttendModal(false)} size="md">

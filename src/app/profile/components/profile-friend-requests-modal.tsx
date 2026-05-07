@@ -37,7 +37,7 @@ export function ProfileFriendRequestsModal({
                 className="flex items-center gap-3 p-3 rounded-lg hover:bg-[var(--color-surface-hover)] transition-colors"
               >
                 <Link
-                  href={`/profile/${request.twitter_handle}`}
+                  href={`/profile/${request.id}`}
                   onClick={onClose}
                   className="flex items-center gap-3 flex-1 min-w-0"
                 >
@@ -58,7 +58,6 @@ export function ProfileFriendRequestsModal({
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-[var(--color-text-primary)] truncate">{request.twitter_name}</p>
-                    <p className="text-xs text-[var(--color-text-secondary)] truncate">@{request.twitter_handle}</p>
                   </div>
                 </Link>
                 <div className="flex items-center gap-2 flex-shrink-0">

@@ -34,7 +34,6 @@ export default function HubsPage() {
   const isMountedRef = useRef(true);
   
   const { user, isAuthenticated } = useAuth();
-  const isVip = user?.subscription_tier === "vip";
   const isAdmin = user?.is_admin || false;
   const { searchQuery, entityTypeFilter, sortBy } = useHubsStore();
   const kodeMonoStyle = { fontFamily: "var(--font-kode-mono), monospace" } as const;
@@ -174,10 +173,6 @@ export default function HubsPage() {
   const handleAddClick = () => {
     if (!isAuthenticated) {
       setShowAuthModal(true);
-      return;
-    }
-    if (!isVip && !isAdmin) {
-      setShowProModal(true);
       return;
     }
     // По умолчанию создаем хаб, но можно расширить для выбора типа

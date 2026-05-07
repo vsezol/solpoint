@@ -308,15 +308,13 @@ export function ProfileMainSection({ user, isOwnProfile, friendsCount = 0 }: Pro
 
       {/* Profile Header */}
       <div className="flex items-start justify-between -mt-20 relative z-10">
-        <div className="ml-[18px] rounded-full overflow-hidden border-4 border-[var(--color-background)]">
-          <Avatar
-            src={currentUser.avatar_url}
-            alt={currentUser.twitter_name}
-            size="xl"
-            isVip={currentUser.subscription_tier === "vip"}
-            isVerified={currentUser.is_verified}
-          />
-        </div>
+        <Avatar
+          src={currentUser.avatar_url}
+          alt={currentUser.twitter_name}
+          size="xl"
+          isVerified={currentUser.is_verified}
+          className="ml-[18px] ring-4 ring-[var(--color-background)]"
+        />
       </div>
 
       {/* Profile Info */}

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { LogOut, Settings, User } from "lucide-react";
+import { LogOut, User } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
 const navItems = [
@@ -21,8 +21,8 @@ export function LandingHeader() {
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
   const profileHref =
-    isAuthenticated && user?.twitter_handle
-      ? `/profile/${user.twitter_handle}`
+    isAuthenticated && user?.id
+      ? `/profile/${user.id}`
       : "/profile";
 
   useEffect(() => {
@@ -120,14 +120,6 @@ export function LandingHeader() {
                     >
                       <User className="h-4 w-4" />
                       Profile
-                    </Link>
-                    <Link
-                      href="/settings"
-                      onClick={() => setIsProfileMenuOpen(false)}
-                      className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-white/95 transition-colors hover:bg-white/10"
-                    >
-                      <Settings className="h-4 w-4" />
-                      Settings
                     </Link>
                     <button
                       type="button"

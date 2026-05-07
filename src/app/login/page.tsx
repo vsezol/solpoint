@@ -115,11 +115,6 @@ function LoginPageContent() {
               Continue with Twitter
             </Button>
 
-            <p className="mt-4 text-center text-[12px] font-medium leading-snug text-white/60">
-              We&apos;ll use your Twitter profile to create your SolPoint account.
-              We don&apos;t post anything without your permission.
-            </p>
-
             <div className="my-6 flex items-center gap-3">
               <div className="h-px flex-1 bg-white/15" />
               <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-white/45">

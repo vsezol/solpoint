@@ -3,14 +3,12 @@
 
 import { useState } from "react";
 import { Avatar, Badge, Button, ProSubscriptionModal } from "@/components/ui";
-import { Crown } from "lucide-react";
 import { ProfileActions } from "./profile-actions";
 import { AddFriendButton } from "./add-friend-button";
 import { useProfileEdit } from "./profile-edit-provider";
 import { useChat } from "@/hooks/use-chat";
 import { useAuth } from "@/hooks/use-auth";
 import type { User } from "@/types";
-import { getSubscriptionDisplayName } from "@/lib/utils";
 
 interface ProfileHeaderProps {
   user: User;
@@ -41,7 +39,6 @@ export function ProfileHeader({ user, isOwnProfile, friendshipStatus = "none" }:
             src={user.avatar_url}
             alt={user.twitter_name}
             size="xl"
-            isVip={user.subscription_tier === "vip"}
             isVerified={user.is_verified}
             className="ring-4 ring-[var(--color-background)]"
           />
@@ -53,18 +50,6 @@ export function ProfileHeader({ user, isOwnProfile, friendshipStatus = "none" }:
               {user.is_verified && (
                 <Badge variant="primary" size="sm">
                   Verified
-                </Badge>
-              )}
-              {user.subscription_tier === "vip" && (
-                <Badge variant="warning" size="sm">
-                  <Crown className="w-3 h-3 mr-1" />
-                  {getSubscriptionDisplayName(user.subscription_tier)}
-                </Badge>
-              )}
-              {/* Отладка: показываем статус is_admin */}
-              {('is_admin' in user) && (
-                <Badge variant={user.is_admin === true ? "primary" : "secondary"} size="sm">
-                  {String(user.is_admin)} - {user.is_admin === true ? "ADMIN" : "NOT ADMIN"}
                 </Badge>
               )}
             </div>
@@ -115,7 +100,6 @@ function ProfileHeaderWithContext({ user }: { user: User }) {
         src={user.avatar_url}
         alt={user.twitter_name}
         size="xl"
-        isVip={user.subscription_tier === "vip"}
         isVerified={user.is_verified}
         className="ring-4 ring-[var(--color-background)]"
       />
@@ -127,18 +111,6 @@ function ProfileHeaderWithContext({ user }: { user: User }) {
           {user.is_verified && (
             <Badge variant="primary" size="sm">
               Verified
-            </Badge>
-          )}
-            {user.subscription_tier === "vip" && (
-              <Badge variant="warning" size="sm">
-                <Crown className="w-3 h-3 mr-1" />
-                {getSubscriptionDisplayName(user.subscription_tier)}
-              </Badge>
-            )}
-          {/* Отладка: показываем статус is_admin */}
-          {('is_admin' in user) && (
-            <Badge variant={user.is_admin === true ? "primary" : "secondary"} size="sm">
-              {String(user.is_admin)} - {user.is_admin === true ? "ADMIN" : "NOT ADMIN"}
             </Badge>
           )}
         </div>

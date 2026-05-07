@@ -12,7 +12,6 @@ export interface DirectoryUser {
   avatar_url?: string | null;
   name: string;
   twitter_handle?: string;
-  isVip?: boolean;
   isVerified?: boolean;
   isOwner?: boolean;
   joinedAt?: string;

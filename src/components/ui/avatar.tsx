@@ -11,7 +11,6 @@ interface AvatarProps {
   size?: "xs" | "sm" | "md" | "lg" | "xl" | "card";
   className?: string;
   isVerified?: boolean;
-  isVip?: boolean;
   fallbackVariant?: "initials" | "branded";
 }
 
@@ -48,19 +47,17 @@ export function Avatar({
   size = "md",
   className,
   isVerified = false,
-  isVip = false,
   fallbackVariant = "initials",
 }: AvatarProps) {
   const [hasError, setHasError] = useState(false);
   const normalizedSrc = src ? normalizeTwitterAvatarUrl(src) : null;
 
   return (
-    <div className={cn("relative inline-flex shrink-0", className)}>
+    <div className={cn("relative inline-flex shrink-0 rounded-full", className)}>
       <div
         className={cn(
           "relative rounded-full overflow-hidden bg-[var(--color-surface-border)] flex items-center justify-center font-medium text-[var(--color-text-secondary)]",
-          sizeClasses[size],
-          isVip && "ring-2 ring-[var(--color-marker-vip)]"
+          sizeClasses[size]
         )}
       >
         {normalizedSrc && !hasError ? (

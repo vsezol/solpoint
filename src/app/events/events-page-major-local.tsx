@@ -165,11 +165,13 @@ function AttendeesSummary({
   /** Figma: Kode Mono 18px / 600 / line-height 100% / -5% tracking */
   majorTypography?: boolean;
 }) {
+  const hasAttendees = peopleGoing > 0;
+
   return (
     <div className={`flex flex-col gap-[11px] ${centered ? "items-center" : "items-start"}`}>
-      <div className={`flex items-center ${centered ? "justify-center" : "pl-2"}`}>
-        {attendees.length > 0 ? (
-          attendees.slice(0, 3).map((attendee, index) => (
+      {hasAttendees && (
+        <div className={`flex items-center ${centered ? "justify-center" : "pl-2"}`}>
+          {attendees.slice(0, 3).map((attendee, index) => (
             <Avatar
               key={attendee.id}
               src={attendee.avatar_url}
@@ -178,11 +180,9 @@ function AttendeesSummary({
               fallbackVariant="branded"
               className={index > 0 ? "-ml-2.5" : ""}
             />
-          ))
-        ) : (
-          <span className="h-8 w-8 rounded-full border border-white/20 bg-white/10" />
-        )}
-      </div>
+          ))}
+        </div>
+      )}
       <p
         className={
           majorTypography
@@ -191,7 +191,7 @@ function AttendeesSummary({
         }
         style={majorTypography ? majorEventMeta18Style : { fontFamily: KM }}
       >
-        {peopleGoing} people going!
+        {hasAttendees ? `${peopleGoing} people going!` : "Be first attendee!"}
       </p>
     </div>
   );
@@ -200,22 +200,24 @@ function AttendeesSummary({
 function MajorEventCard({
   event,
   onAttend,
+  onCancelAttend,
   onShowList,
 }: {
   event: ShowcaseEvent;
   onAttend: (event: ShowcaseEvent) => void;
+  onCancelAttend: (event: ShowcaseEvent) => void;
   onShowList: (event: ShowcaseEvent) => void;
 }) {
   const isAttending = event.is_attending;
 
   return (
-    <article className="flex h-full min-w-0 flex-col">
+    <article id={`event-card-${event.id}`} className="flex h-full min-w-0 flex-col">
       <EventPoster
         event={event}
         frame="hairline"
         className={cn(majorCardColumnClass, "aspect-square")}
         sizes="280px"
-        onClick={() => onAttend(event)}
+        onClick={() => isAttending ? onCancelAttend(event) : onAttend(event)}
       />
 
       <div className={cn(majorCardColumnClass, "flex flex-1 flex-col gap-[48px] pt-[22px]")}>
@@ -246,15 +248,11 @@ function MajorEventCard({
               className={cn(
                 "h-[49px] w-[125px] shrink-0 rounded-[7px] border px-0",
                 isAttending
-                  ? "cursor-default border-white/30 bg-[#1A1A1A] text-white/75! hover:bg-[#1A1A1A]"
+                  ? "border-white/30 bg-[#1A1A1A] text-white/75! hover:bg-white/5"
                   : "border-white bg-white text-black! hover:bg-white/90"
               )}
               style={majorEventButtonTypography}
-              onClick={() => {
-                if (isAttending) return;
-                onAttend(event);
-              }}
-              disabled={isAttending}
+              onClick={() => isAttending ? onCancelAttend(event) : onAttend(event)}
             >
               {isAttending ? "Attending" : "Attend"}
             </Button>
@@ -275,34 +273,36 @@ function MajorEventCard({
 function LocalEventRow({
   event,
   onAttend,
+  onCancelAttend,
   onShowList,
 }: {
   event: ShowcaseEvent;
   onAttend: (event: ShowcaseEvent) => void;
+  onCancelAttend: (event: ShowcaseEvent) => void;
   onShowList: (event: ShowcaseEvent) => void;
 }) {
   const isAttending = event.is_attending;
 
   return (
-    <article className="flex flex-row items-stretch gap-4 border-b border-white/10 pb-6">
+    <article id={`event-card-${event.id}`} className="flex flex-row items-stretch gap-4 border-b border-white/10 pb-6">
       <EventPoster
         event={event}
         className="aspect-square w-[120px] shrink-0 sm:w-[160px] md:w-[200px]"
         sizes="(max-width: 640px) 120px, (max-width: 768px) 160px, 200px"
-        onClick={() => onAttend(event)}
+        onClick={() => isAttending ? onCancelAttend(event) : onAttend(event)}
       />
 
       <div className="flex min-w-0 flex-1 flex-col gap-[22px]">
         <h3
-          className="text-base leading-tight text-white sm:text-lg md:text-xl"
+          className="text-base font-semibold leading-tight text-white sm:text-lg md:text-xl"
           style={{ fontFamily: "var(--font-kode-mono), monospace" }}
         >
           {event.name}
         </h3>
-        <p className="text-sm text-white/95" style={{ fontFamily: "var(--font-kode-mono), monospace" }}>
+        <p className="font-semibold text-white/95" style={{ fontFamily: "var(--font-kode-mono), monospace", fontSize: 18 }}>
           {formatLocation(event.city, event.country)}
         </p>
-        <p className="text-xs text-[#70767d]" style={{ fontFamily: "var(--font-kode-mono), monospace" }}>
+        <p className="font-semibold text-[#70767d]" style={{ fontFamily: "var(--font-kode-mono), monospace", fontSize: 18 }}>
           {formatDateRange(event.start_date, event.end_date)}
         </p>
       </div>
@@ -321,15 +321,11 @@ function LocalEventRow({
             className={cn(
               "h-[49px] w-[125px] shrink-0 rounded-[7px] border px-0",
               isAttending
-                ? "cursor-default border-white/30 bg-[#1A1A1A] text-white/75! hover:bg-[#1A1A1A]"
+                ? "border-white/30 bg-[#1A1A1A] text-white/75! hover:bg-white/5"
                 : "border-white bg-white text-black! hover:bg-white/90"
             )}
             style={majorEventButtonTypography}
-            onClick={() => {
-              if (isAttending) return;
-              onAttend(event);
-            }}
-            disabled={isAttending}
+            onClick={() => isAttending ? onCancelAttend(event) : onAttend(event)}
           >
             {isAttending ? "Attending" : "Attend"}
           </Button>
@@ -388,7 +384,6 @@ export default function EventsPageMajorLocal() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { isAuthenticated } = useAuth();
-  const attendeesSectionRef = useRef<HTMLDivElement | null>(null);
 
   const [data, setData] = useState<EventsShowcaseResponse>({
     majorEvents: [],
@@ -403,9 +398,13 @@ export default function EventsPageMajorLocal() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authModalTitle, setAuthModalTitle] = useState("Log in or Sign up to continue");
   const [pendingAttendEvent, setPendingAttendEvent] = useState<ShowcaseEvent | null>(null);
   const [isAttendSubmitting, setIsAttendSubmitting] = useState(false);
   const [attendError, setAttendError] = useState<string | null>(null);
+  const [pendingCancelEvent, setPendingCancelEvent] = useState<ShowcaseEvent | null>(null);
+  const [isCancelSubmitting, setIsCancelSubmitting] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
   const localPage = useMemo(() => {
     const pageRaw = Number.parseInt(searchParams.get("local_page") || "1", 10);
@@ -506,6 +505,7 @@ export default function EventsPageMajorLocal() {
   const handleAttend = useCallback(
     (event: ShowcaseEvent) => {
       if (!isAuthenticated) {
+        setAuthModalTitle("Log in or Sign up to attend the event");
         setShowAuthModal(true);
         return;
       }
@@ -515,6 +515,34 @@ export default function EventsPageMajorLocal() {
     },
     [isAuthenticated]
   );
+
+  // Автотриггер attend попапа при переходе с карты (?attend=EVENT_ID)
+  const autoAttendTriggeredRef = useRef(false);
+  useEffect(() => {
+    const attendId = searchParams.get("attend");
+    if (!attendId || loading || autoAttendTriggeredRef.current) return;
+
+    const event = allEvents.find((e) => e.id === attendId);
+    if (!event) return;
+
+    autoAttendTriggeredRef.current = true;
+
+    // Убираем ?attend из URL без перезагрузки
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete("attend");
+    const query = next.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+
+    // Скроллим к карточке ивента
+    const el = document.getElementById(`event-card-${event.id}`);
+    if (el) {
+      const top = el.getBoundingClientRect().top + window.scrollY - 100;
+      window.scrollTo({ top: Math.max(top, 0), behavior: "smooth" });
+    }
+
+    // Открываем попап подтверждения
+    handleAttend(event);
+  }, [searchParams, loading, allEvents, handleAttend, pathname, router]);
 
   const handleConfirmAttend = useCallback(async () => {
     if (!pendingAttendEvent || isAttendSubmitting) {
@@ -566,12 +594,60 @@ export default function EventsPageMajorLocal() {
   }, [isAttendSubmitting, loadShowcase, pendingAttendEvent]);
 
   const handleRequireAuth = useCallback(() => {
+    setAuthModalTitle("Log in or Sign up to see attendee list");
     setShowAuthModal(true);
   }, []);
+
+  const handleCancelAttend = useCallback(
+    (event: ShowcaseEvent) => {
+      if (!isAuthenticated) {
+        setAuthModalTitle("Log in or Sign up to manage attendance");
+        setShowAuthModal(true);
+        return;
+      }
+      setPendingCancelEvent(event);
+      setCancelError(null);
+    },
+    [isAuthenticated]
+  );
+
+  const handleConfirmCancelAttend = useCallback(async () => {
+    if (!pendingCancelEvent || isCancelSubmitting) return;
+
+    setIsCancelSubmitting(true);
+    setCancelError(null);
+
+    try {
+      const response = await fetch(`/api/events/${pendingCancelEvent.id}/members`, {
+        method: "DELETE",
+      });
+
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+
+      if (response.status === 401) {
+        setPendingCancelEvent(null);
+        setShowAuthModal(true);
+        return;
+      }
+
+      if (!response.ok) {
+        setCancelError(payload.error || "Failed to cancel attendance");
+        return;
+      }
+
+      setPendingCancelEvent(null);
+      await loadShowcase(false);
+    } catch (err) {
+      setCancelError(err instanceof Error ? err.message : "Failed to cancel attendance");
+    } finally {
+      setIsCancelSubmitting(false);
+    }
+  }, [isCancelSubmitting, loadShowcase, pendingCancelEvent]);
 
   const handleShowList = useCallback(
     (event: ShowcaseEvent) => {
       if (!isAuthenticated) {
+        setAuthModalTitle("Log in or Sign up to see attendee list");
         setShowAuthModal(true);
         return;
       }
@@ -640,27 +716,16 @@ export default function EventsPageMajorLocal() {
   );
 
   useEffect(() => {
-    if (!showAttendeesWidget || !selectedEventId) {
-      return;
+    if (typeof document === "undefined") return;
+    if (showAttendeesWidget) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
     }
-
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      const section = attendeesSectionRef.current;
-      if (!section) return;
-
-      const top = section.getBoundingClientRect().top + window.scrollY - 88;
-      window.scrollTo({
-        top: Math.max(top, 0),
-        behavior: "smooth",
-      });
-    }, 0);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [selectedEventId, showAttendeesWidget]);
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [showAttendeesWidget]);
 
   return (
     <>
@@ -701,6 +766,7 @@ export default function EventsPageMajorLocal() {
                         key={event.id}
                         event={event}
                         onAttend={handleAttend}
+                        onCancelAttend={handleCancelAttend}
                         onShowList={handleShowList}
                       />
                     ))}
@@ -711,87 +777,72 @@ export default function EventsPageMajorLocal() {
               </section>
 
               <section className="space-y-0">
-                {showAttendeesWidget && selectedEvent ? (
-                  <div ref={attendeesSectionRef} className="mt-2">
-                    <EventsAttendeesWidget
-                      selectedEventId={selectedEvent.id}
-                      selectedEventName={selectedEvent.name}
-                      filters={attendeeFilters}
-                      isAuthenticated={isAuthenticated}
-                      onFiltersChange={handleAttendeeFiltersChange}
-                      onRequireAuth={handleRequireAuth}
-                      onClose={handleCloseAttendees}
-                    />
+                <h2
+                  className="text-center text-[28px] font-semibold"
+                  style={{ fontFamily: "var(--font-kode-mono), monospace" }}
+                >
+                  Local events
+                </h2>
+
+                {data.localEvents.length > 0 ? (
+                  <div className="mt-10 sm:px-8 lg:px-16">
+                    <div className="space-y-6">
+                      {data.localEvents.map((event) => (
+                        <LocalEventRow
+                          key={event.id}
+                          event={event}
+                          onAttend={handleAttend}
+                          onCancelAttend={handleCancelAttend}
+                          onShowList={handleShowList}
+                        />
+                      ))}
+                    </div>
+
+                    {data.localPagination.total_pages > 1 ? (
+                      <div className="mt-6 flex flex-col items-center justify-between gap-3 border-t border-white/10 pt-3 sm:flex-row">
+                        <p
+                          className="text-[12px] text-white/65"
+                          style={{ fontFamily: "var(--font-kode-mono), monospace" }}
+                        >
+                          {data.localPagination.total} local events
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-8 border-white/25 text-white hover:bg-white/10"
+                            style={{ fontFamily: "var(--font-kode-mono), monospace" }}
+                            onClick={() =>
+                              handleLocalPageChange(Math.max(data.localPagination.page - 1, 1))
+                            }
+                            disabled={!canGoLocalPrev}
+                          >
+                            Prev
+                          </Button>
+                          <span
+                            className="text-[12px] text-white/80"
+                            style={{ fontFamily: "var(--font-kode-mono), monospace" }}
+                          >
+                            Page {data.localPagination.page} of {data.localPagination.total_pages}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-8 border-white/25 text-white hover:bg-white/10"
+                            style={{ fontFamily: "var(--font-kode-mono), monospace" }}
+                            onClick={() => handleLocalPageChange(data.localPagination.page + 1)}
+                            disabled={!canGoLocalNext}
+                          >
+                            Next
+                          </Button>
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
                 ) : (
-                  <>
-                    <h2
-                      className="text-center text-[28px] font-semibold"
-                      style={{ fontFamily: "var(--font-kode-mono), monospace" }}
-                    >
-                      Local events
-                    </h2>
-
-                    {data.localEvents.length > 0 ? (
-                      <div className="mt-10 sm:px-8 lg:px-16">
-                        <div className="space-y-6">
-                          {data.localEvents.map((event) => (
-                            <LocalEventRow
-                              key={event.id}
-                              event={event}
-                              onAttend={handleAttend}
-                              onShowList={handleShowList}
-                            />
-                          ))}
-                        </div>
-
-                        {data.localPagination.total_pages > 1 ? (
-                          <div className="mt-6 flex flex-col items-center justify-between gap-3 border-t border-white/10 pt-3 sm:flex-row">
-                            <p
-                              className="text-[12px] text-white/65"
-                              style={{ fontFamily: "var(--font-kode-mono), monospace" }}
-                            >
-                              {data.localPagination.total} local events
-                            </p>
-                            <div className="flex items-center gap-2">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                className="h-8 border-white/25 text-white hover:bg-white/10"
-                                style={{ fontFamily: "var(--font-kode-mono), monospace" }}
-                                onClick={() =>
-                                  handleLocalPageChange(Math.max(data.localPagination.page - 1, 1))
-                                }
-                                disabled={!canGoLocalPrev}
-                              >
-                                Prev
-                              </Button>
-                              <span
-                                className="text-[12px] text-white/80"
-                                style={{ fontFamily: "var(--font-kode-mono), monospace" }}
-                              >
-                                Page {data.localPagination.page} of {data.localPagination.total_pages}
-                              </span>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                className="h-8 border-white/25 text-white hover:bg-white/10"
-                                style={{ fontFamily: "var(--font-kode-mono), monospace" }}
-                                onClick={() => handleLocalPageChange(data.localPagination.page + 1)}
-                                disabled={!canGoLocalNext}
-                              >
-                                Next
-                              </Button>
-                            </div>
-                          </div>
-                        ) : null}
-                      </div>
-                    ) : (
-                      <EmptyState label="No local upcoming events." />
-                    )}
-                  </>
+                  <EmptyState label="No local upcoming events." />
                 )}
               </section>
             </div>
@@ -800,13 +851,13 @@ export default function EventsPageMajorLocal() {
           {!loading && hasAnyEvents && (
             <div className="py-12 text-center">
               <p
-                className="text-3xl leading-tight text-white"
+                className="text-3xl font-semibold leading-tight text-white"
                 style={{ fontFamily: "var(--font-kode-mono), monospace" }}
               >
                 Can&apos;t find your event?
               </p>
               <p
-                className="mt-1 text-3xl leading-tight text-white"
+                className="mt-1 text-3xl font-semibold leading-tight text-white"
                 style={{ fontFamily: "var(--font-kode-mono), monospace" }}
               >
                 Let us know - we&apos;ll add it.
@@ -884,13 +935,96 @@ export default function EventsPageMajorLocal() {
           </Button>
         </ModalFooter>
       </Modal>
+      <Modal
+        isOpen={Boolean(pendingCancelEvent)}
+        onClose={() => {
+          if (isCancelSubmitting) return;
+          setPendingCancelEvent(null);
+          setCancelError(null);
+        }}
+        size="md"
+        className={confirmModalClass}
+        closeButtonClassName="!text-white/40 hover:!text-white hover:!bg-white/10 !rounded-[5px]"
+        ariaLabel="Cancel event attendance"
+      >
+        <ModalHeader className={confirmModalHeaderClass}>
+          <ModalTitle
+            className="text-[18px] font-semibold text-white"
+            style={{ fontFamily: "var(--font-kode-mono), monospace" }}
+          >
+            Cancel attendance
+          </ModalTitle>
+          <ModalDescription style={{ fontFamily: "var(--font-kode-mono), monospace" }}>
+            {pendingCancelEvent
+              ? `Are you sure you want to cancel your attendance for ${pendingCancelEvent.name}?`
+              : "Are you sure you want to cancel your attendance?"}
+          </ModalDescription>
+        </ModalHeader>
+        <ModalContent>
+          {cancelError ? (
+            <p className="rounded border border-red-500/35 bg-red-500/10 px-3 py-2 text-[13px] text-red-200">
+              {cancelError}
+            </p>
+          ) : (
+            <p className="text-[13px] text-white/70" style={{ fontFamily: "var(--font-kode-mono), monospace" }}>
+              You will be removed from the attendees list for this event.
+            </p>
+          )}
+        </ModalContent>
+        <ModalFooter className={confirmModalHeaderClass}>
+          <Button
+            variant="outline"
+            className="h-[40px] rounded-[7px] border-white/35 bg-transparent text-white hover:bg-white/10"
+            style={{ fontFamily: "var(--font-kode-mono), monospace" }}
+            onClick={() => {
+              if (isCancelSubmitting) return;
+              setPendingCancelEvent(null);
+              setCancelError(null);
+            }}
+            disabled={isCancelSubmitting}
+          >
+            Cancel
+          </Button>
+          <Button
+            className="h-[40px] rounded-[7px] border border-red-500 bg-red-500 text-white hover:bg-red-600"
+            style={{ fontFamily: "var(--font-kode-mono), monospace" }}
+            onClick={handleConfirmCancelAttend}
+            disabled={isCancelSubmitting}
+          >
+            {isCancelSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            Confirm
+          </Button>
+        </ModalFooter>
+      </Modal>
       <AuthRequiredModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
-        title="Sign in required"
-        description="Please sign up or log in to continue."
+        variant="compact"
+        title={authModalTitle}
         redirectTo={currentPageUrl}
       />
+
+      {showAttendeesWidget && selectedEvent && (
+        <div
+          className="neutral-scrollbar fixed inset-0 z-[55] flex items-start justify-center overflow-y-auto bg-black/70 backdrop-blur-sm"
+          onClick={handleCloseAttendees}
+        >
+          <div
+            className="mt-[96px] mb-16 w-full max-w-5xl px-4 sm:px-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <EventsAttendeesWidget
+              selectedEventId={selectedEvent.id}
+              selectedEventName={selectedEvent.name}
+              filters={attendeeFilters}
+              isAuthenticated={isAuthenticated}
+              onFiltersChange={handleAttendeeFiltersChange}
+              onRequireAuth={handleRequireAuth}
+              onClose={handleCloseAttendees}
+            />
+          </div>
+        </div>
+      )}
     </>
   );
 }

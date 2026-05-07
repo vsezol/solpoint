@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import type { MouseEvent } from "react";
 import Link from "next/link";
-import { Avatar, AuthRequiredModal, ProSubscriptionModal } from "@/components/ui";
+import { Avatar, AuthRequiredModal } from "@/components/ui";
 import { AvatarListModal } from "@/components/users/avatar-list-modal";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -12,7 +12,6 @@ interface MemberItem {
   avatar_url?: string | null;
   name: string;
   twitter_handle?: string;
-  isVip?: boolean;
   isVerified?: boolean;
 }
 
@@ -40,7 +39,6 @@ export function MembersList({
   isFriendsList = false,
 }: MembersListProps) {
   const { user, isAuthenticated } = useAuth();
-  const isVip = user?.subscription_tier === "vip";
   const [showProModal, setShowProModal] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showListModal, setShowListModal] = useState(false);
@@ -87,11 +85,6 @@ export function MembersList({
       return;
     }
 
-    if (!isVip) {
-      setShowProModal(true);
-      return;
-    }
-
     if (!entitySlug || !entityType) {
       setAllItems(items);
       setShowListModal(true);
@@ -128,11 +121,6 @@ export function MembersList({
       return;
     }
 
-    if (!isVip) {
-      setShowProModal(true);
-      return;
-    }
-
     if (twitterHandle) {
       window.location.href = `/profile/${twitterHandle}`;
     }
@@ -151,7 +139,6 @@ export function MembersList({
                   src={item.avatar_url}
                   alt={item.name}
                   size="sm"
-                  isVip={item.isVip}
                   isVerified={item.isVerified}
                 />
               </div>

@@ -22,11 +22,15 @@ interface ProfileEditFormProps {
   onUpdate?: (updatedUser: User) => void;
 }
 
+type Tab = "personal" | "professional" | "social";
+const TABS: Tab[] = ["personal", "professional", "social"];
+
 export function ProfileEditForm({ user, onCancel, onUpdate }: ProfileEditFormProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<Tab>("personal");
   // const { isDetecting, requestGeolocation } = useGeolocation(); // Закомментировано: временно отключаем автоматическое определение локации
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -174,380 +178,219 @@ export function ProfileEditForm({ user, onCancel, onUpdate }: ProfileEditFormPro
   const maxBioLength = 150;
 
   return (
-    <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
-      {/* Bio */}
-      <Card variant="bordered">
-        <h3 className="text-sm font-medium text-[var(--color-text-muted)] mb-2">
-          About
-        </h3>
-        <div>
-          <textarea
-            value={bio}
-            onChange={(e) => setBio(e.target.value)}
-            maxLength={maxBioLength}
-            rows={4}
-            placeholder="Tell us about yourself..."
-            className="w-full px-3 py-2 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] transition-colors focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] resize-none"
-          />
-          <p className="mt-1 text-xs text-[var(--color-text-muted)] text-right">
-            {bioLength}/{maxBioLength}
-          </p>
-        </div>
-      </Card>
+    <form ref={formRef} onSubmit={handleSubmit}>
+      {/* Tab navigation */}
+      <div style={{ display: "flex", alignItems: "center", gap: 47, paddingLeft: 36, marginBottom: 28 }}>
+        {TABS.map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            onClick={() => setActiveTab(tab)}
+            style={{
+              fontFamily: "var(--font-kode-mono), monospace",
+              fontWeight: 700,
+              fontSize: 20,
+              letterSpacing: "2px",
+              width: 142,
+              height: 67,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "transparent",
+              borderRadius: 17,
+              border: activeTab === tab ? "1.5px solid #232323" : "1.5px solid transparent",
+              cursor: "pointer",
+              color: activeTab === tab ? "var(--color-text-primary)" : "var(--color-text-muted)",
+              transition: "border-color 0.2s, color 0.2s",
+            }}
+          >
+            <span style={{ fontFamily: "var(--font-kode-mono), monospace" }}>{tab}</span>
+          </button>
+        ))}
+      </div>
 
-      {/* Details */}
-      <Card variant="bordered">
-        <h3 className="text-sm font-medium text-[var(--color-text-muted)] mb-3">
-          Details
-        </h3>
-        <div className="space-y-4">
-          {/* Role */}
-          <div>
-            <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
-              Role
-            </label>
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value as UserRole)}
-              className="w-full h-10 px-3 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg text-[var(--color-text-primary)] transition-colors focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]"
-            >
-              {ROLES.map((r) => (
-                <option key={r} value={r}>
-                  {USER_ROLE_OPTIONS.find((option) => option.value === r)?.label || r}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Location */}
-          <div>
-            <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
-              Location
-            </label>
-            
-            <div className="space-y-3">
-              {/* Country Selection */}
+      {/* Tab content */}
+      <div className="space-y-6 px-1">
+        {/* PERSONAL */}
+        {activeTab === "personal" && (
+          <>
+            <Card variant="bordered">
+              <h3 className="text-sm font-medium text-[var(--color-text-muted)] mb-2">About</h3>
               <div>
-                <label className="block text-xs text-[var(--color-text-muted)] mb-1">
-                  Country
-                </label>
-                <div className="relative" ref={countryDropdownRef}>
-                  <Input
-                    placeholder={country || "Select country"}
-                    icon={<Search className="w-4 h-4" />}
-                    value={countrySearchQuery}
-                    onChange={(e) => {
-                      setCountrySearchQuery(e.target.value);
-                      setIsCountryDropdownOpen(true);
-                    }}
-                    onFocus={() => setIsCountryDropdownOpen(true)}
-                    onKeyDown={handleKeyDown}
-                  />
+                <textarea
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  maxLength={maxBioLength}
+                  rows={4}
+                  placeholder="Tell us about yourself..."
+                  className="w-full px-3 py-2 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] transition-colors focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] resize-none"
+                />
+                <p className="mt-1 text-xs text-[var(--color-text-muted)] text-right">
+                  {bioLength}/{maxBioLength}
+                </p>
+              </div>
+            </Card>
 
-                  {isCountryDropdownOpen && filteredCountries.length > 0 && (
-                    <div className="absolute z-50 w-full mt-2 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                      {filteredCountries.map((selectedCountry: Country) => (
-                        <button
-                          key={selectedCountry.code}
-                          type="button"
-                          onClick={() => handleSelectCountry(selectedCountry)}
-                          className={cn(
-                            "w-full px-3 py-2 text-left flex items-center justify-between hover:bg-[var(--color-surface-border)] transition-colors",
-                            countryCode === selectedCountry.code && "bg-[var(--color-primary)]/10"
-                          )}
-                        >
-                          <span
+            <Card variant="bordered">
+              <h3 className="text-sm font-medium text-[var(--color-text-muted)] mb-3">Location</h3>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs text-[var(--color-text-muted)] mb-1">Country</label>
+                  <div className="relative" ref={countryDropdownRef}>
+                    <Input
+                      placeholder={country || "Select country"}
+                      icon={<Search className="w-4 h-4" />}
+                      value={countrySearchQuery}
+                      onChange={(e) => {
+                        setCountrySearchQuery(e.target.value);
+                        setIsCountryDropdownOpen(true);
+                      }}
+                      onFocus={() => setIsCountryDropdownOpen(true)}
+                      onKeyDown={handleKeyDown}
+                    />
+                    {isCountryDropdownOpen && filteredCountries.length > 0 && (
+                      <div className="absolute z-50 w-full mt-2 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                        {filteredCountries.map((selectedCountry: Country) => (
+                          <button
+                            key={selectedCountry.code}
+                            type="button"
+                            onClick={() => handleSelectCountry(selectedCountry)}
                             className={cn(
-                              "text-sm",
-                              countryCode === selectedCountry.code
-                                ? "text-[var(--color-primary)] font-medium"
-                                : "text-[var(--color-text-primary)]"
+                              "w-full px-3 py-2 text-left flex items-center justify-between hover:bg-[var(--color-surface-border)] transition-colors",
+                              countryCode === selectedCountry.code && "bg-[var(--color-primary)]/10"
                             )}
                           >
-                            {selectedCountry.name}
-                          </span>
-                          {countryCode === selectedCountry.code && (
-                            <Check className="w-4 h-4 text-[var(--color-primary)]" />
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                            <span
+                              className={cn(
+                                "text-sm",
+                                countryCode === selectedCountry.code
+                                  ? "text-[var(--color-primary)] font-medium"
+                                  : "text-[var(--color-text-primary)]"
+                              )}
+                            >
+                              {selectedCountry.name}
+                            </span>
+                            {countryCode === selectedCountry.code && (
+                              <Check className="w-4 h-4 text-[var(--color-primary)]" />
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs text-[var(--color-text-muted)] mb-1">City</label>
+                  <Input
+                    type="text"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    placeholder="Enter city name"
+                  />
                 </div>
               </div>
+            </Card>
+          </>
+        )}
 
-              {/* City Input */}
+        {/* PROFESSIONAL */}
+        {activeTab === "professional" && (
+          <Card variant="bordered">
+            <h3 className="text-sm font-medium text-[var(--color-text-muted)] mb-3">Details</h3>
+            <div className="space-y-4">
               <div>
-                <label className="block text-xs text-[var(--color-text-muted)] mb-1">
-                  City
-                </label>
-                <Input
-                  type="text"
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  placeholder="Enter city name"
+                <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">Role</label>
+                <select
+                  value={role}
+                  onChange={(e) => setRole(e.target.value as UserRole)}
+                  className="w-full h-10 px-3 bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg text-[var(--color-text-primary)] transition-colors focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]"
+                >
+                  {ROLES.map((r) => (
+                    <option key={r} value={r}>
+                      {USER_ROLE_OPTIONS.find((option) => option.value === r)?.label || r}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="is_open_to_meet"
+                  checked={isOpenToMeet}
+                  onChange={(e) => setIsOpenToMeet(e.target.checked)}
+                  className="w-4 h-4 rounded border-[var(--color-surface-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] focus:ring-2"
                 />
+                <label htmlFor="is_open_to_meet" className="text-sm text-[var(--color-text-primary)] cursor-pointer">
+                  Open to meet
+                </label>
               </div>
             </div>
-            
-            <p className="mt-2 text-xs text-[var(--color-text-muted)] flex items-start gap-1">
-              <MapPin className="w-3 h-3 mt-0.5 shrink-0" />
-              <span>
-                Country is visible to everyone. City is visible only to PRO users.
-              </span>
-            </p>
-          </div>
+          </Card>
+        )}
 
-          {/* Закомментировано: временно отключаем автоматическое определение локации через браузер */}
-          {/* Location Detection */}
-          {/* <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="block text-sm font-medium text-[var(--color-text-primary)]">
-                Location
-              </label>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={handleDetectLocation}
-                disabled={isDetecting || isLoading}
-                className="h-8 px-2 text-xs"
-              >
-                {isDetecting ? (
-                  <>
-                    <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
-                    Detecting...
-                  </>
-                ) : (
-                  <>
-                    <MapPin className="w-3 h-3 mr-1" />
-                    Detect Location
-                  </>
-                )}
-              </Button>
-            </div>
-            
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs text-[var(--color-text-muted)] mb-1">
-                  Country
-                </label>
-                <Input
-                  type="text"
-                  value={country || "Not detected"}
-                  readOnly
-                  placeholder="Detect location to set country"
-                  className="bg-[var(--color-surface-hover)] cursor-not-allowed"
-                />
+        {/* SOCIAL */}
+        {activeTab === "social" && (
+          <Card variant="bordered">
+            <h3 className="text-sm font-medium text-[var(--color-text-muted)] mb-3 flex items-center gap-2">
+              <Globe className="w-4 h-4" />
+              Social Media
+            </h3>
+            <div className="space-y-4">
+              <div className="p-3 rounded-lg bg-[var(--color-surface-hover)] border border-[var(--color-surface-border)]">
+                <div className="flex items-center gap-2 mb-1">
+                  <Twitter className="w-4 h-4 text-[var(--color-text-muted)]" />
+                  <label className="text-sm font-medium text-[var(--color-text-primary)]">Twitter</label>
+                </div>
+                <p className="text-xs text-[var(--color-text-muted)]">
+                  Your Twitter link is automatically generated from your username:{" "}
+                  <span className="font-mono">@{user.twitter_handle}</span>
+                </p>
               </div>
 
-              <div>
-                <label className="block text-xs text-[var(--color-text-muted)] mb-1">
-                  City
-                </label>
-                <Input
-                  type="text"
-                  value={city || "Not detected"}
-                  readOnly
-                  placeholder="Detect location to set city"
-                  className="bg-[var(--color-surface-hover)] cursor-not-allowed"
-                />
-              </div>
+              {[
+                { label: "Instagram", value: socialsInstagram, setter: setSocialsInstagram, placeholder: "https://instagram.com/...", icon: <Instagram className="w-4 h-4" /> },
+                { label: "Facebook", value: socialsFacebook, setter: setSocialsFacebook, placeholder: "https://facebook.com/...", icon: <Facebook className="w-4 h-4" /> },
+                { label: "Telegram", value: socialsTelegram, setter: setSocialsTelegram, placeholder: "https://t.me/...", icon: <Send className="w-4 h-4" /> },
+                { label: "YouTube", value: socialsYoutube, setter: setSocialsYoutube, placeholder: "https://youtube.com/@...", icon: <Youtube className="w-4 h-4" /> },
+                { label: "Discord", value: socialsDiscord, setter: setSocialsDiscord, placeholder: "https://discord.gg/...", icon: <MessageSquare className="w-4 h-4" /> },
+                { label: "GitHub", value: socialsGithub, setter: setSocialsGithub, placeholder: "https://github.com/...", icon: <Github className="w-4 h-4" /> },
+                { label: "LinkedIn", value: socialsLinkedin, setter: setSocialsLinkedin, placeholder: "https://linkedin.com/in/...", icon: <Linkedin className="w-4 h-4" /> },
+                { label: "Medium", value: socialsMedium, setter: setSocialsMedium, placeholder: "https://medium.com/@...", icon: <BookOpen className="w-4 h-4" /> },
+                { label: "Substack", value: socialsSubstack, setter: setSocialsSubstack, placeholder: "https://substack.com/@...", icon: <Rss className="w-4 h-4" /> },
+              ].map(({ label, value, setter, placeholder, icon }) => (
+                <div key={label}>
+                  <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">{label}</label>
+                  <Input
+                    type="url"
+                    value={value}
+                    onChange={(e) => setter(e.target.value)}
+                    placeholder={placeholder}
+                    icon={icon}
+                  />
+                </div>
+              ))}
             </div>
-            
-            <p className="mt-2 text-xs text-[var(--color-text-muted)] flex items-start gap-1">
-              <MapPin className="w-3 h-3 mt-0.5 shrink-0" />
-              <span>
-                Click &quot;Detect Location&quot; to automatically set your country and city.
-                We only store country and city — never exact coordinates.
-              </span>
-            </p>
-          </div> */}
+          </Card>
+        )}
 
-          {/* Is Open to Meet */}
-          <div className="flex items-center gap-3">
-            <input
-              type="checkbox"
-              id="is_open_to_meet"
-              checked={isOpenToMeet}
-              onChange={(e) => setIsOpenToMeet(e.target.checked)}
-              className="w-4 h-4 rounded border-[var(--color-surface-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] focus:ring-2"
-            />
-            <label
-              htmlFor="is_open_to_meet"
-              className="text-sm text-[var(--color-text-primary)] cursor-pointer"
-            >
-              Open to meet
-            </label>
+        {/* Error */}
+        {error && (
+          <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+            <p className="text-sm text-red-500">{error}</p>
           </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex gap-2">
+          <Button type="submit" isLoading={isLoading} disabled={isLoading} className="flex-1 font-bold">
+            <Save className="w-4 h-4 mr-2" />
+            Save
+          </Button>
+          <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading} className="font-bold">
+            <X className="w-4 h-4 mr-2" />
+            Cancel
+          </Button>
         </div>
-      </Card>
-
-      {/* Social Media */}
-      <Card variant="bordered">
-        <h3 className="text-sm font-medium text-[var(--color-text-muted)] mb-3 flex items-center gap-2">
-          <Globe className="w-4 h-4" />
-          Social Media
-        </h3>
-        <div className="space-y-4">
-          <div className="p-3 rounded-lg bg-[var(--color-surface-hover)] border border-[var(--color-surface-border)]">
-            <div className="flex items-center gap-2 mb-1">
-              <Twitter className="w-4 h-4 text-[var(--color-text-muted)]" />
-              <label className="text-sm font-medium text-[var(--color-text-primary)]">
-                Twitter
-              </label>
-            </div>
-            <p className="text-xs text-[var(--color-text-muted)]">
-              Your Twitter link is automatically generated from your username: <span className="font-mono">@{user.twitter_handle}</span>
-            </p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
-              Instagram
-            </label>
-            <Input
-              type="url"
-              value={socialsInstagram}
-              onChange={(e) => setSocialsInstagram(e.target.value)}
-              placeholder="https://instagram.com/..."
-              icon={<Instagram className="w-4 h-4" />}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
-              Facebook
-            </label>
-            <Input
-              type="url"
-              value={socialsFacebook}
-              onChange={(e) => setSocialsFacebook(e.target.value)}
-              placeholder="https://facebook.com/..."
-              icon={<Facebook className="w-4 h-4" />}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
-              Telegram
-            </label>
-            <Input
-              type="url"
-              value={socialsTelegram}
-              onChange={(e) => setSocialsTelegram(e.target.value)}
-              placeholder="https://t.me/..."
-              icon={<Send className="w-4 h-4" />}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
-              YouTube
-            </label>
-            <Input
-              type="url"
-              value={socialsYoutube}
-              onChange={(e) => setSocialsYoutube(e.target.value)}
-              placeholder="https://youtube.com/@..."
-              icon={<Youtube className="w-4 h-4" />}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
-              Discord
-            </label>
-            <Input
-              type="url"
-              value={socialsDiscord}
-              onChange={(e) => setSocialsDiscord(e.target.value)}
-              placeholder="https://discord.gg/..."
-              icon={<MessageSquare className="w-4 h-4" />}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
-              GitHub
-            </label>
-            <Input
-              type="url"
-              value={socialsGithub}
-              onChange={(e) => setSocialsGithub(e.target.value)}
-              placeholder="https://github.com/..."
-              icon={<Github className="w-4 h-4" />}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
-              LinkedIn
-            </label>
-            <Input
-              type="url"
-              value={socialsLinkedin}
-              onChange={(e) => setSocialsLinkedin(e.target.value)}
-              placeholder="https://linkedin.com/in/..."
-              icon={<Linkedin className="w-4 h-4" />}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
-              Medium
-            </label>
-            <Input
-              type="url"
-              value={socialsMedium}
-              onChange={(e) => setSocialsMedium(e.target.value)}
-              placeholder="https://medium.com/@..."
-              icon={<BookOpen className="w-4 h-4" />}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
-              Substack
-            </label>
-            <Input
-              type="url"
-              value={socialsSubstack}
-              onChange={(e) => setSocialsSubstack(e.target.value)}
-              placeholder="https://substack.com/@..."
-              icon={<Rss className="w-4 h-4" />}
-            />
-          </div>
-        </div>
-      </Card>
-
-      {/* Error message */}
-      {error && (
-        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-          <p className="text-sm text-red-500">{error}</p>
-        </div>
-      )}
-
-      {/* Actions */}
-      <div className="flex gap-2">
-        <Button
-          type="submit"
-          isLoading={isLoading}
-          disabled={isLoading}
-          className="flex-1"
-        >
-          <Save className="w-4 h-4 mr-2" />
-          Save
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onCancel}
-          disabled={isLoading}
-        >
-          <X className="w-4 h-4 mr-2" />
-          Cancel
-        </Button>
       </div>
     </form>
   );

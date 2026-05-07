@@ -42,7 +42,6 @@ export function EntityMembersCard({
             avatar_url: member.avatar_url,
             name: member.twitter_name,
             twitter_handle: member.twitter_handle,
-            isVip: member.subscription_tier === "vip",
             isVerified: member.is_verified,
           }))}
           showAllText="Show all members"
@@ -62,8 +61,7 @@ export function EntityMembersCard({
               avatar_url: friend.avatar_url,
               name: friend.twitter_name,
               twitter_handle: friend.twitter_handle,
-              isVip: friend.subscription_tier === "vip",
-              isVerified: friend.is_verified,
+            isVerified: friend.is_verified,
             }))}
             showAllText="Show all frens"
             showAllHref={`${entityPath}?tab=members`}

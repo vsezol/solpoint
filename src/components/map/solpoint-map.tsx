@@ -188,9 +188,8 @@ interface SolPointMapProps {
   center?: [number, number];
   zoom?: number;
   onMarkerClick?: (marker: MapMarker) => void;
-  isVip?: boolean;
   isAuthenticated?: boolean;
-  currentUserId?: string; // ID текущего пользователя для проверки статуса дружбы
+  currentUserId?: string;
 }
 
 export function SolPointMap({
@@ -198,7 +197,6 @@ export function SolPointMap({
   center = [35, 50],
   zoom = 3,
   onMarkerClick,
-  isVip = false,
   isAuthenticated = false,
   currentUserId,
 }: SolPointMapProps) {
@@ -509,7 +507,6 @@ export function SolPointMap({
         return (
           <UserCard
             user={user}
-            isVip={user.subscription_tier === "vip"}
             compact
             isFriend={isFriend}
             friendshipStatus={cardFriendshipStatus}
@@ -520,17 +517,12 @@ export function SolPointMap({
             }
             onRemoveFriend={friendshipStatus === "following" || friendshipStatus === "mutual" ? () => handleRemoveFriend(user.id) : undefined}
             currentUserId={currentUserId}
-            onProfileClick={(e) => {
-              if (isAuthenticated && !isVip) {
-                e.preventDefault();
-                setShowProModal(true);
-              }
-            }}
+            onProfileClick={undefined}
           />
         );
       }
       case "event":
-        return <EventCard event={marker.data as Event} isVip={isVip} isAuthenticated={isAuthenticated} compact isBlurred={!isAuthenticated} />;
+        return <EventCard event={marker.data as Event} isAuthenticated={isAuthenticated} compact isBlurred={!isAuthenticated} />;
       case "hub":
         return <HubCard hub={marker.data as Hub} compact entityType="hub" isBlurred={!isAuthenticated} />;
       case "workspace":
