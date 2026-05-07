@@ -6,7 +6,6 @@ type FilterType = "all" | "country" | "city";
 
 const USER_LIST_FIELDS = `
   id,
-  twitter_handle,
   twitter_name,
   avatar_url,
   subscription_tier,
@@ -91,7 +90,6 @@ export async function GET(request: NextRequest) {
     id: user.id as string,
     avatar_url: user.avatar_url,
     name: user.twitter_name,
-    twitter_handle: user.twitter_handle,
     isVip: proUserIds.has(user.id) || user.subscription_tier === "vip",
     isVerified: user.is_verified,
     isOwner: false,

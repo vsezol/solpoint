@@ -32,23 +32,6 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  let isVip = false;
-  if (authUser && (visibility === "vip_only" || !visibility)) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("subscription_tier")
-      .eq("id", authUser.id)
-      .single();
-    isVip = profile?.subscription_tier === "vip";
-  }
-
-  if (visibility === "vip_only" && !isVip) {
-    return NextResponse.json(
-      { error: "VIP access required for vip_only events" },
-      { status: 403 }
-    );
-  }
-
   let query = supabase
     .from("events")
     .select("*")
@@ -85,9 +68,6 @@ export async function GET(request: NextRequest) {
 
   if (visibility) {
     query = query.eq("visibility", visibility);
-  } else if (!isVip) {
-    // Если не VIP, показываем только публичные
-    query = query.eq("visibility", "public");
   }
 
   const isOnline = searchParams.get("is_online");
@@ -131,7 +111,44 @@ export async function GET(request: NextRequest) {
     source: event.luma_event_id ? ("external" as const) : ("solpoint" as const),
   }));
 
-  return NextResponse.json({ events: eventsWithSource }, { status: 200 });
+  // Fetch attendee previews (up to 3 per event) for avatar stacks
+  const eventIds = eventsWithSource.map((e) => e.id);
+  type AttendeePreviews = {
+    event_id: string;
+    user: { id: string; twitter_handle: string | null; twitter_name: string | null; avatar_url: string | null } | { id: string; twitter_handle: string | null; twitter_name: string | null; avatar_url: string | null }[] | null;
+  };
+  const previewMap = new Map<string, { id: string; avatar_url: string | null; name: string; twitter_handle: string | null }[]>();
+
+  if (eventIds.length > 0) {
+    const { data: memberRows } = await supabase
+      .from("event_members")
+      .select("event_id, user:profiles!event_members_user_id_fkey(id, twitter_handle, twitter_name, avatar_url)")
+      .in("event_id", eventIds)
+      .eq("status", "going")
+      .order("registered_at", { ascending: false });
+
+    for (const row of ((memberRows || []) as AttendeePreviews[])) {
+      const profile = Array.isArray(row.user) ? row.user[0] : row.user;
+      if (!profile) continue;
+      const current = previewMap.get(row.event_id) || [];
+      if (current.length < 3 && !current.some((p) => p.id === profile.id)) {
+        current.push({
+          id: profile.id,
+          avatar_url: profile.avatar_url || null,
+          name: profile.twitter_name || profile.twitter_handle || "User",
+          twitter_handle: profile.twitter_handle,
+        });
+        previewMap.set(row.event_id, current);
+      }
+    }
+  }
+
+  const enrichedEvents = eventsWithSource.map((event) => ({
+    ...event,
+    attendee_previews: previewMap.get(event.id) || [],
+  }));
+
+  return NextResponse.json({ events: enrichedEvents }, { status: 200 });
 }
 
 /**

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Calendar, Check, Crown, Loader2, UserPlus } from "lucide-react";
+import { Calendar, Check, Loader2, UserPlus } from "lucide-react";
 import { Button, Card } from "@/components/ui";
 import type { Event, User } from "@/types";
 import type { CanRequestMeetingSharedEvent } from "@/lib/api/meeting-requests";
@@ -124,7 +124,7 @@ export function ProfileSidebarColumn({
                     {mutualFollowers.slice(0, 3).map((follower) => (
                       <Link
                         key={follower.id}
-                        href={`/profile/${follower.twitter_handle}`}
+                        href={`/profile/${follower.id}`}
                         className="w-8 h-8 rounded-full bg-[var(--color-surface-hover)] border-2 border-[var(--color-background)] flex items-center justify-center overflow-hidden hover:z-10 transition-transform hover:scale-110"
                       >
                         {follower.avatar_url ? (
@@ -248,18 +248,6 @@ export function ProfileSidebarColumn({
           </Card>
         )}
 
-        {user.subscription_tier === "free" && (
-          <Card variant="bordered" className="w-full bg-gradient-to-r from-[var(--color-primary)]/10 to-[var(--color-secondary)]/10">
-            <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">Upgrade to PRO</h3>
-            <p className="text-sm text-[var(--color-text-secondary)] mb-4">See cities, profiles, send messages, and more</p>
-            <Button asChild variant="primary" size="sm" className="w-full">
-              <Link href="/subscription">
-                <Crown className="w-4 h-4 mr-2" />
-                Upgrade
-              </Link>
-            </Button>
-          </Card>
-        )}
       </div>
     </div>
   );

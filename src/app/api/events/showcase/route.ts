@@ -70,7 +70,6 @@ function isMissingIsMajorError(error: { message?: string } | null): boolean {
 async function fetchEventsWithFallback(
   supabase: Awaited<ReturnType<typeof createClient>>,
   options: {
-    isVip: boolean;
     upcomingOnly: boolean;
   }
 ): Promise<{
@@ -89,9 +88,6 @@ async function fetchEventsWithFallback(
       if (options.upcomingOnly) {
         query = query.gte("start_date", new Date().toISOString());
       }
-      if (!options.isVip) {
-        query = query.eq("visibility", "public");
-      }
       return query;
     }
 
@@ -103,9 +99,6 @@ async function fetchEventsWithFallback(
       .order("start_date", { ascending: true });
     if (options.upcomingOnly) {
       query = query.gte("start_date", new Date().toISOString());
-    }
-    if (!options.isVip) {
-      query = query.eq("visibility", "public");
     }
     return query;
   };
@@ -169,18 +162,7 @@ export async function GET(request: NextRequest) {
     data: { user: authUser },
   } = await supabase.auth.getUser();
 
-  let isVip = false;
-  if (authUser) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("subscription_tier")
-      .eq("id", authUser.id)
-      .single();
-    isVip = profile?.subscription_tier === "vip";
-  }
-
   const upcomingResult = await fetchEventsWithFallback(supabase, {
-    isVip,
     upcomingOnly: true,
   });
   const eventsError = upcomingResult.error;
@@ -200,7 +182,6 @@ export async function GET(request: NextRequest) {
   // Fallback: if there are no upcoming local events, show non-major events regardless of date.
   if (allLocalEvents.length === 0) {
     const allEventsResult = await fetchEventsWithFallback(supabase, {
-      isVip,
       upcomingOnly: false,
     });
 

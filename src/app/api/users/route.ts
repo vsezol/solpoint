@@ -13,7 +13,6 @@ import { isUUID } from "@/lib/utils";
 
 const USERS_PUBLIC_FIELDS = `
   id,
-  twitter_handle,
   twitter_name,
   avatar_url,
   about,

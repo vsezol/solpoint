@@ -165,6 +165,8 @@ export interface Event {
   owner_workspace?: Workspace;
   /** Organizers (hosts) from event_organizers: internal = our users, external = e.g. Luma */
   organizers?: { internal: User[]; external: ExternalUser[] };
+  /** Up to 3 attendee previews for avatar stacks (populated by API when available) */
+  attendee_previews?: { id: string; avatar_url: string | null; name: string; twitter_handle: string | null }[];
   created_at: string;
   updated_at?: string;
 }

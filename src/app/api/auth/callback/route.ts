@@ -207,7 +207,7 @@ export async function GET(request: NextRequest) {
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("id, country, country_code, city")
+    .select("id, country, country_code, city, avatar_url")
     .eq("id", user.id)
     .single();
 
@@ -316,13 +316,14 @@ export async function GET(request: NextRequest) {
     const metadata = user.user_metadata;
     const updates: Record<string, unknown> = {};
 
-    if (metadata?.full_name || metadata?.name) {
-      updates.twitter_name = metadata.full_name || metadata.name;
-    }
     if (metadata?.avatar_url || metadata?.picture || metadata?.profile_image_url) {
-      updates.avatar_url = normalizeTwitterAvatarUrl(
-        metadata.avatar_url || metadata.picture || metadata.profile_image_url
-      );
+      const currentAvatarUrl = (profile as { avatar_url?: string | null }).avatar_url || null;
+      const isCustomAvatar = typeof currentAvatarUrl === "string" && currentAvatarUrl.includes("/profile-avatars/");
+      if (!isCustomAvatar) {
+        updates.avatar_url = normalizeTwitterAvatarUrl(
+          metadata.avatar_url || metadata.picture || metadata.profile_image_url
+        );
+      }
     }
     if (metadata?.verified !== undefined) {
       updates.is_verified = metadata.verified;

@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import { Card, Button, Avatar } from "@/components/ui";
 import { Modal, ModalHeader, ModalTitle, ModalContent, AuthRequiredModal, ProSubscriptionModal, UserListItem } from "@/components/ui";
-import { UserPlus, Crown, Calendar, Check } from "lucide-react";
+import { UserPlus, Calendar, Check } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getAppUrl } from "@/lib/utils";
@@ -23,7 +23,6 @@ interface Member {
   avatar_url?: string | null;
   name: string;
   twitter_handle?: string;
-  isVip?: boolean;
   isVerified?: boolean;
   isOwner?: boolean;
   joinedAt?: string;
@@ -31,7 +30,6 @@ interface Member {
 
 export function ProfileSidebar({ user, upcomingEvents }: ProfileSidebarProps) {
   const { user: currentUser, isAuthenticated } = useAuth();
-  const isVip = currentUser?.subscription_tier === "vip";
   const { openChat } = useChat();
   
   const [totalUsers, setTotalUsers] = useState<number>(0);
@@ -260,12 +258,6 @@ export function ProfileSidebar({ user, upcomingEvents }: ProfileSidebarProps) {
       return;
     }
 
-    // Check VIP status
-    if (!isVip) {
-      setShowProModal(true);
-      return;
-    }
-
     setLoadingUsers(true);
     try {
       const params = new URLSearchParams();
@@ -455,7 +447,7 @@ export function ProfileSidebar({ user, upcomingEvents }: ProfileSidebarProps) {
                   {mutualFollowers.slice(0, 3).map((follower) => (
                     <Link
                       key={follower.id}
-                      href={`/profile/${follower.twitter_handle}`}
+                      href={`/profile/${follower.id}`}
                       className="w-8 h-8 rounded-full bg-[var(--color-surface-hover)] border-2 border-[var(--color-background)] flex items-center justify-center overflow-hidden hover:z-10 transition-transform hover:scale-110"
                     >
                       {follower.avatar_url ? (
@@ -560,23 +552,6 @@ export function ProfileSidebar({ user, upcomingEvents }: ProfileSidebarProps) {
         )}
       </Card>
 
-      {/* Upgrade to PRO */}
-      {user.subscription_tier === "free" && (
-        <Card variant="bordered" className="w-full bg-gradient-to-r from-[var(--color-primary)]/10 to-[var(--color-secondary)]/10">
-          <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">
-            Upgrade to PRO
-          </h3>
-          <p className="text-sm text-[var(--color-text-secondary)] mb-4">
-            See cities, profiles, send messages, and more
-          </p>
-          <Button asChild variant="primary" size="sm" className="w-full">
-            <Link href="/subscription">
-              <Crown className="w-4 h-4 mr-2" />
-              Upgrade
-            </Link>
-          </Button>
-        </Card>
-      )}
 
       {/* Auth Required Modal */}
       <AuthRequiredModal
@@ -722,7 +697,7 @@ export function ProfileSidebar({ user, upcomingEvents }: ProfileSidebarProps) {
               mutualFollowers.map((follower) => (
                 <Link
                   key={follower.id}
-                  href={`/profile/${follower.twitter_handle}`}
+                  href={`/profile/${follower.id}`}
                   onClick={() => setIsMutualsModalOpen(false)}
                   className="flex items-center gap-3 p-3 rounded-lg hover:bg-[var(--color-surface-hover)] transition-colors"
                 >
@@ -745,9 +720,11 @@ export function ProfileSidebar({ user, upcomingEvents }: ProfileSidebarProps) {
                     <p className="text-sm font-medium text-[var(--color-text-primary)] truncate">
                       {follower.twitter_name}
                     </p>
-                    <p className="text-xs text-[var(--color-text-secondary)] truncate">
-                      @{follower.twitter_handle}
-                    </p>
+                    {follower.twitter_handle ? (
+                      <p className="text-xs text-[var(--color-text-secondary)] truncate">
+                        @{follower.twitter_handle}
+                      </p>
+                    ) : null}
                   </div>
                 </Link>
               ))

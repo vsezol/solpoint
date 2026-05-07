@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ProfileViewTracker } from "@/components/analytics/profile-view-tracker";
 import { ProfileV2Content } from "@/app/profile-v2/profile-v2-content";
 import type { Metadata } from "next";
-import { getAppUrl } from "@/lib/utils";
+import { getAppUrl, isUUID } from "@/lib/utils";
 import type { User } from "@/types";
 
 interface ProfilePageProps {
@@ -31,7 +31,7 @@ export async function generateMetadata({ params }: ProfilePageProps): Promise<Me
         name
       )
     `)
-    .eq("twitter_handle", cleanUsername)
+    .eq(isUUID(cleanUsername) ? "id" : "twitter_handle", cleanUsername)
     .maybeSingle();
 
   if (!user) {
@@ -55,10 +55,10 @@ export async function generateMetadata({ params }: ProfilePageProps): Promise<Me
       : "Solana community member on SolPoint";
 
   return {
-    title: `${user.twitter_name} (@${user.twitter_handle}) | SolPoint`,
+    title: `${user.twitter_name} | SolPoint`,
     description,
     openGraph: {
-      title: `${user.twitter_name} (@${user.twitter_handle})`,
+      title: `${user.twitter_name}`,
       description,
       type: "profile",
       url: profileUrl,
@@ -74,7 +74,7 @@ export async function generateMetadata({ params }: ProfilePageProps): Promise<Me
     },
     twitter: {
       card: "summary_large_image",
-      title: `${user.twitter_name} (@${user.twitter_handle})`,
+      title: `${user.twitter_name}`,
       description,
       images: [imageUrl],
     },
@@ -85,6 +85,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   const { username } = await params;
   const supabase = await createClient();
   const cleanUsername = username.startsWith("@") ? username.slice(1) : username;
+  const lookupById = isUUID(cleanUsername);
 
   const [
     { data: { user: authUser } },
@@ -99,7 +100,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
           name
         )
       `)
-      .eq("twitter_handle", cleanUsername)
+      .eq(lookupById ? "id" : "twitter_handle", cleanUsername)
       .maybeSingle(),
   ]);
 
@@ -118,14 +119,24 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     initialFriendshipStatus = mapFollowToFriendshipStatus((status as string | null) || null);
   }
 
+  const canRevealSocials = isOwnProfile || initialFriendshipStatus === "accepted";
+  const safeUser = canRevealSocials
+    ? (user as User)
+    : ({
+        ...(user as User),
+        twitter_handle: null,
+        twitter_id: null,
+        socials: {},
+      } as User);
+
   return (
     <>
       <Header />
-      <ProfileViewTracker user={user as User} isOwnProfile={isOwnProfile} />
+      <ProfileViewTracker user={safeUser} isOwnProfile={isOwnProfile} />
       <main className="min-h-screen bg-black pt-20 pb-6">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <ProfileV2Content
-            user={user as User}
+            user={safeUser}
             isOwnProfile={isOwnProfile}
             isAuthenticated={Boolean(authUser)}
             initialFriendshipStatus={initialFriendshipStatus}

@@ -211,6 +211,15 @@ function MapMarker({
 }: MapMarkerProps) {
   const { map } = useMap();
 
+  // Use refs so the DOM listeners always call the latest prop callbacks
+  // even though the marker element is created once in useMemo.
+  const onClickRef = useRef(onClick);
+  const onMouseEnterRef = useRef(onMouseEnter);
+  const onMouseLeaveRef = useRef(onMouseLeave);
+  onClickRef.current = onClick;
+  onMouseEnterRef.current = onMouseEnter;
+  onMouseLeaveRef.current = onMouseLeave;
+
   const marker = useMemo(() => {
     const markerInstance = new MapLibreGL.Marker({
       ...markerOptions,
@@ -218,9 +227,9 @@ function MapMarker({
       draggable,
     }).setLngLat([longitude, latitude]);
 
-    const handleClick = (e: MouseEvent) => onClick?.(e);
-    const handleMouseEnter = (e: MouseEvent) => onMouseEnter?.(e);
-    const handleMouseLeave = (e: MouseEvent) => onMouseLeave?.(e);
+    const handleClick = (e: MouseEvent) => onClickRef.current?.(e);
+    const handleMouseEnter = (e: MouseEvent) => onMouseEnterRef.current?.(e);
+    const handleMouseLeave = (e: MouseEvent) => onMouseLeaveRef.current?.(e);
 
     markerInstance.getElement()?.addEventListener("click", handleClick);
     markerInstance
@@ -362,7 +371,22 @@ function MarkerPopup({
     popup.setDOMContent(container);
     marker.setPopup(popup);
 
+    // MapLibre calculates the popup anchor before React renders portal content,
+    // so the first layout pass may use zero content height. After the popup opens,
+    // wait one animation frame (content is now in DOM) and call setLngLat to
+    // trigger a full _update() so MapLibre re-picks the best anchor direction.
+    const handleOpen = () => {
+      requestAnimationFrame(() => {
+        if (popup.isOpen()) {
+          popup.setLngLat(marker.getLngLat());
+        }
+      });
+    };
+
+    popup.on("open", handleOpen);
+
     return () => {
+      popup.off("open", handleOpen);
       marker.setPopup(null);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

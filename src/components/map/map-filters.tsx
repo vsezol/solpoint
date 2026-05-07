@@ -23,13 +23,11 @@ const eventTypes: { value: EventType; label: string }[] = [
 interface MapFiltersProps {
   filters: MapFilters;
   onFiltersChange: (filters: MapFilters) => void;
-  isVip?: boolean;
 }
 
 export function MapFiltersPanel({
   filters,
   onFiltersChange,
-  isVip = false,
 }: MapFiltersProps) {
   const { country, setCountry } = useMapStore();
   const { isAuthenticated, user } = useAuth();
@@ -149,10 +147,6 @@ export function MapFiltersPanel({
       setShowAuthModal(true);
       return;
     }
-    if (isAuthenticated && !isVip) {
-      setShowProModal(true);
-      return;
-    }
     const currentRoles = filters.userRoles || [];
     const newRoles = currentRoles.includes(role)
       ? currentRoles.filter((r) => r !== role)
@@ -265,10 +259,6 @@ export function MapFiltersPanel({
                 setShowAuthModal(true);
                 return;
               }
-              if (isAuthenticated && !isVip) {
-                setShowProModal(true);
-                return;
-              }
               // Обновляем только локальное состояние, фильтры обновятся через debounce
               setCityInput(e.target.value);
             }}
@@ -276,9 +266,6 @@ export function MapFiltersPanel({
               if (!isAuthenticated) {
                 setShowAuthModal(true);
                 return;
-              }
-              if (isAuthenticated && !isVip) {
-                setShowProModal(true);
               }
             }}
           />
@@ -395,40 +382,6 @@ export function MapFiltersPanel({
               </button>
             </label>
 
-            {isVip && (
-              <label className="flex items-center justify-between cursor-pointer">
-                <span className="text-sm text-[var(--color-text-secondary)]">
-                  Pro users only
-                </span>
-                <button
-                  onClick={() => {
-                    const newActiveOnly = !filters.activeOnly;
-                    trackEvent("map_filter_change", {
-                      event_category: "Map",
-                      filter_type: "active_only",
-                      filter_value: newActiveOnly ? "true" : "false",
-                    });
-                    onFiltersChange({
-                      ...filters,
-                      activeOnly: newActiveOnly,
-                    });
-                  }}
-                  className={cn(
-                    "w-11 h-6 rounded-full transition-colors relative",
-                    filters.activeOnly
-                      ? "bg-[var(--color-primary)]"
-                      : "bg-[var(--color-surface-border)]"
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "absolute top-1 w-4 h-4 rounded-full bg-white transition-transform",
-                      filters.activeOnly ? "left-6" : "left-1"
-                    )}
-                  />
-                </button>
-              </label>
-            )}
           </div>
         )}
       </div>
@@ -518,8 +471,8 @@ export function MapFiltersPanel({
       <AuthRequiredModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
-        title="Sign up or log in to use filters"
-        description="Please sign up or log in to use map filters and search."
+        variant="compact"
+        title="Log in or Sign up to use filters"
       />
       <ProSubscriptionModal
         isOpen={showProModal}

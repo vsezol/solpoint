@@ -21,7 +21,6 @@ export default function EventsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const { user, isAuthenticated } = useAuth();
-  const isVip = user?.subscription_tier === "vip";
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showProModal, setShowProModal] = useState(false);
@@ -187,10 +186,6 @@ export default function EventsPage() {
                 setShowAuthModal(true);
                 return;
               }
-              if (!isVip) {
-                setShowProModal(true);
-                return;
-              }
               setIsCreateModalOpen(true);
               trackEvent("event_create_modal_open", {
                 event_category: "Events",
@@ -227,7 +222,7 @@ export default function EventsPage() {
           ) : upcomingEvents.length > 0 ? (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {upcomingEvents.map((event) => (
-                <EventCard key={event.id} event={event} isVip={isVip} />
+                <EventCard key={event.id} event={event} />
               ))}
             </div>
           ) : (
@@ -250,7 +245,7 @@ export default function EventsPage() {
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 opacity-70">
               {pastEvents.map((event) => (
-                <EventCard key={event.id} event={event} isVip={isVip} />
+                <EventCard key={event.id} event={event} />
               ))}
             </div>
           </section>

@@ -43,7 +43,6 @@ interface UseProfileMeetingRequestsParams {
   user: User;
   isOwnProfile: boolean;
   isAuthenticated: boolean;
-  isVip: boolean;
   currentAuthUserId: string | null;
   meetingRequestsEnabled: boolean;
   searchParams: ReadonlyURLSearchParams;
@@ -61,7 +60,6 @@ export function useProfileMeetingRequests({
   user,
   isOwnProfile,
   isAuthenticated,
-  isVip,
   currentAuthUserId,
   meetingRequestsEnabled,
   searchParams,
@@ -192,7 +190,7 @@ export function useProfileMeetingRequests({
   const meetingCalendarInitialDate = meetingCalendarAutoScrollTarget?.start ?? undefined;
 
   async function fetchMeetingRequestsList(options?: { silent?: boolean }) {
-    if (!meetingRequestsEnabled || !isAuthenticated || !isVip) {
+    if (!meetingRequestsEnabled || !isAuthenticated) {
       setMeetingRequests([]);
       setMeetingRequestsError(null);
       return;
@@ -228,7 +226,7 @@ export function useProfileMeetingRequests({
   }
 
   const handleOpenMeetingRequestsModal = async () => {
-    if (!meetingRequestsEnabled || !isVip) {
+    if (!meetingRequestsEnabled) {
       onRequirePro?.();
       return;
     }
@@ -246,7 +244,7 @@ export function useProfileMeetingRequests({
   };
 
   const handleOpenMeetingCalendarModal = async () => {
-    if (!meetingRequestsEnabled || !isVip) {
+    if (!meetingRequestsEnabled) {
       onRequirePro?.();
       return;
     }
@@ -295,7 +293,7 @@ export function useProfileMeetingRequests({
       return;
     }
 
-    if (!isVip) {
+    if (false) {
       setShowMeetingDetailsChatProModal(true);
       return;
     }
@@ -322,7 +320,7 @@ export function useProfileMeetingRequests({
       return;
     }
 
-    if (!isVip) {
+    if (false) {
       setShowProfileMeetingProModal(true);
       return;
     }
@@ -410,7 +408,7 @@ export function useProfileMeetingRequests({
   };
 
   useEffect(() => {
-    if (!isOwnProfile || !meetingRequestsEnabled || !isAuthenticated || !isVip) {
+    if (!isOwnProfile || !meetingRequestsEnabled || !isAuthenticated ) {
       setMeetingRequests([]);
       setMeetingRequestsError(null);
       setIsLoadingMeetingRequests(false);
@@ -430,7 +428,7 @@ export function useProfileMeetingRequests({
       window.removeEventListener("meeting-requests-updated", refreshCounts);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOwnProfile, isAuthenticated, isVip, meetingRequestsEnabled]);
+  }, [isOwnProfile, isAuthenticated, meetingRequestsEnabled]);
 
   useEffect(() => {
     if (isOwnProfile || !meetingRequestsEnabled || !user.id || !isAuthenticated) {
@@ -464,7 +462,7 @@ export function useProfileMeetingRequests({
   }, [isOwnProfile, meetingRequestsEnabled, user.id, isAuthenticated]);
 
   useEffect(() => {
-    if (!isOwnProfile || !meetingRequestsEnabled || !isAuthenticated || !isVip) {
+    if (!isOwnProfile || !meetingRequestsEnabled || !isAuthenticated ) {
       return;
     }
 
@@ -481,7 +479,7 @@ export function useProfileMeetingRequests({
       url.searchParams.delete("meetingRequests");
       window.history.replaceState({}, "", url.toString());
     }
-  }, [isOwnProfile, isAuthenticated, isVip, meetingRequestsEnabled, searchParams]);
+  }, [isOwnProfile, isAuthenticated, meetingRequestsEnabled, searchParams]);
 
   useEffect(() => {
     if (!isMeetingCalendarModalOpen || approvedMeetingCalendarEvents.length === 0) {

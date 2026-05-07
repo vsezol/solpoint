@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import type { MouseEvent } from "react";
 import Link from "next/link";
-import { Avatar, Button, AuthRequiredModal, ProSubscriptionModal } from "@/components/ui";
+import { Avatar, Button, AuthRequiredModal } from "@/components/ui";
 import { AvatarListModal } from "@/components/users/avatar-list-modal";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -12,7 +12,6 @@ interface AttendeeItem {
   avatar_url?: string | null;
   name: string;
   twitter_handle?: string;
-  isVip?: boolean;
   isVerified?: boolean;
 }
 
@@ -44,9 +43,9 @@ export function AttendeesList({
   isFriendsList = false,
 }: AttendeesListProps) {
   const { user, isAuthenticated } = useAuth();
-  const isVip = user?.subscription_tier === "vip";
   const [showProModal, setShowProModal] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authModalTitle, setAuthModalTitle] = useState("Log in or Sign up to continue");
   const [showListModal, setShowListModal] = useState(false);
   const [allItems, setAllItems] = useState<AttendeeItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -71,12 +70,12 @@ export function AttendeesList({
 
   const handleShowAll = async () => {
     if (!isAuthenticated) {
+      setAuthModalTitle(
+        isFriendsList
+          ? "Log in or Sign up to see friends going"
+          : "Log in or Sign up to see attendee list"
+      );
       setShowAuthModal(true);
-      return;
-    }
-
-    if (!isVip) {
-      setShowProModal(true);
       return;
     }
 
@@ -109,12 +108,8 @@ export function AttendeesList({
     e.preventDefault();
 
     if (!isAuthenticated) {
+      setAuthModalTitle("Log in or Sign up to view profiles");
       setShowAuthModal(true);
-      return;
-    }
-
-    if (!isVip) {
-      setShowProModal(true);
       return;
     }
 
@@ -136,7 +131,6 @@ export function AttendeesList({
                   src={item.avatar_url}
                   alt={item.name}
                   size="sm"
-                  isVip={item.isVip}
                   isVerified={item.isVerified}
                 />
               </div>
@@ -186,8 +180,8 @@ export function AttendeesList({
       <AuthRequiredModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
-        title="Sign in required"
-        description="Please sign up or log in to view the full list."
+        variant="compact"
+        title={authModalTitle}
       />
 
       <ProSubscriptionModal

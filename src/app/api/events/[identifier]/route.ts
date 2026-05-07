@@ -20,16 +20,6 @@ export async function GET(
     data: { user: authUser },
   } = await supabase.auth.getUser();
 
-  let isVip = false;
-  if (authUser) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("subscription_tier")
-      .eq("id", authUser.id)
-      .single();
-    isVip = profile?.subscription_tier === "vip";
-  }
-
   // Определяем, является ли identifier UUID или slug
   let query = supabase
     .from("events")
@@ -96,14 +86,6 @@ export async function GET(
     return NextResponse.json(
       { error: error.message || "Failed to fetch event" },
       { status: 500 }
-    );
-  }
-
-  // Проверяем доступ к VIP ивенту
-  if (event.visibility === "vip_only" && !isVip) {
-    return NextResponse.json(
-      { error: "This event is PRO only" },
-      { status: 403 }
     );
   }
 

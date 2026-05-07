@@ -19,17 +19,6 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
     redirect("/login");
   }
 
-  // Получаем профиль пользователя, чтобы узнать его username
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("twitter_handle")
-    .eq("id", authUser.id)
-    .single();
-
-  if (profileError || !profile) {
-    redirect("/");
-  }
-
   // Редиректим на динамический роут с username пользователя
   const nextParams = new URLSearchParams();
   const meetingRequests = params.meetingRequests;
@@ -38,5 +27,5 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
   }
 
   const queryString = nextParams.toString();
-  redirect(`/profile/${profile.twitter_handle}${queryString ? `?${queryString}` : ""}`);
+  redirect(`/profile/${authUser.id}${queryString ? `?${queryString}` : ""}`);
 }

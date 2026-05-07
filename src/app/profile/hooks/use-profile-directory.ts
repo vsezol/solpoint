@@ -14,14 +14,12 @@ import { getUsersList } from "@/lib/api/users";
 interface UseProfileDirectoryParams {
   user: User;
   isAuthenticated: boolean;
-  isVip: boolean;
   hasCurrentAuthUser: boolean;
 }
 
 export function useProfileDirectory({
   user,
   isAuthenticated,
-  isVip,
   hasCurrentAuthUser,
 }: UseProfileDirectoryParams) {
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -66,11 +64,6 @@ export function useProfileDirectory({
         return;
       }
 
-      if (!isVip) {
-        setShowProModalUsers(true);
-        return;
-      }
-
       setLoadingUsers(true);
       try {
         const result = await getUsersList({
@@ -95,7 +88,7 @@ export function useProfileDirectory({
         setLoadingUsers(false);
       }
     },
-    [isAuthenticated, isVip, user.country_code, user.city]
+    [isAuthenticated, user.country_code, user.city]
   );
 
   const handleShowUserFriendsList = useCallback(async () => {
@@ -104,12 +97,7 @@ export function useProfileDirectory({
       return;
     }
 
-    if (!isVip) {
-      setShowProModalUsers(true);
-      return;
-    }
-
-    setLoadingUserFriends(true);
+      setLoadingUserFriends(true);
     try {
       const friends = await getFriendsList({ userId: user.id, type: "mutual" });
       const formattedFriends: DirectoryUser[] = friends.map((friend) => ({
@@ -117,7 +105,6 @@ export function useProfileDirectory({
         avatar_url: friend.avatar_url,
         name: friend.twitter_name,
         twitter_handle: friend.twitter_handle,
-        isVip: friend.subscription_tier === "vip",
         isVerified: friend.is_verified,
       }));
 
@@ -129,7 +116,7 @@ export function useProfileDirectory({
     } finally {
       setLoadingUserFriends(false);
     }
-  }, [isAuthenticated, isVip, user.id]);
+  }, [isAuthenticated, user.id]);
 
   const handleAddFriend = useCallback(
     async (userId: string) => {

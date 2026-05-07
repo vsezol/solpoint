@@ -36,7 +36,6 @@ export function ProfileContent({ user, isOwnProfile, profileQrEnabled = true }: 
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user: currentAuthUser, isAuthenticated } = useAuth();
-  const isVip = currentAuthUser?.subscription_tier === "vip";
   const meetingRequestsEnabled = isMeetingRequestsEnabled();
 
   const [currentUser, setCurrentUser] = useState<User>(user);
@@ -65,7 +64,6 @@ export function ProfileContent({ user, isOwnProfile, profileQrEnabled = true }: 
   const directory = useProfileDirectory({
     user,
     isAuthenticated,
-    isVip,
     hasCurrentAuthUser: Boolean(currentAuthUser),
   });
 
@@ -73,7 +71,6 @@ export function ProfileContent({ user, isOwnProfile, profileQrEnabled = true }: 
     user,
     isOwnProfile,
     isAuthenticated,
-    isVip,
     currentAuthUserId: currentAuthUser?.id || null,
     meetingRequestsEnabled,
     searchParams,
@@ -87,18 +84,10 @@ export function ProfileContent({ user, isOwnProfile, profileQrEnabled = true }: 
   });
 
   const handleShowMutualsList = async () => {
-    if (!isVip) {
-      setShowProModal(true);
-      return;
-    }
     setIsMutualsModalOpen(true);
   };
 
   const handleShowAffiliationsList = async () => {
-    if (!isVip) {
-      setShowProModal(true);
-      return;
-    }
     setIsAffiliationsModalOpen(true);
   };
 
@@ -108,10 +97,6 @@ export function ProfileContent({ user, isOwnProfile, profileQrEnabled = true }: 
   };
 
   const handleAddEntityClick = () => {
-    if (!isVip) {
-      setShowProModal(true);
-      return;
-    }
     setCreateEntityType("hub");
     setIsCreateModalOpen(true);
   };
@@ -193,7 +178,6 @@ export function ProfileContent({ user, isOwnProfile, profileQrEnabled = true }: 
       <ProfileAffiliationsModal
         isOpen={isAffiliationsModalOpen}
         onClose={() => setIsAffiliationsModalOpen(false)}
-        isVip={Boolean(isVip)}
         isOwnProfile={isOwnProfile}
         affiliations={pageData.affiliations}
         onUpgradeClick={() => {

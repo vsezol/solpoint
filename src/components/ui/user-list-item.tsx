@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Button, ProSubscriptionModal } from "@/components/ui";
+import { Button } from "@/components/ui";
 import { normalizeTwitterAvatarUrl } from "@/lib/twitter-avatar";
 import { CalendarPlus, MessageCircle, UserPlus, UserCheck } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
@@ -14,7 +13,6 @@ interface Member {
   avatar_url?: string | null;
   name: string;
   twitter_handle?: string;
-  isVip?: boolean;
   isVerified?: boolean;
   isOwner?: boolean;
   joinedAt?: string;
@@ -43,19 +41,13 @@ export function UserListItem({
 }: UserListItemProps) {
   const { user: currentUser, isAuthenticated } = useAuth();
   const { openChat } = useChat();
-  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const avatarSrc = member.avatar_url ? normalizeTwitterAvatarUrl(member.avatar_url) : null;
 
   const isOwnProfile = currentUser?.id === member.id;
+  const canRevealHandle = isOwnProfile || friendStatus === "accepted";
 
   const handleSendMessage = async (userId: string) => {
     if (!isAuthenticated) {
-      return;
-    }
-
-    // Check if user has PRO subscription
-    if (currentUser?.subscription_tier !== "vip") {
-      setShowSubscriptionModal(true);
       return;
     }
 
@@ -81,7 +73,7 @@ export function UserListItem({
   return (
     <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-[var(--color-surface-hover)] transition-colors">
       <Link
-        href={member.twitter_handle ? `/profile/${member.twitter_handle}` : "#"}
+        href={`/profile/${member.id}`}
         className="flex items-center gap-3 flex-1 min-w-0"
       >
         <div className="w-12 h-12 rounded-full bg-[var(--color-surface-hover)] border-2 border-[var(--color-background)] flex items-center justify-center overflow-hidden flex-shrink-0">
@@ -104,7 +96,7 @@ export function UserListItem({
           <p className="text-sm font-medium text-[var(--color-text-primary)] truncate">
             {member.name}
           </p>
-          {member.twitter_handle && (
+          {canRevealHandle && member.twitter_handle && (
             <p className="text-xs text-[var(--color-text-secondary)] truncate">
               @{member.twitter_handle}
             </p>
@@ -158,13 +150,6 @@ export function UserListItem({
         </div>
       )}
       
-      {/* Subscription Modal */}
-      <ProSubscriptionModal
-        isOpen={showSubscriptionModal}
-        onClose={() => setShowSubscriptionModal(false)}
-        title="Private messaging is available only with PRO subscription"
-        description="Upgrade to PRO to send direct messages to other users."
-      />
     </div>
   );
 }

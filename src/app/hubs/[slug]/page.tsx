@@ -88,7 +88,6 @@ export async function generateMetadata({ params }: HubPageProps): Promise<Metada
 export default async function HubPage({ params }: HubPageProps) {
   const { slug } = await params;
   const supabase = await createClient();
-
   // Получаем хаб - сначала по слагу, потом по ID (если параметр является UUID)
   let query = supabase
     .from("hubs")

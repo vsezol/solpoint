@@ -1,18 +1,17 @@
 "use client";
 
-import { Button, EventBadges } from "@/components/ui";
+import { AuthRequiredModal, Button, EventBadges } from "@/components/ui";
 import type { Event } from "@/types";
 import { Twitter, Instagram, Facebook, ExternalLink, MapPin, Calendar, Share2, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import Link from "next/link";
 import { trackEvent } from "@/lib/analytics";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { attendEvent } from "@/app/events/[slug]/actions";
 
 interface EventCardProps {
   event: Event;
-  isVip?: boolean;
   isAuthenticated?: boolean;
   compact?: boolean;
   isBlurred?: boolean;
@@ -69,21 +68,24 @@ export function EventCardSkeleton() {
 
 export function EventCard({
   event,
-  isVip = false,
   isAuthenticated = false,
   compact = false,
   isBlurred = false,
   isRegistered = false,
 }: EventCardProps) {
-  const [showAttendModal, setShowAttendModal] = useState(false);
-  const [attendLoading, setAttendLoading] = useState(false);
-  const [attendError, setAttendError] = useState<string | null>(null);
-  const [attended, setAttended] = useState(isRegistered);
+  const router = useRouter();
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authModalTitle, setAuthModalTitle] = useState("Log in or Sign up to continue");
+  const [authRedirectTo, setAuthRedirectTo] = useState<string | undefined>(undefined);
 
-  // Определяем, может ли пользователь видеть детали события
-  const canViewDetails = isAuthenticated && (
-    event.visibility === "public" || 
-    (event.visibility === "vip_only" && isVip)
+  const canViewDetails = isAuthenticated;
+  const computedAttendeesCount = Math.max(
+    typeof event.attendees_count === "number" ? event.attendees_count : 0,
+    // Some endpoints (e.g. showcase lists) use `people_going` instead.
+    typeof (event as Event & { people_going?: number }).people_going === "number"
+      ? (event as Event & { people_going?: number }).people_going!
+      : 0,
+    Array.isArray(event.attendee_previews) ? event.attendee_previews.length : 0
   );
 
   const formatDate = (startDate: string, endDate?: string) => {
@@ -111,176 +113,187 @@ export function EventCard({
   const kmFont = { fontFamily: "var(--font-kode-mono), monospace" } as const;
 
   if (compact) {
-    const cardFill = "#0B0B0B";
-    const cardSurface = {
-      border: "1px solid transparent",
-      background: `
-        linear-gradient(${cardFill}, ${cardFill}) padding-box,
-        linear-gradient(180deg, #00F68B 0%, rgba(0,246,139,0.85) 25%, rgba(0,246,139,0.45) 55%, rgba(0,246,139,0.12) 75%, rgba(0,246,139,0) 92%) border-box
-      `,
-      backgroundClip: "padding-box, border-box",
-    } as const;
-
-    const attendModal = showAttendModal && (
-      <div
-        className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm"
-        onClick={(e) => { e.stopPropagation(); setShowAttendModal(false); setAttendError(null); }}
-      >
-        <div
-          className="bg-[#101319] border border-white/[0.08] rounded-[10px] w-full max-w-sm mx-4 overflow-hidden"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="px-6 py-4 border-b border-white/[0.08]">
-            <h3 className="text-[18px] font-semibold text-white" style={kmFont}>Confirm attendance</h3>
-            <p className="mt-1 text-sm text-white/60" style={kmFont}>Are you sure you are going to {event.name}?</p>
-          </div>
-          <div className="px-6 py-4">
-            {attendError ? (
-              <p className="rounded border border-red-500/35 bg-red-500/10 px-3 py-2 text-[13px] text-red-200">{attendError}</p>
-            ) : (
-              <p className="text-[13px] text-white/70" style={kmFont}>We will add you to the internal attendees list for this event.</p>
-            )}
-          </div>
-          <div className="px-6 py-4 border-t border-white/[0.08] flex justify-end gap-3">
-            <button
-              className="h-[40px] px-4 rounded-[7px] border border-white/35 text-white text-sm font-medium hover:bg-white/10 transition-colors disabled:opacity-50"
-              style={kmFont}
-              onClick={() => { setShowAttendModal(false); setAttendError(null); }}
-              disabled={attendLoading}
-            >Cancel</button>
-            <button
-              className="h-[40px] px-4 rounded-[7px] border border-white bg-white text-black text-sm font-medium hover:bg-white/90 transition-colors disabled:opacity-50 flex items-center gap-2"
-              style={kmFont}
-              disabled={attendLoading}
-              onClick={async () => {
-                setAttendLoading(true);
-                setAttendError(null);
-                trackEvent("event_attend_click", { event_category: "Events", event_label: event.slug || event.id, event_id: event.id, event_slug: event.slug, event_name: event.name, source: "map_popup" });
-                try {
-                  const result = await attendEvent(event.id);
-                  if (result.success) { setAttended(true); setShowAttendModal(false); trackEvent("event_attend_success", { event_category: "Events", event_label: event.slug || event.id, event_id: event.id, event_name: event.name, source: "map_popup" }); }
-                  else { setAttendError(result.error || "Failed to register"); }
-                } catch { setAttendError("An unexpected error occurred"); }
-                finally { setAttendLoading(false); }
-              }}
-            >
-              {attendLoading && (
-                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-              )}
-              Accept
-            </button>
-          </div>
-        </div>
-      </div>
-    );
+    const sgFont = { fontFamily: "var(--font-display), sans-serif" } as const;
+    const previewAvatars = (event.attendee_previews && event.attendee_previews.length > 0
+      ? event.attendee_previews
+      : (event.organizers?.internal ?? []).map((u) => ({ id: u.id, avatar_url: u.avatar_url, name: u.twitter_name || u.twitter_handle || "?", twitter_handle: u.twitter_handle ?? null }))
+    )
+      .slice(0, 3)
+      .map((u) => ({ url: u.avatar_url, name: u.name }));
 
     return (
       <div
-        className="relative isolate flex w-[256px] flex-col overflow-hidden rounded-[3px] p-4 shadow-[0_0_18px_rgba(0,246,139,0.12)]"
-        style={cardSurface}
+        className="p-[1px] bg-[linear-gradient(180deg,#00F68B_0%,#0B0B0B_100%)] shadow-2xl shrink-0"
+        style={{ width: 256, height: 374, borderRadius: 3 }}
       >
-        {/* Bottom fade */}
-        <div
-          className="pointer-events-none absolute inset-0 rounded-[inherit] bg-[linear-gradient(180deg,transparent_0%,transparent_85%,#0B0B0B_100%)]"
-          aria-hidden
-        />
-
-        <div className="relative z-10 flex flex-col">
-          {/* Event image */}
-          <div className="relative mx-auto h-[64px] w-[64px] overflow-hidden rounded-[7px] bg-white/10">
+      <div
+        className="bg-[#080b12] overflow-hidden flex flex-col w-full h-full"
+        style={{ borderRadius: 3 }}
+      >
+        {/* Logo — 13px from top, centered */}
+        <div className="flex justify-center" style={{ paddingTop: 13 }}>
+          <div
+            className="relative overflow-hidden bg-[#111520] flex-shrink-0"
+            style={{ width: 70, height: 70, borderRadius: 3 }}
+          >
             {event.image_url ? (
               <Image src={event.image_url} alt={event.name} fill className="object-cover" />
             ) : (
-              <div className="flex h-full w-full items-center justify-center text-[#14f195]">
-                <Calendar className="h-8 w-8" />
-              </div>
-            )}
-          </div>
-
-          {/* Name */}
-          <h3
-            className="mt-3 text-center text-[16px] font-extrabold leading-snug text-white"
-            style={kmFont}
-          >
-            {event.name}
-          </h3>
-
-          {/* Date + Location */}
-          <div className="mt-[20px] w-full space-y-5 text-[15px] font-medium leading-none">
-            <p className="flex items-start gap-2 text-[#14f195]" style={kmFont}>
-              <Calendar className="mt-px h-[15px] w-[15px] shrink-0" strokeWidth={1.5} aria-hidden />
-              <span className="min-w-0 break-words">{formatDate(event.start_date, event.end_date)}</span>
-            </p>
-            <p className="flex items-start gap-2 text-[#14f195]" style={kmFont}>
-              <MapPin className="mt-px h-[15px] w-[15px] shrink-0" strokeWidth={1.5} aria-hidden />
-              <span className="min-w-0 break-words">{[event.city, event.country].filter(Boolean).join(", ") || "Location TBD"}</span>
-            </p>
-          </div>
-
-          {/* Attendees count */}
-          {event.attendees_count != null && event.attendees_count > 0 && (
-            <div className="mt-4 flex items-center gap-2">
-              <Users className="h-[14px] w-[14px] shrink-0 text-white/50" strokeWidth={1.5} aria-hidden />
-              <span className="text-[13px] text-white/70" style={kmFont}>
-                {event.attendees_count} people going!
-              </span>
-            </div>
-          )}
-
-          {/* Actions */}
-          <div className="mt-6" onClick={(e) => e.stopPropagation()}>
-            {canViewDetails ? (
-              <div className="flex gap-3">
-                <button
-                  className={cn(
-                    "h-[49px] flex-1 shrink-0 rounded-[7px] border text-[13px] font-bold transition-opacity",
-                    attended
-                      ? "cursor-default border-white/30 bg-[#1A1A1A] text-white/75"
-                      : "border-white bg-white text-black hover:bg-white/90"
-                  )}
-                  style={kmFont}
-                  disabled={attended}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    if (!attended) setShowAttendModal(true);
-                  }}
-                >
-                  {attended ? "Attending" : "Attend"}
-                </button>
-
-                {/* Show list — gradient border */}
-                <div
-                  className="flex-1 shrink-0 rounded-[7px] p-px"
-                  style={{ background: "linear-gradient(to right, #9849FC, #01F48B)" }}
-                >
-                  <button
-                    className="h-[47px] w-full rounded-[6px] bg-[#0B0B0B] text-white text-[13px] font-bold hover:bg-white/5 transition-colors"
-                    style={kmFont}
-                    onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}
-                  >
-                    Show list
-                  </button>
-                </div>
-                {attendModal}
-              </div>
-            ) : (
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <Button variant="secondary" size="sm" asChild>
-                    <Link href="/signup" onClick={(e) => e.stopPropagation()}>Sign up / Log in</Link>
-                  </Button>
-                </div>
-                <div className="blur-sm pointer-events-none opacity-50 flex justify-center">
-                  <button className="h-[49px] w-full rounded-[7px] border border-white bg-white text-black text-[13px] font-bold" style={kmFont}>Attend</button>
-                </div>
+              <div className="w-full h-full flex items-center justify-center">
+                <Calendar className="w-8 h-8 text-[#14f195]/40" />
               </div>
             )}
           </div>
         </div>
+
+        {/* Title — 10px below logo */}
+        <h3
+          className="font-bold text-white text-center leading-snug px-4 truncate"
+          style={{ ...sgFont, fontSize: 12, marginTop: 10 }}
+        >
+          {event.name}
+        </h3>
+
+        {/* Date & Location — styled like user card role/location rows */}
+        <div
+          className={cn("w-full min-w-0 space-y-[10px] text-[15px] font-medium leading-none tracking-normal text-[#14f195]", isBlurred && "blur-sm select-none")}
+          style={{ marginTop: 29, paddingLeft: 16, paddingRight: 16 }}
+        >
+          <p className="-ml-2 flex items-end gap-[7px]" style={kmFont}>
+            <CalendarDays className="h-5 w-5 shrink-0 text-[#14f195]" strokeWidth={2} aria-hidden />
+            <span className="min-w-0 truncate" style={{ letterSpacing: "-0.07em" }}>
+              {formatDate(event.start_date, event.end_date)}
+            </span>
+          </p>
+          <p className="-ml-2 flex items-end gap-[7px]" style={kmFont}>
+            <MapPin className="h-5 w-5 shrink-0 text-[#14f195]" strokeWidth={2} aria-hidden />
+            <span className="min-w-0 truncate">
+              {event.venue_name || event.city}
+            </span>
+          </p>
+        </div>
+
+        {/* Attendees */}
+        <div className="flex flex-col items-center" style={{ marginTop: 27 }}>
+          {previewAvatars.length > 0 && (
+            <div className="flex items-center">
+              {previewAvatars.map((a, i) => (
+                <div
+                  key={i}
+                  className="rounded-full border-2 border-[#080b12] overflow-hidden bg-[#1a2030] flex-shrink-0"
+                  style={{
+                    width: 40,
+                    height: 40,
+                    marginLeft: i === 0 ? 0 : -12,
+                    zIndex: previewAvatars.length - i,
+                    position: "relative",
+                  }}
+                >
+                  {a.url ? (
+                    <Image src={a.url} alt={a.name} width={40} height={40} className="object-cover w-full h-full" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-[10px] font-bold text-[#14f195]" style={kmFont}>
+                      {a.name[0].toUpperCase()}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          <p className="text-white" style={{ ...kmFont, fontSize: 15, fontWeight: 600, marginTop: previewAvatars.length > 0 ? 6 : 0 }}>
+            {computedAttendeesCount > 0 ? `${computedAttendeesCount} people going!` : "Be first attendee!"}
+          </p>
+        </div>
+
+        {/* Spacer pushes buttons to bottom */}
+        <div className="flex-1" />
+
+        {/* Action buttons — pinned to bottom */}
+        <div className="flex justify-center gap-[10px]" style={{ paddingBottom: 11 }}>
+          <button
+            className={cn(
+              "bg-white text-black font-bold transition-opacity shrink-0",
+              canViewDetails ? "hover:opacity-90 active:opacity-75" : "hover:opacity-95 active:opacity-85"
+            )}
+            style={{ ...kmFont, fontSize: 20, width: 116, height: 49, borderRadius: 7 }}
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              setTimeout(() => {
+                trackEvent("event_attend_click", {
+                  event_category: "Events",
+                  event_label: event.slug || event.id,
+                  event_id: event.id,
+                  event_slug: event.slug,
+                  event_name: event.name,
+                  source: "event_card_compact",
+                });
+              }, 0);
+
+              if (!canViewDetails) {
+                setAuthModalTitle("Log in or Sign up to attend the event");
+                setAuthRedirectTo(`/events?attend=${event.id}`);
+                setShowAuthModal(true);
+                return;
+              }
+
+              router.push(`/events?attend=${event.id}`);
+            }}
+          >
+            Attend
+          </button>
+          <button
+            className={cn(
+              "text-white font-bold transition-opacity shrink-0",
+              canViewDetails ? "hover:opacity-80 active:opacity-60" : "hover:opacity-90 active:opacity-75"
+            )}
+            style={{
+              ...kmFont,
+              fontSize: 20,
+              width: 116,
+              height: 49,
+              borderRadius: 7,
+              letterSpacing: "-0.07em",
+              border: "1px solid transparent",
+              background:
+                "linear-gradient(#080b12, #080b12) padding-box, linear-gradient(135deg, #9849FC, #01F48B) border-box",
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              setTimeout(() => {
+                trackEvent("event_show_list_click", {
+                  event_category: "Events",
+                  event_label: event.slug || event.id,
+                  event_id: event.id,
+                  event_slug: event.slug,
+                  event_name: event.name,
+                  source: "event_card_compact",
+                });
+              }, 0);
+
+              if (!canViewDetails) {
+                setAuthModalTitle("Log in or Sign up to see attendee list");
+                setAuthRedirectTo(`/events?selected_event=${event.id}`);
+                setShowAuthModal(true);
+                return;
+              }
+
+              router.push(`/events?selected_event=${event.id}`);
+            }}
+          >
+            Show list
+          </button>
+        </div>
+
+        <AuthRequiredModal
+          isOpen={showAuthModal}
+          onClose={() => setShowAuthModal(false)}
+          variant="compact"
+          title={authModalTitle}
+          redirectTo={authRedirectTo}
+        />
+      </div>
       </div>
     );
   }
@@ -338,7 +351,7 @@ export function EventCard({
         {/* Attendees */}
         <div className="flex items-center gap-2 mb-4">
           <span className="text-sm text-[var(--color-text-secondary)]">
-            {event.attendees_count} attending
+            {computedAttendeesCount} attending
             {event.max_attendees && ` / ${event.max_attendees} max`}
           </span>
         </div>
