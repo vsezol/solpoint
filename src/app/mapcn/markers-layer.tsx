@@ -337,7 +337,7 @@ const MarkerIcon = ({
 
   // Event markers: render the same "cluster" circular look with pulse,
   // but with the event logo in the center (no clustering).
-  if (type === "event") {
+  if ((type as unknown as string) === "event") {
     const borderColor = "#14f195";
     const size = 52;
     const logoSize = 40;
