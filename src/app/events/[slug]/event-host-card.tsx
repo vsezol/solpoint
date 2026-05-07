@@ -28,8 +28,8 @@ export function EventHostCard({ user, externalUser, currentUserId }: EventHostCa
   const { isAuthenticated } = useAuth();
 
   if (externalUser) {
-    const avatarSrc = externalUser.avatar_url
-      ? normalizeTwitterAvatarUrl(externalUser.avatar_url)
+    const avatarSrc = externalUser.avatar
+      ? normalizeTwitterAvatarUrl(externalUser.avatar)
       : null;
     return (
       <div className="p-4 min-w-[280px] max-w-[350px] bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-xl">
@@ -37,7 +37,7 @@ export function EventHostCard({ user, externalUser, currentUserId }: EventHostCa
           <div className="w-12 h-12 rounded-full overflow-hidden bg-[var(--color-surface-hover)] flex-shrink-0">
             {avatarSrc ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={avatarSrc} alt={externalUser.name} className="w-full h-full object-cover" />
+              <img src={avatarSrc} alt={externalUser.name ?? ""} className="w-full h-full object-cover" />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-[var(--color-text-secondary)] text-sm font-medium">
                 {externalUser.name?.[0]?.toUpperCase() || "?"}

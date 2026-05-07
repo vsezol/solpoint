@@ -2,7 +2,7 @@
 
 import { AuthRequiredModal, Button, EventBadges } from "@/components/ui";
 import type { Event } from "@/types";
-import { Twitter, Instagram, Facebook, ExternalLink, MapPin, Calendar, Share2, Users } from "lucide-react";
+import { Twitter, Instagram, Facebook, ExternalLink, MapPin, Calendar, CalendarDays, Share2, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import Link from "next/link";

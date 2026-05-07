@@ -124,8 +124,8 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     ? (user as User)
     : ({
         ...(user as User),
-        twitter_handle: null,
-        twitter_id: null,
+        twitter_handle: "",
+        twitter_id: "",
         socials: {},
       } as User);
 
