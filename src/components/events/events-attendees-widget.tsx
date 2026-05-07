@@ -74,6 +74,50 @@ const kodeMonoStyle = {
   fontFamily: "var(--font-kode-mono), monospace",
 } as const;
 
+const attendeeCardFill = "#0B0B0B";
+
+const attendeeCardSurfaceStyle = {
+  border: "1px solid transparent",
+  background: `
+    linear-gradient(${attendeeCardFill}, ${attendeeCardFill}) padding-box,
+    linear-gradient(180deg, #00F68B 0%, rgba(0, 246, 139, 0.38) 46%, rgba(0, 246, 139, 0) 76%) border-box
+  `,
+  backgroundClip: "padding-box, border-box",
+} as const;
+
+const attendeeCardSurfaceStyleFlipped = {
+  border: "1px solid transparent",
+  background: `
+    linear-gradient(${attendeeCardFill}, ${attendeeCardFill}) padding-box,
+    linear-gradient(0deg, #00F68B 0%, rgba(0, 246, 139, 0.38) 46%, rgba(0, 246, 139, 0) 76%) border-box
+  `,
+  backgroundClip: "padding-box, border-box",
+} as const;
+
+const attendeeCardBottomFadeClass =
+  "pointer-events-none absolute inset-0 rounded-[inherit] bg-[linear-gradient(180deg,transparent_0%,transparent_46%,rgba(0,0,0,0.45)_72%,#0B0B0B_100%)]";
+
+const attendeeCardTopFadeClass =
+  "pointer-events-none absolute inset-0 rounded-[inherit] bg-[linear-gradient(0deg,transparent_0%,transparent_46%,rgba(0,0,0,0.45)_72%,#0B0B0B_100%)]";
+
+const attendeeCardTopGlowStyle = {
+  background:
+    "radial-gradient(60% 100% at 50% 0%, rgba(0,246,139,0.22) 0%, rgba(0,246,139,0.08) 45%, transparent 75%)",
+  filter: "blur(6px)",
+} as const;
+
+const attendeeCardTopGlowClass =
+  "pointer-events-none absolute -top-4 left-1/2 h-24 w-[calc(100%+32px)] -translate-x-1/2";
+
+const attendeeCardBottomGlowStyle = {
+  background:
+    "radial-gradient(60% 100% at 50% 100%, rgba(0,246,139,0.22) 0%, rgba(0,246,139,0.08) 45%, transparent 75%)",
+  filter: "blur(6px)",
+} as const;
+
+const attendeeCardBottomGlowClass =
+  "pointer-events-none absolute -bottom-4 left-1/2 h-24 w-[calc(100%+32px)] -translate-x-1/2";
+
 function MultiSelectPopup({
   label,
   placeholder,

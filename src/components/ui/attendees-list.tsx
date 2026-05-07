@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import type { MouseEvent } from "react";
 import Link from "next/link";
-import { Avatar, Button, AuthRequiredModal } from "@/components/ui";
+import { Avatar, Button, AuthRequiredModal, ProSubscriptionModal } from "@/components/ui";
 import { AvatarListModal } from "@/components/users/avatar-list-modal";
 import { useAuth } from "@/hooks/use-auth";
 
