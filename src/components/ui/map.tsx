@@ -563,6 +563,97 @@ const positionClasses = {
   "bottom-right": "bottom-10 right-2",
 };
 
+/** iOS Safari often has no `requestFullscreen` on map divs; use vendor APIs or CSS fallback. */
+type DocumentWithFs = Document & {
+  webkitFullscreenElement?: Element | null;
+  mozFullScreenElement?: Element | null;
+  msFullscreenElement?: Element | null;
+  webkitExitFullscreen?: () => Promise<void> | void;
+  mozCancelFullScreen?: () => Promise<void> | void;
+  msExitFullscreen?: () => Promise<void> | void;
+};
+
+type ElementWithFs = HTMLElement & {
+  webkitRequestFullscreen?: () => Promise<void> | void;
+  webkitRequestFullScreen?: () => Promise<void> | void;
+  mozRequestFullScreen?: () => Promise<void> | void;
+  msRequestFullscreen?: () => Promise<void> | void;
+};
+
+function getFullscreenElement(): Element | null {
+  const doc = document as DocumentWithFs;
+  return (
+    document.fullscreenElement ??
+    doc.webkitFullscreenElement ??
+    doc.mozFullScreenElement ??
+    doc.msFullscreenElement ??
+    null
+  );
+}
+
+async function exitNativeFullscreen(): Promise<void> {
+  const doc = document as DocumentWithFs;
+  try {
+    if (document.fullscreenElement && typeof document.exitFullscreen === "function") {
+      await document.exitFullscreen();
+      return;
+    }
+    if (doc.webkitFullscreenElement && typeof doc.webkitExitFullscreen === "function") {
+      await doc.webkitExitFullscreen();
+      return;
+    }
+    if (doc.mozFullScreenElement && typeof doc.mozCancelFullScreen === "function") {
+      await doc.mozCancelFullScreen();
+      return;
+    }
+    if (doc.msFullscreenElement && typeof doc.msExitFullscreen === "function") {
+      await doc.msExitFullscreen();
+    }
+  } catch {
+    // ignore
+  }
+}
+
+async function requestNativeFullscreen(el: HTMLElement): Promise<boolean> {
+  const target = el as ElementWithFs;
+  try {
+    if (typeof target.requestFullscreen === "function") {
+      await target.requestFullscreen();
+      return true;
+    }
+    if (typeof target.webkitRequestFullscreen === "function") {
+      await target.webkitRequestFullscreen();
+      return true;
+    }
+    if (typeof target.webkitRequestFullScreen === "function") {
+      await Promise.resolve(target.webkitRequestFullScreen());
+      return true;
+    }
+    if (typeof target.mozRequestFullScreen === "function") {
+      await target.mozRequestFullScreen();
+      return true;
+    }
+    if (typeof target.msRequestFullscreen === "function") {
+      await target.msRequestFullscreen();
+      return true;
+    }
+  } catch {
+    // not allowed or unsupported
+  }
+  return false;
+}
+
+const PSEUDO_FULLSCREEN_CLASSES = [
+  "!fixed",
+  "!inset-0",
+  "!z-[10000]",
+  "!h-[100dvh]",
+  "!w-full",
+  "!max-w-none",
+  "!rounded-none",
+  "!min-h-0",
+] as const;
+
 function ControlGroup({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex flex-col rounded-md border border-border bg-background shadow-sm overflow-hidden [&>button:not(:last-child)]:border-b [&>button:not(:last-child)]:border-border">
@@ -609,6 +700,45 @@ function MapControls({
 }: MapControlsProps) {
   const { map, isLoaded } = useMap();
   const [waitingForLocation, setWaitingForLocation] = useState(false);
+  const pseudoFullscreenRef = useRef(false);
+
+  const scheduleMapResize = useCallback(() => {
+    requestAnimationFrame(() => {
+      map?.resize();
+    });
+  }, [map]);
+
+  useEffect(() => {
+    if (!map || !showFullscreen) return;
+    const onFullscreenLayout = () => {
+      scheduleMapResize();
+    };
+    document.addEventListener("fullscreenchange", onFullscreenLayout);
+    document.addEventListener(
+      "webkitfullscreenchange",
+      onFullscreenLayout as EventListener
+    );
+    return () => {
+      document.removeEventListener("fullscreenchange", onFullscreenLayout);
+      document.removeEventListener(
+        "webkitfullscreenchange",
+        onFullscreenLayout as EventListener
+      );
+    };
+  }, [map, showFullscreen, scheduleMapResize]);
+
+  useEffect(() => {
+    return () => {
+      const container = map?.getContainer() as HTMLElement | undefined;
+      if (container && pseudoFullscreenRef.current) {
+        for (const cls of PSEUDO_FULLSCREEN_CLASSES) {
+          container.classList.remove(cls);
+        }
+        pseudoFullscreenRef.current = false;
+        document.body.style.overflow = "";
+      }
+    };
+  }, [map]);
 
   const handleZoomIn = useCallback(() => {
     map?.zoomTo(map.getZoom() + 1, { duration: 300 });
@@ -647,15 +777,39 @@ function MapControls({
     }
   }, [map, onLocate]);
 
-  const handleFullscreen = useCallback(() => {
-    const container = map?.getContainer();
+  const handleFullscreen = useCallback(async () => {
+    const container = map?.getContainer() as HTMLElement | undefined;
     if (!container) return;
-    if (document.fullscreenElement) {
-      document.exitFullscreen();
-    } else {
-      container.requestFullscreen();
+
+    if (pseudoFullscreenRef.current) {
+      for (const cls of PSEUDO_FULLSCREEN_CLASSES) {
+        container.classList.remove(cls);
+      }
+      pseudoFullscreenRef.current = false;
+      document.body.style.overflow = "";
+      scheduleMapResize();
+      return;
     }
-  }, [map]);
+
+    if (getFullscreenElement()) {
+      await exitNativeFullscreen();
+      scheduleMapResize();
+      return;
+    }
+
+    const nativeOk = await requestNativeFullscreen(container);
+    if (nativeOk) {
+      scheduleMapResize();
+      return;
+    }
+
+    for (const cls of PSEUDO_FULLSCREEN_CLASSES) {
+      container.classList.add(cls);
+    }
+    pseudoFullscreenRef.current = true;
+    document.body.style.overflow = "hidden";
+    scheduleMapResize();
+  }, [map, scheduleMapResize]);
 
   if (!isLoaded) return null;
 

@@ -40,7 +40,8 @@ export function CountriesLayer({ landColor = "#452D9F" }: CountriesLayerProps) {
     // Function to update land layer colors in the base map
     const updateLandColor = () => {
       const style = map.getStyle();
-      const allLayers = style.layers || [];
+      if (!style) return;
+      const allLayers = style.layers ?? [];
 
       allLayers.forEach((layer) => {
         if (typeof layer === "string") return;
