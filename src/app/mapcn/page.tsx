@@ -139,7 +139,7 @@ export default function MapCnPage() {
         <section className="max-w-[90rem] mx-auto px-4 sm:px-6 lg:px-8 pb-16">
           <div className="flex flex-col lg:flex-row gap-6">
             {/* Filters sidebar */}
-            <aside className="w-full lg:w-[320px] lg:flex-shrink-0">
+            <aside className="order-2 w-full lg:order-1 lg:w-[320px] lg:flex-shrink-0">
               <MapFiltersPanel
                 filters={filters}
                 onFiltersChange={setFilters}
@@ -147,7 +147,7 @@ export default function MapCnPage() {
             </aside>
 
             {/* Map */}
-            <div className="flex-1">
+            <div className="order-1 flex-1 lg:order-2">
               <div className="h-[500px] lg:h-[720px] rounded-xl overflow-hidden border border-[var(--color-surface-border)]">
                 {loading ? (
                   <div className="w-full h-full flex items-center justify-center bg-[var(--color-surface)]">
