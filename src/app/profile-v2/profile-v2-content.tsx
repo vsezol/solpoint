@@ -1371,37 +1371,39 @@ export function ProfileV2Content({
         </p>
       )}
 
-      <p className="mb-4 flex items-center gap-2 text-[#00ffa3]" style={kodeMono15}>
+      <p className="mb-6 flex items-center gap-2 text-[#00ffa3] sm:mb-4" style={kodeMono15}>
         <MapPin className="h-4 w-4 shrink-0 text-[#00ffa3]" aria-hidden />
         <span>{location}</span>
       </p>
 
-      <button
-        type="button"
-        className="group text-left transition-colors duration-150"
-        style={kodeMono15}
-        onClick={handleOpenAllConnectionsList}
-      >
-        <span className="text-white">{friendsCount}</span>
-        <span className="text-[#70767d] transition-colors duration-150 group-hover:text-white"> connections</span>
-      </button>
-
-      {isOwnProfile ? (
+      <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:gap-0">
         <button
           type="button"
-          className="group ml-[20px] text-left transition-colors duration-150"
+          className="group text-left transition-colors duration-150"
           style={kodeMono15}
-          onClick={() => void openRequestsModal()}
-          disabled={isRequestsLoading}
+          onClick={handleOpenAllConnectionsList}
         >
-          <span style={{ color: connectionRequestsCount > 0 ? "#16F196" : "#ffffff" }}>
-            {connectionRequestsCount}
-          </span>{" "}
-          <span className="text-[#70767d] transition-colors duration-150 group-hover:text-white">
-            connection requests
-          </span>
+          <span className="text-white">{friendsCount}</span>
+          <span className="text-[#70767d] transition-colors duration-150 group-hover:text-white"> connections</span>
         </button>
-      ) : null}
+
+        {isOwnProfile ? (
+          <button
+            type="button"
+            className="group text-left transition-colors duration-150 sm:ml-[20px]"
+            style={kodeMono15}
+            onClick={() => void openRequestsModal()}
+            disabled={isRequestsLoading}
+          >
+            <span style={{ color: connectionRequestsCount > 0 ? "#16F196" : "#ffffff" }}>
+              {connectionRequestsCount}
+            </span>{" "}
+            <span className="text-[#70767d] transition-colors duration-150 group-hover:text-white">
+              connection requests
+            </span>
+          </button>
+        ) : null}
+      </div>
     </div>
   );
 
@@ -1477,21 +1479,25 @@ export function ProfileV2Content({
                       >
                         {e.description}
                       </p>
-                      {e.description.length > 150 && (
+                      {e.description.length > 90 && (
                         <div className="flex justify-end">
                           <button
                             type="button"
                             onClick={() =>
                               setExpandedExpIds((prev) => {
                                 const next = new Set(prev);
-                                next.has(e.id) ? next.delete(e.id) : next.add(e.id);
+                                if (next.has(e.id)) {
+                                  next.delete(e.id);
+                                } else {
+                                  next.add(e.id);
+                                }
                                 return next;
                               })
                             }
                             className="mt-1 text-[15px] text-[#00ffa3] hover:opacity-80 transition-opacity"
                             style={{ fontFamily: "var(--font-display), sans-serif", fontWeight: 500 }}
                           >
-                            {expandedExpIds.has(e.id) ? "See less" : "See more"}
+                            {expandedExpIds.has(e.id) ? "Show less" : "Show more"}
                           </button>
                         </div>
                       )}
@@ -1592,10 +1598,10 @@ export function ProfileV2Content({
           No skills added yet.
         </p>
       ) : (
-        <ul className="flex flex-wrap gap-[7px]">
+        <ul className="flex flex-wrap gap-1 sm:gap-[7px]">
           {skillsList.map((s) => (
-            <li key={s.slug} className="rounded-[3px] border border-[#282827] bg-[#20201f] px-2.5 py-2 text-[#f9f9f9]">
-              <span style={skillLabelStyle}>{s.label}</span>
+            <li key={s.slug} className="rounded-[3px] border border-[#282827] bg-[#20201f] px-1 py-0.5 text-[#f9f9f9] sm:px-2.5 sm:py-2">
+              <span className="text-[10px] sm:text-[13px]" style={skillLabelStyle}>{s.label}</span>
             </li>
           ))}
         </ul>
@@ -1802,7 +1808,7 @@ export function ProfileV2Content({
   const actionButtons = (
     <div
       className={cn(
-        "mt-[72px] flex items-center justify-end sm:mt-0",
+        "mt-0 flex items-center justify-end sm:mt-0",
         isOwnProfile ? "flex-wrap gap-3" : "flex-nowrap gap-2"
       )}
     >
@@ -1847,7 +1853,7 @@ export function ProfileV2Content({
         <Button
           type="button"
           variant="outline"
-          className="h-[44px] w-full rounded-[5px] border-white/35 text-white hover:bg-white/10 sm:w-[173px] font-extrabold"
+          className="h-[44px] w-[130px] rounded-[5px] border-white/35 text-white hover:bg-white/10 sm:w-[173px] font-extrabold"
           onClick={() => {
             setIsEditingProfile(true);
             setActiveEditTab("personal");
@@ -2076,12 +2082,12 @@ export function ProfileV2Content({
           </div>
 
           <div className="relative px-6 pt-3 sm:px-10 min-[830px]:px-8 min-[1200px]:px-[45px]">
-            <div className="absolute -top-[60px] left-5 sm:-top-[75px]">
-              <div className="relative h-[120px] w-[120px] overflow-hidden rounded-full border-2 border-black bg-[#121212] sm:h-[150px] sm:w-[150px]">
+            <div className="profile-avatar-wrap absolute left-5">
+              <div className="profile-avatar relative overflow-hidden rounded-full border-2 border-black bg-[#121212]">
                 {avatarUrl ? (
                   <Image src={avatarUrl} alt={user.twitter_name} fill className="object-cover" unoptimized />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-[#1a1a1a] text-4xl font-bold text-white">
+                  <div className="flex h-full w-full items-center justify-center bg-[#1a1a1a] text-2xl font-bold text-white sm:text-4xl">
                     {(user.twitter_name || user.twitter_handle || "?").slice(0, 1).toUpperCase()}
                   </div>
                 )}
@@ -2090,9 +2096,34 @@ export function ProfileV2Content({
 
             {actionButtons}
 
-            <div className="pt-[62px] sm:pt-[70px]">
+            <div className="profile-avatar-spacer">
               {identityBlock}
             </div>
+
+            <style jsx>{`
+              .profile-avatar-wrap {
+                top: -48px;
+              }
+              .profile-avatar {
+                width: 96px;
+                height: 96px;
+              }
+              .profile-avatar-spacer {
+                padding-top: 8px;
+              }
+              @media (min-width: 640px) {
+                .profile-avatar-wrap {
+                  top: -75px;
+                }
+                .profile-avatar {
+                  width: 150px;
+                  height: 150px;
+                }
+                .profile-avatar-spacer {
+                  padding-top: 70px;
+                }
+              }
+            `}</style>
           </div>
         </div>
 
@@ -2109,7 +2140,9 @@ export function ProfileV2Content({
         {/* Row 1 / Col 2: mutual context + socials */}
         <div className="px-6 pb-6 pt-8 sm:px-10 min-[830px]:col-start-2 min-[830px]:row-start-1 min-[830px]:px-8 min-[830px]:pt-[61px] min-[1200px]:px-[50px]">
           <div className="mx-auto w-full max-w-[550px] min-[830px]:mx-0 space-y-14">
-            {mutualContextCard}
+            <div className="hidden min-[830px]:block">
+              {mutualContextCard}
+            </div>
             {socialsSection}
           </div>
         </div>
@@ -2122,6 +2155,10 @@ export function ProfileV2Content({
         {/* Row 3 / Col 2: skills */}
         <div className="px-6 pb-10 pt-14 sm:px-10 min-[830px]:col-start-2 min-[830px]:row-start-3 min-[830px]:px-8 min-[1200px]:px-[50px]">
           {skillsSection}
+        </div>
+
+        <div className="px-6 pb-10 pt-4 sm:px-10 min-[830px]:hidden">
+          {mutualContextCard}
         </div>
       </div>
 

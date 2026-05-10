@@ -637,7 +637,7 @@ export function EventsAttendeesWidget({
       </p>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-[300px_1fr]">
-        <aside className="w-full border border-[#2A2A2A] bg-[#171A1E] p-3 lg:h-[401px] lg:w-[300px]">
+        <aside className="order-2 w-full border border-[#2A2A2A] bg-[#171A1E] p-3 lg:order-1 lg:h-[401px] lg:w-[300px]">
           <div className="mb-3 flex items-center justify-between border-b border-[#2A2A2A] pb-2">
             <p className="text-[16px] font-bold text-white" style={kodeMonoStyle}>
               Filters
@@ -727,7 +727,7 @@ export function EventsAttendeesWidget({
           </div>
         </aside>
 
-        <div className="space-y-4">
+        <div className="order-1 space-y-4 lg:order-2">
           {loading ? (
             <div className="grid grid-cols-1 justify-items-center gap-6 sm:grid-cols-2">
               {Array.from({ length: 4 }).map((_, index) => {

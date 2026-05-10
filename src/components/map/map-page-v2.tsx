@@ -104,7 +104,7 @@ export function MapPageV2() {
           </div>
 
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-5">
-            <aside className="w-full lg:w-[300px] lg:shrink-0">
+            <aside className="order-2 w-full lg:order-1 lg:w-[300px] lg:shrink-0">
               <MapFiltersPanelV2
                 filters={filters}
                 onFiltersChange={setFilters}
@@ -112,7 +112,7 @@ export function MapPageV2() {
               />
             </aside>
 
-            <div className="w-full flex-1 lg:max-w-[934px]">
+            <div className="order-1 w-full flex-1 lg:order-2 lg:max-w-[934px]">
               <div className="h-[360px] overflow-hidden rounded-[20px] border border-[#2A2A2A] bg-[#18E3C5] sm:h-[440px] md:h-[520px] lg:h-[582px] lg:rounded-[26px]">
                 {loading ? (
                   <div className="flex h-full w-full items-center justify-center bg-[#111318]">
