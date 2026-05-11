@@ -1,4 +1,27 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Solpoint
+
+The event and networking hub for the Solana ecosystem. Discover events, build your on-chain profile, and connect with founders, developers, and community members across Solana.
+
+## Features
+
+- **Event Discovery** — Browse and search Solana ecosystem events synced from Luma and other sources
+- **Interactive Map** — Visualize events and communities geographically with MapLibre GL
+- **Wallet Auth** — Sign in with any Solana wallet (Phantom, Backpack, Solflare, and more)
+- **Profiles** — On-chain identity with community badges, DAO memberships, and accelerator alumni status
+- **Hubs & Communities** — Find your people by project, track, or ecosystem vertical
+- **3D Visualizations** — Three.js-powered ecosystem views
+
+## Tech Stack
+
+| Layer | Tech |
+|---|---|
+| Framework | Next.js 16, React 19, TypeScript |
+| Styling | Tailwind CSS 4 |
+| Blockchain | Solana Web3.js, Wallet Adapter |
+| Backend | Supabase (auth + database), NextAuth |
+| Maps | MapLibre GL, Leaflet |
+| 3D | Three.js, React Three Fiber |
+| State | Zustand, TanStack React Query |
 
 ## SolPoint: Your Network is Your Net Worth on Solana 🚀
 > The Thesis
@@ -86,103 +109,97 @@ Founder context:
 
 ## Getting Started
 
+### Prerequisites
+
+- Node.js ≥ 18.0.0
+- A Supabase project
+
 ### Environment Variables
 
-Create a `.env.local` file in the root directory with the following variables:
+Create a `.env.local` file in the root directory:
 
 ```env
-# Supabase Configuration
+# Supabase
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
 
-# Application URL
-# For local development use: http://localhost:3000
-# For production use your domain: https://app.example.com
+# App URL
+# Local: http://localhost:3000
+# Production: https://your-domain.com
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 
-# Allowed mobile deep-link schemes for OAuth callback redirects (comma-separated)
+# OAuth deep-link schemes (comma-separated)
 MOBILE_DEEP_LINK_SCHEMES=solpointmobile
+
+# Optional: Google Analytics
+NEXT_PUBLIC_GA4_MEASUREMENT_ID=G-XXXXXXXXXX
 ```
 
-### Running the Development Server
-
-First, run the development server:
+### Run Locally
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Available Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm run dev              # Start development server
+npm run build            # Production build
+npm run start            # Start production server
+npm run lint             # Run ESLint
+npm run luma-scraper:*   # Collect event data from Luma
+npm run luma-sync:events # Sync events to database
+npm run backfill:organizers # Populate organizer data
+```
 
 ## Deploy on Vercel
 
 ### Quick Deploy
 
 1. Push your code to GitHub, GitLab, or Bitbucket
-2. Import your repository on [Vercel](https://vercel.com/new)
-3. Vercel will automatically detect Next.js and configure the build settings
+2. Import the repository at [vercel.com/new](https://vercel.com/new)
+3. Vercel auto-detects Next.js — no build config needed
 
 ### Environment Variables
 
-Before deploying, make sure to add the following environment variables in your Vercel project settings (Settings → Environment Variables):
+In your Vercel project: **Settings → Environment Variables**, add:
 
-**Required:**
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
-NEXT_PUBLIC_APP_URL=https://your-domain.vercel.app
-MOBILE_DEEP_LINK_SCHEMES=solpointmobile
+| Variable | Value |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Your Supabase anon key |
+| `NEXT_PUBLIC_APP_URL` | `https://your-domain.vercel.app` |
+| `MOBILE_DEEP_LINK_SCHEMES` | `solpointmobile` |
+| `NEXT_PUBLIC_GA4_MEASUREMENT_ID` | *(optional)* Your GA4 ID |
+
+Set variables for **Production**, **Preview**, and **Development** environments as needed.
+
+After first deploy, update `NEXT_PUBLIC_APP_URL` to match your production domain.
+
+## Project Structure
+
+```
+src/
+├── app/              # Next.js App Router pages
+│   ├── events/       # Event discovery
+│   ├── map*/         # Map views (v1, v2, cn)
+│   ├── profile*/     # User profiles
+│   ├── hubs/         # Community hubs
+│   ├── communities/  # Communities
+│   ├── dashboard/    # User dashboard
+│   ├── chats/        # Messaging
+│   ├── projects/     # Projects directory
+│   └── admin/        # Admin panel
+├── components/       # Shared UI components
+└── lib/              # Utilities and helpers
 ```
 
-**Optional:**
-```env
-NEXT_PUBLIC_GA4_MEASUREMENT_ID=G-XXXXXXXXXX
-```
+## Learn More
 
-### Deployment Steps
-
-1. **Connect Repository:**
-   - Go to [Vercel Dashboard](https://vercel.com/dashboard)
-   - Click "Add New Project"
-   - Import your Git repository
-
-2. **Configure Project:**
-   - Framework Preset: Next.js (auto-detected)
-   - Root Directory: `./` (default)
-   - Build Command: `npm run build` (auto-detected)
-   - Output Directory: `.next` (auto-detected)
-
-3. **Add Environment Variables:**
-   - Go to Project Settings → Environment Variables
-   - Add all required variables listed above
-   - Set them for Production, Preview, and Development environments as needed
-
-4. **Deploy:**
-   - Click "Deploy"
-   - Vercel will build and deploy your application
-   - Your app will be available at `https://your-project.vercel.app`
-
-### Post-Deployment
-
-After deployment, update `NEXT_PUBLIC_APP_URL` in Vercel environment variables to match your production domain.
-
-For more details, check out the [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying).
+- [Next.js Documentation](https://nextjs.org/docs)
+- [Supabase Documentation](https://supabase.com/docs)
+- [Solana Wallet Adapter](https://github.com/solana-labs/wallet-adapter)

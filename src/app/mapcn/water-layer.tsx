@@ -20,7 +20,8 @@ export function WaterLayer() {
       // Try to override water layer colors in the base map
       // CARTO basemaps typically have layers named like "water", "waterway", "ocean", etc.
       const style = map.getStyle();
-      const allLayers = style.layers || [];
+      if (!style) return;
+      const allLayers = style.layers ?? [];
 
       // Find all water-related layers
       allLayers.forEach((layer) => {

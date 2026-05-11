@@ -119,7 +119,7 @@ function BadgeRow({ className }: { className?: string }) {
         return (
           <article
             key={badge.title}
-            className="flex h-[64px] flex-none flex-col rounded-[8px] border border-[#303030] px-1.5 pt-1.5 pb-1.5 sm:h-[75px] sm:max-w-[148px] sm:flex-1 sm:rounded-[11px] sm:px-[14px] sm:pt-2 sm:pb-2"
+            className="flex h-[58px] flex-none flex-col rounded-[8px] border border-[#303030] px-1.5 pt-1 pb-1 sm:h-[70px] sm:max-w-[148px] sm:flex-1 sm:rounded-[11px] sm:px-[14px] sm:pt-1.5 sm:pb-1.5"
           >
             <p
               className="shrink-0 text-center text-[8px] font-normal leading-[100%] text-white sm:text-[10px] md:text-[12px]"
@@ -236,8 +236,8 @@ function StepPreview({ type }: { type: (typeof stepCards)[number]["previewType"]
               </div>
             </div>
             <p
-              className="block w-full min-w-0 whitespace-nowrap text-center text-[9px] font-bold leading-[100%] text-white"
-              style={{ ...kodeMonoStyle, letterSpacing: "-3%" }}
+              className="block w-full min-w-0 whitespace-nowrap text-center text-[8px] font-bold leading-[100%] tracking-[-0.05em] text-white"
+              style={kodeMonoStyle}
             >
               Solana accelerate USA
             </p>
@@ -320,10 +320,10 @@ export function LandingPageRedesign() {
 
         <BadgeRow className="mx-auto mt-7 w-auto sm:w-full sm:max-w-[654px]" />
 
-        <div className="mx-auto mt-[72px] flex w-full max-w-[230px] flex-row flex-nowrap items-stretch justify-center gap-2 sm:mt-[84px] sm:max-w-none sm:gap-[105px]">
+        <div className="mx-auto mt-[72px] flex w-full max-w-[360px] flex-row flex-nowrap items-stretch justify-center gap-3 sm:mt-[84px] sm:max-w-none sm:gap-[105px]">
           <Link
             href="/events"
-            className="inline-flex h-10 min-w-0 flex-1 items-center justify-center rounded-[6px] border border-white bg-white px-2 text-[12px] font-bold leading-none text-black transition-colors duration-200 ease-out hover:bg-black hover:text-white sm:h-[49px] sm:w-[194px] sm:shrink-0 sm:flex-none sm:rounded-[7px] sm:px-[13px] sm:text-[20px] sm:tracking-normal sm:whitespace-nowrap"
+            className="inline-flex h-10 min-w-0 flex-1 items-center justify-center whitespace-nowrap rounded-[6px] border border-white bg-white px-2 text-[12px] font-bold leading-none text-black transition-colors duration-200 ease-out hover:bg-black hover:text-white sm:h-[49px] sm:w-[194px] sm:shrink-0 sm:flex-none sm:rounded-[7px] sm:px-[13px] sm:text-[20px] sm:tracking-normal sm:whitespace-nowrap"
             style={kodeMonoStyle}
           >
             Explore Events
@@ -336,7 +336,7 @@ export function LandingPageRedesign() {
             }}
           >
             <span
-              className="flex min-w-0 flex-1 items-center justify-center rounded-[5px] bg-black px-2 text-center text-[12px] font-bold leading-none tracking-normal text-white transition-colors duration-200 ease-out group-hover:bg-transparent sm:w-full sm:min-w-0 sm:rounded-[6px] sm:px-[13px] sm:text-[20px] sm:tracking-normal sm:whitespace-nowrap"
+              className="flex min-w-0 flex-1 items-center justify-center whitespace-nowrap rounded-[5px] bg-black px-2 text-center text-[12px] font-bold leading-none tracking-normal text-white transition-colors duration-200 ease-out group-hover:bg-transparent sm:w-full sm:min-w-0 sm:rounded-[6px] sm:px-[13px] sm:text-[20px] sm:tracking-normal sm:whitespace-nowrap"
               style={kodeMonoStyle}
             >
               Explore Map
@@ -352,7 +352,10 @@ export function LandingPageRedesign() {
 
         <div className="mx-auto mt-10 grid max-w-[954px] gap-6 lg:grid-cols-3">
           {stepCards.map((card) => (
-            <article key={card.title} className="h-[270px] rounded-[2px] bg-[#121212] px-[21px] pb-[26px] pt-[23px]">
+            <article
+              key={card.title}
+              className="flex min-h-[270px] flex-col rounded-[2px] bg-[#121212] px-[21px] pb-[26px] pt-[23px]"
+            >
               <div className="flex items-start gap-3">
                 <p className="text-[45px] font-bold leading-none tracking-[-1.35px] text-white">{card.number}</p>
                 <h3 className="max-w-[224px] text-[23px] font-bold leading-[1] tracking-[-0.69px] text-white">
@@ -364,10 +367,10 @@ export function LandingPageRedesign() {
                 {card.subtitle}
               </p>
 
-              <div className="mt-7 flex items-end justify-between gap-3">
+              <div className="mt-auto flex items-end justify-between gap-3 pt-7">
                 <Link
                   href={card.href}
-                  className="inline-flex h-[31px] w-[109px] shrink-0 items-center justify-center rounded-[5px] border border-white bg-white text-center text-[12px] font-bold leading-[100%] tracking-[-0.03em] text-black transition-colors duration-200 ease-out hover:bg-black hover:text-white"
+                  className="inline-flex h-[31px] w-[109px] shrink-0 items-center justify-center whitespace-nowrap rounded-[5px] border border-white bg-white text-center text-[12px] font-bold leading-[100%] tracking-[-0.03em] text-black transition-colors duration-200 ease-out hover:bg-black hover:text-white"
                   style={kodeMonoStyle}
                 >
                   {card.cta}
