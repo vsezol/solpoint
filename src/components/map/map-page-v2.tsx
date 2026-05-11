@@ -92,11 +92,14 @@ export function MapPageV2() {
       <main className="min-h-screen bg-black pb-16 pt-[84px]">
         <section className="mx-auto max-w-[1280px] px-4 pb-14 md:px-8 md:pb-20">
           <div className="pb-8 pt-10 text-center md:pb-12 md:pt-14">
-            <h1 className="mx-auto max-w-[1040px] text-[35px] font-bold leading-none tracking-[0] text-white" style={kodeMonoStyle}>
+            <h1
+              className="mx-auto max-w-[1040px] text-[25px] font-bold leading-[1.05] tracking-[0] text-white md:text-[35px]"
+              style={kodeMonoStyle}
+            >
               See who from the Solana community is nearby
             </h1>
             <p
-              className="mx-auto mt-4 max-w-[920px] text-[20px] font-bold leading-none tracking-[0] text-white/90"
+              className="mx-auto mt-3 max-w-[920px] text-[16px] font-bold leading-tight tracking-[0] text-white/90 md:mt-4 md:text-[20px]"
               style={kodeMonoStyle}
             >
               Find people around you, explore who&apos;s relevant, and start connecting.

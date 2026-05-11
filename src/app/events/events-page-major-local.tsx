@@ -257,7 +257,7 @@ function MajorEventCard({
               {isAttending ? "Attending" : "Attend"}
             </Button>
             <GradientBorderButton
-              className="w-[125px] shrink-0"
+              className="w-[132px] shrink-0 sm:w-[125px]"
               buttonStyle={majorEventButtonTypography}
               onClick={() => onShowList(event)}
             >
@@ -275,39 +275,69 @@ function LocalEventRow({
   onAttend,
   onCancelAttend,
   onShowList,
+  onOpenMobileActions,
 }: {
   event: ShowcaseEvent;
   onAttend: (event: ShowcaseEvent) => void;
   onCancelAttend: (event: ShowcaseEvent) => void;
   onShowList: (event: ShowcaseEvent) => void;
+  onOpenMobileActions: (event: ShowcaseEvent) => void;
 }) {
   const isAttending = event.is_attending;
 
-  return (
-    <article id={`event-card-${event.id}`} className="flex flex-row items-stretch gap-4 border-b border-white/10 pb-6">
-      <EventPoster
-        event={event}
-        className="aspect-square w-[120px] shrink-0 sm:w-[160px] md:w-[200px]"
-        sizes="(max-width: 640px) 120px, (max-width: 768px) 160px, 200px"
-        onClick={() => isAttending ? onCancelAttend(event) : onAttend(event)}
-      />
+  const handleMobileOpen = useCallback(() => {
+    if (typeof window === "undefined") return;
+    if (window.matchMedia("(max-width: 639px)").matches) {
+      onOpenMobileActions(event);
+    }
+  }, [event, onOpenMobileActions]);
 
-      <div className="flex min-w-0 flex-1 flex-col gap-[22px]">
-        <h3
-          className="text-base font-semibold leading-tight text-white sm:text-lg md:text-xl"
-          style={{ fontFamily: "var(--font-kode-mono), monospace" }}
-        >
-          {event.name}
-        </h3>
-        <p className="font-semibold text-white/95" style={{ fontFamily: "var(--font-kode-mono), monospace", fontSize: 18 }}>
-          {formatLocation(event.city, event.country)}
-        </p>
-        <p className="font-semibold text-[#70767d]" style={{ fontFamily: "var(--font-kode-mono), monospace", fontSize: 18 }}>
-          {formatDateRange(event.start_date, event.end_date)}
-        </p>
+  return (
+    <article
+      id={`event-card-${event.id}`}
+      className="flex flex-col gap-4 border-b border-white/10 pb-6 sm:flex-row sm:items-stretch"
+    >
+      <div className="flex flex-row items-stretch gap-4 sm:flex-1">
+        <EventPoster
+          event={event}
+          className="aspect-square w-[120px] shrink-0 sm:w-[160px] md:w-[200px]"
+          sizes="(max-width: 640px) 120px, (max-width: 768px) 160px, 200px"
+          onClick={() => {
+            if (typeof window !== "undefined" && window.matchMedia("(max-width: 639px)").matches) {
+              onOpenMobileActions(event);
+              return;
+            }
+            isAttending ? onCancelAttend(event) : onAttend(event);
+          }}
+        />
+
+        <div className="flex min-w-0 flex-1 flex-col gap-2 sm:gap-3">
+          <h3
+            className="text-base font-semibold leading-tight text-white sm:text-lg md:text-xl"
+            style={{ fontFamily: "var(--font-kode-mono), monospace" }}
+            onClick={handleMobileOpen}
+          >
+            {event.name}
+          </h3>
+          <p
+            className="text-base font-semibold leading-tight tracking-[-0.07em] text-white/95 sm:text-lg md:text-xl"
+            style={{ fontFamily: "var(--font-kode-mono), monospace" }}
+            onClick={handleMobileOpen}
+          >
+            {formatLocation(event.city, event.country)}
+          </p>
+          <p
+            className="text-base font-semibold leading-tight tracking-[-0.07em] text-[#70767d] sm:text-lg md:text-xl"
+            style={{ fontFamily: "var(--font-kode-mono), monospace" }}
+            onClick={handleMobileOpen}
+          >
+            {formatDateRange(event.start_date, event.end_date)}
+          </p>
+        </div>
       </div>
 
-      <div className="ml-[34px] flex shrink-0 flex-col items-center gap-[29px] pt-4 pb-[25px]">
+      {/* Desktop/tablet: keep the right column layout */}
+      <div className="ml-[34px] hidden shrink-0 flex-col items-center gap-[29px] pt-4 pb-[25px] sm:flex">
         <AttendeesSummary
           attendees={event.attendee_previews}
           peopleGoing={event.people_going}
@@ -361,7 +391,7 @@ function GradientBorderButton({
       <Button
         variant="ghost"
         size="sm"
-        className="h-[49px] w-full rounded-[6px] bg-black text-white hover:bg-white/5"
+        className="h-[49px] w-full whitespace-nowrap rounded-[6px] bg-black text-white hover:bg-white/5"
         style={buttonStyle}
         onClick={onClick}
       >
@@ -405,6 +435,7 @@ export default function EventsPageMajorLocal() {
   const [pendingCancelEvent, setPendingCancelEvent] = useState<ShowcaseEvent | null>(null);
   const [isCancelSubmitting, setIsCancelSubmitting] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
+  const [mobileLocalActionsEvent, setMobileLocalActionsEvent] = useState<ShowcaseEvent | null>(null);
 
   const localPage = useMemo(() => {
     const pageRaw = Number.parseInt(searchParams.get("local_page") || "1", 10);
@@ -699,7 +730,11 @@ export default function EventsPageMajorLocal() {
     });
   }, [updateEventsQuery]);
 
-  const showAttendeesWidget = Boolean(selectedEvent && isAuthenticated);
+  const handleOpenMobileLocalActions = useCallback((event: ShowcaseEvent) => {
+    setMobileLocalActionsEvent(event);
+  }, []);
+
+  const showAttendeesWidget = Boolean(selectedEventId && isAuthenticated);
   const canGoLocalPrev = data.localPagination.page > 1;
   const canGoLocalNext =
     data.localPagination.total_pages > 0 &&
@@ -794,6 +829,7 @@ export default function EventsPageMajorLocal() {
                           onAttend={handleAttend}
                           onCancelAttend={handleCancelAttend}
                           onShowList={handleShowList}
+                        onOpenMobileActions={handleOpenMobileLocalActions}
                         />
                       ))}
                     </div>
@@ -851,13 +887,13 @@ export default function EventsPageMajorLocal() {
           {!loading && hasAnyEvents && (
             <div className="py-12 text-center">
               <p
-                className="text-3xl font-semibold leading-tight text-white"
+                className="text-xl font-semibold leading-tight text-white sm:text-2xl md:text-3xl"
                 style={{ fontFamily: "var(--font-kode-mono), monospace" }}
               >
                 Can&apos;t find your event?
               </p>
               <p
-                className="mt-1 text-3xl font-semibold leading-tight text-white"
+                className="mt-1 text-xl font-semibold leading-tight text-white sm:text-2xl md:text-3xl"
                 style={{ fontFamily: "var(--font-kode-mono), monospace" }}
               >
                 Let us know - we&apos;ll add it.
@@ -1004,7 +1040,74 @@ export default function EventsPageMajorLocal() {
         redirectTo={currentPageUrl}
       />
 
-      {showAttendeesWidget && selectedEvent && (
+      <Modal
+        isOpen={Boolean(mobileLocalActionsEvent)}
+        onClose={() => setMobileLocalActionsEvent(null)}
+        size="md"
+        className="bg-black border border-white/5 rounded-[10px]"
+        closeButtonClassName="top-1 right-1 !text-white/55 hover:!text-white !bg-white/5 hover:!bg-white/10 !rounded-[7px] !p-2"
+        ariaLabel="Local event actions"
+      >
+        {mobileLocalActionsEvent && (
+          <>
+            <ModalHeader className={confirmModalHeaderClass}>
+              <ModalTitle
+                className="text-[18px] font-semibold text-white"
+                style={{ fontFamily: "var(--font-kode-mono), monospace" }}
+              >
+                {mobileLocalActionsEvent.name}
+              </ModalTitle>
+              <ModalDescription style={{ fontFamily: "var(--font-kode-mono), monospace" }}>
+                {formatLocation(mobileLocalActionsEvent.city, mobileLocalActionsEvent.country)} ·{" "}
+                {formatDateRange(mobileLocalActionsEvent.start_date, mobileLocalActionsEvent.end_date)}
+              </ModalDescription>
+            </ModalHeader>
+            <ModalContent>
+              <div className="flex flex-col items-center gap-6">
+                <AttendeesSummary
+                  attendees={mobileLocalActionsEvent.attendee_previews}
+                  peopleGoing={mobileLocalActionsEvent.people_going}
+                  centered
+                  majorTypography
+                />
+                <div className="flex w-full items-center justify-center gap-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={cn(
+                      "h-[49px] w-[125px] shrink-0 rounded-[7px] border px-0",
+                      mobileLocalActionsEvent.is_attending
+                        ? "border-white/30 bg-[#1A1A1A] text-white/75! hover:bg-white/5"
+                        : "border-white bg-white text-black! hover:bg-white/90"
+                    )}
+                    style={majorEventButtonTypography}
+                    onClick={() => {
+                      const next = mobileLocalActionsEvent;
+                      setMobileLocalActionsEvent(null);
+                      next.is_attending ? handleCancelAttend(next) : handleAttend(next);
+                    }}
+                  >
+                    {mobileLocalActionsEvent.is_attending ? "Attending" : "Attend"}
+                  </Button>
+                  <GradientBorderButton
+                    className="w-[132px] shrink-0 sm:w-[125px]"
+                    buttonStyle={majorEventButtonTypography}
+                    onClick={() => {
+                      const next = mobileLocalActionsEvent;
+                      setMobileLocalActionsEvent(null);
+                      handleShowList(next);
+                    }}
+                  >
+                    Show list
+                  </GradientBorderButton>
+                </div>
+              </div>
+            </ModalContent>
+          </>
+        )}
+      </Modal>
+
+      {showAttendeesWidget && selectedEventId && (
         <div
           className="neutral-scrollbar fixed inset-0 z-[55] flex items-start justify-center overflow-y-auto bg-black/70 backdrop-blur-sm"
           onClick={handleCloseAttendees}
@@ -1014,8 +1117,8 @@ export default function EventsPageMajorLocal() {
             onClick={(e) => e.stopPropagation()}
           >
             <EventsAttendeesWidget
-              selectedEventId={selectedEvent.id}
-              selectedEventName={selectedEvent.name}
+              selectedEventId={selectedEventId}
+              selectedEventName={selectedEvent?.name ?? "Attendee list"}
               filters={attendeeFilters}
               isAuthenticated={isAuthenticated}
               onFiltersChange={handleAttendeeFiltersChange}

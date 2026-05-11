@@ -643,18 +643,31 @@ const ClusterIcon = ({ count, type }: { count: number; type: MapMarker["type"] }
   );
 };
 
-// Dimensions of the user profile card used for smart popup positioning
-const USER_CARD_WIDTH = 290;
-const USER_CARD_HEIGHT = 460;
+// Layout box for user profile card (matches AttendeeStyleProfileCard max width / min height)
+const USER_CARD_WIDTH = 256;
+const USER_CARD_HEIGHT = 420;
 const USER_PIN_HEIGHT = 55;
 const USER_PIN_HALF_WIDTH = 22;
 const CARD_OFFSET = 14;
 
-// Dimensions of the event compact card used for smart popup positioning
+// Layout box for the event compact card (matches EventCard compact inline size)
 const EVENT_CARD_WIDTH = 256;
 const EVENT_CARD_HEIGHT = 374;
 const EVENT_PIN_HEIGHT = 52;
 const EVENT_PIN_HALF_WIDTH = 26;
+
+const MAP_CARD_EDGE_PAD = 10;
+const MAP_CARD_SCALE_MIN = 0.58;
+
+/** Scale card so its visual footprint fits inside the map container (mobile). */
+function mapCardScale(mapWidth: number, mapHeight: number, cardW: number, cardH: number): number {
+  const pad = MAP_CARD_EDGE_PAD;
+  const innerW = Math.max(1, mapWidth - pad * 2);
+  const innerH = Math.max(1, mapHeight - pad * 2);
+  const sx = innerW / cardW;
+  const sy = innerH / cardH;
+  return Math.max(MAP_CARD_SCALE_MIN, Math.min(1, sx, sy));
+}
 
 type UserCardState = {
   user: User;
@@ -714,6 +727,10 @@ export function MapMarkersLayer({
       const mapWidth = container.clientWidth;
       const mapHeight = container.clientHeight;
 
+      const scale = mapCardScale(mapWidth, mapHeight, USER_CARD_WIDTH, USER_CARD_HEIGHT);
+      const visW = USER_CARD_WIDTH * scale;
+      const visH = USER_CARD_HEIGHT * scale;
+
       const x = pixel.x; // pin tip x (pin is centered horizontally)
       const y = pixel.y; // pin tip y (anchor="bottom", so tip is at the coordinate)
 
@@ -723,39 +740,44 @@ export function MapMarkersLayer({
       const spaceRight = mapWidth - x; // from pin center to map right
       const spaceLeft = x; // from map left to pin center
 
+      const pad = MAP_CARD_EDGE_PAD;
       const clampH = (left: number) =>
-        Math.max(8, Math.min(left, mapWidth - USER_CARD_WIDTH - 8));
+        Math.max(pad, Math.min(left, mapWidth - visW - pad));
       const clampV = (top: number) =>
-        Math.max(8, Math.min(top, mapHeight - USER_CARD_HEIGHT - 8));
+        Math.max(pad, Math.min(top, mapHeight - visH - pad));
 
       const pinCenterY = y - USER_PIN_HEIGHT / 2;
 
-      let style: CSSProperties = {
+      const style: CSSProperties = {
         position: "absolute",
         width: USER_CARD_WIDTH,
+        height: USER_CARD_HEIGHT,
         zIndex: 400,
+        transform: scale < 0.999 ? `scale(${scale})` : undefined,
+        transformOrigin: "top left",
+        pointerEvents: "auto",
       };
 
-      if (spaceAbove >= USER_CARD_HEIGHT + CARD_OFFSET) {
+      if (spaceAbove >= visH + CARD_OFFSET) {
         // Enough space above: show card above the pin
-        style.left = clampH(x - USER_CARD_WIDTH / 2);
-        style.top = y - USER_PIN_HEIGHT - CARD_OFFSET - USER_CARD_HEIGHT;
-      } else if (spaceRight >= USER_CARD_WIDTH + USER_PIN_HALF_WIDTH + CARD_OFFSET) {
+        style.left = clampH(x - visW / 2);
+        style.top = y - USER_PIN_HEIGHT - CARD_OFFSET - visH;
+      } else if (spaceRight >= visW + USER_PIN_HALF_WIDTH + CARD_OFFSET) {
         // Enough space to the right
         style.left = x + USER_PIN_HALF_WIDTH + CARD_OFFSET;
-        style.top = clampV(pinCenterY - USER_CARD_HEIGHT / 2);
-      } else if (spaceLeft >= USER_CARD_WIDTH + USER_PIN_HALF_WIDTH + CARD_OFFSET) {
+        style.top = clampV(pinCenterY - visH / 2);
+      } else if (spaceLeft >= visW + USER_PIN_HALF_WIDTH + CARD_OFFSET) {
         // Enough space to the left
-        style.left = x - USER_PIN_HALF_WIDTH - CARD_OFFSET - USER_CARD_WIDTH;
-        style.top = clampV(pinCenterY - USER_CARD_HEIGHT / 2);
-      } else if (spaceBelow >= USER_CARD_HEIGHT + CARD_OFFSET) {
+        style.left = x - USER_PIN_HALF_WIDTH - CARD_OFFSET - visW;
+        style.top = clampV(pinCenterY - visH / 2);
+      } else if (spaceBelow >= visH + CARD_OFFSET) {
         // Enough space below: show card below the pin tip
-        style.left = clampH(x - USER_CARD_WIDTH / 2);
+        style.left = clampH(x - visW / 2);
         style.top = y + CARD_OFFSET;
       } else {
         // Best effort: above with clamping to map bounds
-        style.left = clampH(x - USER_CARD_WIDTH / 2);
-        style.top = Math.max(8, y - USER_PIN_HEIGHT - CARD_OFFSET - USER_CARD_HEIGHT);
+        style.left = clampH(x - visW / 2);
+        style.top = Math.max(pad, y - USER_PIN_HEIGHT - CARD_OFFSET - visH);
       }
 
       const user = marker.data as User;
@@ -774,6 +796,10 @@ export function MapMarkersLayer({
       const mapWidth = container.clientWidth;
       const mapHeight = container.clientHeight;
 
+      const scale = mapCardScale(mapWidth, mapHeight, EVENT_CARD_WIDTH, EVENT_CARD_HEIGHT);
+      const visW = EVENT_CARD_WIDTH * scale;
+      const visH = EVENT_CARD_HEIGHT * scale;
+
       const x = pixel.x;
       const y = pixel.y;
 
@@ -782,34 +808,39 @@ export function MapMarkersLayer({
       const spaceRight = mapWidth - x;
       const spaceLeft = x;
 
+      const pad = MAP_CARD_EDGE_PAD;
       const clampH = (left: number) =>
-        Math.max(8, Math.min(left, mapWidth - EVENT_CARD_WIDTH - 8));
+        Math.max(pad, Math.min(left, mapWidth - visW - pad));
       const clampV = (top: number) =>
-        Math.max(8, Math.min(top, mapHeight - EVENT_CARD_HEIGHT - 8));
+        Math.max(pad, Math.min(top, mapHeight - visH - pad));
 
       const pinCenterY = y - EVENT_PIN_HEIGHT / 2;
 
-      let style: CSSProperties = {
+      const style: CSSProperties = {
         position: "absolute",
         width: EVENT_CARD_WIDTH,
+        height: EVENT_CARD_HEIGHT,
         zIndex: 400,
+        transform: scale < 0.999 ? `scale(${scale})` : undefined,
+        transformOrigin: "top left",
+        pointerEvents: "auto",
       };
 
-      if (spaceAbove >= EVENT_CARD_HEIGHT + CARD_OFFSET) {
-        style.left = clampH(x - EVENT_CARD_WIDTH / 2);
-        style.top = y - EVENT_PIN_HEIGHT - CARD_OFFSET - EVENT_CARD_HEIGHT;
-      } else if (spaceRight >= EVENT_CARD_WIDTH + EVENT_PIN_HALF_WIDTH + CARD_OFFSET) {
+      if (spaceAbove >= visH + CARD_OFFSET) {
+        style.left = clampH(x - visW / 2);
+        style.top = y - EVENT_PIN_HEIGHT - CARD_OFFSET - visH;
+      } else if (spaceRight >= visW + EVENT_PIN_HALF_WIDTH + CARD_OFFSET) {
         style.left = x + EVENT_PIN_HALF_WIDTH + CARD_OFFSET;
-        style.top = clampV(pinCenterY - EVENT_CARD_HEIGHT / 2);
-      } else if (spaceLeft >= EVENT_CARD_WIDTH + EVENT_PIN_HALF_WIDTH + CARD_OFFSET) {
-        style.left = x - EVENT_PIN_HALF_WIDTH - CARD_OFFSET - EVENT_CARD_WIDTH;
-        style.top = clampV(pinCenterY - EVENT_CARD_HEIGHT / 2);
-      } else if (spaceBelow >= EVENT_CARD_HEIGHT + CARD_OFFSET) {
-        style.left = clampH(x - EVENT_CARD_WIDTH / 2);
+        style.top = clampV(pinCenterY - visH / 2);
+      } else if (spaceLeft >= visW + EVENT_PIN_HALF_WIDTH + CARD_OFFSET) {
+        style.left = x - EVENT_PIN_HALF_WIDTH - CARD_OFFSET - visW;
+        style.top = clampV(pinCenterY - visH / 2);
+      } else if (spaceBelow >= visH + CARD_OFFSET) {
+        style.left = clampH(x - visW / 2);
         style.top = y + CARD_OFFSET;
       } else {
-        style.left = clampH(x - EVENT_CARD_WIDTH / 2);
-        style.top = Math.max(8, y - EVENT_PIN_HEIGHT - CARD_OFFSET - EVENT_CARD_HEIGHT);
+        style.left = clampH(x - visW / 2);
+        style.top = Math.max(pad, y - EVENT_PIN_HEIGHT - CARD_OFFSET - visH);
       }
 
       const event = marker.data as Event;
@@ -818,46 +849,29 @@ export function MapMarkersLayer({
     [map]
   );
 
-  // Close user card when clicking outside it
+  // Close cards on tap/click outside (pointerdown works on mobile; mousedown for older browsers).
   useEffect(() => {
-    if (!userCard) return;
+    if (!userCard && !eventCard) return;
 
-    const handleDocClick = (e: MouseEvent) => {
-      if (cardRef.current && !cardRef.current.contains(e.target as Node)) {
-        setUserCard(null);
-      }
+    const handleOutside = (e: MouseEvent | PointerEvent) => {
+      const t = e.target as Node;
+      if (cardRef.current?.contains(t)) return;
+      if (eventCardRef.current?.contains(t)) return;
+      setUserCard(null);
+      setEventCard(null);
     };
 
-    // Defer so the opening click doesn't immediately close the card
-    const timerId = setTimeout(() => {
-      document.addEventListener("mousedown", handleDocClick);
+    const timerId = window.setTimeout(() => {
+      document.addEventListener("pointerdown", handleOutside);
+      document.addEventListener("mousedown", handleOutside);
     }, 0);
 
     return () => {
-      clearTimeout(timerId);
-      document.removeEventListener("mousedown", handleDocClick);
+      window.clearTimeout(timerId);
+      document.removeEventListener("pointerdown", handleOutside);
+      document.removeEventListener("mousedown", handleOutside);
     };
-  }, [userCard]);
-
-  // Close event card when clicking outside it
-  useEffect(() => {
-    if (!eventCard) return;
-
-    const handleDocClick = (e: MouseEvent) => {
-      if (eventCardRef.current && !eventCardRef.current.contains(e.target as Node)) {
-        setEventCard(null);
-      }
-    };
-
-    const timerId = setTimeout(() => {
-      document.addEventListener("mousedown", handleDocClick);
-    }, 0);
-
-    return () => {
-      clearTimeout(timerId);
-      document.removeEventListener("mousedown", handleDocClick);
-    };
-  }, [eventCard]);
+  }, [userCard, eventCard]);
 
   // Close cards when the map is dragged (position becomes stale).
   // We intentionally do NOT close on zoomstart/zoom because scroll-wheel and
@@ -950,6 +964,8 @@ export function MapMarkersLayer({
             ref={eventCardRef}
             style={eventCard.style}
             onMouseDown={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
           >
             <EventCard
               event={eventCard.event}
@@ -968,8 +984,9 @@ export function MapMarkersLayer({
           <div
             ref={cardRef}
             style={userCard.style}
-            // Prevent map clicks inside the card from bubbling to the backdrop listener
             onMouseDown={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
           >
             <AttendeeStyleProfileCard
               displayName={userCard.user.twitter_name}
