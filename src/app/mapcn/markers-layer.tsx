@@ -1002,7 +1002,9 @@ export function MapMarkersLayer({
                 "Location unknown"
               }
               aboutText={
-                userCard.user.about || userCard.user.bio || "Profile has no about yet."
+                userCard.user.about?.trim() ||
+                userCard.user.bio?.trim() ||
+                "Profile has no about yet."
               }
               strokeVariant="top"
               onView={

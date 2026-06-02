@@ -11,11 +11,55 @@
  * });
  */
 
-// Типы для событий
 export interface AnalyticsEventParams {
   event_category?: string;
   event_label?: string;
-  [key: string]: string | number | boolean | undefined;
+  [key: string]: string | number | boolean | null | undefined;
+}
+
+type AnalyticsLevel = "info" | "warn" | "error";
+
+const ANALYTICS_ENDPOINT = "/api/analytics/event";
+
+function toSerializablePayload(
+  params?: AnalyticsEventParams
+): Record<string, unknown> {
+  if (!params) return {};
+
+  const entries = Object.entries(params).slice(0, 80);
+  return Object.fromEntries(entries);
+}
+
+function sendToBackend(
+  eventName: string,
+  level: AnalyticsLevel,
+  payload?: AnalyticsEventParams
+) {
+  if (typeof window === "undefined") return;
+
+  const body = JSON.stringify({
+    event_name: eventName,
+    event_level: level,
+    page_path: window.location.pathname + window.location.search,
+    payload: {
+      ...toSerializablePayload(payload),
+      page_title: document.title,
+      timestamp: new Date().toISOString(),
+      user_agent: window.navigator.userAgent,
+    },
+  });
+
+  // Prefer keepalive fetch. sendBeacon is not reliable for JSON APIs in all browsers.
+  fetch(ANALYTICS_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body,
+    keepalive: true,
+  }).catch(() => {
+    // Best-effort analytics transport.
+  });
 }
 
 // Проверка доступности GA4
@@ -37,8 +81,9 @@ export const trackEvent = (
   eventName: string,
   params?: AnalyticsEventParams
 ): void => {
+  sendToBackend(eventName, "info", params);
+
   if (!isGA4Available()) {
-    // В режиме разработки логируем события в консоль
     if (process.env.NODE_ENV === 'development') {
       console.log('[GA4 Event]', eventName, params);
     }
@@ -48,18 +93,33 @@ export const trackEvent = (
   try {
     window.gtag('event', eventName, {
       ...params,
-      // Добавляем контекстную информацию
       page_path: window.location.pathname,
       page_title: document.title,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
     console.error('Error tracking GA4 event:', error);
+    sendToBackend("ga4_track_event_failed", "error", {
+      event_name: eventName,
+      error_message: error instanceof Error ? error.message : "unknown_error",
+    });
   }
+};
+
+export const trackError = (
+  eventName: string,
+  params?: AnalyticsEventParams
+): void => {
+  sendToBackend(eventName, "error", params);
 };
 
 // Отправка page_view события
 export const trackPageView = (path: string, title?: string): void => {
+  sendToBackend("page_view", "info", {
+    page_path: path,
+    page_title: title || (typeof document !== "undefined" ? document.title : ""),
+  });
+
   if (!isGA4Available()) {
     if (process.env.NODE_ENV === 'development') {
       console.log('[GA4 PageView]', path, title);
@@ -85,6 +145,9 @@ export const setUserProperties = (properties: Record<string, string | number | b
     window.gtag('set', 'user_properties', properties);
   } catch (error) {
     console.error('Error setting user properties:', error);
+    sendToBackend("ga4_set_user_properties_failed", "error", {
+      error_message: error instanceof Error ? error.message : "unknown_error",
+    });
   }
 };
 
@@ -104,6 +167,10 @@ export const setUserId = (userId: string | null): void => {
     }
   } catch (error) {
     console.error('Error setting user ID:', error);
+    sendToBackend("ga4_set_user_id_failed", "error", {
+      user_id: userId,
+      error_message: error instanceof Error ? error.message : "unknown_error",
+    });
   }
 };
 

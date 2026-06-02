@@ -374,7 +374,8 @@ export async function GET(
     const attendeeEventIds = eventIdsByUser.get(user.id) || new Set<string>();
     attendeeEventIds.delete(eventId);
 
-    const about = user.about?.trim() || null;
+    // Prefer long-form about, but gracefully fallback to legacy short bio.
+    const about = user.about?.trim() || user.bio?.trim() || null;
     const countryCode = user.country_code ? user.country_code.toUpperCase() : null;
 
     const hasCompleteProfile = isCompleteProfile({

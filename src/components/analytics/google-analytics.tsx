@@ -20,6 +20,23 @@ function GoogleAnalyticsInner({ nonce }: GoogleAnalyticsProps) {
     trackPageView(url);
   }, [pathname, searchParams, measurementId]);
 
+  useEffect(() => {
+    if (!pathname) return;
+    const path = pathname + (searchParams?.toString() ? `?${searchParams.toString()}` : "");
+    const referrer = typeof document !== "undefined" ? document.referrer : "";
+
+    fetch("/api/analytics/visit", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ path, referrer }),
+      keepalive: true,
+    }).catch(() => {
+      // Best-effort analytics endpoint.
+    });
+  }, [pathname, searchParams]);
+
   if (!measurementId) return null;
 
   return (

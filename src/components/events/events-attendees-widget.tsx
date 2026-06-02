@@ -792,7 +792,7 @@ export function EventsAttendeesWidget({
                 {items.map((item, index) => {
                   const location =
                     [item.city, item.country].filter(Boolean).join(", ") || "Location unknown";
-                  const about = item.about || "Profile has no about yet.";
+                  const about = item.about?.trim() || "Profile has no about yet.";
                   const roleLabel = item.role
                     ? USER_ROLE_LABELS[item.role] || item.role
                     : "Role not specified";
