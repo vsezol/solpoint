@@ -46,7 +46,7 @@ export async function POST(request: Request) {
       data: { user },
     } = await supabase.auth.getUser();
 
-    const serviceRoleClient = createServiceRoleClient();
+    const serviceRoleClient = createServiceRoleClient() as any;
     const { data: existing, error: selectError } = await serviceRoleClient
       .from("site_visit_sessions")
       .select("session_id, page_views, registered_user_id")

@@ -51,16 +51,23 @@ export function AppInstrumentation() {
     };
 
     const onUnhandledRejection = (event: PromiseRejectionEvent) => {
-      let reason: unknown = event.reason;
+      const reason: unknown = event.reason;
+      let reasonText: string | null = null;
       if (reason instanceof Error) {
-        reason = {
+        reasonText = JSON.stringify({
           message: reason.message,
           stack: reason.stack || null,
           name: reason.name,
-        };
+        });
+      } else if (reason != null) {
+        try {
+          reasonText = typeof reason === "string" ? reason : JSON.stringify(reason);
+        } catch {
+          reasonText = String(reason);
+        }
       }
       trackError("unhandled_rejection", {
-        reason: reason ?? null,
+        reason: reasonText,
       });
     };
 

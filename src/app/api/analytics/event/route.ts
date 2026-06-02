@@ -63,7 +63,7 @@ export async function POST(request: Request) {
       data: { user },
     } = await supabase.auth.getUser();
 
-    const serviceRoleClient = createServiceRoleClient();
+    const serviceRoleClient = createServiceRoleClient() as any;
     const { error } = await serviceRoleClient.from("analytics_events").insert({
       session_id: sessionId,
       user_id: user?.id || null,
