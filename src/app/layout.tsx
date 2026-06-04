@@ -8,6 +8,7 @@ import { AuthProvider } from "@/components/providers/auth-provider";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { WalletContextProvider } from "@/components/providers/wallet-provider";
 import { GoogleAnalytics } from "@/components/analytics/google-analytics";
+import { AppInstrumentation } from "@/components/analytics/app-instrumentation";
 import { IntentChecker } from "@/components/subscription/intent-checker";
 import { MobileNav } from "@/components/layout/mobile-nav";
 
@@ -105,6 +106,7 @@ export default async function RootLayout({
       >
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
           <GoogleAnalytics nonce={nonce} />
+          <AppInstrumentation />
           <QueryProvider>
             <WalletContextProvider>
               <AuthProvider>

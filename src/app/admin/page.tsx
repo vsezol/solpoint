@@ -127,15 +127,21 @@ export default async function AdminPage() {
                 </p>
               </a>
 
-              {/* Статистика */}
-              <div className="bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg p-6">
+              {/* User analytics */}
+              <a
+                href="/admin/analytics"
+                className="bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg p-6 hover:border-[var(--color-primary)] transition-colors cursor-pointer"
+              >
                 <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">
-                  Статистика
+                  User Analytics
                 </h2>
-                <p className="text-[var(--color-text-secondary)]">
-                  Здесь будет статистика системы
+                <p className="text-[var(--color-text-secondary)] mb-2">
+                  View total users, country split, and role distribution.
                 </p>
-              </div>
+                <p className="text-sm text-[var(--color-primary)]">
+                  Open analytics →
+                </p>
+              </a>
 
               {/* Управление пользователями */}
               <div className="bg-[var(--color-surface)] border border-[var(--color-surface-border)] rounded-lg p-6">
