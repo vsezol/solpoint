@@ -67,6 +67,11 @@ function isMissingIsMajorError(error: { message?: string } | null): boolean {
   return error.message.toLowerCase().includes("is_major");
 }
 
+/** Events that have not ended yet (ongoing or upcoming). */
+function buildOngoingEventsFilter(nowIso: string): string {
+  return `end_date.gte.${nowIso},and(end_date.is.null,start_date.gte.${nowIso})`;
+}
+
 async function fetchEventsWithFallback(
   supabase: Awaited<ReturnType<typeof createClient>>,
   options: {
@@ -86,7 +91,7 @@ async function fetchEventsWithFallback(
         )
         .order("start_date", { ascending: true });
       if (options.upcomingOnly) {
-        query = query.gte("start_date", new Date().toISOString());
+        query = query.or(buildOngoingEventsFilter(new Date().toISOString()));
       }
       return query;
     }
@@ -98,7 +103,7 @@ async function fetchEventsWithFallback(
       )
       .order("start_date", { ascending: true });
     if (options.upcomingOnly) {
-      query = query.gte("start_date", new Date().toISOString());
+      query = query.or(buildOngoingEventsFilter(new Date().toISOString()));
     }
     return query;
   };
